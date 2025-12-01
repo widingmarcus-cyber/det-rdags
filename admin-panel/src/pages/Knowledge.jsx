@@ -4,8 +4,8 @@ import { AuthContext } from '../App'
 
 const API_BASE = '/api'
 
-const CATEGORIES = [
-  { value: '', label: 'Alla kategorier' },
+// Default categories (used if no custom categories are set)
+const DEFAULT_CATEGORIES = [
   { value: 'hyra', label: 'Hyra & Betalning' },
   { value: 'felanmalan', label: 'Felanmälan' },
   { value: 'tvattstuga', label: 'Tvättstuga' },
@@ -35,10 +35,39 @@ function Knowledge() {
   const [exporting, setExporting] = useState(false)
   const [similarQuestions, setSimilarQuestions] = useState([])
   const [checkingSimilar, setCheckingSimilar] = useState(false)
+  const [customCategories, setCustomCategories] = useState([])
+
+  // Get categories with "All" option prepended
+  const CATEGORIES = [
+    { value: '', label: 'Alla kategorier' },
+    ...(customCategories.length > 0 ? customCategories : DEFAULT_CATEGORIES)
+  ]
 
   useEffect(() => {
     fetchKnowledge()
+    fetchSettings()
   }, [])
+
+  const fetchSettings = async () => {
+    try {
+      const response = await authFetch(`${API_BASE}/settings`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.custom_categories) {
+          try {
+            const parsed = JSON.parse(data.custom_categories)
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setCustomCategories(parsed)
+            }
+          } catch {
+            // Use default categories if parsing fails
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Kunde inte hämta inställningar:', error)
+    }
+  }
 
   // Handle prefilled question from Analytics page
   useEffect(() => {
@@ -233,7 +262,7 @@ function Knowledge() {
     try {
       const response = await authFetch(`${API_BASE}/knowledge/bulk`, {
         method: 'DELETE',
-        body: JSON.stringify(Array.from(selectedItems))
+        body: JSON.stringify({ item_ids: Array.from(selectedItems) })
       })
 
       if (response.ok) {
@@ -289,8 +318,7 @@ function Knowledge() {
 
       const response = await authFetch(`${API_BASE}/knowledge/upload`, {
         method: 'POST',
-        body: formData,
-        headers: {} // Let browser set content-type with boundary
+        body: formData
       })
 
       const result = await response.json()

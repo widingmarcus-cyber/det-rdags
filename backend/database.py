@@ -53,10 +53,14 @@ class CompanySettings(Base):
     # Chatbot-meddelanden
     welcome_message = Column(Text, default="Hej! Hur kan jag hjälpa dig idag?")
     fallback_message = Column(Text, default="Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt.")
+    subtitle = Column(String, default="Alltid redo att hjälpa")  # Widget subtitle/slogan
 
     # Utseende & Språk
     primary_color = Column(String, default="#D97757")
     language = Column(String, default="sv")  # sv, en, ar
+
+    # Custom categories (JSON array: [{"value": "hyra", "label": "Hyra & Betalning"}, ...])
+    custom_categories = Column(Text, default="")
 
     # GDPR - Datalagring
     data_retention_days = Column(Integer, default=30)  # Antal dagar att spara konversationer

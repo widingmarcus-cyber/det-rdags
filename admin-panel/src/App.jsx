@@ -136,10 +136,17 @@ function App() {
 
   // Hjälpfunktion för autentiserade API-anrop (company)
   const authFetch = async (url, options = {}) => {
+    // Don't set Content-Type for FormData - browser sets it with boundary
+    const isFormData = options.body instanceof FormData
     const headers = {
-      ...options.headers,
       'Authorization': `Bearer ${auth?.token}`,
-      'Content-Type': 'application/json'
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+      ...options.headers
+    }
+
+    // Remove Content-Type if explicitly set to empty for FormData
+    if (isFormData && headers['Content-Type']) {
+      delete headers['Content-Type']
     }
 
     const response = await fetch(url, { ...options, headers })

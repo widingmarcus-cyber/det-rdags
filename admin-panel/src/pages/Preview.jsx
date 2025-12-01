@@ -11,6 +11,7 @@ function Preview() {
   const [loading, setLoading] = useState(false)
   const [loadingSettings, setLoadingSettings] = useState(true)
   const [sessionId, setSessionId] = useState(() => generateSessionId())
+  const [feedbackGiven, setFeedbackGiven] = useState({})
   const messagesEndRef = useRef(null)
 
   function generateSessionId() {
@@ -119,6 +120,11 @@ function Preview() {
   // Dynamic colors from settings
   const primaryColor = settings?.primary_color || '#D97757'
   const companyName = settings?.company_name || 'Bobot'
+  const subtitle = settings?.subtitle || 'Alltid redo att hjälpa'
+
+  const handleFeedback = (msgIndex, helpful) => {
+    setFeedbackGiven(prev => ({ ...prev, [msgIndex]: helpful }))
+  }
 
   if (loadingSettings) {
     return (
@@ -182,7 +188,7 @@ function Preview() {
               </div>
               <div>
                 <h3 className="font-semibold">{companyName}</h3>
-                <p className="text-sm text-white/80">Alltid redo att hjälpa</p>
+                <p className="text-sm text-white/80">{subtitle}</p>
               </div>
             </div>
           </div>
@@ -223,6 +229,29 @@ function Preview() {
                       <p className="text-xs text-text-tertiary">
                         Baserat på: {msg.sources.join(', ')}
                       </p>
+                    </div>
+                  )}
+                  {/* Feedback buttons for bot messages */}
+                  {msg.type === 'bot' && index > 0 && !feedbackGiven[index] && (
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border-subtle">
+                      <span className="text-xs text-text-tertiary">Var detta hjälpsamt?</span>
+                      <button
+                        onClick={() => handleFeedback(index, true)}
+                        className="px-2 py-1 text-xs border border-border rounded-full hover:bg-success-soft hover:border-success hover:text-success transition-colors"
+                      >
+                        👍 Ja
+                      </button>
+                      <button
+                        onClick={() => handleFeedback(index, false)}
+                        className="px-2 py-1 text-xs border border-border rounded-full hover:bg-error-soft hover:border-error hover:text-error transition-colors"
+                      >
+                        👎 Nej
+                      </button>
+                    </div>
+                  )}
+                  {feedbackGiven[index] !== undefined && (
+                    <div className="text-xs text-success mt-2 pt-2 border-t border-border-subtle">
+                      ✓ Tack för din feedback!
                     </div>
                   )}
                 </div>

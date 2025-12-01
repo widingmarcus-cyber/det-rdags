@@ -229,11 +229,13 @@ class SettingsUpdate(BaseModel):
     contact_phone: Optional[str] = None
     welcome_message: Optional[str] = None
     fallback_message: Optional[str] = None
+    subtitle: Optional[str] = None
     primary_color: Optional[str] = None
     language: Optional[str] = None
     data_retention_days: Optional[int] = None
     notify_unanswered: Optional[bool] = None
     notification_email: Optional[str] = None
+    custom_categories: Optional[str] = None  # JSON string
 
 
 class SettingsResponse(BaseModel):
@@ -242,11 +244,13 @@ class SettingsResponse(BaseModel):
     contact_phone: str
     welcome_message: str
     fallback_message: str
+    subtitle: str
     primary_color: str
     language: str
     data_retention_days: int
     notify_unanswered: bool
     notification_email: str
+    custom_categories: str
 
 
 class MessageResponse(BaseModel):
@@ -976,6 +980,7 @@ async def get_widget_config(
         "company_name": settings.company_name or company.name,
         "welcome_message": settings.welcome_message or "",
         "fallback_message": settings.fallback_message or "",
+        "subtitle": settings.subtitle or "Alltid redo att hjälpa",
         "primary_color": settings.primary_color or "#D97757",
         "contact_email": settings.contact_email or "",
         "contact_phone": settings.contact_phone or "",
@@ -1000,11 +1005,13 @@ async def get_settings(
         contact_phone=settings.contact_phone or "",
         welcome_message=settings.welcome_message or "",
         fallback_message=settings.fallback_message or "",
+        subtitle=settings.subtitle or "Alltid redo att hjälpa",
         primary_color=settings.primary_color or "#D97757",
         language=settings.language or "sv",
         data_retention_days=settings.data_retention_days or 30,
         notify_unanswered=settings.notify_unanswered or False,
-        notification_email=settings.notification_email or ""
+        notification_email=settings.notification_email or "",
+        custom_categories=settings.custom_categories or ""
     )
 
 
@@ -1041,6 +1048,10 @@ async def update_settings(
         settings.notify_unanswered = update.notify_unanswered
     if update.notification_email is not None:
         settings.notification_email = update.notification_email
+    if update.subtitle is not None:
+        settings.subtitle = update.subtitle
+    if update.custom_categories is not None:
+        settings.custom_categories = update.custom_categories
 
     db.commit()
     db.refresh(settings)
@@ -1051,11 +1062,13 @@ async def update_settings(
         contact_phone=settings.contact_phone or "",
         welcome_message=settings.welcome_message or "",
         fallback_message=settings.fallback_message or "",
+        subtitle=settings.subtitle or "Alltid redo att hjälpa",
         primary_color=settings.primary_color or "#D97757",
         language=settings.language or "sv",
         data_retention_days=settings.data_retention_days or 30,
         notify_unanswered=settings.notify_unanswered or False,
-        notification_email=settings.notification_email or ""
+        notification_email=settings.notification_email or "",
+        custom_categories=settings.custom_categories or ""
     )
 
 
@@ -1707,16 +1720,20 @@ async def import_knowledge_from_url(
     )
 
 
+class BulkDeleteRequest(BaseModel):
+    item_ids: List[int]
+
+
 @app.delete("/knowledge/bulk")
 async def delete_knowledge_bulk(
-    item_ids: List[int],
+    request: BulkDeleteRequest,
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db)
 ):
     """Delete multiple knowledge items at once"""
     deleted_count = 0
 
-    for item_id in item_ids:
+    for item_id in request.item_ids:
         db_item = db.query(KnowledgeItem).filter(
             KnowledgeItem.id == item_id,
             KnowledgeItem.company_id == current["company_id"]

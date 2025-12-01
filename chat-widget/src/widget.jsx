@@ -414,6 +414,7 @@ function ChatWidget({ config }) {
   // Dynamic colors from company config
   const primaryColor = companyConfig?.primary_color || defaultColors.accent
   const companyName = companyConfig?.company_name || config.title || 'Bobot'
+  const companySubtitle = companyConfig?.subtitle || t.subtitle
   const hasContact = companyConfig?.contact_email || companyConfig?.contact_phone
 
   // Styles - using dynamic colors based on dark mode
@@ -618,7 +619,7 @@ function ChatWidget({ config }) {
             <div style={{ flex: 1 }}>
               <p style={styles.headerTitle}>{companyName}</p>
               <p style={styles.headerSubtitle}>
-                {conversationId ? `${t.subtitle} • ${conversationId}` : t.subtitle}
+                {conversationId ? `${companySubtitle} • ${conversationId}` : companySubtitle}
               </p>
             </div>
             <div style={{ position: 'relative' }}>
@@ -856,6 +857,28 @@ function ChatWidget({ config }) {
                 </svg>
               </button>
             </form>
+            {/* Powered by */}
+            <div style={{
+              textAlign: 'center',
+              marginTop: '8px',
+              fontSize: '10px',
+              color: colors.textTertiary,
+              opacity: 0.7
+            }}>
+              Powered by{' '}
+              <a
+                href="https://bobot.nu"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: colors.textTertiary,
+                  textDecoration: 'none',
+                  borderBottom: `1px dotted ${colors.textTertiary}`
+                }}
+              >
+                bobot.nu
+              </a>
+            </div>
           </div>
         </div>
       )}

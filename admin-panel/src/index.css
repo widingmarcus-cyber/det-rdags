@@ -16,6 +16,11 @@
   --text-inverse: #FAFAFA;
   --border-subtle: #E7E5E4;
   --border: #D6D3D1;
+  /* Soft background colors - light mode */
+  --accent-soft: #FEF2EE;
+  --success-soft: #EDF7F3;
+  --warning-soft: #FEF9EE;
+  --error-soft: #FDF2F2;
 }
 
 .dark {
@@ -31,6 +36,11 @@
   --text-inverse: #1C1917;
   --border-subtle: #2A2A2A;
   --border: #3A3A3A;
+  /* Soft background colors - dark mode (semi-transparent) */
+  --accent-soft: rgba(217, 119, 87, 0.15);
+  --success-soft: rgba(74, 157, 124, 0.15);
+  --warning-soft: rgba(212, 160, 84, 0.15);
+  --error-soft: rgba(199, 93, 93, 0.15);
 }
 
 @layer base {
