@@ -4,7 +4,7 @@ import { AuthContext } from '../App'
 const API_BASE = '/api'
 
 function Analytics() {
-  const { authFetch } = useContext(AuthContext)
+  const { authFetch, token } = useContext(AuthContext)
   const [analytics, setAnalytics] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -23,6 +23,35 @@ function Analytics() {
       console.error('Kunde inte hämta analytics:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleExport = async (type) => {
+    const endpoints = {
+      conversations: '/export/conversations',
+      statistics: '/export/statistics',
+      knowledge: '/export/knowledge'
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}${endpoints[type]}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${type}.csv`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        a.remove()
+      }
+    } catch (error) {
+      console.error('Export failed:', error)
     }
   }
 
@@ -45,12 +74,42 @@ function Analytics() {
   // Find max value for chart scaling
   const maxMessages = Math.max(...(analytics.daily_stats?.map(d => d.messages) || [1]), 1)
 
+  // Calculate peak hour
+  const peakHour = Object.entries(analytics.hourly_stats || {})
+    .sort((a, b) => b[1] - a[1])[0]
+
   return (
     <div className="animate-fade-in">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Statistik</h1>
-        <p className="text-text-secondary mt-1">Anonymiserad data - GDPR-säker</p>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Statistik</h1>
+          <p className="text-text-secondary mt-1">Anonymiserad data - GDPR-säker</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleExport('statistics')}
+            className="btn btn-ghost text-sm"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Exportera statistik
+          </button>
+          <button
+            onClick={() => handleExport('conversations')}
+            className="btn btn-ghost text-sm"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Exportera konversationer
+          </button>
+        </div>
       </div>
 
       {/* Overview Stats */}
@@ -151,7 +210,106 @@ function Analytics() {
         </div>
       )}
 
-      {/* Answer Breakdown */}
+      {/* Language & Feedback Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+        {/* Language Distribution */}
+        <div className="card">
+          <h3 className="text-lg font-medium text-text-primary mb-4">Språk</h3>
+          {Object.keys(analytics.language_stats || {}).length > 0 ? (
+            <div className="space-y-2">
+              {Object.entries(analytics.language_stats)
+                .sort((a, b) => b[1] - a[1])
+                .map(([lang, count]) => {
+                  const langNames = { sv: 'Svenska', en: 'English', ar: 'العربية' }
+                  const total = Object.values(analytics.language_stats).reduce((a, b) => a + b, 0)
+                  const percent = total > 0 ? ((count / total) * 100).toFixed(0) : 0
+                  return (
+                    <div key={lang}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-text-secondary">{langNames[lang] || lang}</span>
+                        <span className="font-medium text-text-primary">{count} ({percent}%)</span>
+                      </div>
+                      <div className="h-1.5 bg-bg-secondary rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-accent rounded-full"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+            </div>
+          ) : (
+            <p className="text-text-tertiary text-sm">Ingen språkdata ännu</p>
+          )}
+        </div>
+
+        {/* Feedback Stats */}
+        <div className="card">
+          <h3 className="text-lg font-medium text-text-primary mb-4">Feedback</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">👍</span>
+                <span className="text-text-secondary">Hjälpsam</span>
+              </div>
+              <span className="font-medium text-success">{analytics.feedback_stats?.helpful || 0}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">👎</span>
+                <span className="text-text-secondary">Ej hjälpsam</span>
+              </div>
+              <span className="font-medium text-error">{analytics.feedback_stats?.not_helpful || 0}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🤷</span>
+                <span className="text-text-secondary">Ingen feedback</span>
+              </div>
+              <span className="font-medium text-text-tertiary">{analytics.feedback_stats?.no_feedback || 0}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Peak Hours */}
+        <div className="card">
+          <h3 className="text-lg font-medium text-text-primary mb-4">Aktivitet</h3>
+          {peakHour && peakHour[1] > 0 ? (
+            <div>
+              <div className="text-center mb-4">
+                <span className="text-4xl font-bold text-accent">{peakHour[0]}:00</span>
+                <p className="text-sm text-text-tertiary mt-1">Mest aktiv timme</p>
+              </div>
+              <div className="flex items-end justify-center gap-0.5 h-16">
+                {Object.entries(analytics.hourly_stats || {})
+                  .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+                  .filter((_, i) => i % 2 === 0) // Show every other hour
+                  .map(([hour, count]) => {
+                    const maxCount = Math.max(...Object.values(analytics.hourly_stats || {}), 1)
+                    return (
+                      <div
+                        key={hour}
+                        className="w-2 bg-accent/60 hover:bg-accent rounded-t transition-all"
+                        style={{ height: `${Math.max((count / maxCount) * 100, 4)}%` }}
+                        title={`${hour}:00 - ${count} konversationer`}
+                      />
+                    )
+                  })}
+              </div>
+              <div className="flex justify-between mt-1 text-xs text-text-tertiary">
+                <span>00:00</span>
+                <span>12:00</span>
+                <span>23:00</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-text-tertiary text-sm">Ingen tidsdata ännu</p>
+          )}
+        </div>
+      </div>
+
+      {/* Answer Breakdown & Categories */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="card">
           <h3 className="text-lg font-medium text-text-primary mb-4">Frågor</h3>
@@ -187,7 +345,7 @@ function Analytics() {
             <div className="space-y-2">
               {Object.entries(analytics.category_stats)
                 .sort((a, b) => b[1] - a[1])
-                .slice(0, 5)
+                .slice(0, 6)
                 .map(([category, count]) => (
                   <div key={category} className="flex items-center justify-between">
                     <span className="text-text-secondary capitalize">{category}</span>
@@ -201,8 +359,8 @@ function Analytics() {
         </div>
       </div>
 
-      {/* Unanswered Questions Section */}
-      {analytics.total_unanswered > 0 && (
+      {/* Top Unanswered Questions */}
+      {analytics.top_unanswered && analytics.top_unanswered.length > 0 && (
         <div className="card">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-warning/10 rounded-lg flex items-center justify-center">
@@ -215,13 +373,17 @@ function Analytics() {
             <div>
               <h3 className="text-lg font-medium text-text-primary">Obesvarade frågor</h3>
               <p className="text-sm text-text-secondary">
-                {analytics.total_unanswered} frågor kunde inte besvaras - lägg till i kunskapsbasen!
+                Lägg till dessa i kunskapsbasen för att förbättra svarsfrekvensen
               </p>
             </div>
           </div>
-          <p className="text-sm text-text-tertiary">
-            Se konversationer för att hitta specifika frågor som behöver svar.
-          </p>
+          <div className="space-y-2">
+            {analytics.top_unanswered.map((question, index) => (
+              <div key={index} className="p-3 bg-bg-secondary rounded-lg">
+                <p className="text-sm text-text-primary">{question}</p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -3,6 +3,24 @@ import { AuthContext } from '../App'
 
 const API_BASE = '/api'
 
+const CATEGORIES = [
+  { value: '', label: 'Alla kategorier' },
+  { value: 'hyra', label: 'Hyra' },
+  { value: 'felanmalan', label: 'Felanmälan' },
+  { value: 'kontrakt', label: 'Kontrakt' },
+  { value: 'tvattstuga', label: 'Tvättstuga' },
+  { value: 'parkering', label: 'Parkering' },
+  { value: 'kontakt', label: 'Kontakt' },
+  { value: 'allmant', label: 'Allmänt' }
+]
+
+const LANGUAGES = [
+  { value: '', label: 'Alla språk' },
+  { value: 'sv', label: 'Svenska' },
+  { value: 'en', label: 'English' },
+  { value: 'ar', label: 'العربية' }
+]
+
 function Conversations() {
   const { authFetch } = useContext(AuthContext)
   const [conversations, setConversations] = useState([])
@@ -10,14 +28,22 @@ function Conversations() {
   const [selectedConversation, setSelectedConversation] = useState(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [languageFilter, setLanguageFilter] = useState('')
 
   useEffect(() => {
     fetchConversations()
-  }, [])
+  }, [categoryFilter, languageFilter])
 
   const fetchConversations = async () => {
     try {
-      const response = await authFetch(`${API_BASE}/conversations`)
+      let url = `${API_BASE}/conversations`
+      const params = new URLSearchParams()
+      if (categoryFilter) params.append('category', categoryFilter)
+      if (languageFilter) params.append('language', languageFilter)
+      if (params.toString()) url += `?${params.toString()}`
+
+      const response = await authFetch(url)
       if (response.ok) {
         const data = await response.json()
         setConversations(data)
@@ -141,29 +167,49 @@ function Conversations() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="mb-6">
-        <div className="relative">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Sök i konversationer..."
-            className="input pl-12"
-          />
+      {/* Search & Filters */}
+      <div className="mb-6 flex flex-wrap gap-4">
+        <div className="flex-1 min-w-[200px]">
+          <div className="relative">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Sök i konversationer..."
+              className="input pl-12"
+            />
+          </div>
         </div>
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="input w-auto min-w-[150px]"
+        >
+          {CATEGORIES.map(cat => (
+            <option key={cat.value} value={cat.value}>{cat.label}</option>
+          ))}
+        </select>
+        <select
+          value={languageFilter}
+          onChange={(e) => setLanguageFilter(e.target.value)}
+          className="input w-auto min-w-[120px]"
+        >
+          {LANGUAGES.map(lang => (
+            <option key={lang.value} value={lang.value}>{lang.label}</option>
+          ))}
+        </select>
       </div>
 
       {loading ? (
@@ -195,18 +241,31 @@ function Conversations() {
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium text-text-primary">
-                    {conv.message_count} meddelanden
+                  <span className="text-xs font-mono text-accent">
+                    {conv.reference_id}
                   </span>
                   <span className="text-xs text-text-tertiary">
                     {formatDate(conv.started_at)}
                   </span>
                 </div>
-                <p className="text-sm text-text-secondary truncate">
+                <p className="text-sm text-text-secondary truncate mb-2">
                   {conv.first_message || 'Tom konversation'}
                 </p>
-                {conv.was_helpful !== null && (
-                  <div className="mt-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-text-tertiary">
+                    {conv.message_count} meddelanden
+                  </span>
+                  {conv.category && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-bg-secondary text-text-secondary">
+                      {conv.category}
+                    </span>
+                  )}
+                  {conv.language && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-bg-secondary text-text-tertiary uppercase">
+                      {conv.language}
+                    </span>
+                  )}
+                  {conv.was_helpful !== null && (
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
                       conv.was_helpful
                         ? 'bg-success/10 text-success'
@@ -214,8 +273,8 @@ function Conversations() {
                     }`}>
                       {conv.was_helpful ? 'Hjälpsam' : 'Ej hjälpsam'}
                     </span>
-                  </div>
-                )}
+                  )}
+                </div>
               </button>
             ))}
           </div>
@@ -230,10 +289,29 @@ function Conversations() {
               <div className="card">
                 <div className="flex items-center justify-between mb-4 pb-4 border-b border-border-subtle">
                   <div>
-                    <h3 className="font-medium text-text-primary">Konversation</h3>
-                    <p className="text-xs text-text-tertiary">
-                      {formatDate(selectedConversation.started_at)} • {selectedConversation.message_count} meddelanden
-                    </p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-medium text-text-primary">Konversation</h3>
+                      <span className="text-sm font-mono text-accent bg-accent-soft px-2 py-0.5 rounded">
+                        {selectedConversation.reference_id}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-text-tertiary">
+                      <span>{formatDate(selectedConversation.started_at)}</span>
+                      <span>•</span>
+                      <span>{selectedConversation.message_count} meddelanden</span>
+                      {selectedConversation.category && (
+                        <>
+                          <span>•</span>
+                          <span className="capitalize">{selectedConversation.category}</span>
+                        </>
+                      )}
+                      {selectedConversation.language && (
+                        <>
+                          <span>•</span>
+                          <span className="uppercase">{selectedConversation.language}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <button
                     onClick={() => handleDelete(selectedConversation.id)}

@@ -104,6 +104,7 @@ class Conversation(Base):
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(String, ForeignKey("companies.id"), nullable=False)
     session_id = Column(String, index=True)  # För att gruppera meddelanden från samma session
+    reference_id = Column(String, index=True)  # Short readable ID (e.g., "BOB-A1B2")
 
     # Anonymiserad användardata (GDPR)
     user_ip_anonymous = Column(String)  # Endast första 3 oktetter, t.ex. "192.168.1.xxx"
@@ -115,6 +116,8 @@ class Conversation(Base):
     # Metadata
     message_count = Column(Integer, default=0)
     was_helpful = Column(Boolean)  # Feedback från användaren
+    category = Column(String, default="allmant")  # Auto-detected category
+    language = Column(String, default="sv")  # Detected/provided language
 
     # Relations
     company = relationship("Company", back_populates="conversations")
@@ -163,6 +166,12 @@ class DailyStatistics(Base):
 
     # Kategoristatistik (JSON-format: {"hyra": 5, "felanmalan": 3})
     category_counts = Column(Text, default="{}")
+
+    # Language statistics (JSON-format: {"sv": 10, "en": 5, "ar": 2})
+    language_counts = Column(Text, default="{}")
+
+    # Hourly distribution (JSON-format: {"9": 5, "10": 8, ...})
+    hourly_counts = Column(Text, default="{}")
 
     # Feedback
     helpful_count = Column(Integer, default=0)
