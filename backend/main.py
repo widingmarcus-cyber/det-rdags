@@ -199,6 +199,7 @@ class SettingsUpdate(BaseModel):
     welcome_message: Optional[str] = None
     fallback_message: Optional[str] = None
     primary_color: Optional[str] = None
+    language: Optional[str] = None
     data_retention_days: Optional[int] = None
 
 
@@ -209,6 +210,7 @@ class SettingsResponse(BaseModel):
     welcome_message: str
     fallback_message: str
     primary_color: str
+    language: str
     data_retention_days: int
 
 
@@ -685,6 +687,7 @@ async def get_settings(
         welcome_message=settings.welcome_message or "",
         fallback_message=settings.fallback_message or "",
         primary_color=settings.primary_color or "#D97757",
+        language=settings.language or "sv",
         data_retention_days=settings.data_retention_days or 30
     )
 
@@ -711,6 +714,10 @@ async def update_settings(
         settings.fallback_message = update.fallback_message
     if update.primary_color is not None:
         settings.primary_color = update.primary_color
+    if update.language is not None:
+        # Validera språk (sv, en, ar)
+        if update.language in ["sv", "en", "ar"]:
+            settings.language = update.language
     if update.data_retention_days is not None:
         # Validera retention (7-365 dagar)
         settings.data_retention_days = max(7, min(365, update.data_retention_days))
@@ -725,6 +732,7 @@ async def update_settings(
         welcome_message=settings.welcome_message or "",
         fallback_message=settings.fallback_message or "",
         primary_color=settings.primary_color or "#D97757",
+        language=settings.language or "sv",
         data_retention_days=settings.data_retention_days or 30
     )
 

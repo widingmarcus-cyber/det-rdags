@@ -54,8 +54,9 @@ class CompanySettings(Base):
     welcome_message = Column(Text, default="Hej! Hur kan jag hjälpa dig idag?")
     fallback_message = Column(Text, default="Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt.")
 
-    # Utseende
+    # Utseende & Språk
     primary_color = Column(String, default="#D97757")
+    language = Column(String, default="sv")  # sv, en, ar
 
     # GDPR - Datalagring
     data_retention_days = Column(Integer, default=30)  # Antal dagar att spara konversationer

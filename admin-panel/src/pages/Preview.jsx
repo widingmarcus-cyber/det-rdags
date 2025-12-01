@@ -10,7 +10,12 @@ function Preview() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingSettings, setLoadingSettings] = useState(true)
+  const [sessionId, setSessionId] = useState(() => generateSessionId())
   const messagesEndRef = useRef(null)
+
+  function generateSessionId() {
+    return 'preview-' + Math.random().toString(36).substring(2, 15)
+  }
 
   useEffect(() => {
     fetchSettings()
@@ -61,7 +66,8 @@ function Preview() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question: userMessage
+          question: userMessage,
+          session_id: sessionId
         })
       })
 
@@ -101,6 +107,7 @@ function Preview() {
   }
 
   const handleReset = () => {
+    setSessionId(generateSessionId()) // New session
     setMessages([
       {
         type: 'bot',
