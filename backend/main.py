@@ -5,7 +5,7 @@ En GDPR-säker AI-chatbot för fastighetsbolag
 
 from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 from datetime import datetime, timedelta, date
 from sqlalchemy.orm import Session
@@ -171,9 +171,16 @@ class LoginResponse(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    question: str
+    question: str = Field(..., min_length=1, max_length=2000, description="User question (max 2000 characters)")
     session_id: Optional[str] = None
     language: Optional[str] = None  # Language code from widget (sv, en, ar)
+
+    @field_validator('question')
+    @classmethod
+    def validate_question(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Frågan kan inte vara tom')
+        return v.strip()
 
 
 class ChatResponse(BaseModel):
@@ -213,10 +220,52 @@ def set_cached_response(company_id: str, question: str, response: dict):
             del response_cache[k]
 
 
+# Rate limiting for chat endpoint
+rate_limit_store = {}  # {session_id: [timestamps]}
+RATE_LIMIT_WINDOW = 60  # 1 minute window
+RATE_LIMIT_MAX_REQUESTS = 15  # Max 15 messages per minute
+
+
+def check_rate_limit(session_id: str, ip_address: str) -> bool:
+    """Check if session/IP is rate limited. Returns True if allowed, False if limited."""
+    # Use combination of session and IP for rate limiting
+    rate_key = f"{session_id}:{ip_address}" if session_id else ip_address
+    now = datetime.utcnow().timestamp()
+    window_start = now - RATE_LIMIT_WINDOW
+
+    if rate_key not in rate_limit_store:
+        rate_limit_store[rate_key] = []
+
+    # Remove old timestamps outside window
+    rate_limit_store[rate_key] = [ts for ts in rate_limit_store[rate_key] if ts > window_start]
+
+    # Check if under limit
+    if len(rate_limit_store[rate_key]) >= RATE_LIMIT_MAX_REQUESTS:
+        return False
+
+    # Add current request
+    rate_limit_store[rate_key].append(now)
+
+    # Cleanup old entries periodically (every 100 requests)
+    if len(rate_limit_store) > 10000:
+        cutoff = now - RATE_LIMIT_WINDOW * 2
+        rate_limit_store.clear()  # Simple cleanup - clear all
+
+    return True
+
+
 class KnowledgeItemCreate(BaseModel):
-    question: str
-    answer: str
-    category: Optional[str] = ""
+    question: str = Field(..., min_length=1, max_length=1000, description="Question text (max 1000 characters)")
+    answer: str = Field(..., min_length=1, max_length=10000, description="Answer text (max 10000 characters)")
+    category: Optional[str] = Field(default="", max_length=100, description="Category (max 100 characters)")
+
+    @field_validator('question', 'answer')
+    @classmethod
+    def validate_not_empty(cls, v, info):
+        if not v or not v.strip():
+            field_name = 'Frågan' if info.field_name == 'question' else 'Svaret'
+            raise ValueError(f'{field_name} kan inte vara tomt')
+        return v.strip()
 
 
 class KnowledgeItemResponse(BaseModel):
@@ -945,6 +994,14 @@ async def chat(
             detail=maintenance_msg or "Systemet är under underhåll. Försök igen senare."
         )
 
+    # Rate limiting - check before any heavy processing
+    client_ip = req.client.host if req.client else "unknown"
+    if not check_rate_limit(request.session_id, client_ip):
+        raise HTTPException(
+            status_code=429,
+            detail="Du skickar meddelanden för snabbt. Vänta en stund och försök igen."
+        )
+
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company or not company.is_active:
         raise HTTPException(status_code=404, detail="Företag finns inte")
@@ -1015,6 +1072,14 @@ async def chat(
         # Update category if new one is more specific
         if category != "allmant" and conversation.category == "allmant":
             conversation.category = category
+
+        # Check max messages per conversation (100 messages = 50 exchanges)
+        MAX_MESSAGES_PER_CONVERSATION = 100
+        if conversation.message_count >= MAX_MESSAGES_PER_CONVERSATION:
+            raise HTTPException(
+                status_code=429,
+                detail="Konversationen har nått maxgränsen. Vänligen starta en ny chatt."
+            )
 
     # Spara användarens meddelande
     user_message = Message(
@@ -1697,6 +1762,32 @@ class URLImportRequest(BaseModel):
     url: str
 
 
+# Security limits for imports
+MAX_IMPORT_ITEMS = 200  # Max items per import
+MAX_QUESTION_LENGTH = 1000  # Same as KnowledgeItemCreate
+MAX_ANSWER_LENGTH = 10000
+MAX_CATEGORY_LENGTH = 100
+
+
+def validate_and_truncate_import_items(items: List[dict]) -> List[dict]:
+    """Validate and truncate imported items to safe limits"""
+    valid_items = []
+    for item in items[:MAX_IMPORT_ITEMS]:  # Limit number of items
+        question = str(item.get("question", "")).strip()[:MAX_QUESTION_LENGTH]
+        answer = str(item.get("answer", "")).strip()[:MAX_ANSWER_LENGTH]
+        category = str(item.get("category", "")).strip()[:MAX_CATEGORY_LENGTH]
+
+        # Only add if both question and answer are non-empty
+        if question and answer:
+            valid_items.append({
+                "question": question,
+                "answer": answer,
+                "category": category or None
+            })
+
+    return valid_items
+
+
 async def parse_excel_file(content: bytes) -> List[dict]:
     """Parse Excel file and extract Q&A pairs"""
     import io
@@ -1786,13 +1877,23 @@ async def parse_text_file(content: bytes) -> str:
 
 async def fetch_url_content(url: str) -> str:
     """Fetch and extract text content from a URL"""
+    MAX_URL_CONTENT_SIZE = 1024 * 1024  # 1MB max for URL imports
+
     try:
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
             response = await client.get(url, headers={
                 'User-Agent': 'Mozilla/5.0 (compatible; BobotBot/1.0)'
             })
             response.raise_for_status()
+
+            # Check content size to prevent memory issues
+            content_length = response.headers.get('content-length')
+            if content_length and int(content_length) > MAX_URL_CONTENT_SIZE:
+                return ""  # Too large, return empty
+
             html = response.text
+            if len(html) > MAX_URL_CONTENT_SIZE:
+                html = html[:MAX_URL_CONTENT_SIZE]  # Truncate to limit
 
             # Simple HTML to text conversion
             import re
@@ -1931,6 +2032,16 @@ async def upload_knowledge_file(
             message="Kunde inte hitta några frågor/svar i filen. Kontrollera formatet."
         )
 
+    # Validate and truncate items for security
+    items_to_add = validate_and_truncate_import_items(items_to_add)
+
+    if not items_to_add:
+        return UploadResponse(
+            success=False,
+            items_added=0,
+            message="Inga giltiga frågor/svar hittades efter validering."
+        )
+
     # Auto-categorize items without category
     for item in items_to_add:
         if not item.get("category"):
@@ -2000,6 +2111,16 @@ async def import_knowledge_from_url(
             success=False,
             items_added=0,
             message="Kunde inte hitta några frågor/svar på sidan. Försök med en annan sida."
+        )
+
+    # Validate and truncate items for security
+    items_to_add = validate_and_truncate_import_items(items_to_add)
+
+    if not items_to_add:
+        return UploadResponse(
+            success=False,
+            items_added=0,
+            message="Inga giltiga frågor/svar hittades efter validering."
         )
 
     # Auto-categorize items without category
