@@ -663,9 +663,9 @@ async def save_conversation_stats(db: Session, conversation: Conversation):
         )
         db.add(daily_stat)
 
-    # Uppdatera statistik
+    # Uppdatera statistik (handle None values from old conversations)
     daily_stat.total_conversations += 1
-    daily_stat.total_messages += conversation.message_count
+    daily_stat.total_messages += (conversation.message_count or 0)
 
     # Räkna besvarade/obesvarade
     messages = db.query(Message).filter(
@@ -716,9 +716,10 @@ async def save_conversation_stats(db: Session, conversation: Conversation):
     response_times = [m.response_time_ms for m in messages if m.response_time_ms]
     if response_times:
         current_avg = daily_stat.avg_response_time_ms or 0
-        current_count = daily_stat.questions_answered + daily_stat.questions_unanswered - len(messages)
-        new_avg = (current_avg * current_count + sum(response_times)) / (current_count + len(response_times))
-        daily_stat.avg_response_time_ms = new_avg
+        current_count = (daily_stat.questions_answered or 0) + (daily_stat.questions_unanswered or 0) - len(messages)
+        if current_count + len(response_times) > 0:
+            new_avg = (current_avg * max(0, current_count) + sum(response_times)) / (max(0, current_count) + len(response_times))
+            daily_stat.avg_response_time_ms = new_avg
 
 
 def get_or_create_settings(db: Session, company_id: str) -> CompanySettings:
