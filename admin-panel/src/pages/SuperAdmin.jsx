@@ -4,16 +4,24 @@ import { AuthContext } from '../App'
 const API_BASE = '/api'
 
 function SuperAdmin() {
-  const { adminAuth, adminFetch } = useContext(AuthContext)
+  const { adminAuth, adminFetch, handleAdminLogout } = useContext(AuthContext)
   const [companies, setCompanies] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [formData, setFormData] = useState({ id: '', name: '', password: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [activeTab, setActiveTab] = useState('overview')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState('created_at')
+  const [sortOrder, setSortOrder] = useState('desc')
+  const [systemHealth, setSystemHealth] = useState(null)
+  const [selectedCompanies, setSelectedCompanies] = useState(new Set())
+  const [notification, setNotification] = useState(null)
 
   useEffect(() => {
     fetchCompanies()
+    fetchSystemHealth()
   }, [])
 
   const fetchCompanies = async () => {
@@ -28,6 +36,29 @@ function SuperAdmin() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchSystemHealth = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/system-health`)
+      if (response.ok) {
+        const data = await response.json()
+        setSystemHealth(data)
+      }
+    } catch (error) {
+      // System health endpoint might not exist yet
+      setSystemHealth({
+        ollama_status: 'unknown',
+        database_size: 'N/A',
+        total_conversations: companies.reduce((sum, c) => sum + (c.chat_count || 0), 0),
+        uptime: 'N/A'
+      })
+    }
+  }
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type })
+    setTimeout(() => setNotification(null), 3000)
   }
 
   const handleAdd = () => {
@@ -50,6 +81,7 @@ function SuperAdmin() {
       if (response.ok) {
         setShowModal(false)
         fetchCompanies()
+        showNotification(`Företag "${formData.name}" skapat`)
       } else {
         const err = await response.json()
         setError(err.detail || 'Kunde inte skapa företag')
@@ -68,6 +100,8 @@ function SuperAdmin() {
       })
       if (response.ok) {
         fetchCompanies()
+        const company = companies.find(c => c.id === companyId)
+        showNotification(`${company?.name} ${company?.is_active ? 'inaktiverad' : 'aktiverad'}`)
       }
     } catch (error) {
       console.error('Kunde inte ändra status:', error)
@@ -75,7 +109,7 @@ function SuperAdmin() {
   }
 
   const handleDelete = async (companyId) => {
-    if (!confirm(`Är du säker på att du vill ta bort företag "${companyId}"? All data kommer att raderas.`)) {
+    if (!window.confirm(`Är du säker på att du vill ta bort företag "${companyId}"? All data kommer att raderas permanent.`)) {
       return
     }
 
@@ -85,9 +119,37 @@ function SuperAdmin() {
       })
       if (response.ok) {
         fetchCompanies()
+        showNotification('Företag raderat')
       }
     } catch (error) {
       console.error('Kunde inte ta bort:', error)
+    }
+  }
+
+  const handleBulkToggle = async (activate) => {
+    if (selectedCompanies.size === 0) return
+
+    for (const companyId of selectedCompanies) {
+      const company = companies.find(c => c.id === companyId)
+      if ((activate && !company?.is_active) || (!activate && company?.is_active)) {
+        await adminFetch(`${API_BASE}/admin/companies/${companyId}/toggle`, { method: 'PUT' })
+      }
+    }
+    fetchCompanies()
+    setSelectedCompanies(new Set())
+    showNotification(`${selectedCompanies.size} företag ${activate ? 'aktiverade' : 'inaktiverade'}`)
+  }
+
+  const handleGdprCleanup = async () => {
+    if (!window.confirm('Kör GDPR-cleanup nu? Detta raderar gamla konversationer enligt retention-inställningar.')) return
+
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/gdpr-cleanup`, { method: 'POST' })
+      if (response.ok) {
+        showNotification('GDPR-cleanup slutförd')
+      }
+    } catch (error) {
+      console.error('GDPR cleanup failed:', error)
     }
   }
 
@@ -99,209 +161,606 @@ function SuperAdmin() {
     })
   }
 
+  // Filter and sort companies
+  const filteredCompanies = companies
+    .filter(c =>
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.id.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      let aVal = a[sortBy]
+      let bVal = b[sortBy]
+      if (sortBy === 'created_at') {
+        aVal = new Date(aVal)
+        bVal = new Date(bVal)
+      }
+      if (sortOrder === 'asc') return aVal > bVal ? 1 : -1
+      return aVal < bVal ? 1 : -1
+    })
+
+  const toggleSelectCompany = (id) => {
+    const newSelected = new Set(selectedCompanies)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedCompanies(newSelected)
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedCompanies.size === filteredCompanies.length) {
+      setSelectedCompanies(new Set())
+    } else {
+      setSelectedCompanies(new Set(filteredCompanies.map(c => c.id)))
+    }
+  }
+
+  // Stats
+  const totalCompanies = companies.length
+  const activeCompanies = companies.filter(c => c.is_active).length
+  const totalKnowledge = companies.reduce((sum, c) => sum + (c.knowledge_count || 0), 0)
+  const totalChats = companies.reduce((sum, c) => sum + (c.chat_count || 0), 0)
+
+  const StatCard = ({ title, value, subtitle, icon, color = 'accent' }) => (
+    <div className="card group">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm text-text-secondary">{title}</p>
+          <p className="text-3xl font-semibold text-text-primary mt-2 tracking-tight">{value}</p>
+          {subtitle && <p className="text-xs text-text-tertiary mt-1">{subtitle}</p>}
+        </div>
+        <div className={`w-10 h-10 bg-${color}-soft rounded-lg flex items-center justify-center text-${color} group-hover:scale-110 transition-transform`}>
+          {icon}
+        </div>
+      </div>
+    </div>
+  )
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-bg-primary">
+      {/* Notification */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg animate-slide-up ${
+          notification.type === 'success' ? 'bg-success text-white' : 'bg-error text-white'
+        }`}>
+          {notification.message}
+        </div>
+      )}
+
       {/* Header */}
-      <nav className="bg-gray-900 shadow-sm">
-        <div className="container mx-auto px-4">
+      <nav className="bg-bg-tertiary border-b border-border-subtle sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center">
-                <span className="text-gray-900 font-bold text-sm">A</span>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-gradient-to-br from-warning to-warning-hover rounded-lg flex items-center justify-center shadow-sm">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-bg-primary">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
               </div>
-              <span className="font-semibold text-white">Bobot Super Admin</span>
+              <div>
+                <span className="font-semibold text-text-primary">Bobot Admin</span>
+                <span className="text-xs text-text-tertiary ml-2">Super Admin</span>
+              </div>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-gray-300 text-sm">{adminAuth.username}</span>
+              <span className="text-sm text-text-secondary">{adminAuth.username}</span>
+              <button
+                onClick={handleAdminLogout}
+                className="btn btn-ghost text-sm"
+              >
+                Logga ut
+              </button>
             </div>
           </div>
         </div>
       </nav>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Företagshantering</h1>
-            <p className="text-gray-500 mt-1">Hantera alla företag i systemet</p>
-          </div>
-          <button
-            onClick={handleAdd}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2"
-          >
-            <span>+</span>
-            Nytt företag
-          </button>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <p className="text-sm text-gray-500">Totalt antal företag</p>
-            <p className="text-3xl font-bold text-gray-800 mt-1">{companies.length}</p>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <p className="text-sm text-gray-500">Aktiva företag</p>
-            <p className="text-3xl font-bold text-green-600 mt-1">
-              {companies.filter(c => c.is_active).length}
-            </p>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <p className="text-sm text-gray-500">Totalt kunskapsposter</p>
-            <p className="text-3xl font-bold text-blue-600 mt-1">
-              {companies.reduce((sum, c) => sum + c.knowledge_count, 0)}
-            </p>
+      {/* Tabs */}
+      <div className="bg-bg-tertiary border-b border-border-subtle">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex gap-1">
+            {[
+              { id: 'overview', label: 'Översikt', icon: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /> },
+              { id: 'companies', label: 'Företag', icon: <><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></> },
+              { id: 'system', label: 'System', icon: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></> },
+              { id: 'gdpr', label: 'GDPR', icon: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /> }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-accent text-accent'
+                    : 'border-transparent text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  {tab.icon}
+                </svg>
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
+      </div>
 
-        {/* Companies table */}
-        {loading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">Laddar...</p>
-          </div>
-        ) : companies.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
-            <div className="text-4xl mb-4">🏢</div>
-            <h3 className="text-lg font-medium text-gray-800">Inga företag ännu</h3>
-            <p className="text-gray-500 mt-2">Skapa ditt första företag för att komma igång</p>
-            <button
-              onClick={handleAdd}
-              className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-            >
-              Skapa första företaget
-            </button>
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Företag
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Kunskapsbas
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Chattmeddelanden
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Skapad
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Åtgärder
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {companies.map((company) => (
-                  <tr key={company.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <p className="font-medium text-gray-900">{company.name}</p>
-                        <p className="text-sm text-gray-500">{company.id}</p>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Overview Tab */}
+        {activeTab === 'overview' && (
+          <div className="animate-fade-in">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <StatCard
+                title="Totalt företag"
+                value={totalCompanies}
+                subtitle={`${activeCompanies} aktiva`}
+                icon={
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                  </svg>
+                }
+              />
+              <StatCard
+                title="Kunskapsposter"
+                value={totalKnowledge}
+                subtitle="totalt i systemet"
+                icon={
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                  </svg>
+                }
+              />
+              <StatCard
+                title="Chattmeddelanden"
+                value={totalChats}
+                subtitle="totalt i systemet"
+                icon={
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                }
+              />
+              <StatCard
+                title="Systemstatus"
+                value={systemHealth?.ollama_status === 'online' ? 'Online' : 'Okänd'}
+                subtitle={systemHealth?.database_size || 'Kontrollerar...'}
+                icon={
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                  </svg>
+                }
+              />
+            </div>
+
+            {/* Quick Actions & Top Companies */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Quick Actions */}
+              <div className="card">
+                <h2 className="text-lg font-medium text-text-primary mb-4">Snabbåtgärder</h2>
+                <div className="space-y-2">
+                  <button
+                    onClick={handleAdd}
+                    className="w-full flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all group"
+                  >
+                    <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-text-primary">Skapa nytt företag</p>
+                      <p className="text-sm text-text-secondary">Lägg till en ny kund</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={handleGdprCleanup}
+                    className="w-full flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all group"
+                  >
+                    <div className="w-10 h-10 bg-warning-soft rounded-lg flex items-center justify-center text-warning group-hover:scale-110 transition-transform">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-text-primary">Kör GDPR-cleanup</p>
+                      <p className="text-sm text-text-secondary">Rensa gamla konversationer</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('companies')}
+                    className="w-full flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all group"
+                  >
+                    <div className="w-10 h-10 bg-success-soft rounded-lg flex items-center justify-center text-success group-hover:scale-110 transition-transform">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-text-primary">Hantera företag</p>
+                      <p className="text-sm text-text-secondary">Visa och redigera alla kunder</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Top Companies */}
+              <div className="card">
+                <h2 className="text-lg font-medium text-text-primary mb-4">Mest aktiva företag</h2>
+                <div className="space-y-3">
+                  {companies
+                    .sort((a, b) => (b.chat_count || 0) - (a.chat_count || 0))
+                    .slice(0, 5)
+                    .map((company, i) => (
+                      <div key={company.id} className="flex items-center justify-between p-3 rounded-lg bg-bg-secondary">
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 rounded-full bg-accent-soft text-accent text-xs font-medium flex items-center justify-center">
+                            {i + 1}
+                          </span>
+                          <div>
+                            <p className="font-medium text-text-primary text-sm">{company.name}</p>
+                            <p className="text-xs text-text-tertiary">{company.id}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-text-primary">{company.chat_count || 0}</p>
+                          <p className="text-xs text-text-tertiary">meddelanden</p>
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          company.is_active
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {company.is_active ? 'Aktiv' : 'Inaktiv'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {company.knowledge_count} poster
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {company.chat_count} meddelanden
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(company.created_at)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                      <button
-                        onClick={() => handleToggle(company.id)}
-                        className={`mr-3 ${
-                          company.is_active
-                            ? 'text-yellow-600 hover:text-yellow-800'
-                            : 'text-green-600 hover:text-green-800'
-                        }`}
-                      >
-                        {company.is_active ? 'Inaktivera' : 'Aktivera'}
-                      </button>
-                      <button
-                        onClick={() => handleDelete(company.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        Ta bort
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Companies Tab */}
+        {activeTab === 'companies' && (
+          <div className="animate-fade-in">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Företag</h1>
+                <p className="text-text-secondary mt-1">Hantera alla kunder i systemet</p>
+              </div>
+              <button onClick={handleAdd} className="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Nytt företag
+              </button>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="card mb-6">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 relative">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Sök företag..."
+                    className="input pl-10"
+                  />
+                </div>
+                <select
+                  value={`${sortBy}-${sortOrder}`}
+                  onChange={(e) => {
+                    const [by, order] = e.target.value.split('-')
+                    setSortBy(by)
+                    setSortOrder(order)
+                  }}
+                  className="input w-auto"
+                >
+                  <option value="created_at-desc">Nyast först</option>
+                  <option value="created_at-asc">Äldst först</option>
+                  <option value="name-asc">Namn A-Ö</option>
+                  <option value="name-desc">Namn Ö-A</option>
+                  <option value="chat_count-desc">Mest aktiva</option>
+                </select>
+              </div>
+
+              {/* Bulk Actions */}
+              {selectedCompanies.size > 0 && (
+                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-border-subtle">
+                  <span className="text-sm text-text-secondary">{selectedCompanies.size} valda</span>
+                  <button onClick={() => handleBulkToggle(true)} className="btn btn-ghost text-success text-sm py-1">
+                    Aktivera alla
+                  </button>
+                  <button onClick={() => handleBulkToggle(false)} className="btn btn-ghost text-warning text-sm py-1">
+                    Inaktivera alla
+                  </button>
+                  <button onClick={() => setSelectedCompanies(new Set())} className="btn btn-ghost text-sm py-1">
+                    Avmarkera
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Companies List */}
+            {loading ? (
+              <div className="card text-center py-12">
+                <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full mx-auto mb-4" />
+                <p className="text-text-secondary">Laddar företag...</p>
+              </div>
+            ) : filteredCompanies.length === 0 ? (
+              <div className="card text-center py-12">
+                <div className="w-16 h-16 bg-bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-text-primary">Inga företag hittades</h3>
+                <p className="text-text-secondary mt-2">
+                  {searchQuery ? 'Prova en annan sökning' : 'Skapa ditt första företag'}
+                </p>
+              </div>
+            ) : (
+              <div className="card overflow-hidden p-0">
+                <table className="w-full">
+                  <thead className="bg-bg-secondary border-b border-border-subtle">
+                    <tr>
+                      <th className="px-4 py-3 text-left">
+                        <input
+                          type="checkbox"
+                          checked={selectedCompanies.size === filteredCompanies.length && filteredCompanies.length > 0}
+                          onChange={toggleSelectAll}
+                          className="rounded border-border"
+                        />
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Företag</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Kunskapsbas</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Meddelanden</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Skapad</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">Åtgärder</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-subtle">
+                    {filteredCompanies.map((company) => (
+                      <tr key={company.id} className="hover:bg-bg-secondary transition-colors">
+                        <td className="px-4 py-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedCompanies.has(company.id)}
+                            onChange={() => toggleSelectCompany(company.id)}
+                            className="rounded border-border"
+                          />
+                        </td>
+                        <td className="px-4 py-4">
+                          <div>
+                            <p className="font-medium text-text-primary">{company.name}</p>
+                            <p className="text-sm text-text-tertiary">{company.id}</p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                            company.is_active
+                              ? 'bg-success-soft text-success'
+                              : 'bg-error-soft text-error'
+                          }`}>
+                            {company.is_active ? 'Aktiv' : 'Inaktiv'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-text-secondary">
+                          {company.knowledge_count} poster
+                        </td>
+                        <td className="px-4 py-4 text-sm text-text-secondary">
+                          {company.chat_count || 0}
+                        </td>
+                        <td className="px-4 py-4 text-sm text-text-secondary">
+                          {formatDate(company.created_at)}
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleToggle(company.id)}
+                              className={`p-2 rounded-lg transition-colors ${
+                                company.is_active
+                                  ? 'text-warning hover:bg-warning-soft'
+                                  : 'text-success hover:bg-success-soft'
+                              }`}
+                              title={company.is_active ? 'Inaktivera' : 'Aktivera'}
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                {company.is_active ? (
+                                  <><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></>
+                                ) : (
+                                  <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></>
+                                )}
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(company.id)}
+                              className="p-2 rounded-lg text-error hover:bg-error-soft transition-colors"
+                              title="Ta bort"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* System Tab */}
+        {activeTab === 'system' && (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Systeminställningar</h1>
+              <p className="text-text-secondary mt-1">Övervaka och konfigurera systemet</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* System Health */}
+              <div className="card">
+                <h2 className="text-lg font-medium text-text-primary mb-4">Systemhälsa</h2>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-bg-secondary">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${systemHealth?.ollama_status === 'online' ? 'bg-success' : 'bg-warning'}`} />
+                      <span className="text-text-primary">Ollama AI</span>
+                    </div>
+                    <span className="text-sm text-text-secondary">{systemHealth?.ollama_status || 'Kontrollerar...'}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-bg-secondary">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full bg-success" />
+                      <span className="text-text-primary">Databas</span>
+                    </div>
+                    <span className="text-sm text-text-secondary">{systemHealth?.database_size || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-bg-secondary">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full bg-success" />
+                      <span className="text-text-primary">API</span>
+                    </div>
+                    <span className="text-sm text-text-secondary">Online</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Configuration */}
+              <div className="card">
+                <h2 className="text-lg font-medium text-text-primary mb-4">Konfiguration</h2>
+                <div className="space-y-4">
+                  <div className="p-3 rounded-lg bg-bg-secondary">
+                    <p className="text-sm text-text-secondary">AI-modell</p>
+                    <p className="text-text-primary font-medium">Llama 3.1</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-bg-secondary">
+                    <p className="text-sm text-text-secondary">Max retention</p>
+                    <p className="text-text-primary font-medium">30 dagar</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-bg-secondary">
+                    <p className="text-sm text-text-secondary">GDPR-cleanup</p>
+                    <p className="text-text-primary font-medium">Varje timme</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* GDPR Tab */}
+        {activeTab === 'gdpr' && (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">GDPR & Dataskydd</h1>
+              <p className="text-text-secondary mt-1">Hantera dataskydd och compliance</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* GDPR Actions */}
+              <div className="card">
+                <h2 className="text-lg font-medium text-text-primary mb-4">GDPR-åtgärder</h2>
+                <div className="space-y-3">
+                  <button
+                    onClick={handleGdprCleanup}
+                    className="w-full flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all group"
+                  >
+                    <div className="w-10 h-10 bg-warning-soft rounded-lg flex items-center justify-center text-warning group-hover:scale-110 transition-transform">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-text-primary">Manuell cleanup</p>
+                      <p className="text-sm text-text-secondary">Rensa utgångna konversationer nu</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* GDPR Stats */}
+              <div className="card">
+                <h2 className="text-lg font-medium text-text-primary mb-4">Dataskyddsstatus</h2>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-bg-secondary">
+                    <span className="text-text-primary">Automatisk cleanup</span>
+                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-success-soft text-success">Aktiv</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-bg-secondary">
+                    <span className="text-text-primary">IP-anonymisering</span>
+                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-success-soft text-success">Aktiv</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-bg-secondary">
+                    <span className="text-text-primary">Samtyckesspårning</span>
+                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-success-soft text-success">Aktiv</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>
 
-      {/* Modal */}
+      {/* Create Company Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="p-6 border-b">
-              <h2 className="text-lg font-semibold text-gray-800">Skapa nytt företag</h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle">
+              <h2 className="text-lg font-semibold text-text-primary">Skapa nytt företag</h2>
+              <p className="text-sm text-text-secondary mt-1">Lägg till en ny kund i systemet</p>
             </div>
             <form onSubmit={handleCreate} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Företags-ID
-                </label>
+                <label className="input-label">Företags-ID</label>
                 <input
                   type="text"
                   value={formData.id}
                   onChange={(e) => setFormData({ ...formData, id: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
                   placeholder="t.ex. bostadsbolaget"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  className="input"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">Endast små bokstäver, siffror och bindestreck</p>
+                <p className="text-xs text-text-tertiary mt-1">Endast små bokstäver, siffror och bindestreck</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Företagsnamn
-                </label>
+                <label className="input-label">Företagsnamn</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="t.ex. Bostadsbolaget AB"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  className="input"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Lösenord
-                </label>
+                <label className="input-label">Lösenord</label>
                 <input
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Välj ett starkt lösenord"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  className="input"
                   required
                   minLength={6}
                 />
               </div>
 
               {error && (
-                <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
+                <div className="bg-error-soft text-error px-4 py-3 rounded-lg text-sm">
                   {error}
                 </div>
               )}
@@ -310,14 +769,14 @@ function SuperAdmin() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="btn btn-ghost"
                 >
                   Avbryt
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+                  className="btn btn-primary"
                 >
                   {saving ? 'Skapar...' : 'Skapa företag'}
                 </button>

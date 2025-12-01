@@ -2488,6 +2488,57 @@ async def toggle_company(
 
 
 # =============================================================================
+# System Health Endpoint (för admin dashboard)
+# =============================================================================
+
+@app.get("/admin/system-health")
+async def system_health(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Hämta systemhälsa för admin dashboard"""
+    import os
+    import httpx
+
+    # Check Ollama status
+    ollama_status = "offline"
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(f"{OLLAMA_BASE_URL}/api/tags")
+            if response.status_code == 200:
+                ollama_status = "online"
+    except:
+        ollama_status = "offline"
+
+    # Get database size
+    db_path = "./bobot.db"
+    db_size = "N/A"
+    if os.path.exists(db_path):
+        size_bytes = os.path.getsize(db_path)
+        if size_bytes < 1024:
+            db_size = f"{size_bytes} B"
+        elif size_bytes < 1024 * 1024:
+            db_size = f"{size_bytes / 1024:.1f} KB"
+        else:
+            db_size = f"{size_bytes / (1024 * 1024):.1f} MB"
+
+    # Get total counts
+    total_companies = db.query(Company).count()
+    total_conversations = db.query(Conversation).count()
+    total_messages = db.query(Message).count()
+    total_knowledge = db.query(KnowledgeItem).count()
+
+    return {
+        "ollama_status": ollama_status,
+        "database_size": db_size,
+        "total_companies": total_companies,
+        "total_conversations": total_conversations,
+        "total_messages": total_messages,
+        "total_knowledge": total_knowledge
+    }
+
+
+# =============================================================================
 # Manual GDPR Cleanup Endpoint (för testing/admin)
 # =============================================================================
 
