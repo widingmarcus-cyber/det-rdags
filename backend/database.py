@@ -76,6 +76,12 @@ class CompanySettings(Base):
     data_controller_name = Column(String, default="")  # Name of data controller (PuB)
     data_controller_email = Column(String, default="")  # DPO/privacy contact email
 
+    # Usage Limits
+    max_conversations_month = Column(Integer, default=0)  # 0 = unlimited
+    current_month_conversations = Column(Integer, default=0)
+    usage_reset_date = Column(Date)  # When to reset monthly counter
+    limit_warning_sent = Column(Boolean, default=False)  # Track if warning was sent
+
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relations
@@ -232,6 +238,35 @@ class GDPRAuditLog(Base):
     # Outcome
     success = Column(Boolean, default=True)
     error_message = Column(Text)
+
+
+class AdminAuditLog(Base):
+    """Audit log for super admin actions"""
+    __tablename__ = "admin_audit_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    admin_username = Column(String, nullable=False)
+
+    # Action details
+    action_type = Column(String, nullable=False)  # "create_company", "delete_company", "toggle_company", "impersonate", "export_data", etc.
+    target_company_id = Column(String)  # Which company was affected
+    description = Column(Text)  # Human-readable description
+    details = Column(Text)  # JSON with additional details
+
+    # Metadata
+    ip_address = Column(String)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+
+class GlobalSettings(Base):
+    """Global system settings"""
+    __tablename__ = "global_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String, unique=True, nullable=False)
+    value = Column(Text)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by = Column(String)  # Admin username
 
 
 # =============================================================================

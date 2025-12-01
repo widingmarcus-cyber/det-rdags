@@ -4,7 +4,7 @@ import { AuthContext } from '../App'
 const API_BASE = '/api'
 
 function SuperAdmin() {
-  const { adminAuth, adminFetch, handleAdminLogout } = useContext(AuthContext)
+  const { adminAuth, adminFetch, handleAdminLogout, handleLogin } = useContext(AuthContext)
   const [companies, setCompanies] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -19,10 +19,24 @@ function SuperAdmin() {
   const [selectedCompanies, setSelectedCompanies] = useState(new Set())
   const [notification, setNotification] = useState(null)
 
+  // New state for added features
+  const [auditLogs, setAuditLogs] = useState([])
+  const [auditLoading, setAuditLoading] = useState(false)
+  const [maintenanceMode, setMaintenanceMode] = useState({ enabled: false, message: '' })
+  const [showUsageLimitModal, setShowUsageLimitModal] = useState(null)
+  const [usageLimitValue, setUsageLimitValue] = useState(0)
+
   useEffect(() => {
     fetchCompanies()
     fetchSystemHealth()
+    fetchMaintenanceMode()
   }, [])
+
+  useEffect(() => {
+    if (activeTab === 'audit') {
+      fetchAuditLogs()
+    }
+  }, [activeTab])
 
   const fetchCompanies = async () => {
     try {
@@ -53,6 +67,34 @@ function SuperAdmin() {
         total_conversations: companies.reduce((sum, c) => sum + (c.chat_count || 0), 0),
         uptime: 'N/A'
       })
+    }
+  }
+
+  const fetchAuditLogs = async () => {
+    setAuditLoading(true)
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/audit-log?limit=100`)
+      if (response.ok) {
+        const data = await response.json()
+        setAuditLogs(data.logs || [])
+      }
+    } catch (error) {
+      console.error('Kunde inte hämta audit logs:', error)
+    } finally {
+      setAuditLoading(false)
+    }
+  }
+
+  const fetchMaintenanceMode = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/maintenance-mode`)
+      if (response.ok) {
+        const data = await response.json()
+        setMaintenanceMode(data)
+      }
+    } catch (error) {
+      // Endpoint might not exist yet
+      setMaintenanceMode({ enabled: false, message: '' })
     }
   }
 
@@ -151,6 +193,98 @@ function SuperAdmin() {
     } catch (error) {
       console.error('GDPR cleanup failed:', error)
     }
+  }
+
+  const handleImpersonate = async (companyId) => {
+    if (!window.confirm(`Logga in som företag "${companyId}"? Du kommer att lämna super admin-panelen.`)) return
+
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/impersonate/${companyId}`, { method: 'POST' })
+      if (response.ok) {
+        const data = await response.json()
+        // Store the impersonation token and redirect to company admin
+        localStorage.setItem('auth', JSON.stringify({
+          token: data.token,
+          companyId: data.company_id,
+          companyName: data.company_name,
+          isImpersonated: true
+        }))
+        window.location.href = '/'
+      } else {
+        showNotification('Kunde inte impersonera företag', 'error')
+      }
+    } catch (error) {
+      console.error('Impersonation failed:', error)
+      showNotification('Kunde inte impersonera företag', 'error')
+    }
+  }
+
+  const handleExport = async (companyId) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/export/${companyId}`)
+      if (response.ok) {
+        const data = await response.json()
+        // Download as JSON file
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${companyId}-export-${new Date().toISOString().split('T')[0]}.json`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        showNotification('Data exporterad')
+      } else {
+        showNotification('Kunde inte exportera data', 'error')
+      }
+    } catch (error) {
+      console.error('Export failed:', error)
+      showNotification('Kunde inte exportera data', 'error')
+    }
+  }
+
+  const handleToggleMaintenance = async () => {
+    const newEnabled = !maintenanceMode.enabled
+    const message = newEnabled ? (prompt('Ange underhållsmeddelande:', 'Systemet är under underhåll. Försök igen senare.') || '') : ''
+
+    if (newEnabled && !message) return
+
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/maintenance-mode`, {
+        method: 'PUT',
+        body: JSON.stringify({ enabled: newEnabled, message })
+      })
+      if (response.ok) {
+        setMaintenanceMode({ enabled: newEnabled, message })
+        showNotification(newEnabled ? 'Underhållsläge aktiverat' : 'Underhållsläge avaktiverat')
+      }
+    } catch (error) {
+      console.error('Failed to toggle maintenance mode:', error)
+      showNotification('Kunde inte ändra underhållsläge', 'error')
+    }
+  }
+
+  const handleSetUsageLimit = async (companyId) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/companies/${companyId}/usage-limit`, {
+        method: 'PUT',
+        body: JSON.stringify({ max_conversations_month: usageLimitValue })
+      })
+      if (response.ok) {
+        showNotification('Användningsgräns uppdaterad')
+        setShowUsageLimitModal(null)
+        fetchCompanies()
+      }
+    } catch (error) {
+      console.error('Failed to set usage limit:', error)
+      showNotification('Kunde inte uppdatera gräns', 'error')
+    }
+  }
+
+  const openUsageLimitModal = (company) => {
+    setShowUsageLimitModal(company)
+    setUsageLimitValue(company.max_conversations_month || 0)
   }
 
   const formatDate = (dateString) => {
@@ -263,6 +397,7 @@ function SuperAdmin() {
             {[
               { id: 'overview', label: 'Översikt', icon: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /> },
               { id: 'companies', label: 'Företag', icon: <><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></> },
+              { id: 'audit', label: 'Aktivitetslogg', icon: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><line x1="10" y1="9" x2="8" y2="9" /></> },
               { id: 'system', label: 'System', icon: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></> },
               { id: 'gdpr', label: 'GDPR', icon: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /> }
             ].map(tab => (
@@ -562,7 +697,39 @@ function SuperAdmin() {
                           {formatDate(company.created_at)}
                         </td>
                         <td className="px-4 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => handleImpersonate(company.id)}
+                              className="p-2 rounded-lg text-accent hover:bg-accent-soft transition-colors"
+                              title="Logga in som"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleExport(company.id)}
+                              className="p-2 rounded-lg text-text-secondary hover:bg-bg-secondary transition-colors"
+                              title="Exportera data"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => openUsageLimitModal(company)}
+                              className="p-2 rounded-lg text-text-secondary hover:bg-bg-secondary transition-colors"
+                              title="Användningsgräns"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M12 20V10" />
+                                <path d="M18 20V4" />
+                                <path d="M6 20v-4" />
+                              </svg>
+                            </button>
                             <button
                               onClick={() => handleToggle(company.id)}
                               className={`p-2 rounded-lg transition-colors ${
@@ -591,6 +758,84 @@ function SuperAdmin() {
                               </svg>
                             </button>
                           </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Audit Log Tab */}
+        {activeTab === 'audit' && (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Aktivitetslogg</h1>
+              <p className="text-text-secondary mt-1">Spåra alla admin-åtgärder i systemet</p>
+            </div>
+
+            {auditLoading ? (
+              <div className="card text-center py-12">
+                <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full mx-auto mb-4" />
+                <p className="text-text-secondary">Laddar aktivitetslogg...</p>
+              </div>
+            ) : auditLogs.length === 0 ? (
+              <div className="card text-center py-12">
+                <div className="w-16 h-16 bg-bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-text-primary">Ingen aktivitet ännu</h3>
+                <p className="text-text-secondary mt-2">Åtgärder kommer att loggas här</p>
+              </div>
+            ) : (
+              <div className="card overflow-hidden p-0">
+                <table className="w-full">
+                  <thead className="bg-bg-secondary border-b border-border-subtle">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Tidpunkt</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Admin</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Åtgärd</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Företag</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Beskrivning</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-subtle">
+                    {auditLogs.map((log) => (
+                      <tr key={log.id} className="hover:bg-bg-secondary transition-colors">
+                        <td className="px-4 py-3 text-sm text-text-secondary whitespace-nowrap">
+                          {new Date(log.timestamp).toLocaleString('sv-SE')}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-text-primary font-medium">
+                          {log.admin_username}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                            log.action_type === 'create_company' ? 'bg-success-soft text-success' :
+                            log.action_type === 'delete_company' ? 'bg-error-soft text-error' :
+                            log.action_type === 'toggle_company' ? 'bg-warning-soft text-warning' :
+                            log.action_type === 'impersonate' ? 'bg-accent-soft text-accent' :
+                            'bg-bg-secondary text-text-secondary'
+                          }`}>
+                            {log.action_type === 'create_company' ? 'Skapat' :
+                             log.action_type === 'delete_company' ? 'Raderat' :
+                             log.action_type === 'toggle_company' ? 'Växlat status' :
+                             log.action_type === 'impersonate' ? 'Impersonerat' :
+                             log.action_type === 'export' ? 'Exporterat' :
+                             log.action_type === 'maintenance_mode' ? 'Underhållsläge' :
+                             log.action_type === 'usage_limit' ? 'Användningsgräns' :
+                             log.action_type}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-text-secondary">
+                          {log.target_company_id || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-text-secondary">
+                          {log.description || '-'}
                         </td>
                       </tr>
                     ))}
@@ -655,6 +900,50 @@ function SuperAdmin() {
                     <p className="text-text-primary font-medium">Varje timme</p>
                   </div>
                 </div>
+              </div>
+
+              {/* Maintenance Mode */}
+              <div className="card lg:col-span-2">
+                <h2 className="text-lg font-medium text-text-primary mb-4">Underhållsläge</h2>
+                <div className="flex items-center justify-between p-4 rounded-lg bg-bg-secondary">
+                  <div>
+                    <p className="font-medium text-text-primary">
+                      {maintenanceMode.enabled ? 'Underhållsläge är aktivt' : 'Systemet är online'}
+                    </p>
+                    <p className="text-sm text-text-secondary mt-1">
+                      {maintenanceMode.enabled
+                        ? maintenanceMode.message || 'Alla chattwidgets är inaktiverade'
+                        : 'Alla chattwidgets fungerar normalt'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleToggleMaintenance}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      maintenanceMode.enabled
+                        ? 'bg-success text-white hover:bg-success-hover'
+                        : 'bg-warning text-white hover:bg-warning-hover'
+                    }`}
+                  >
+                    {maintenanceMode.enabled ? 'Avaktivera' : 'Aktivera underhåll'}
+                  </button>
+                </div>
+                {maintenanceMode.enabled && (
+                  <div className="mt-4 p-4 rounded-lg bg-warning-soft border border-warning/20">
+                    <div className="flex items-start gap-3">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-warning flex-shrink-0 mt-0.5">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                      </svg>
+                      <div>
+                        <p className="font-medium text-warning">Varning: Underhållsläge aktivt</p>
+                        <p className="text-sm text-text-secondary mt-1">
+                          Inga chattwidgets kan användas medan underhållsläget är aktivt. Användare ser meddelandet ovan.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -782,6 +1071,59 @@ function SuperAdmin() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Usage Limit Modal */}
+      {showUsageLimitModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle">
+              <h2 className="text-lg font-semibold text-text-primary">Användningsgräns</h2>
+              <p className="text-sm text-text-secondary mt-1">
+                Ange max konversationer per månad för {showUsageLimitModal.name}
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="input-label">Max konversationer/månad</label>
+                <input
+                  type="number"
+                  value={usageLimitValue}
+                  onChange={(e) => setUsageLimitValue(parseInt(e.target.value) || 0)}
+                  placeholder="0 = obegränsat"
+                  className="input"
+                  min="0"
+                />
+                <p className="text-xs text-text-tertiary mt-1">Sätt till 0 för obegränsat</p>
+              </div>
+
+              {showUsageLimitModal.current_month_conversations > 0 && (
+                <div className="p-3 rounded-lg bg-bg-secondary">
+                  <p className="text-sm text-text-secondary">Nuvarande användning denna månad</p>
+                  <p className="text-lg font-medium text-text-primary">
+                    {showUsageLimitModal.current_month_conversations || 0} konversationer
+                  </p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowUsageLimitModal(null)}
+                  className="btn btn-ghost"
+                >
+                  Avbryt
+                </button>
+                <button
+                  onClick={() => handleSetUsageLimit(showUsageLimitModal.id)}
+                  className="btn btn-primary"
+                >
+                  Spara
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

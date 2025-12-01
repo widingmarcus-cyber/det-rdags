@@ -20,7 +20,8 @@ from dotenv import load_dotenv
 
 from database import (
     create_tables, get_db, Company, KnowledgeItem, ChatLog, SuperAdmin,
-    CompanySettings, Conversation, Message, DailyStatistics, GDPRAuditLog
+    CompanySettings, Conversation, Message, DailyStatistics, GDPRAuditLog,
+    AdminAuditLog, GlobalSettings
 )
 from auth import (
     hash_password, verify_password, create_token,
@@ -209,6 +210,8 @@ class CompanyResponse(BaseModel):
     created_at: datetime
     knowledge_count: int = 0
     chat_count: int = 0
+    max_conversations_month: int = 0
+    current_month_conversations: int = 0
 
 
 class SuperAdminLogin(BaseModel):
@@ -741,6 +744,71 @@ def get_or_create_settings(db: Session, company_id: str) -> CompanySettings:
     return settings
 
 
+def log_admin_action(db: Session, admin_username: str, action_type: str,
+                     target_company_id: str = None, description: str = None,
+                     details: dict = None, ip_address: str = None):
+    """Log an admin action to the audit log"""
+    log_entry = AdminAuditLog(
+        admin_username=admin_username,
+        action_type=action_type,
+        target_company_id=target_company_id,
+        description=description,
+        details=json.dumps(details) if details else None,
+        ip_address=ip_address
+    )
+    db.add(log_entry)
+    db.commit()
+
+
+def get_global_setting(db: Session, key: str, default: str = None) -> str:
+    """Get a global setting value"""
+    setting = db.query(GlobalSettings).filter(GlobalSettings.key == key).first()
+    return setting.value if setting else default
+
+
+def set_global_setting(db: Session, key: str, value: str, admin_username: str = None):
+    """Set a global setting value"""
+    setting = db.query(GlobalSettings).filter(GlobalSettings.key == key).first()
+    if setting:
+        setting.value = value
+        setting.updated_by = admin_username
+    else:
+        setting = GlobalSettings(key=key, value=value, updated_by=admin_username)
+        db.add(setting)
+    db.commit()
+
+
+def is_maintenance_mode(db: Session) -> tuple:
+    """Check if maintenance mode is enabled, returns (enabled, message)"""
+    enabled = get_global_setting(db, "maintenance_mode", "false") == "true"
+    message = get_global_setting(db, "maintenance_message", "Systemet är tillfälligt stängt för underhåll.")
+    return enabled, message
+
+
+def check_usage_limit(db: Session, company_id: str) -> tuple:
+    """Check if company has reached usage limit, returns (allowed, message)"""
+    settings = db.query(CompanySettings).filter(
+        CompanySettings.company_id == company_id
+    ).first()
+
+    if not settings or settings.max_conversations_month == 0:
+        return True, None  # No limit
+
+    # Reset counter if new month
+    from datetime import date
+    today = date.today()
+    if settings.usage_reset_date is None or settings.usage_reset_date.month != today.month:
+        settings.usage_reset_date = today
+        settings.current_month_conversations = 0
+        settings.limit_warning_sent = False
+        db.commit()
+
+    if settings.current_month_conversations >= settings.max_conversations_month:
+        return False, f"Månadsgränsen på {settings.max_conversations_month} konversationer har uppnåtts."
+
+    return True, None
+
+
 # =============================================================================
 # Public Endpoints
 # =============================================================================
@@ -807,9 +875,22 @@ async def chat(
     db: Session = Depends(get_db)
 ):
     """Chatta med AI - öppen endpoint för widget"""
+    # Check maintenance mode
+    maintenance_enabled, maintenance_msg = is_maintenance_mode(db)
+    if maintenance_enabled:
+        raise HTTPException(
+            status_code=503,
+            detail=maintenance_msg or "Systemet är under underhåll. Försök igen senare."
+        )
+
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company or not company.is_active:
         raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    # Check usage limits
+    allowed, limit_msg = check_usage_limit(db, company_id)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=limit_msg)
 
     # Check cache first
     cached = get_cached_response(company_id, request.question)
@@ -863,6 +944,11 @@ async def chat(
         db.add(conversation)
         db.commit()
         db.refresh(conversation)
+
+        # Increment monthly usage counter
+        if settings.max_conversations_month > 0:
+            settings.current_month_conversations = (settings.current_month_conversations or 0) + 1
+            db.commit()
     else:
         # Update category if new one is more specific
         if category != "allmant" and conversation.category == "allmant":
@@ -2403,6 +2489,7 @@ async def list_companies(
     for c in companies:
         knowledge_count = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == c.id).count()
         chat_count = db.query(ChatLog).filter(ChatLog.company_id == c.id).count()
+        settings = db.query(CompanySettings).filter(CompanySettings.company_id == c.id).first()
 
         result.append(CompanyResponse(
             id=c.id,
@@ -2410,7 +2497,9 @@ async def list_companies(
             is_active=c.is_active,
             created_at=c.created_at,
             knowledge_count=knowledge_count,
-            chat_count=chat_count
+            chat_count=chat_count,
+            max_conversations_month=settings.max_conversations_month if settings else 0,
+            current_month_conversations=settings.current_month_conversations if settings else 0
         ))
 
     return result
@@ -2443,6 +2532,13 @@ async def create_company(
     db.add(settings)
     db.commit()
 
+    # Log admin action
+    log_admin_action(
+        db, admin["username"], "create_company",
+        target_company_id=company.id,
+        description=f"Skapade nytt företag: {company.name}"
+    )
+
     return CompanyResponse(
         id=new_company.id,
         name=new_company.name,
@@ -2464,8 +2560,16 @@ async def delete_company(
     if not company:
         raise HTTPException(status_code=404, detail="Företag finns inte")
 
+    company_name = company.name
     db.delete(company)
     db.commit()
+
+    # Log admin action
+    log_admin_action(
+        db, admin["username"], "delete_company",
+        target_company_id=company_id,
+        description=f"Raderade företag: {company_name}"
+    )
 
     return {"message": f"Företag {company_id} borttaget"}
 
@@ -2484,7 +2588,15 @@ async def toggle_company(
     company.is_active = not company.is_active
     db.commit()
 
-    return {"message": f"Företag {'aktiverat' if company.is_active else 'inaktiverat'}"}
+    # Log admin action
+    status = "aktiverat" if company.is_active else "inaktiverat"
+    log_admin_action(
+        db, admin["username"], "toggle_company",
+        target_company_id=company_id,
+        description=f"Företag {status}: {company.name}"
+    )
+
+    return {"message": f"Företag {status}"}
 
 
 # =============================================================================
@@ -2544,11 +2656,280 @@ async def system_health(
 
 @app.post("/admin/gdpr-cleanup")
 async def manual_gdpr_cleanup(
-    admin: dict = Depends(get_super_admin)
+    admin: dict = Depends(get_super_admin),
+    req: Request = None,
+    db: Session = Depends(get_db)
 ):
     """Kör GDPR-cleanup manuellt (för testing)"""
     await cleanup_old_conversations()
+
+    # Log admin action
+    log_admin_action(
+        db, admin["username"], "gdpr_cleanup",
+        description="Manual GDPR cleanup triggered",
+        ip_address=req.client.host if req else None
+    )
+
     return {"message": "GDPR cleanup genomförd"}
+
+
+# =============================================================================
+# Audit Log Endpoints
+# =============================================================================
+
+@app.get("/admin/audit-log")
+async def get_admin_audit_log(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db),
+    limit: int = 100,
+    offset: int = 0
+):
+    """Get admin audit log"""
+    logs = db.query(AdminAuditLog).order_by(
+        AdminAuditLog.timestamp.desc()
+    ).offset(offset).limit(limit).all()
+
+    total = db.query(AdminAuditLog).count()
+
+    return {
+        "logs": [
+            {
+                "id": log.id,
+                "admin_username": log.admin_username,
+                "action_type": log.action_type,
+                "target_company_id": log.target_company_id,
+                "description": log.description,
+                "details": json.loads(log.details) if log.details else None,
+                "ip_address": log.ip_address,
+                "timestamp": log.timestamp.isoformat()
+            }
+            for log in logs
+        ],
+        "total": total,
+        "limit": limit,
+        "offset": offset
+    }
+
+
+# =============================================================================
+# Company Impersonation
+# =============================================================================
+
+@app.post("/admin/impersonate/{company_id}")
+async def impersonate_company(
+    company_id: str,
+    admin: dict = Depends(get_super_admin),
+    req: Request = None,
+    db: Session = Depends(get_db)
+):
+    """Generate a temporary token to login as a company (for support)"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    # Create token for company
+    token = create_token({"company_id": company_id, "impersonated_by": admin["username"]})
+
+    # Log admin action
+    log_admin_action(
+        db, admin["username"], "impersonate",
+        target_company_id=company_id,
+        description=f"Impersonated company {company.name}",
+        ip_address=req.client.host if req else None
+    )
+
+    return {
+        "token": token,
+        "company_id": company_id,
+        "company_name": company.name,
+        "message": f"Du är nu inloggad som {company.name}. Token gäller i 24 timmar."
+    }
+
+
+# =============================================================================
+# Export Company Data
+# =============================================================================
+
+@app.get("/admin/export/{company_id}")
+async def export_company_data(
+    company_id: str,
+    admin: dict = Depends(get_super_admin),
+    req: Request = None,
+    db: Session = Depends(get_db)
+):
+    """Export all data for a company (for support/GDPR requests)"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    settings = db.query(CompanySettings).filter(
+        CompanySettings.company_id == company_id
+    ).first()
+
+    knowledge = db.query(KnowledgeItem).filter(
+        KnowledgeItem.company_id == company_id
+    ).all()
+
+    conversations = db.query(Conversation).filter(
+        Conversation.company_id == company_id
+    ).all()
+
+    # Log admin action
+    log_admin_action(
+        db, admin["username"], "export_data",
+        target_company_id=company_id,
+        description=f"Exported all data for {company.name}",
+        ip_address=req.client.host if req else None
+    )
+
+    return {
+        "company": {
+            "id": company.id,
+            "name": company.name,
+            "created_at": company.created_at.isoformat(),
+            "is_active": company.is_active
+        },
+        "settings": {
+            "company_name": settings.company_name if settings else "",
+            "contact_email": settings.contact_email if settings else "",
+            "contact_phone": settings.contact_phone if settings else "",
+            "welcome_message": settings.welcome_message if settings else "",
+            "primary_color": settings.primary_color if settings else "",
+            "data_retention_days": settings.data_retention_days if settings else 30,
+            "max_conversations_month": settings.max_conversations_month if settings else 0,
+            "current_month_conversations": settings.current_month_conversations if settings else 0
+        } if settings else None,
+        "knowledge_items": [
+            {
+                "id": k.id,
+                "question": k.question,
+                "answer": k.answer,
+                "category": k.category,
+                "created_at": k.created_at.isoformat()
+            }
+            for k in knowledge
+        ],
+        "conversations_count": len(conversations),
+        "total_messages": sum(c.message_count or 0 for c in conversations)
+    }
+
+
+# =============================================================================
+# Usage Limits Management
+# =============================================================================
+
+class UsageLimitUpdate(BaseModel):
+    max_conversations_month: int = 0  # 0 = unlimited
+
+
+@app.put("/admin/companies/{company_id}/usage-limit")
+async def update_usage_limit(
+    company_id: str,
+    update: UsageLimitUpdate,
+    admin: dict = Depends(get_super_admin),
+    req: Request = None,
+    db: Session = Depends(get_db)
+):
+    """Update usage limit for a company"""
+    settings = get_or_create_settings(db, company_id)
+
+    old_limit = settings.max_conversations_month
+    settings.max_conversations_month = max(0, update.max_conversations_month)
+    db.commit()
+
+    # Log admin action
+    log_admin_action(
+        db, admin["username"], "update_usage_limit",
+        target_company_id=company_id,
+        description=f"Updated usage limit from {old_limit} to {settings.max_conversations_month}",
+        details={"old_limit": old_limit, "new_limit": settings.max_conversations_month},
+        ip_address=req.client.host if req else None
+    )
+
+    return {
+        "message": f"Användningsgräns uppdaterad till {settings.max_conversations_month} konversationer/månad",
+        "max_conversations_month": settings.max_conversations_month,
+        "current_month_conversations": settings.current_month_conversations
+    }
+
+
+@app.get("/admin/companies/{company_id}/usage")
+async def get_company_usage(
+    company_id: str,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get usage statistics for a company"""
+    settings = db.query(CompanySettings).filter(
+        CompanySettings.company_id == company_id
+    ).first()
+
+    if not settings:
+        return {
+            "max_conversations_month": 0,
+            "current_month_conversations": 0,
+            "usage_percent": 0
+        }
+
+    usage_percent = 0
+    if settings.max_conversations_month > 0:
+        usage_percent = (settings.current_month_conversations / settings.max_conversations_month) * 100
+
+    return {
+        "max_conversations_month": settings.max_conversations_month,
+        "current_month_conversations": settings.current_month_conversations,
+        "usage_percent": round(usage_percent, 1),
+        "usage_reset_date": settings.usage_reset_date.isoformat() if settings.usage_reset_date else None
+    }
+
+
+# =============================================================================
+# Maintenance Mode
+# =============================================================================
+
+class MaintenanceModeUpdate(BaseModel):
+    enabled: bool
+    message: Optional[str] = None
+
+
+@app.put("/admin/maintenance-mode")
+async def update_maintenance_mode(
+    update: MaintenanceModeUpdate,
+    admin: dict = Depends(get_super_admin),
+    req: Request = None,
+    db: Session = Depends(get_db)
+):
+    """Enable/disable maintenance mode"""
+    set_global_setting(db, "maintenance_mode", "true" if update.enabled else "false", admin["username"])
+
+    if update.message:
+        set_global_setting(db, "maintenance_message", update.message, admin["username"])
+
+    # Log admin action
+    log_admin_action(
+        db, admin["username"], "maintenance_mode",
+        description=f"{'Enabled' if update.enabled else 'Disabled'} maintenance mode",
+        details={"enabled": update.enabled, "message": update.message},
+        ip_address=req.client.host if req else None
+    )
+
+    return {
+        "message": f"Underhållsläge {'aktiverat' if update.enabled else 'inaktiverat'}",
+        "enabled": update.enabled
+    }
+
+
+@app.get("/admin/maintenance-mode")
+async def get_maintenance_mode(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get current maintenance mode status"""
+    enabled, message = is_maintenance_mode(db)
+    return {
+        "enabled": enabled,
+        "message": message
+    }
 
 
 # =============================================================================
