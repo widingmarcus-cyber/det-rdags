@@ -367,18 +367,58 @@ def init_demo_data():
 # Helper Functions
 # =============================================================================
 
+def normalize_text(text: str) -> str:
+    """Remove punctuation and normalize text for matching"""
+    import re
+    # Remove punctuation, keep letters and numbers
+    text = re.sub(r'[^\w\s]', '', text.lower())
+    return text
+
+
 def find_relevant_context(question: str, company_id: str, db: Session, top_k: int = 3) -> List[KnowledgeItem]:
-    """Hitta relevanta frågor/svar från kunskapsbasen"""
+    """Hitta relevanta frågor/svar från kunskapsbasen - fuzzy matching"""
     items = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == company_id).all()
 
-    question_lower = question.lower()
-    question_words = set(question_lower.split())
+    question_normalized = normalize_text(question)
+    question_words = set(question_normalized.split())
+
+    # Common stopwords to ignore
+    stopwords = {'jag', 'vill', 'kan', 'hur', 'vad', 'är', 'har', 'en', 'ett', 'att', 'och',
+                 'för', 'med', 'om', 'på', 'av', 'i', 'det', 'den', 'de', 'du', 'vi', 'ni',
+                 'göra', 'gör', 'ska', 'skulle', 'a', 'the', 'is', 'are', 'to', 'how', 'what'}
+
+    # Get meaningful words (not stopwords)
+    meaningful_words = question_words - stopwords
 
     scored_items = []
     for item in items:
-        item_words = set(item.question.lower().split())
-        common_words = question_words & item_words
-        score = len(common_words)
+        item_question_normalized = normalize_text(item.question)
+        item_answer_normalized = normalize_text(item.answer)
+        item_words = set(item_question_normalized.split()) | set(item_answer_normalized.split())
+
+        score = 0
+
+        # Exact word matches (high score)
+        common_words = meaningful_words & item_words
+        score += len(common_words) * 3
+
+        # Partial/substring matches (medium score) - important for compound words
+        for q_word in meaningful_words:
+            if len(q_word) >= 4:  # Only check words with 4+ chars
+                for i_word in item_words:
+                    if len(i_word) >= 4:
+                        # Check if one contains the other (handles "felanmälan" matching "felanmalan")
+                        if q_word in i_word or i_word in q_word:
+                            score += 2
+                        # Check root similarity (first 4 chars match)
+                        elif q_word[:4] == i_word[:4]:
+                            score += 1
+
+        # Category match bonus
+        if item.category:
+            if item.category.lower() in question_normalized:
+                score += 2
+
         if score > 0:
             scored_items.append((score, item))
 
@@ -477,7 +517,7 @@ def detect_category(text: str) -> str:
     return "allmant"
 
 
-def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None) -> str:
+def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None, category: str = None) -> str:
     """Bygg prompt med kontext - använder specificerat eller detekterat språk"""
     # Use provided language or detect from question
     lang = language if language in ["sv", "en", "ar"] else detect_language(question)
@@ -495,16 +535,35 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
 
     company_name = settings.company_name if settings else "fastighetsbolaget"
 
-    return f"""You are a helpful customer service assistant for {company_name}.
+    # Category-specific guidance when no exact context found
+    category_guidance = ""
+    if not context and category and category != "allmant":
+        category_hints = {
+            "felanmalan": "The customer seems to want to report a problem/fault. Ask what the issue is and where it's located. Common issues include plumbing, heating, electricity, doors/locks, etc.",
+            "hyra": "The customer has a question about rent. Common topics: payment dates, amounts, late payments, included costs.",
+            "kontrakt": "The customer has a contract question. Common topics: lease terms, termination notice, moving in/out.",
+            "tvattstuga": "The customer has a laundry room question. Common topics: booking times, rules, broken machines.",
+            "parkering": "The customer has a parking question. Common topics: available spots, permits, costs.",
+            "kontakt": "The customer wants contact information. Provide relevant contact details if available."
+        }
+        if category in category_hints:
+            category_guidance = f"\n\nNote: {category_hints[category]}\n"
+
+    # Additional instruction when message is very short
+    short_message_hint = ""
+    if len(question.split()) <= 2:
+        short_message_hint = "\nThe customer's message is brief. Be friendly and ask a clarifying question to better help them.\n"
+
+    return f"""You are a helpful, friendly customer service assistant for {company_name}.
 
 CRITICAL LANGUAGE REQUIREMENT: {lang_instruction}
 You are responding to a customer who speaks {target_lang}. Your ENTIRE response must be in {target_lang}.
 DO NOT use any other language. If the knowledge base answers are in a different language, translate them.
-
+{category_guidance}{short_message_hint}
 {context_text}
 Customer question: {question}
 
-Provide a helpful, friendly answer in {target_lang}:"""
+Be conversational and helpful. If you're not sure exactly what they need, ask a friendly follow-up question. Provide a helpful answer in {target_lang}:"""
 
 
 def anonymize_ip(ip: str) -> str:
@@ -570,6 +629,33 @@ async def save_conversation_stats(db: Session, conversation: Conversation):
         daily_stat.helpful_count += 1
     elif conversation.was_helpful is False:
         daily_stat.not_helpful_count += 1
+
+    # Update category counts
+    category = conversation.category or "allmant"
+    try:
+        cat_counts = json.loads(daily_stat.category_counts or "{}")
+    except:
+        cat_counts = {}
+    cat_counts[category] = cat_counts.get(category, 0) + 1
+    daily_stat.category_counts = json.dumps(cat_counts)
+
+    # Update language counts
+    language = conversation.language or "sv"
+    try:
+        lang_counts = json.loads(daily_stat.language_counts or "{}")
+    except:
+        lang_counts = {}
+    lang_counts[language] = lang_counts.get(language, 0) + 1
+    daily_stat.language_counts = json.dumps(lang_counts)
+
+    # Update hourly counts
+    hour = str(conversation.started_at.hour)
+    try:
+        hour_counts = json.loads(daily_stat.hourly_counts or "{}")
+    except:
+        hour_counts = {}
+    hour_counts[hour] = hour_counts.get(hour, 0) + 1
+    daily_stat.hourly_counts = json.dumps(hour_counts)
 
     # Beräkna genomsnittlig svarstid
     response_times = [m.response_time_ms for m in messages if m.response_time_ms]
@@ -722,26 +808,30 @@ async def chat(
 
     # Hitta kontext
     context = find_relevant_context(request.question, company_id, db)
-    had_answer = len(context) > 0
+    # Consider it "had_answer" if we found context OR if we detected a specific category
+    had_answer = len(context) > 0 or category != "allmant"
 
     # Mät svarstid
     start_time = datetime.utcnow()
 
-    # Bygg prompt och fråga AI med rätt språk
-    prompt = build_prompt(request.question, context, settings, language)
+    # Bygg prompt och fråga AI med rätt språk och kategori
+    prompt = build_prompt(request.question, context, settings, language, category)
     answer = await query_ollama(prompt)
 
     response_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
 
-    # Om inget svar hittades, använd fallback på rätt språk
-    if not had_answer:
-        # Use language-appropriate fallback
+    # Only use fallback if no context AND no specific category detected (truly generic question)
+    # The AI should try to help based on category even without exact knowledge base matches
+    if not context and category == "allmant" and len(request.question.split()) <= 2:
+        # Only fallback for very short, uncategorized messages where AI can't help
         fallback_messages = {
             "sv": settings.fallback_message or "Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt.",
             "en": "I couldn't find an answer to your question. Please contact us directly.",
             "ar": "لم أتمكن من العثور على إجابة لسؤالك. يرجى الاتصال بنا مباشرة."
         }
-        answer = fallback_messages.get(language, settings.fallback_message)
+        # Only use fallback if AI gave a very short/unhelpful response
+        if len(answer.strip()) < 50:
+            answer = fallback_messages.get(language, settings.fallback_message)
 
     # Spara bot-svaret
     sources = [item.question for item in context]
