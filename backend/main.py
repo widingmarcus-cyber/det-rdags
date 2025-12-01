@@ -1201,54 +1201,99 @@ async def update_settings(
     """Uppdatera inställningar för inloggat företag"""
     settings = get_or_create_settings(db, current["company_id"])
 
-    # Uppdatera endast fält som skickats
-    if update.company_name is not None:
+    # Track changes for activity log
+    changes = []
+    field_labels = {
+        "company_name": "Företagsnamn",
+        "contact_email": "Kontakt-e-post",
+        "contact_phone": "Kontakttelefon",
+        "welcome_message": "Välkomstmeddelande",
+        "fallback_message": "Reservmeddelande",
+        "primary_color": "Primärfärg",
+        "language": "Språk",
+        "data_retention_days": "Datalagring",
+        "notify_unanswered": "Notifikationer",
+        "notification_email": "Notifikations-e-post",
+        "subtitle": "Underrubrik",
+        "custom_categories": "Kategorier",
+        "privacy_policy_url": "Integritetspolicy-URL",
+        "require_consent": "Kräv samtycke",
+        "consent_text": "Samtyckestext",
+        "data_controller_name": "Personuppgiftsansvarig",
+        "data_controller_email": "PuB-kontakt"
+    }
+
+    # Uppdatera endast fält som skickats och spåra ändringar
+    if update.company_name is not None and settings.company_name != update.company_name:
+        changes.append(field_labels["company_name"])
         settings.company_name = update.company_name
-    if update.contact_email is not None:
+    if update.contact_email is not None and settings.contact_email != update.contact_email:
+        changes.append(field_labels["contact_email"])
         settings.contact_email = update.contact_email
-    if update.contact_phone is not None:
+    if update.contact_phone is not None and settings.contact_phone != update.contact_phone:
+        changes.append(field_labels["contact_phone"])
         settings.contact_phone = update.contact_phone
-    if update.welcome_message is not None:
+    if update.welcome_message is not None and settings.welcome_message != update.welcome_message:
+        changes.append(field_labels["welcome_message"])
         settings.welcome_message = update.welcome_message
-    if update.fallback_message is not None:
+    if update.fallback_message is not None and settings.fallback_message != update.fallback_message:
+        changes.append(field_labels["fallback_message"])
         settings.fallback_message = update.fallback_message
-    if update.primary_color is not None:
+    if update.primary_color is not None and settings.primary_color != update.primary_color:
+        changes.append(field_labels["primary_color"])
         settings.primary_color = update.primary_color
-    if update.language is not None:
-        # Validera språk (sv, en, ar)
-        if update.language in ["sv", "en", "ar"]:
-            settings.language = update.language
+    if update.language is not None and update.language in ["sv", "en", "ar"] and settings.language != update.language:
+        changes.append(field_labels["language"])
+        settings.language = update.language
     if update.data_retention_days is not None:
-        # Validera retention (7-30 dagar för GDPR)
-        settings.data_retention_days = max(7, min(30, update.data_retention_days))
-    if update.notify_unanswered is not None:
+        new_val = max(7, min(30, update.data_retention_days))
+        if settings.data_retention_days != new_val:
+            changes.append(field_labels["data_retention_days"])
+            settings.data_retention_days = new_val
+    if update.notify_unanswered is not None and settings.notify_unanswered != update.notify_unanswered:
+        changes.append(field_labels["notify_unanswered"])
         settings.notify_unanswered = update.notify_unanswered
-    if update.notification_email is not None:
+    if update.notification_email is not None and settings.notification_email != update.notification_email:
+        changes.append(field_labels["notification_email"])
         settings.notification_email = update.notification_email
-    if update.subtitle is not None:
+    if update.subtitle is not None and settings.subtitle != update.subtitle:
+        changes.append(field_labels["subtitle"])
         settings.subtitle = update.subtitle
-    if update.custom_categories is not None:
+    if update.custom_categories is not None and settings.custom_categories != update.custom_categories:
+        changes.append(field_labels["custom_categories"])
         settings.custom_categories = update.custom_categories
     # PuB/GDPR Compliance fields
-    if update.privacy_policy_url is not None:
+    if update.privacy_policy_url is not None and settings.privacy_policy_url != update.privacy_policy_url:
+        changes.append(field_labels["privacy_policy_url"])
         settings.privacy_policy_url = update.privacy_policy_url
-    if update.require_consent is not None:
+    if update.require_consent is not None and settings.require_consent != update.require_consent:
+        changes.append(field_labels["require_consent"])
         settings.require_consent = update.require_consent
-    if update.consent_text is not None:
+    if update.consent_text is not None and settings.consent_text != update.consent_text:
+        changes.append(field_labels["consent_text"])
         settings.consent_text = update.consent_text
-    if update.data_controller_name is not None:
+    if update.data_controller_name is not None and settings.data_controller_name != update.data_controller_name:
+        changes.append(field_labels["data_controller_name"])
         settings.data_controller_name = update.data_controller_name
-    if update.data_controller_email is not None:
+    if update.data_controller_email is not None and settings.data_controller_email != update.data_controller_email:
+        changes.append(field_labels["data_controller_email"])
         settings.data_controller_email = update.data_controller_email
 
     db.commit()
     db.refresh(settings)
 
-    # Log activity
-    log_company_activity(
-        db, current["company_id"], "settings_update",
-        "Uppdaterade företagsinställningar"
-    )
+    # Log activity with specific changes
+    if changes:
+        if len(changes) == 1:
+            description = f"Ändrade {changes[0]}"
+        elif len(changes) <= 3:
+            description = f"Ändrade {', '.join(changes)}"
+        else:
+            description = f"Ändrade {', '.join(changes[:2])} och {len(changes) - 2} till"
+        log_company_activity(
+            db, current["company_id"], "settings_update",
+            description, {"fields": changes}
+        )
 
     return SettingsResponse(
         company_name=settings.company_name or "",

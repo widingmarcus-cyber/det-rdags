@@ -325,9 +325,9 @@ function SuperAdmin() {
   }
 
   const getUsageColor = (percent) => {
-    if (percent >= 90) return { bar: 'bg-red-500', text: 'text-red-600', bg: 'bg-red-100' }
-    if (percent >= 75) return { bar: 'bg-amber-500', text: 'text-amber-600', bg: 'bg-amber-100' }
-    return { bar: 'bg-green-500', text: 'text-green-600', bg: 'bg-green-100' }
+    if (percent >= 90) return { bar: 'bg-red-500', text: 'text-red-500', bg: 'bg-red-500/15' }
+    if (percent >= 75) return { bar: 'bg-amber-500', text: 'text-amber-500', bg: 'bg-amber-500/15' }
+    return { bar: 'bg-green-500', text: 'text-green-500', bg: 'bg-green-500/15' }
   }
 
   const formatDate = (dateString) => {
@@ -703,7 +703,7 @@ function SuperAdmin() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Kunskapsbas</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Konversationer</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Användning</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">Åtgärder</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Skapad</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-subtle">
@@ -792,68 +792,8 @@ function SuperAdmin() {
                               <span className="text-xs text-text-tertiary">Obegränsat</span>
                             )}
                           </td>
-                          <td className="px-4 py-4 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <button
-                                onClick={() => handleImpersonate(company.id)}
-                                className="p-2 rounded-lg text-accent hover:bg-accent-soft transition-colors"
-                                title="Logga in som"
-                              >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                                  <circle cx="12" cy="7" r="4" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => handleExport(company.id)}
-                                className="p-2 rounded-lg text-text-secondary hover:bg-bg-secondary transition-colors"
-                                title="Exportera data"
-                              >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                  <polyline points="7 10 12 15 17 10" />
-                                  <line x1="12" y1="15" x2="12" y2="3" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => openUsageLimitModal(company)}
-                                className="p-2 rounded-lg text-text-secondary hover:bg-bg-secondary transition-colors"
-                                title="Användningsgräns"
-                              >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M12 20V10" />
-                                  <path d="M18 20V4" />
-                                  <path d="M6 20v-4" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => handleToggle(company.id)}
-                                className={`p-2 rounded-lg transition-colors ${
-                                  company.is_active
-                                    ? 'text-warning hover:bg-warning-soft'
-                                    : 'text-success hover:bg-success-soft'
-                                }`}
-                                title={company.is_active ? 'Inaktivera' : 'Aktivera'}
-                              >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  {company.is_active ? (
-                                    <><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></>
-                                  ) : (
-                                    <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></>
-                                  )}
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => handleDelete(company.id)}
-                                className="p-2 rounded-lg text-error hover:bg-error-soft transition-colors"
-                                title="Ta bort"
-                              >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <polyline points="3 6 5 6 21 6" />
-                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                </svg>
-                              </button>
-                            </div>
+                          <td className="px-4 py-4 text-sm text-text-secondary">
+                            {formatDate(company.created_at)}
                           </td>
                         </tr>
                       );

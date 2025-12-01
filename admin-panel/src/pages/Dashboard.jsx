@@ -101,8 +101,8 @@ function Dashboard() {
   )
 
   const getUsageColor = (percent) => {
-    if (percent >= 90) return { bar: 'bg-red-500', text: 'text-red-600', bg: 'bg-red-50' }
-    if (percent >= 75) return { bar: 'bg-amber-500', text: 'text-amber-600', bg: 'bg-amber-50' }
+    if (percent >= 90) return { bar: 'bg-red-500', text: 'text-red-500', bg: 'bg-red-500/10' }
+    if (percent >= 75) return { bar: 'bg-amber-500', text: 'text-amber-500', bg: 'bg-amber-500/10' }
     return { bar: 'bg-accent', text: 'text-accent', bg: 'bg-accent-soft' }
   }
 
@@ -113,14 +113,14 @@ function Dashboard() {
     const isAtLimit = percent >= 100
 
     return (
-      <div className={`p-4 rounded-xl border ${isAtLimit ? 'border-red-200 bg-red-50/50' : isNearLimit ? 'border-amber-200 bg-amber-50/50' : 'border-border-default bg-bg-primary'}`}>
+      <div className={`p-4 rounded-xl border ${isAtLimit ? 'border-red-500/30 bg-red-500/10' : isNearLimit ? 'border-amber-500/30 bg-amber-500/10' : 'border-border-default bg-bg-primary'}`}>
         <div className="flex items-center gap-3 mb-3">
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colors.bg} ${colors.text}`}>
             {icon}
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium text-text-primary">{label}</p>
-            <p className="text-xs text-text-secondary">
+            <p className={`text-xs ${isAtLimit ? 'text-red-500' : isNearLimit ? 'text-amber-500' : 'text-text-secondary'}`}>
               {isAtLimit ? 'Gränsen nådd' : isNearLimit ? 'Närmar dig gränsen' : 'Inom gränsen'}
             </p>
           </div>
