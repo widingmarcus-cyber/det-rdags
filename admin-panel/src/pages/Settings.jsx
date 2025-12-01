@@ -12,6 +12,7 @@ function Settings() {
     primary_color: '#D97757',
     contact_email: '',
     contact_phone: '',
+    data_retention_days: 30,
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -186,6 +187,65 @@ function Settings() {
               >
                 Förhandsvisning
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* GDPR & Integritet */}
+        <section className="card">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-lg font-medium text-text-primary">GDPR & Integritet</h2>
+              <p className="text-sm text-text-secondary">Hantera hur länge användardata sparas</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="input-label">Datalagring (dagar)</label>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min="7"
+                  max="365"
+                  value={settings.data_retention_days}
+                  onChange={(e) => setSettings({ ...settings, data_retention_days: parseInt(e.target.value) })}
+                  className="flex-1 h-2 bg-bg-secondary rounded-lg appearance-none cursor-pointer accent-accent"
+                />
+                <input
+                  type="number"
+                  min="7"
+                  max="365"
+                  value={settings.data_retention_days}
+                  onChange={(e) => setSettings({ ...settings, data_retention_days: parseInt(e.target.value) || 30 })}
+                  className="input w-20 text-center"
+                />
+              </div>
+              <p className="text-xs text-text-tertiary mt-2">
+                Konversationer raderas automatiskt efter {settings.data_retention_days} dagar.
+                Anonymiserad statistik bevaras för analys.
+              </p>
+            </div>
+            <div className="bg-bg-secondary rounded-lg p-4 border border-border-subtle">
+              <h4 className="text-sm font-medium text-text-primary mb-2">Vad sparas?</h4>
+              <ul className="text-xs text-text-secondary space-y-1">
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-success rounded-full"></span>
+                  Anonymiserad statistik (antal frågor, svarstider, kategorier)
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-warning rounded-full"></span>
+                  Konversationer (raderas efter {settings.data_retention_days} dagar)
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-error rounded-full"></span>
+                  IP-adresser anonymiseras direkt (xxx.xxx.xxx.xxx)
+                </li>
+              </ul>
             </div>
           </div>
         </section>

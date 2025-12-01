@@ -3,18 +3,25 @@ Bobot Backend API
 En GDPR-säker AI-chatbot för fastighetsbolag
 """
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta, date
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, and_
 import httpx
 import os
+import json
+import asyncio
+import uuid
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
-from database import create_tables, get_db, Company, KnowledgeItem, ChatLog, SuperAdmin
+from database import (
+    create_tables, get_db, Company, KnowledgeItem, ChatLog, SuperAdmin,
+    CompanySettings, Conversation, Message, DailyStatistics
+)
 from auth import (
     hash_password, verify_password, create_token,
     get_current_company, get_super_admin
@@ -22,10 +29,86 @@ from auth import (
 
 load_dotenv()
 
+
+# =============================================================================
+# Lifespan & Scheduled Tasks
+# =============================================================================
+
+async def cleanup_old_conversations():
+    """Rensa gamla konversationer baserat på retention-inställningar (GDPR)"""
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        # Hämta alla företag med deras retention-inställningar
+        companies = db.query(Company).all()
+
+        for company in companies:
+            settings = db.query(CompanySettings).filter(
+                CompanySettings.company_id == company.id
+            ).first()
+
+            retention_days = settings.data_retention_days if settings else 30
+            cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
+
+            # Hitta gamla konversationer
+            old_conversations = db.query(Conversation).filter(
+                and_(
+                    Conversation.company_id == company.id,
+                    Conversation.started_at < cutoff_date
+                )
+            ).all()
+
+            for conv in old_conversations:
+                # Spara statistik innan radering
+                await save_conversation_stats(db, conv)
+
+                # Radera konversation och meddelanden (cascade)
+                db.delete(conv)
+
+            if old_conversations:
+                db.commit()
+                print(f"[GDPR Cleanup] Raderade {len(old_conversations)} gamla konversationer för {company.id}")
+
+    except Exception as e:
+        print(f"[GDPR Cleanup Error] {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
+async def scheduled_cleanup_task():
+    """Kör cleanup varje timme"""
+    while True:
+        await asyncio.sleep(3600)  # Vänta 1 timme
+        await cleanup_old_conversations()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup och shutdown events"""
+    # Startup
+    create_tables()
+    init_demo_data()
+
+    # Starta bakgrundsuppgift för cleanup
+    cleanup_task = asyncio.create_task(scheduled_cleanup_task())
+    print("[Startup] GDPR cleanup-task startad (körs varje timme)")
+
+    yield
+
+    # Shutdown
+    cleanup_task.cancel()
+    try:
+        await cleanup_task
+    except asyncio.CancelledError:
+        pass
+
+
 app = FastAPI(
     title="Bobot API",
     description="AI-chatbot backend för fastighetsbolag",
-    version="2.0.0"
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 # CORS
@@ -59,22 +142,27 @@ class LoginResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     question: str
+    session_id: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
     answer: str
     sources: List[str] = []
+    session_id: str
+    had_answer: bool = True
 
 
 class KnowledgeItemCreate(BaseModel):
     question: str
     answer: str
+    category: Optional[str] = ""
 
 
 class KnowledgeItemResponse(BaseModel):
     id: int
     question: str
     answer: str
+    category: str
 
 
 class CompanyCreate(BaseModel):
@@ -104,65 +192,157 @@ class StatsResponse(BaseModel):
     questions_this_week: int
 
 
+class SettingsUpdate(BaseModel):
+    company_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    welcome_message: Optional[str] = None
+    fallback_message: Optional[str] = None
+    primary_color: Optional[str] = None
+    data_retention_days: Optional[int] = None
+
+
+class SettingsResponse(BaseModel):
+    company_name: str
+    contact_email: str
+    contact_phone: str
+    welcome_message: str
+    fallback_message: str
+    primary_color: str
+    data_retention_days: int
+
+
+class MessageResponse(BaseModel):
+    id: int
+    role: str
+    content: str
+    created_at: datetime
+    sources: Optional[List[str]] = None
+    had_answer: bool = True
+
+
+class ConversationResponse(BaseModel):
+    id: int
+    session_id: str
+    started_at: datetime
+    message_count: int
+    was_helpful: Optional[bool] = None
+    messages: Optional[List[MessageResponse]] = None
+
+
+class ConversationListResponse(BaseModel):
+    id: int
+    session_id: str
+    started_at: datetime
+    message_count: int
+    was_helpful: Optional[bool] = None
+    first_message: Optional[str] = None
+
+
+class AnalyticsResponse(BaseModel):
+    # Totals
+    total_conversations: int
+    total_messages: int
+    total_answered: int
+    total_unanswered: int
+
+    # Today
+    conversations_today: int
+    messages_today: int
+
+    # This week
+    conversations_week: int
+    messages_week: int
+
+    # Performance
+    avg_response_time_ms: float
+    answer_rate: float  # Procent av frågor som kunde besvaras
+
+    # Daily breakdown (senaste 30 dagarna)
+    daily_stats: List[dict]
+
+    # Category breakdown
+    category_stats: dict
+
+
 # =============================================================================
-# Startup
+# Init Functions
 # =============================================================================
 
-@app.on_event("startup")
-async def startup():
-    """Skapa tabeller och demo-data vid start"""
-    create_tables()
+def init_demo_data():
+    """Skapa demo-data vid start"""
+    from database import SessionLocal
+    db = SessionLocal()
 
-    db = next(get_db())
+    try:
+        # Skapa super admin om den inte finns
+        admin = db.query(SuperAdmin).filter(SuperAdmin.username == "admin").first()
+        if not admin:
+            admin = SuperAdmin(
+                username="admin",
+                password_hash=hash_password("admin123")
+            )
+            db.add(admin)
+            db.commit()
+            print("Super admin skapad: admin / admin123")
 
-    # Skapa super admin om den inte finns
-    admin = db.query(SuperAdmin).filter(SuperAdmin.username == "admin").first()
-    if not admin:
-        admin = SuperAdmin(
-            username="admin",
-            password_hash=hash_password("admin123")  # Byt i produktion!
-        )
-        db.add(admin)
-        db.commit()
-        print("Super admin skapad: admin / admin123")
+        # Skapa demo-företag om det inte finns
+        demo = db.query(Company).filter(Company.id == "demo").first()
+        if not demo:
+            demo = Company(
+                id="demo",
+                name="Demo Fastigheter AB",
+                password_hash=hash_password("demo123")
+            )
+            db.add(demo)
+            db.commit()
 
-    # Skapa demo-företag om det inte finns
-    demo = db.query(Company).filter(Company.id == "demo").first()
-    if not demo:
-        demo = Company(
-            id="demo",
-            name="Demo Fastigheter AB",
-            password_hash=hash_password("demo123")
-        )
-        db.add(demo)
-        db.commit()
+            # Skapa standardinställningar för demo
+            demo_settings = CompanySettings(
+                company_id="demo",
+                company_name="Demo Fastigheter AB",
+                contact_email="info@demo.se",
+                contact_phone="08-123 456 78"
+            )
+            db.add(demo_settings)
 
-        # Lägg till demo-kunskapsbas
-        demo_items = [
-            ("Hur säger jag upp min lägenhet?",
-             "För att säga upp din lägenhet behöver du skicka en skriftlig uppsägning till oss. Uppsägningstiden är vanligtvis 3 månader."),
-            ("Vad ingår i hyran?",
-             "I hyran ingår vanligtvis värme, vatten, sophämtning och tillgång till gemensamma utrymmen som tvättstuga."),
-            ("Hur anmäler jag ett fel i lägenheten?",
-             "Felanmälan görs via vår hemsida under 'Felanmälan' eller genom att ringa kundtjänst på 08-123 456 78."),
-            ("När är tvättstugan öppen?",
-             "Tvättstugan är öppen dygnet runt. Du bokar tvättid via bokningstavlan eller vår app."),
-            ("Får jag ha husdjur?",
-             "Ja, husdjur är tillåtna så länge de inte stör grannar eller orsakar skada."),
-        ]
+            # Lägg till demo-kunskapsbas med kategorier
+            demo_items = [
+                ("Hur säger jag upp min lägenhet?",
+                 "För att säga upp din lägenhet behöver du skicka en skriftlig uppsägning till oss. Uppsägningstiden är vanligtvis 3 månader.",
+                 "kontrakt"),
+                ("Vad ingår i hyran?",
+                 "I hyran ingår vanligtvis värme, vatten, sophämtning och tillgång till gemensamma utrymmen som tvättstuga.",
+                 "hyra"),
+                ("Hur anmäler jag ett fel i lägenheten?",
+                 "Felanmälan görs via vår hemsida under 'Felanmälan' eller genom att ringa kundtjänst på 08-123 456 78.",
+                 "felanmalan"),
+                ("När är tvättstugan öppen?",
+                 "Tvättstugan är öppen dygnet runt. Du bokar tvättid via bokningstavlan eller vår app.",
+                 "tvattstuga"),
+                ("Får jag ha husdjur?",
+                 "Ja, husdjur är tillåtna så länge de inte stör grannar eller orsakar skada.",
+                 "allmant"),
+                ("Hur betalar jag hyran?",
+                 "Hyran betalas via autogiro eller bankgiro. Du hittar betalningsinformation på din faktura.",
+                 "hyra"),
+                ("Var kan jag parkera?",
+                 "Parkering finns tillgänglig i vårt garage. Kontakta kundtjänst för att hyra en parkeringsplats.",
+                 "parkering"),
+            ]
 
-        for q, a in demo_items:
-            item = KnowledgeItem(company_id="demo", question=q, answer=a)
-            db.add(item)
+            for q, a, cat in demo_items:
+                item = KnowledgeItem(company_id="demo", question=q, answer=a, category=cat)
+                db.add(item)
 
-        db.commit()
-        print("Demo-företag skapat: demo / demo123")
-
-    db.close()
+            db.commit()
+            print("Demo-företag skapat: demo / demo123")
+    finally:
+        db.close()
 
 
 # =============================================================================
-# Hjälpfunktioner
+# Helper Functions
 # =============================================================================
 
 def find_relevant_context(question: str, company_id: str, db: Session, top_k: int = 3) -> List[KnowledgeItem]:
@@ -200,7 +380,7 @@ async def query_ollama(prompt: str) -> str:
             raise HTTPException(status_code=500, detail=str(e))
 
 
-def build_prompt(question: str, context: List[KnowledgeItem]) -> str:
+def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None) -> str:
     """Bygg prompt med kontext"""
     context_text = ""
     if context:
@@ -208,7 +388,9 @@ def build_prompt(question: str, context: List[KnowledgeItem]) -> str:
         for item in context:
             context_text += f"F: {item.question}\nS: {item.answer}\n\n"
 
-    return f"""Du är en hjälpsam kundtjänstassistent för ett fastighetsbolag.
+    company_name = settings.company_name if settings else "fastighetsbolaget"
+
+    return f"""Du är en hjälpsam kundtjänstassistent för {company_name}.
 Svara på svenska, trevligt och professionellt.
 Om du inte vet svaret, säg det ärligt.
 
@@ -216,6 +398,98 @@ Om du inte vet svaret, säg det ärligt.
 Kundens fråga: {question}
 
 Svar:"""
+
+
+def anonymize_ip(ip: str) -> str:
+    """Anonymisera IP-adress genom att ersätta sista oktetten"""
+    if not ip:
+        return None
+    parts = ip.split(".")
+    if len(parts) == 4:
+        return f"{parts[0]}.{parts[1]}.{parts[2]}.xxx"
+    return "xxx.xxx.xxx.xxx"
+
+
+def anonymize_user_agent(user_agent: str) -> str:
+    """Extrahera endast webbläsare från user agent"""
+    if not user_agent:
+        return None
+
+    # Enkel parsing för vanliga webbläsare
+    browsers = ["Chrome", "Firefox", "Safari", "Edge", "Opera"]
+    for browser in browsers:
+        if browser in user_agent:
+            return browser
+    return "Other"
+
+
+async def save_conversation_stats(db: Session, conversation: Conversation):
+    """Spara anonymiserad statistik innan konversation raderas"""
+    conv_date = conversation.started_at.date()
+
+    # Hämta eller skapa daglig statistik
+    daily_stat = db.query(DailyStatistics).filter(
+        and_(
+            DailyStatistics.company_id == conversation.company_id,
+            DailyStatistics.date == conv_date
+        )
+    ).first()
+
+    if not daily_stat:
+        daily_stat = DailyStatistics(
+            company_id=conversation.company_id,
+            date=conv_date
+        )
+        db.add(daily_stat)
+
+    # Uppdatera statistik
+    daily_stat.total_conversations += 1
+    daily_stat.total_messages += conversation.message_count
+
+    # Räkna besvarade/obesvarade
+    messages = db.query(Message).filter(
+        Message.conversation_id == conversation.id,
+        Message.role == "bot"
+    ).all()
+
+    for msg in messages:
+        if msg.had_answer:
+            daily_stat.questions_answered += 1
+        else:
+            daily_stat.questions_unanswered += 1
+
+    # Feedback
+    if conversation.was_helpful is True:
+        daily_stat.helpful_count += 1
+    elif conversation.was_helpful is False:
+        daily_stat.not_helpful_count += 1
+
+    # Beräkna genomsnittlig svarstid
+    response_times = [m.response_time_ms for m in messages if m.response_time_ms]
+    if response_times:
+        current_avg = daily_stat.avg_response_time_ms or 0
+        current_count = daily_stat.questions_answered + daily_stat.questions_unanswered - len(messages)
+        new_avg = (current_avg * current_count + sum(response_times)) / (current_count + len(response_times))
+        daily_stat.avg_response_time_ms = new_avg
+
+
+def get_or_create_settings(db: Session, company_id: str) -> CompanySettings:
+    """Hämta eller skapa inställningar för ett företag"""
+    settings = db.query(CompanySettings).filter(
+        CompanySettings.company_id == company_id
+    ).first()
+
+    if not settings:
+        company = db.query(Company).filter(Company.id == company_id).first()
+        settings = CompanySettings(
+            company_id=company_id,
+            company_name=company.name if company else ""
+        )
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+
+    return settings
 
 
 # =============================================================================
@@ -277,30 +551,309 @@ async def admin_login(request: SuperAdminLogin, db: Session = Depends(get_db)):
 # =============================================================================
 
 @app.post("/chat/{company_id}", response_model=ChatResponse)
-async def chat(company_id: str, request: ChatRequest, db: Session = Depends(get_db)):
+async def chat(
+    company_id: str,
+    request: ChatRequest,
+    req: Request,
+    db: Session = Depends(get_db)
+):
     """Chatta med AI - öppen endpoint för widget"""
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company or not company.is_active:
         raise HTTPException(status_code=404, detail="Företag finns inte")
 
+    # Hämta inställningar
+    settings = get_or_create_settings(db, company_id)
+
+    # Hantera session
+    session_id = request.session_id or str(uuid.uuid4())
+
+    # Hitta eller skapa konversation
+    conversation = db.query(Conversation).filter(
+        Conversation.session_id == session_id,
+        Conversation.company_id == company_id
+    ).first()
+
+    if not conversation:
+        # Anonymisera användardata
+        client_ip = req.client.host if req.client else None
+        user_agent = req.headers.get("user-agent", "")
+
+        conversation = Conversation(
+            company_id=company_id,
+            session_id=session_id,
+            user_ip_anonymous=anonymize_ip(client_ip),
+            user_agent_anonymous=anonymize_user_agent(user_agent)
+        )
+        db.add(conversation)
+        db.commit()
+        db.refresh(conversation)
+
+    # Spara användarens meddelande
+    user_message = Message(
+        conversation_id=conversation.id,
+        role="user",
+        content=request.question
+    )
+    db.add(user_message)
+
     # Hitta kontext
     context = find_relevant_context(request.question, company_id, db)
+    had_answer = len(context) > 0
+
+    # Mät svarstid
+    start_time = datetime.utcnow()
 
     # Bygg prompt och fråga AI
-    prompt = build_prompt(request.question, context)
+    prompt = build_prompt(request.question, context, settings)
     answer = await query_ollama(prompt)
 
-    # Logga frågan
+    response_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+
+    # Om inget svar hittades, använd fallback
+    if not had_answer:
+        answer = settings.fallback_message
+
+    # Spara bot-svaret
+    sources = [item.question for item in context]
+    bot_message = Message(
+        conversation_id=conversation.id,
+        role="bot",
+        content=answer,
+        sources=json.dumps(sources) if sources else None,
+        had_answer=had_answer,
+        response_time_ms=response_time
+    )
+    db.add(bot_message)
+
+    # Uppdatera konversation
+    conversation.message_count += 2
+    conversation.ended_at = datetime.utcnow()
+
+    # Legacy: Spara även till ChatLog för bakåtkompatibilitet
     log = ChatLog(company_id=company_id, question=request.question, answer=answer)
     db.add(log)
+
     db.commit()
 
-    sources = [item.question for item in context]
-    return ChatResponse(answer=answer, sources=sources)
+    return ChatResponse(
+        answer=answer,
+        sources=sources,
+        session_id=session_id,
+        had_answer=had_answer
+    )
+
+
+@app.post("/chat/{company_id}/feedback")
+async def chat_feedback(
+    company_id: str,
+    session_id: str,
+    helpful: bool,
+    db: Session = Depends(get_db)
+):
+    """Ge feedback på en konversation"""
+    conversation = db.query(Conversation).filter(
+        Conversation.session_id == session_id,
+        Conversation.company_id == company_id
+    ).first()
+
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Konversation finns inte")
+
+    conversation.was_helpful = helpful
+    db.commit()
+
+    return {"message": "Tack för din feedback!"}
 
 
 # =============================================================================
-# Company Endpoints (Autentiserade)
+# Settings Endpoints (Autentiserade)
+# =============================================================================
+
+@app.get("/settings", response_model=SettingsResponse)
+async def get_settings(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Hämta inställningar för inloggat företag"""
+    settings = get_or_create_settings(db, current["company_id"])
+
+    return SettingsResponse(
+        company_name=settings.company_name or "",
+        contact_email=settings.contact_email or "",
+        contact_phone=settings.contact_phone or "",
+        welcome_message=settings.welcome_message or "",
+        fallback_message=settings.fallback_message or "",
+        primary_color=settings.primary_color or "#D97757",
+        data_retention_days=settings.data_retention_days or 30
+    )
+
+
+@app.put("/settings", response_model=SettingsResponse)
+async def update_settings(
+    update: SettingsUpdate,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Uppdatera inställningar för inloggat företag"""
+    settings = get_or_create_settings(db, current["company_id"])
+
+    # Uppdatera endast fält som skickats
+    if update.company_name is not None:
+        settings.company_name = update.company_name
+    if update.contact_email is not None:
+        settings.contact_email = update.contact_email
+    if update.contact_phone is not None:
+        settings.contact_phone = update.contact_phone
+    if update.welcome_message is not None:
+        settings.welcome_message = update.welcome_message
+    if update.fallback_message is not None:
+        settings.fallback_message = update.fallback_message
+    if update.primary_color is not None:
+        settings.primary_color = update.primary_color
+    if update.data_retention_days is not None:
+        # Validera retention (7-365 dagar)
+        settings.data_retention_days = max(7, min(365, update.data_retention_days))
+
+    db.commit()
+    db.refresh(settings)
+
+    return SettingsResponse(
+        company_name=settings.company_name or "",
+        contact_email=settings.contact_email or "",
+        contact_phone=settings.contact_phone or "",
+        welcome_message=settings.welcome_message or "",
+        fallback_message=settings.fallback_message or "",
+        primary_color=settings.primary_color or "#D97757",
+        data_retention_days=settings.data_retention_days or 30
+    )
+
+
+# =============================================================================
+# Conversations Endpoints (Autentiserade)
+# =============================================================================
+
+@app.get("/conversations", response_model=List[ConversationListResponse])
+async def get_conversations(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db),
+    limit: int = 50,
+    offset: int = 0
+):
+    """Hämta konversationer för inloggat företag"""
+    conversations = db.query(Conversation).filter(
+        Conversation.company_id == current["company_id"]
+    ).order_by(Conversation.started_at.desc()).offset(offset).limit(limit).all()
+
+    result = []
+    for conv in conversations:
+        # Hämta första meddelandet
+        first_msg = db.query(Message).filter(
+            Message.conversation_id == conv.id,
+            Message.role == "user"
+        ).order_by(Message.created_at.asc()).first()
+
+        result.append(ConversationListResponse(
+            id=conv.id,
+            session_id=conv.session_id,
+            started_at=conv.started_at,
+            message_count=conv.message_count,
+            was_helpful=conv.was_helpful,
+            first_message=first_msg.content[:100] if first_msg else None
+        ))
+
+    return result
+
+
+@app.get("/conversations/{conversation_id}", response_model=ConversationResponse)
+async def get_conversation(
+    conversation_id: int,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Hämta en specifik konversation med meddelanden"""
+    conversation = db.query(Conversation).filter(
+        Conversation.id == conversation_id,
+        Conversation.company_id == current["company_id"]
+    ).first()
+
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Konversation finns inte")
+
+    messages = db.query(Message).filter(
+        Message.conversation_id == conversation.id
+    ).order_by(Message.created_at.asc()).all()
+
+    message_responses = []
+    for msg in messages:
+        sources = json.loads(msg.sources) if msg.sources else None
+        message_responses.append(MessageResponse(
+            id=msg.id,
+            role=msg.role,
+            content=msg.content,
+            created_at=msg.created_at,
+            sources=sources,
+            had_answer=msg.had_answer if msg.had_answer is not None else True
+        ))
+
+    return ConversationResponse(
+        id=conversation.id,
+        session_id=conversation.session_id,
+        started_at=conversation.started_at,
+        message_count=conversation.message_count,
+        was_helpful=conversation.was_helpful,
+        messages=message_responses
+    )
+
+
+@app.delete("/conversations/{conversation_id}")
+async def delete_conversation(
+    conversation_id: int,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Radera en konversation (GDPR) - statistik sparas"""
+    conversation = db.query(Conversation).filter(
+        Conversation.id == conversation_id,
+        Conversation.company_id == current["company_id"]
+    ).first()
+
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Konversation finns inte")
+
+    # Spara statistik innan radering
+    await save_conversation_stats(db, conversation)
+
+    # Radera (meddelanden tas bort via cascade)
+    db.delete(conversation)
+    db.commit()
+
+    return {"message": "Konversation raderad. Anonymiserad statistik sparad."}
+
+
+@app.delete("/conversations")
+async def delete_all_conversations(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Radera alla konversationer (GDPR) - statistik sparas"""
+    conversations = db.query(Conversation).filter(
+        Conversation.company_id == current["company_id"]
+    ).all()
+
+    count = len(conversations)
+
+    for conv in conversations:
+        await save_conversation_stats(db, conv)
+        db.delete(conv)
+
+    db.commit()
+
+    return {"message": f"{count} konversationer raderade. Anonymiserad statistik sparad."}
+
+
+# =============================================================================
+# Knowledge Endpoints (Autentiserade)
 # =============================================================================
 
 @app.get("/knowledge", response_model=List[KnowledgeItemResponse])
@@ -313,7 +866,12 @@ async def get_knowledge(
         KnowledgeItem.company_id == current["company_id"]
     ).all()
 
-    return [KnowledgeItemResponse(id=i.id, question=i.question, answer=i.answer) for i in items]
+    return [KnowledgeItemResponse(
+        id=i.id,
+        question=i.question,
+        answer=i.answer,
+        category=i.category or ""
+    ) for i in items]
 
 
 @app.post("/knowledge", response_model=KnowledgeItemResponse)
@@ -326,13 +884,19 @@ async def add_knowledge(
     new_item = KnowledgeItem(
         company_id=current["company_id"],
         question=item.question,
-        answer=item.answer
+        answer=item.answer,
+        category=item.category or ""
     )
     db.add(new_item)
     db.commit()
     db.refresh(new_item)
 
-    return KnowledgeItemResponse(id=new_item.id, question=new_item.question, answer=new_item.answer)
+    return KnowledgeItemResponse(
+        id=new_item.id,
+        question=new_item.question,
+        answer=new_item.answer,
+        category=new_item.category or ""
+    )
 
 
 @app.put("/knowledge/{item_id}", response_model=KnowledgeItemResponse)
@@ -353,9 +917,15 @@ async def update_knowledge(
 
     db_item.question = item.question
     db_item.answer = item.answer
+    db_item.category = item.category or ""
     db.commit()
 
-    return KnowledgeItemResponse(id=db_item.id, question=db_item.question, answer=db_item.answer)
+    return KnowledgeItemResponse(
+        id=db_item.id,
+        question=db_item.question,
+        answer=db_item.answer,
+        category=db_item.category or ""
+    )
 
 
 @app.delete("/knowledge/{item_id}")
@@ -379,12 +949,16 @@ async def delete_knowledge(
     return {"message": "Borttagen"}
 
 
+# =============================================================================
+# Stats & Analytics Endpoints
+# =============================================================================
+
 @app.get("/stats", response_model=StatsResponse)
 async def get_stats(
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db)
 ):
-    """Hämta statistik för inloggat företag"""
+    """Hämta enkel statistik för inloggat företag"""
     company_id = current["company_id"]
 
     total = db.query(ChatLog).filter(ChatLog.company_id == company_id).count()
@@ -396,7 +970,6 @@ async def get_stats(
         func.date(ChatLog.created_at) == today
     ).count()
 
-    from datetime import timedelta
     week_ago = datetime.utcnow() - timedelta(days=7)
     week_count = db.query(ChatLog).filter(
         ChatLog.company_id == company_id,
@@ -408,6 +981,135 @@ async def get_stats(
         knowledge_items=knowledge,
         questions_today=today_count,
         questions_this_week=week_count
+    )
+
+
+@app.get("/analytics", response_model=AnalyticsResponse)
+async def get_analytics(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Hämta detaljerad GDPR-säker statistik (anonymiserad)"""
+    company_id = current["company_id"]
+    today = date.today()
+    week_ago = today - timedelta(days=7)
+    month_ago = today - timedelta(days=30)
+
+    # Totals från DailyStatistics (historisk data)
+    stats = db.query(DailyStatistics).filter(
+        DailyStatistics.company_id == company_id
+    ).all()
+
+    total_conversations = sum(s.total_conversations for s in stats)
+    total_messages = sum(s.total_messages for s in stats)
+    total_answered = sum(s.questions_answered for s in stats)
+    total_unanswered = sum(s.questions_unanswered for s in stats)
+
+    # Lägg till aktiva konversationer (ej ännu i statistik)
+    active_convs = db.query(Conversation).filter(
+        Conversation.company_id == company_id
+    ).all()
+    total_conversations += len(active_convs)
+    total_messages += sum(c.message_count for c in active_convs)
+
+    # Räkna answered/unanswered för aktiva
+    for conv in active_convs:
+        msgs = db.query(Message).filter(
+            Message.conversation_id == conv.id,
+            Message.role == "bot"
+        ).all()
+        for msg in msgs:
+            if msg.had_answer:
+                total_answered += 1
+            else:
+                total_unanswered += 1
+
+    # Today
+    today_stats = db.query(DailyStatistics).filter(
+        DailyStatistics.company_id == company_id,
+        DailyStatistics.date == today
+    ).first()
+
+    conversations_today = today_stats.total_conversations if today_stats else 0
+    messages_today = today_stats.total_messages if today_stats else 0
+
+    # Lägg till dagens aktiva konversationer
+    today_convs = [c for c in active_convs if c.started_at.date() == today]
+    conversations_today += len(today_convs)
+    messages_today += sum(c.message_count for c in today_convs)
+
+    # This week
+    week_stats = db.query(DailyStatistics).filter(
+        DailyStatistics.company_id == company_id,
+        DailyStatistics.date >= week_ago
+    ).all()
+
+    conversations_week = sum(s.total_conversations for s in week_stats)
+    messages_week = sum(s.total_messages for s in week_stats)
+
+    # Lägg till veckans aktiva
+    week_convs = [c for c in active_convs if c.started_at.date() >= week_ago]
+    conversations_week += len(week_convs)
+    messages_week += sum(c.message_count for c in week_convs)
+
+    # Performance
+    all_response_times = []
+    for conv in active_convs:
+        msgs = db.query(Message).filter(
+            Message.conversation_id == conv.id,
+            Message.response_time_ms.isnot(None)
+        ).all()
+        all_response_times.extend([m.response_time_ms for m in msgs])
+
+    avg_response_time = sum(all_response_times) / len(all_response_times) if all_response_times else 0
+
+    # Inkludera historisk data
+    historical_avg = [s.avg_response_time_ms for s in stats if s.avg_response_time_ms]
+    if historical_avg:
+        avg_response_time = (avg_response_time + sum(historical_avg)) / (1 + len(historical_avg))
+
+    answer_rate = (total_answered / (total_answered + total_unanswered) * 100) if (total_answered + total_unanswered) > 0 else 100
+
+    # Daily breakdown (senaste 30 dagarna)
+    daily_stats = []
+    month_stats = db.query(DailyStatistics).filter(
+        DailyStatistics.company_id == company_id,
+        DailyStatistics.date >= month_ago
+    ).order_by(DailyStatistics.date.asc()).all()
+
+    for s in month_stats:
+        daily_stats.append({
+            "date": s.date.isoformat(),
+            "conversations": s.total_conversations,
+            "messages": s.total_messages,
+            "answered": s.questions_answered,
+            "unanswered": s.questions_unanswered
+        })
+
+    # Category breakdown
+    category_stats = {}
+    for s in stats:
+        if s.category_counts:
+            try:
+                cats = json.loads(s.category_counts)
+                for cat, count in cats.items():
+                    category_stats[cat] = category_stats.get(cat, 0) + count
+            except:
+                pass
+
+    return AnalyticsResponse(
+        total_conversations=total_conversations,
+        total_messages=total_messages,
+        total_answered=total_answered,
+        total_unanswered=total_unanswered,
+        conversations_today=conversations_today,
+        messages_today=messages_today,
+        conversations_week=conversations_week,
+        messages_week=messages_week,
+        avg_response_time_ms=avg_response_time,
+        answer_rate=answer_rate,
+        daily_stats=daily_stats,
+        category_stats=category_stats
     )
 
 
@@ -459,6 +1161,14 @@ async def create_company(
     db.add(new_company)
     db.commit()
 
+    # Skapa standardinställningar
+    settings = CompanySettings(
+        company_id=company.id,
+        company_name=company.name
+    )
+    db.add(settings)
+    db.commit()
+
     return CompanyResponse(
         id=new_company.id,
         name=new_company.name,
@@ -501,6 +1211,19 @@ async def toggle_company(
     db.commit()
 
     return {"message": f"Företag {'aktiverat' if company.is_active else 'inaktiverat'}"}
+
+
+# =============================================================================
+# Manual GDPR Cleanup Endpoint (för testing/admin)
+# =============================================================================
+
+@app.post("/admin/gdpr-cleanup")
+async def manual_gdpr_cleanup(
+    admin: dict = Depends(get_super_admin)
+):
+    """Kör GDPR-cleanup manuellt (för testing)"""
+    await cleanup_old_conversations()
+    return {"message": "GDPR cleanup genomförd"}
 
 
 # =============================================================================
