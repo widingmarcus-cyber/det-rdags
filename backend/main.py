@@ -3,7 +3,7 @@ Bobot Backend API
 En GDPR-säker AI-chatbot för fastighetsbolag
 """
 
-from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
@@ -1213,6 +1213,236 @@ async def delete_knowledge(
     db.commit()
 
     return {"message": "Borttagen"}
+
+
+class UploadResponse(BaseModel):
+    success: bool
+    items_added: int
+    message: str
+    items: List[KnowledgeItemResponse] = []
+
+
+async def parse_excel_file(content: bytes) -> List[dict]:
+    """Parse Excel file and extract Q&A pairs"""
+    import io
+    try:
+        import openpyxl
+    except ImportError:
+        return []
+
+    items = []
+    try:
+        workbook = openpyxl.load_workbook(io.BytesIO(content))
+        sheet = workbook.active
+
+        # Try to find headers
+        headers = []
+        for col in range(1, sheet.max_column + 1):
+            val = sheet.cell(row=1, column=col).value
+            headers.append(str(val).lower() if val else "")
+
+        # Map columns to Q&A
+        q_col = None
+        a_col = None
+        cat_col = None
+
+        for i, h in enumerate(headers):
+            if any(x in h for x in ['fråga', 'question', 'q']):
+                q_col = i + 1
+            elif any(x in h for x in ['svar', 'answer', 'a']):
+                a_col = i + 1
+            elif any(x in h for x in ['kategori', 'category', 'cat']):
+                cat_col = i + 1
+
+        # If no headers found, assume first two columns
+        if q_col is None:
+            q_col = 1
+        if a_col is None:
+            a_col = 2
+
+        # Read rows
+        for row in range(2, sheet.max_row + 1):
+            q = sheet.cell(row=row, column=q_col).value
+            a = sheet.cell(row=row, column=a_col).value
+            cat = sheet.cell(row=row, column=cat_col).value if cat_col else None
+
+            if q and a:
+                items.append({
+                    "question": str(q).strip(),
+                    "answer": str(a).strip(),
+                    "category": str(cat).strip() if cat else None
+                })
+    except Exception as e:
+        print(f"Excel parse error: {e}")
+
+    return items
+
+
+async def parse_word_file(content: bytes) -> str:
+    """Parse Word file and extract text"""
+    import io
+    try:
+        from docx import Document
+    except ImportError:
+        return ""
+
+    try:
+        doc = Document(io.BytesIO(content))
+        text = []
+        for para in doc.paragraphs:
+            if para.text.strip():
+                text.append(para.text.strip())
+        return "\n\n".join(text)
+    except Exception as e:
+        print(f"Word parse error: {e}")
+        return ""
+
+
+async def parse_text_file(content: bytes) -> str:
+    """Parse plain text file"""
+    try:
+        return content.decode('utf-8')
+    except:
+        try:
+            return content.decode('latin-1')
+        except:
+            return ""
+
+
+async def ai_extract_qa_pairs(text: str, company_name: str = "") -> List[dict]:
+    """Use AI to extract Q&A pairs from unstructured text"""
+    if not text or len(text) < 20:
+        return []
+
+    prompt = f"""Analyze this document and extract question-answer pairs that would be useful for a customer service chatbot for a property management company.
+
+Document text:
+{text[:4000]}
+
+Extract relevant information as Q&A pairs. For each piece of information, create a natural question a tenant might ask, and provide the answer.
+
+Also assign each Q&A to one of these categories: hyra, felanmalan, kontrakt, tvattstuga, parkering, kontakt, allmant
+
+Return your response as a JSON array with objects containing "question", "answer", and "category" fields.
+Only return the JSON array, nothing else.
+
+Example format:
+[
+  {{"question": "När ska hyran betalas?", "answer": "Hyran ska betalas senast den sista dagen varje månad.", "category": "hyra"}},
+  {{"question": "Hur gör jag en felanmälan?", "answer": "Du kan göra en felanmälan via...", "category": "felanmalan"}}
+]"""
+
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            response = await client.post(
+                f"{OLLAMA_BASE_URL}/api/generate",
+                json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
+            )
+            response.raise_for_status()
+            result = response.json().get("response", "")
+
+            # Try to parse JSON from response
+            import re
+            json_match = re.search(r'\[[\s\S]*\]', result)
+            if json_match:
+                items = json.loads(json_match.group())
+                return [item for item in items if item.get("question") and item.get("answer")]
+    except Exception as e:
+        print(f"AI extraction error: {e}")
+
+    return []
+
+
+@app.post("/knowledge/upload", response_model=UploadResponse)
+async def upload_knowledge_file(
+    file: UploadFile = File(...),
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Upload Excel, Word, or text file to populate knowledge base"""
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Ingen fil vald")
+
+    filename = file.filename.lower()
+    content = await file.read()
+
+    if len(content) > 10 * 1024 * 1024:  # 10MB limit
+        raise HTTPException(status_code=400, detail="Filen är för stor (max 10MB)")
+
+    items_to_add = []
+
+    # Parse based on file type
+    if filename.endswith('.xlsx') or filename.endswith('.xls'):
+        items_to_add = await parse_excel_file(content)
+    elif filename.endswith('.docx'):
+        text = await parse_word_file(content)
+        if text:
+            # Use AI to extract Q&A from unstructured text
+            settings = get_or_create_settings(db, current["company_id"])
+            items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
+    elif filename.endswith('.txt') or filename.endswith('.csv'):
+        text = await parse_text_file(content)
+        if text:
+            # Check if it looks like CSV
+            if ',' in text or ';' in text:
+                # Simple CSV parsing
+                lines = text.strip().split('\n')
+                for line in lines[1:]:  # Skip header
+                    parts = line.split(',') if ',' in line else line.split(';')
+                    if len(parts) >= 2:
+                        items_to_add.append({
+                            "question": parts[0].strip().strip('"'),
+                            "answer": parts[1].strip().strip('"'),
+                            "category": parts[2].strip().strip('"') if len(parts) > 2 else None
+                        })
+            else:
+                # Use AI to extract Q&A
+                settings = get_or_create_settings(db, current["company_id"])
+                items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Filformat stöds inte. Använd .xlsx, .docx, .txt eller .csv"
+        )
+
+    if not items_to_add:
+        return UploadResponse(
+            success=False,
+            items_added=0,
+            message="Kunde inte hitta några frågor/svar i filen. Kontrollera formatet."
+        )
+
+    # Auto-categorize items without category
+    for item in items_to_add:
+        if not item.get("category"):
+            item["category"] = detect_category(item["question"] + " " + item["answer"])
+
+    # Add to database
+    added_items = []
+    for item in items_to_add:
+        new_item = KnowledgeItem(
+            company_id=current["company_id"],
+            question=item["question"],
+            answer=item["answer"],
+            category=item.get("category", "allmant")
+        )
+        db.add(new_item)
+        db.flush()
+        added_items.append(KnowledgeItemResponse(
+            id=new_item.id,
+            question=new_item.question,
+            answer=new_item.answer,
+            category=new_item.category or ""
+        ))
+
+    db.commit()
+
+    return UploadResponse(
+        success=True,
+        items_added=len(added_items),
+        message=f"{len(added_items)} frågor/svar har lagts till i kunskapsbasen",
+        items=added_items
+    )
 
 
 # =============================================================================

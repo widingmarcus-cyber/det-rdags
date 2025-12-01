@@ -26,6 +26,8 @@ function Analytics() {
     }
   }
 
+  const [exporting, setExporting] = useState(null)
+
   const handleExport = async (type) => {
     const endpoints = {
       conversations: '/export/conversations',
@@ -33,12 +35,9 @@ function Analytics() {
       knowledge: '/export/knowledge'
     }
 
+    setExporting(type)
     try {
-      const response = await fetch(`${API_BASE}${endpoints[type]}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
+      const response = await authFetch(`${API_BASE}${endpoints[type]}`)
       if (response.ok) {
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
@@ -49,9 +48,14 @@ function Analytics() {
         a.click()
         window.URL.revokeObjectURL(url)
         a.remove()
+      } else {
+        alert('Export misslyckades. Försök igen.')
       }
     } catch (error) {
       console.error('Export failed:', error)
+      alert('Export misslyckades: ' + error.message)
+    } finally {
+      setExporting(null)
     }
   }
 
@@ -89,24 +93,34 @@ function Analytics() {
         <div className="flex gap-2">
           <button
             onClick={() => handleExport('statistics')}
-            className="btn btn-ghost text-sm"
+            disabled={exporting !== null}
+            className="btn btn-ghost text-sm disabled:opacity-50"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
+            {exporting === 'statistics' ? (
+              <span className="animate-spin">⏳</span>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            )}
             Exportera statistik
           </button>
           <button
             onClick={() => handleExport('conversations')}
-            className="btn btn-ghost text-sm"
+            disabled={exporting !== null}
+            className="btn btn-ghost text-sm disabled:opacity-50"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
+            {exporting === 'conversations' ? (
+              <span className="animate-spin">⏳</span>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            )}
             Exportera konversationer
           </button>
         </div>
