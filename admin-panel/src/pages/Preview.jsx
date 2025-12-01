@@ -154,7 +154,7 @@ function Preview() {
       <div className="max-w-md mx-auto">
         {/* Settings info */}
         <div className="bg-bg-secondary border border-border-subtle rounded-lg p-3 mb-4 text-sm">
-          <div className="flex items-center gap-4 text-text-secondary">
+          <div className="flex items-center gap-4 text-text-secondary flex-wrap">
             <div className="flex items-center gap-2">
               <div
                 className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
@@ -168,8 +168,32 @@ function Preview() {
               </svg>
               <span>{companyName}</span>
             </div>
+            {settings?.require_consent && (
+              <div className="flex items-center gap-2 text-accent">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                <span>GDPR aktiv</span>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* GDPR Note */}
+        {settings?.require_consent && (
+          <div className="bg-accent-soft border border-accent/20 rounded-lg p-3 mb-4 text-sm">
+            <div className="flex items-start gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent mt-0.5 flex-shrink-0">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              <p className="text-text-secondary">
+                <span className="font-medium text-text-primary">OBS:</span> Den riktiga widgeten visar en samtyckes-dialog och GDPR-meny. I förhandsvisningen är detta inaktiverat för testning.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Widget Preview */}
         <div className="bg-bg-tertiary rounded-xl shadow-lg border border-border-subtle overflow-hidden">

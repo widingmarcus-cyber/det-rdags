@@ -76,7 +76,7 @@ function Conversations() {
   }
 
   const handleDelete = async (conversationId) => {
-    if (!confirm('Är du säker på att du vill radera denna konversation? Anonymiserad statistik bevaras.')) {
+    if (!window.confirm('Är du säker på att du vill radera denna konversation? Anonymiserad statistik bevaras.')) {
       return
     }
 
@@ -96,7 +96,7 @@ function Conversations() {
   }
 
   const handleDeleteAll = async () => {
-    if (!confirm('Är du HELT säker på att du vill radera ALLA konversationer? Anonymiserad statistik bevaras.')) {
+    if (!window.confirm('Är du HELT säker på att du vill radera ALLA konversationer? Anonymiserad statistik bevaras.')) {
       return
     }
 

@@ -109,7 +109,7 @@ function Knowledge() {
   }
 
   const deleteCategory = (name) => {
-    if (!confirm(`Ta bort kategorin "${name}"? Frågor i denna kategori blir utan kategori.`)) return
+    if (!window.confirm(`Ta bort kategorin "${name}"? Frågor i denna kategori blir utan kategori.`)) return
     const newCategories = categories.filter(c => c !== name)
     saveCategories(newCategories)
   }
@@ -184,7 +184,7 @@ function Knowledge() {
   }
 
   const handleDelete = async (item) => {
-    if (!confirm('Är du säker på att du vill ta bort denna post?')) return
+    if (!window.confirm('Är du säker på att du vill ta bort denna post?')) return
 
     try {
       const response = await authFetch(`${API_BASE}/knowledge/${item.id}`, {
@@ -302,7 +302,7 @@ function Knowledge() {
 
   const handleBulkDelete = async () => {
     if (selectedItems.size === 0) return
-    if (!confirm(`Är du säker på att du vill ta bort ${selectedItems.size} poster?`)) return
+    if (!window.confirm(`Är du säker på att du vill ta bort ${selectedItems.size} poster?`)) return
 
     try {
       const response = await authFetch(`${API_BASE}/knowledge/bulk`, {
