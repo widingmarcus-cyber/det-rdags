@@ -382,24 +382,67 @@ async def query_ollama(prompt: str) -> str:
             raise HTTPException(status_code=500, detail=str(e))
 
 
+def detect_language(text: str) -> str:
+    """Detect language of text based on common words and characters"""
+    text_lower = text.lower()
+
+    # Arabic detection - check for Arabic Unicode range
+    arabic_chars = sum(1 for c in text if '\u0600' <= c <= '\u06FF')
+    if arabic_chars > len(text) * 0.3:
+        return "ar"
+
+    # Swedish-specific words
+    swedish_words = ['jag', 'hur', 'vad', 'kan', 'har', 'är', 'och', 'att', 'det', 'en', 'ett',
+                     'för', 'med', 'om', 'på', 'av', 'till', 'från', 'var', 'när', 'vill',
+                     'hej', 'tack', 'hyra', 'lägenhet', 'felanmälan', 'bostaden', 'kontakt']
+
+    # English-specific words
+    english_words = ['the', 'is', 'are', 'what', 'how', 'can', 'you', 'i', 'my', 'have',
+                     'do', 'does', 'would', 'could', 'should', 'will', 'want', 'need',
+                     'hello', 'hi', 'thanks', 'please', 'help', 'rent', 'apartment', 'contact']
+
+    words = text_lower.split()
+    swedish_count = sum(1 for w in words if w in swedish_words)
+    english_count = sum(1 for w in words if w in english_words)
+
+    if english_count > swedish_count:
+        return "en"
+    return "sv"  # Default to Swedish
+
+
+def get_language_instruction(lang: str) -> str:
+    """Get language instruction for the AI prompt"""
+    instructions = {
+        "sv": "Svara på svenska, trevligt och professionellt.",
+        "en": "Reply in English, friendly and professionally.",
+        "ar": "أجب باللغة العربية بشكل ودي ومهني. Reply in Arabic, friendly and professionally."
+    }
+    return instructions.get(lang, instructions["sv"])
+
+
 def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None) -> str:
-    """Bygg prompt med kontext"""
+    """Bygg prompt med kontext - detekterar språk automatiskt"""
+    # Detect the language of the question
+    detected_lang = detect_language(question)
+    lang_instruction = get_language_instruction(detected_lang)
+
     context_text = ""
     if context:
         context_text = "Relevant information:\n\n"
         for item in context:
-            context_text += f"F: {item.question}\nS: {item.answer}\n\n"
+            context_text += f"Q: {item.question}\nA: {item.answer}\n\n"
 
     company_name = settings.company_name if settings else "fastighetsbolaget"
 
-    return f"""Du är en hjälpsam kundtjänstassistent för {company_name}.
-Svara på svenska, trevligt och professionellt.
-Om du inte vet svaret, säg det ärligt.
+    return f"""You are a helpful customer service assistant for {company_name}.
+{lang_instruction}
+If you don't know the answer, say so honestly.
+IMPORTANT: Always respond in the SAME language as the customer's question.
 
 {context_text}
-Kundens fråga: {question}
+Customer question: {question}
 
-Svar:"""
+Answer:"""
 
 
 def anonymize_ip(ip: str) -> str:

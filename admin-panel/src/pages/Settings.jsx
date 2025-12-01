@@ -5,6 +5,7 @@ const API_BASE = '/api'
 
 function Settings() {
   const { auth, authFetch } = useContext(AuthContext)
+  const [activeTab, setActiveTab] = useState('general')
   const [settings, setSettings] = useState({
     company_name: '',
     welcome_message: 'Hej! Hur kan jag hjälpa dig idag?',
@@ -17,15 +18,19 @@ function Settings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [embedCode, setEmbedCode] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  const tabs = [
+    { id: 'general', label: 'Allmänt', icon: 'building' },
+    { id: 'chatbot', label: 'Chatbot', icon: 'chat' },
+    { id: 'appearance', label: 'Utseende', icon: 'palette' },
+    { id: 'privacy', label: 'Integritet', icon: 'shield' },
+    { id: 'install', label: 'Installation', icon: 'code' },
+  ]
 
   useEffect(() => {
     fetchSettings()
   }, [])
-
-  useEffect(() => {
-    generateEmbedCode()
-  }, [settings, auth.companyId])
 
   const fetchSettings = async () => {
     try {
@@ -41,19 +46,7 @@ function Settings() {
     }
   }
 
-  const generateEmbedCode = () => {
-    // Simplified embed code - widget fetches settings from backend automatically
-    const code = `<script src="https://cdn.bobot.se/widget.js"></script>
-<script>
-  Bobot.init({
-    companyId: '${auth.companyId}'
-  });
-</script>`
-    setEmbedCode(code)
-  }
-
-  const handleSave = async (e) => {
-    e.preventDefault()
+  const handleSave = async () => {
     setSaving(true)
     setSaved(false)
 
@@ -74,8 +67,61 @@ function Settings() {
     }
   }
 
+  const generateEmbedCode = () => {
+    return `<script src="https://cdn.bobot.se/widget.js"></script>
+<script>
+  Bobot.init({
+    companyId: '${auth.companyId}'
+  });
+</script>`
+  }
+
   const copyEmbedCode = () => {
-    navigator.clipboard.writeText(embedCode)
+    navigator.clipboard.writeText(generateEmbedCode())
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const renderIcon = (icon) => {
+    switch (icon) {
+      case 'building':
+        return (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4M9 9v.01M9 12v.01M9 15v.01M9 18v.01" />
+          </svg>
+        )
+      case 'chat':
+        return (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+        )
+      case 'palette':
+        return (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <circle cx="13.5" cy="6.5" r="2.5" />
+            <circle cx="17.5" cy="10.5" r="2.5" />
+            <circle cx="8.5" cy="7.5" r="2.5" />
+            <circle cx="6.5" cy="12.5" r="2.5" />
+            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z" />
+          </svg>
+        )
+      case 'shield':
+        return (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+        )
+      case 'code':
+        return (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <polyline points="16 18 22 12 16 6" />
+            <polyline points="8 6 2 12 8 18" />
+          </svg>
+        )
+      default:
+        return null
+    }
   }
 
   if (loading) {
@@ -87,212 +133,330 @@ function Settings() {
   }
 
   return (
-    <div className="max-w-3xl animate-fade-in">
+    <div className="animate-fade-in">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Inställningar</h1>
-        <p className="text-text-secondary mt-1">Anpassa din chatbot och widget</p>
-      </div>
-
-      <form onSubmit={handleSave} className="space-y-8">
-        {/* Företagsinformation */}
-        <section className="card">
-          <h2 className="text-lg font-medium text-text-primary mb-4">Företagsinformation</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="input-label">Företagsnamn</label>
-              <input
-                type="text"
-                value={settings.company_name}
-                onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
-                placeholder="T.ex. Bostadsbolaget AB"
-                className="input"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="input-label">E-post för kontakt</label>
-                <input
-                  type="email"
-                  value={settings.contact_email}
-                  onChange={(e) => setSettings({ ...settings, contact_email: e.target.value })}
-                  placeholder="kundtjanst@foretag.se"
-                  className="input"
-                />
-              </div>
-              <div>
-                <label className="input-label">Telefon för kontakt</label>
-                <input
-                  type="tel"
-                  value={settings.contact_phone}
-                  onChange={(e) => setSettings({ ...settings, contact_phone: e.target.value })}
-                  placeholder="08-123 456 78"
-                  className="input"
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Chatbot-meddelanden */}
-        <section className="card">
-          <h2 className="text-lg font-medium text-text-primary mb-4">Chatbot-meddelanden</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="input-label">Välkomstmeddelande</label>
-              <textarea
-                value={settings.welcome_message}
-                onChange={(e) => setSettings({ ...settings, welcome_message: e.target.value })}
-                placeholder="Hej! Hur kan jag hjälpa dig idag?"
-                rows={2}
-                className="input resize-none"
-              />
-              <p className="text-xs text-text-tertiary mt-1">Första meddelandet användaren ser</p>
-            </div>
-            <div>
-              <label className="input-label">Fallback-meddelande</label>
-              <textarea
-                value={settings.fallback_message}
-                onChange={(e) => setSettings({ ...settings, fallback_message: e.target.value })}
-                placeholder="Tyvärr kunde jag inte svara på din fråga..."
-                rows={2}
-                className="input resize-none"
-              />
-              <p className="text-xs text-text-tertiary mt-1">Visas när AI inte kan svara</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Utseende */}
-        <section className="card">
-          <h2 className="text-lg font-medium text-text-primary mb-4">Utseende</h2>
-          <div>
-            <label className="input-label">Primärfärg</label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={settings.primary_color}
-                onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
-                className="w-12 h-12 rounded-md border border-border cursor-pointer"
-              />
-              <input
-                type="text"
-                value={settings.primary_color}
-                onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
-                className="input w-32"
-                placeholder="#D97757"
-              />
-              <div
-                className="px-4 py-2 rounded-md text-white text-sm font-medium"
-                style={{ backgroundColor: settings.primary_color }}
-              >
-                Förhandsvisning
-              </div>
-            </div>
-            <p className="text-xs text-text-tertiary mt-2">
-              Widgeten anpassar automatiskt språket efter besökarens webbläsare (svenska, engelska, arabiska)
-            </p>
-          </div>
-        </section>
-
-        {/* GDPR & Integritet */}
-        <section className="card">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Inställningar</h1>
+          <p className="text-text-secondary mt-1">Anpassa din chatbot och widget</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {saved && (
+            <span className="text-success text-sm animate-fade-in flex items-center gap-1">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="20 6 9 17 4 12" />
               </svg>
-            </div>
-            <div>
-              <h2 className="text-lg font-medium text-text-primary">GDPR & Integritet</h2>
-              <p className="text-sm text-text-secondary">Hantera hur länge användardata sparas</p>
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <label className="input-label">Datalagring (dagar)</label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min="7"
-                  max="365"
-                  value={settings.data_retention_days}
-                  onChange={(e) => setSettings({ ...settings, data_retention_days: parseInt(e.target.value) })}
-                  className="flex-1 h-2 bg-bg-secondary rounded-lg appearance-none cursor-pointer accent-accent"
-                />
-                <input
-                  type="number"
-                  min="7"
-                  max="365"
-                  value={settings.data_retention_days}
-                  onChange={(e) => setSettings({ ...settings, data_retention_days: parseInt(e.target.value) || 30 })}
-                  className="input w-20 text-center"
-                />
-              </div>
-              <p className="text-xs text-text-tertiary mt-2">
-                Konversationer raderas automatiskt efter {settings.data_retention_days} dagar.
-                Anonymiserad statistik bevaras för analys.
-              </p>
-            </div>
-            <div className="bg-bg-secondary rounded-lg p-4 border border-border-subtle">
-              <h4 className="text-sm font-medium text-text-primary mb-2">Vad sparas?</h4>
-              <ul className="text-xs text-text-secondary space-y-1">
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-success rounded-full"></span>
-                  Anonymiserad statistik (antal frågor, svarstider, kategorier)
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-warning rounded-full"></span>
-                  Konversationer (raderas efter {settings.data_retention_days} dagar)
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-error rounded-full"></span>
-                  IP-adresser anonymiseras direkt (xxx.xxx.xxx.xxx)
-                </li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        {/* Spara-knapp */}
-        <div className="flex items-center gap-4">
+              Sparat!
+            </span>
+          )}
           <button
-            type="submit"
+            onClick={handleSave}
             disabled={saving}
             className="btn btn-primary"
           >
-            {saving ? 'Sparar...' : 'Spara inställningar'}
+            {saving ? 'Sparar...' : 'Spara ändringar'}
           </button>
-          {saved && (
-            <span className="text-success text-sm animate-fade-in">
-              Inställningar sparade!
-            </span>
+        </div>
+      </div>
+
+      {/* Tabs + Content Layout */}
+      <div className="flex gap-6">
+        {/* Sidebar Tabs */}
+        <div className="w-48 flex-shrink-0">
+          <nav className="space-y-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-accent text-white'
+                    : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+                }`}
+              >
+                {renderIcon(tab.icon)}
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Content Area */}
+        <div className="flex-1 min-w-0">
+          {/* General Tab */}
+          {activeTab === 'general' && (
+            <div className="card animate-fade-in">
+              <h2 className="text-lg font-medium text-text-primary mb-6">Företagsinformation</h2>
+              <div className="space-y-5">
+                <div>
+                  <label className="input-label">Företagsnamn</label>
+                  <input
+                    type="text"
+                    value={settings.company_name}
+                    onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
+                    placeholder="T.ex. Bostadsbolaget AB"
+                    className="input"
+                  />
+                  <p className="text-xs text-text-tertiary mt-1">Visas i widgetens header</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="input-label">E-post för kontakt</label>
+                    <input
+                      type="email"
+                      value={settings.contact_email}
+                      onChange={(e) => setSettings({ ...settings, contact_email: e.target.value })}
+                      placeholder="kundtjanst@foretag.se"
+                      className="input"
+                    />
+                  </div>
+                  <div>
+                    <label className="input-label">Telefon för kontakt</label>
+                    <input
+                      type="tel"
+                      value={settings.contact_phone}
+                      onChange={(e) => setSettings({ ...settings, contact_phone: e.target.value })}
+                      placeholder="08-123 456 78"
+                      className="input"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-text-tertiary">
+                  Kontaktuppgifterna visas när chatboten inte kan svara på en fråga
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Chatbot Tab */}
+          {activeTab === 'chatbot' && (
+            <div className="card animate-fade-in">
+              <h2 className="text-lg font-medium text-text-primary mb-6">Chatbot-meddelanden</h2>
+              <div className="space-y-5">
+                <div>
+                  <label className="input-label">Välkomstmeddelande</label>
+                  <textarea
+                    value={settings.welcome_message}
+                    onChange={(e) => setSettings({ ...settings, welcome_message: e.target.value })}
+                    placeholder="Hej! Hur kan jag hjälpa dig idag?"
+                    rows={3}
+                    className="input resize-none"
+                  />
+                  <p className="text-xs text-text-tertiary mt-1">Första meddelandet användaren ser när chatten öppnas</p>
+                </div>
+                <div>
+                  <label className="input-label">Fallback-meddelande</label>
+                  <textarea
+                    value={settings.fallback_message}
+                    onChange={(e) => setSettings({ ...settings, fallback_message: e.target.value })}
+                    placeholder="Tyvärr kunde jag inte svara på din fråga..."
+                    rows={3}
+                    className="input resize-none"
+                  />
+                  <p className="text-xs text-text-tertiary mt-1">Visas när AI inte kan hitta ett svar i kunskapsbasen</p>
+                </div>
+                <div className="bg-bg-secondary rounded-lg p-4 border border-border-subtle">
+                  <div className="flex items-center gap-2 text-sm text-text-secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="16" x2="12" y2="12" />
+                      <line x1="12" y1="8" x2="12.01" y2="8" />
+                    </svg>
+                    <span>Chatboten svarar automatiskt på samma språk som användaren skriver</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Appearance Tab */}
+          {activeTab === 'appearance' && (
+            <div className="card animate-fade-in">
+              <h2 className="text-lg font-medium text-text-primary mb-6">Utseende</h2>
+              <div className="space-y-5">
+                <div>
+                  <label className="input-label">Primärfärg</label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="color"
+                      value={settings.primary_color}
+                      onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
+                      className="w-14 h-14 rounded-lg border border-border cursor-pointer"
+                    />
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        value={settings.primary_color}
+                        onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
+                        className="input w-32"
+                        placeholder="#D97757"
+                      />
+                      <p className="text-xs text-text-tertiary mt-1">HEX-färgkod</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preview */}
+                <div>
+                  <label className="input-label mb-3">Förhandsvisning</label>
+                  <div className="bg-bg-secondary rounded-xl p-4 border border-border-subtle">
+                    <div
+                      className="rounded-lg overflow-hidden shadow-lg max-w-xs"
+                      style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }}
+                    >
+                      {/* Widget Header Preview */}
+                      <div
+                        className="text-white px-4 py-3"
+                        style={{
+                          background: `linear-gradient(135deg, ${settings.primary_color}, ${adjustColor(settings.primary_color, -30)})`
+                        }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm">{settings.company_name || 'Ditt Företag'}</p>
+                            <p className="text-xs opacity-80">Alltid redo att hjälpa</p>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Widget Body Preview */}
+                      <div className="bg-white p-3">
+                        <div className="bg-gray-100 rounded-lg rounded-bl-sm px-3 py-2 text-sm text-gray-700 max-w-[80%]">
+                          {settings.welcome_message || 'Hej! Hur kan jag hjälpa dig?'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Privacy Tab */}
+          {activeTab === 'privacy' && (
+            <div className="card animate-fade-in">
+              <div className="flex items-start gap-3 mb-6">
+                <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-lg font-medium text-text-primary">GDPR & Integritet</h2>
+                  <p className="text-sm text-text-secondary">Hantera hur länge användardata sparas</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="input-label">Datalagring (dagar)</label>
+                  <div className="flex items-center gap-4 mt-2">
+                    <input
+                      type="range"
+                      min="7"
+                      max="365"
+                      value={settings.data_retention_days}
+                      onChange={(e) => setSettings({ ...settings, data_retention_days: parseInt(e.target.value) })}
+                      className="flex-1 h-2 bg-bg-secondary rounded-lg appearance-none cursor-pointer accent-accent"
+                    />
+                    <input
+                      type="number"
+                      min="7"
+                      max="365"
+                      value={settings.data_retention_days}
+                      onChange={(e) => setSettings({ ...settings, data_retention_days: parseInt(e.target.value) || 30 })}
+                      className="input w-20 text-center"
+                    />
+                  </div>
+                  <p className="text-xs text-text-tertiary mt-2">
+                    Konversationer raderas automatiskt efter {settings.data_retention_days} dagar
+                  </p>
+                </div>
+
+                <div className="bg-bg-secondary rounded-lg p-4 border border-border-subtle">
+                  <h4 className="text-sm font-medium text-text-primary mb-3">Vad sparas?</h4>
+                  <ul className="space-y-2">
+                    <li className="flex items-center gap-3 text-sm">
+                      <span className="w-2 h-2 bg-success rounded-full flex-shrink-0"></span>
+                      <span className="text-text-secondary">Anonymiserad statistik (antal frågor, svarstider) - sparas permanent</span>
+                    </li>
+                    <li className="flex items-center gap-3 text-sm">
+                      <span className="w-2 h-2 bg-warning rounded-full flex-shrink-0"></span>
+                      <span className="text-text-secondary">Konversationshistorik - raderas efter {settings.data_retention_days} dagar</span>
+                    </li>
+                    <li className="flex items-center gap-3 text-sm">
+                      <span className="w-2 h-2 bg-accent rounded-full flex-shrink-0"></span>
+                      <span className="text-text-secondary">IP-adresser anonymiseras direkt (xxx.xxx.xxx.xxx)</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Install Tab */}
+          {activeTab === 'install' && (
+            <div className="card animate-fade-in">
+              <h2 className="text-lg font-medium text-text-primary mb-2">Installera widgeten</h2>
+              <p className="text-text-secondary text-sm mb-6">
+                Klistra in koden på din webbplats för att aktivera chatboten
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="input-label mb-2">Widget-kod</label>
+                  <div className="relative">
+                    <pre className="bg-bg-secondary border border-border-subtle rounded-lg p-4 text-sm text-text-primary overflow-x-auto font-mono">
+                      <code>{generateEmbedCode()}</code>
+                    </pre>
+                    <button
+                      type="button"
+                      onClick={copyEmbedCode}
+                      className="absolute top-3 right-3 btn btn-secondary text-xs py-1.5 px-3"
+                    >
+                      {copied ? 'Kopierat!' : 'Kopiera'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-bg-secondary rounded-lg p-4 border border-border-subtle">
+                  <h4 className="text-sm font-medium text-text-primary mb-2">Instruktioner</h4>
+                  <ol className="text-sm text-text-secondary space-y-2 list-decimal list-inside">
+                    <li>Kopiera koden ovan</li>
+                    <li>Klistra in precis före <code className="bg-bg-tertiary px-1 py-0.5 rounded text-xs">&lt;/body&gt;</code> på din webbplats</li>
+                    <li>Widgeten visas automatiskt i nedre högra hörnet</li>
+                  </ol>
+                </div>
+
+                <div className="flex items-center gap-2 text-sm text-text-tertiary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                  <span>Widgeten hämtar automatiskt dina inställningar och anpassar språket efter besökarens webbläsare</span>
+                </div>
+              </div>
+            </div>
           )}
         </div>
-      </form>
-
-      {/* Embed-kod */}
-      <section className="card mt-8">
-        <h2 className="text-lg font-medium text-text-primary mb-2">Widget-kod</h2>
-        <p className="text-text-secondary text-sm mb-4">
-          Klistra in denna kod precis före <code className="bg-bg-secondary px-1.5 py-0.5 rounded text-xs">&lt;/body&gt;</code> på din webbplats.
-          Widgeten hämtar automatiskt dina inställningar och anpassar språket efter besökarens webbläsare.
-        </p>
-        <div className="relative">
-          <pre className="bg-bg-secondary border border-border-subtle rounded-lg p-4 text-sm text-text-primary overflow-x-auto">
-            <code>{embedCode}</code>
-          </pre>
-          <button
-            type="button"
-            onClick={copyEmbedCode}
-            className="absolute top-3 right-3 btn btn-secondary text-xs py-1.5 px-3"
-          >
-            Kopiera
-          </button>
-        </div>
-      </section>
+      </div>
     </div>
   )
+}
+
+// Helper function to darken/lighten a hex color
+function adjustColor(hex, amount) {
+  if (!hex) return '#C4613D'
+  const num = parseInt(hex.replace('#', ''), 16)
+  const r = Math.min(255, Math.max(0, (num >> 16) + amount))
+  const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amount))
+  const b = Math.min(255, Math.max(0, (num & 0x0000FF) + amount))
+  return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`
 }
 
 export default Settings
