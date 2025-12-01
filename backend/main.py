@@ -578,20 +578,20 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
 
     company_name = settings.company_name if settings else "the company"
 
-    # Build company facts section
+    # Build company facts section (bilingual labels for better matching)
     company_facts = []
     if settings:
         if settings.contact_email:
-            company_facts.append(f"Contact email: {settings.contact_email}")
+            company_facts.append(f"Email/E-post: {settings.contact_email}")
         if settings.contact_phone:
-            company_facts.append(f"Contact phone: {settings.contact_phone}")
+            company_facts.append(f"Phone/Telefon: {settings.contact_phone}")
         if settings.data_controller_name:
-            gdpr_contact = f"GDPR/Privacy responsible: {settings.data_controller_name}"
+            gdpr_contact = f"GDPR-ansvarig (personuppgiftsansvarig/dataskyddsansvarig): {settings.data_controller_name}"
             if settings.data_controller_email:
-                gdpr_contact += f" ({settings.data_controller_email})"
+                gdpr_contact += f" - email: {settings.data_controller_email}"
             company_facts.append(gdpr_contact)
         if settings.privacy_policy_url:
-            company_facts.append(f"Privacy policy: {settings.privacy_policy_url}")
+            company_facts.append(f"Integritetspolicy/Privacy policy: {settings.privacy_policy_url}")
 
     company_info = ""
     if company_facts:
@@ -611,16 +611,14 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
 {knowledge}
 === END FACTS ===
 
-STRICT RULES:
-1. ONLY state facts from the FACTS section above. Nothing else.
-2. If info is not in FACTS, say "I don't have that information" - don't guess or add details.
-3. Reply in {target_lang}. Be concise (1-2 sentences).
-4. Don't mention documents, websites, or locations unless they're in FACTS.
-5. Include the email/phone if available when giving contact info.
+RULES:
+1. Use ONLY facts from above. Never invent or guess.
+2. Questions about GDPR/privacy/personuppgifter → use GDPR-ansvarig info.
+3. Reply in {target_lang}. Be concise and helpful (1-2 sentences).
+4. Always include email/phone when giving contact info.
+5. If you truly don't have the info, say so briefly.
 
-Customer: {question}
-
-Answer using ONLY the facts above:"""
+Customer: {question}"""
 
 
 def anonymize_ip(ip: str) -> str:
