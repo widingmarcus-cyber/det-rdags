@@ -49,6 +49,9 @@ function SuperAdmin() {
   const [adminPrefs, setAdminPrefs] = useState({ dark_mode: false, totp_enabled: false })
   const [show2FASetup, setShow2FASetup] = useState(false)
   const [twoFAData, setTwoFAData] = useState(null)
+  const [verifyCode, setVerifyCode] = useState('')
+  const [verifying2FA, setVerifying2FA] = useState(false)
+  const [twoFAError, setTwoFAError] = useState('')
 
   // Rate limiting & performance
   const [rateLimitStats, setRateLimitStats] = useState(null)
@@ -282,10 +285,52 @@ function SuperAdmin() {
         const data = await response.json()
         setTwoFAData(data)
         setShow2FASetup(true)
+        setVerifyCode('')
+        setTwoFAError('')
       }
     } catch (error) {
       console.error('Failed to setup 2FA:', error)
     }
+  }
+
+  const handleVerify2FA = async () => {
+    if (!verifyCode || verifyCode.length !== 6) {
+      setTwoFAError('Ange en 6-siffrig kod')
+      return
+    }
+
+    setVerifying2FA(true)
+    setTwoFAError('')
+
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/2fa/verify`, {
+        method: 'POST',
+        body: JSON.stringify({ code: verifyCode })
+      })
+
+      if (response.ok) {
+        setShow2FASetup(false)
+        setTwoFAData(null)
+        setVerifyCode('')
+        setAdminPrefs(prev => ({ ...prev, totp_enabled: true }))
+        showNotification('2FA aktiverat!')
+      } else {
+        const data = await response.json().catch(() => ({}))
+        setTwoFAError(data.detail || 'Ogiltig kod. Försök igen.')
+      }
+    } catch (error) {
+      console.error('Failed to verify 2FA:', error)
+      setTwoFAError('Ett fel uppstod. Försök igen.')
+    } finally {
+      setVerifying2FA(false)
+    }
+  }
+
+  const handleCancel2FA = () => {
+    setShow2FASetup(false)
+    setTwoFAData(null)
+    setVerifyCode('')
+    setTwoFAError('')
   }
 
   const handleBulkSetLimits = async (limits) => {
@@ -1961,6 +2006,83 @@ function SuperAdmin() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 2FA Setup Modal */}
+      {show2FASetup && twoFAData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle">
+              <h2 className="text-lg font-semibold text-text-primary">Aktivera tvåfaktorsautentisering</h2>
+              <p className="text-sm text-text-secondary mt-1">Skanna QR-koden med Google Authenticator</p>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* QR Code */}
+              <div className="flex flex-col items-center">
+                <div className="bg-white p-4 rounded-lg mb-4">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(twoFAData.totp_uri)}`}
+                    alt="QR Code"
+                    className="w-48 h-48"
+                  />
+                </div>
+                <p className="text-xs text-text-tertiary text-center">
+                  Eller ange denna kod manuellt:
+                </p>
+                <code className="mt-2 px-3 py-2 bg-bg-secondary rounded-lg text-sm font-mono text-text-primary select-all">
+                  {twoFAData.secret}
+                </code>
+              </div>
+
+              {/* Verification Code Input */}
+              <div>
+                <label className="input-label">Verifiera med kod från appen</label>
+                <input
+                  type="text"
+                  value={verifyCode}
+                  onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  className="input text-center text-2xl tracking-widest font-mono"
+                  maxLength={6}
+                  autoComplete="one-time-code"
+                />
+                {twoFAError && (
+                  <p className="text-sm text-error mt-2">{twoFAError}</p>
+                )}
+              </div>
+
+              {/* Backup Codes */}
+              <div className="p-4 bg-warning/10 border border-warning/20 rounded-lg">
+                <p className="text-sm font-medium text-warning mb-2">Spara dessa reservkoder säkert:</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {twoFAData.backup_codes?.map((code, i) => (
+                    <code key={i} className="text-xs font-mono text-text-secondary bg-bg-secondary px-2 py-1 rounded">
+                      {code}
+                    </code>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-border-subtle flex justify-end gap-3">
+              <button
+                onClick={handleCancel2FA}
+                className="btn btn-ghost"
+                disabled={verifying2FA}
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleVerify2FA}
+                className="btn btn-primary"
+                disabled={verifying2FA || verifyCode.length !== 6}
+              >
+                {verifying2FA ? 'Verifierar...' : 'Verifiera och aktivera'}
+              </button>
+            </div>
           </div>
         </div>
       )}

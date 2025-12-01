@@ -4123,9 +4123,9 @@ async def setup_2fa(
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db)
 ):
-    """Generate TOTP secret for 2FA setup"""
+    """Generate TOTP secret for 2FA setup (Google Authenticator compatible)"""
+    import pyotp
     import secrets
-    import base64
 
     admin_user = db.query(SuperAdmin).filter(SuperAdmin.username == admin["username"]).first()
     if not admin_user:
@@ -4134,8 +4134,8 @@ async def setup_2fa(
     if admin_user.totp_enabled:
         raise HTTPException(status_code=400, detail="2FA redan aktiverat")
 
-    # Generate secret
-    secret = base64.b32encode(secrets.token_bytes(20)).decode('utf-8')
+    # Generate a proper base32 secret for Google Authenticator
+    secret = pyotp.random_base32()
     admin_user.totp_secret = secret
 
     # Generate backup codes
@@ -4144,8 +4144,9 @@ async def setup_2fa(
 
     db.commit()
 
-    # Generate QR code URL (for authenticator apps)
-    totp_uri = f"otpauth://totp/Bobot:{admin['username']}?secret={secret}&issuer=Bobot"
+    # Generate provisioning URI for QR code (Google Authenticator format)
+    totp = pyotp.TOTP(secret)
+    totp_uri = totp.provisioning_uri(name=admin['username'], issuer_name="Bobot Admin")
 
     return {
         "secret": secret,
@@ -4154,19 +4155,30 @@ async def setup_2fa(
     }
 
 
+class TwoFAVerifyRequest(BaseModel):
+    code: str
+
+
 @app.post("/admin/2fa/verify")
 async def verify_2fa_setup(
-    code: str,
+    request: TwoFAVerifyRequest,
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db)
 ):
-    """Verify TOTP code to enable 2FA"""
+    """Verify TOTP code to enable 2FA (validates against Google Authenticator)"""
+    import pyotp
+
     admin_user = db.query(SuperAdmin).filter(SuperAdmin.username == admin["username"]).first()
     if not admin_user or not admin_user.totp_secret:
         raise HTTPException(status_code=400, detail="2FA not set up")
 
-    # Simple TOTP verification (in production, use pyotp library)
-    # For now, just enable it
+    # Verify the TOTP code using pyotp
+    totp = pyotp.TOTP(admin_user.totp_secret)
+
+    # Allow a window of 1 interval (30 seconds) before and after for clock drift
+    if not totp.verify(request.code, valid_window=1):
+        raise HTTPException(status_code=400, detail="Ogiltig kod. Försök igen.")
+
     admin_user.totp_enabled = True
     db.commit()
 
