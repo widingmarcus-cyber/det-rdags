@@ -5,6 +5,7 @@ function Navbar({ companyId, companyName, onLogout }) {
     { to: '/', label: 'Dashboard', icon: 'chart' },
     { to: '/knowledge', label: 'Kunskapsbas', icon: 'book' },
     { to: '/conversations', label: 'Konversationer', icon: 'messages' },
+    { to: '/analytics', label: 'Statistik', icon: 'analytics' },
     { to: '/settings', label: 'Inställningar', icon: 'settings' },
     { to: '/preview', label: 'Förhandsgranska', icon: 'eye' },
   ]
@@ -44,6 +45,13 @@ function Navbar({ companyId, companyName, onLogout }) {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
             <circle cx="12" cy="12" r="3" />
+          </svg>
+        )
+      case 'analytics':
+        return (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+            <path d="M22 12A10 10 0 0 0 12 2v10z" />
           </svg>
         )
       default:

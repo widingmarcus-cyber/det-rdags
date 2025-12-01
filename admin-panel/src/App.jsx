@@ -6,6 +6,7 @@ import Knowledge from './pages/Knowledge'
 import Preview from './pages/Preview'
 import Settings from './pages/Settings'
 import Conversations from './pages/Conversations'
+import Analytics from './pages/Analytics'
 import Navbar from './components/Navbar'
 import AdminLogin from './pages/AdminLogin'
 import SuperAdmin from './pages/SuperAdmin'
@@ -176,6 +177,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/knowledge" element={<Knowledge />} />
             <Route path="/conversations" element={<Conversations />} />
+            <Route path="/analytics" element={<Analytics />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/preview" element={<Preview />} />
             <Route path="*" element={<Navigate to="/" replace />} />
