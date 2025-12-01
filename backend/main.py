@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 from database import (
     create_tables, get_db, Company, KnowledgeItem, ChatLog, SuperAdmin,
     CompanySettings, Conversation, Message, DailyStatistics, GDPRAuditLog,
-    AdminAuditLog, GlobalSettings
+    AdminAuditLog, GlobalSettings, CompanyActivityLog
 )
 from auth import (
     hash_password, verify_password, create_token,
@@ -77,11 +77,40 @@ async def cleanup_old_conversations():
         db.close()
 
 
+async def cleanup_old_activity_logs():
+    """Clean up activity logs older than 12 months"""
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        cutoff_date = datetime.utcnow() - timedelta(days=365)
+
+        # Clean company activity logs (12 months)
+        deleted_company = db.query(CompanyActivityLog).filter(
+            CompanyActivityLog.timestamp < cutoff_date
+        ).delete()
+
+        # Clean admin audit logs (12 months)
+        deleted_admin = db.query(AdminAuditLog).filter(
+            AdminAuditLog.timestamp < cutoff_date
+        ).delete()
+
+        if deleted_company or deleted_admin:
+            db.commit()
+            print(f"[Activity Log Cleanup] Raderade {deleted_company} företagsloggar, {deleted_admin} adminloggar")
+
+    except Exception as e:
+        print(f"[Activity Log Cleanup Error] {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
 async def scheduled_cleanup_task():
     """Kör cleanup varje timme"""
     while True:
         await asyncio.sleep(3600)  # Vänta 1 timme
         await cleanup_old_conversations()
+        await cleanup_old_activity_logs()
 
 
 @asynccontextmanager
@@ -212,6 +241,7 @@ class CompanyResponse(BaseModel):
     chat_count: int = 0
     max_conversations_month: int = 0
     current_month_conversations: int = 0
+    max_knowledge_items: int = 0
 
 
 class SuperAdminLogin(BaseModel):
@@ -760,6 +790,38 @@ def log_admin_action(db: Session, admin_username: str, action_type: str,
     db.commit()
 
 
+def log_company_activity(db: Session, company_id: str, action_type: str,
+                         description: str = None, details: dict = None):
+    """Log a company admin action to the activity log"""
+    log_entry = CompanyActivityLog(
+        company_id=company_id,
+        action_type=action_type,
+        description=description,
+        details=json.dumps(details) if details else None
+    )
+    db.add(log_entry)
+    db.commit()
+
+
+def check_knowledge_limit(db: Session, company_id: str) -> tuple:
+    """Check if company has reached knowledge limit, returns (allowed, message)"""
+    settings = db.query(CompanySettings).filter(
+        CompanySettings.company_id == company_id
+    ).first()
+
+    if not settings or settings.max_knowledge_items == 0:
+        return True, None  # No limit
+
+    current_count = db.query(KnowledgeItem).filter(
+        KnowledgeItem.company_id == company_id
+    ).count()
+
+    if current_count >= settings.max_knowledge_items:
+        return False, f"Du har nått maxgränsen på {settings.max_knowledge_items} kunskapsposter."
+
+    return True, None
+
+
 def get_global_setting(db: Session, key: str, default: str = None) -> str:
     """Get a global setting value"""
     setting = db.query(GlobalSettings).filter(GlobalSettings.key == key).first()
@@ -1182,6 +1244,12 @@ async def update_settings(
     db.commit()
     db.refresh(settings)
 
+    # Log activity
+    log_company_activity(
+        db, current["company_id"], "settings_update",
+        "Uppdaterade företagsinställningar"
+    )
+
     return SettingsResponse(
         company_name=settings.company_name or "",
         contact_email=settings.contact_email or "",
@@ -1201,6 +1269,46 @@ async def update_settings(
         data_controller_name=settings.data_controller_name or "",
         data_controller_email=settings.data_controller_email or ""
     )
+
+
+# =============================================================================
+# Activity Log Endpoint (Företag)
+# =============================================================================
+
+class ActivityLogEntry(BaseModel):
+    id: int
+    action_type: str
+    description: Optional[str]
+    timestamp: datetime
+
+
+@app.get("/activity-log")
+async def get_company_activity_log(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db),
+    limit: int = 100,
+    offset: int = 0
+):
+    """Hämta aktivitetslogg för företaget"""
+    logs = db.query(CompanyActivityLog).filter(
+        CompanyActivityLog.company_id == current["company_id"]
+    ).order_by(CompanyActivityLog.timestamp.desc()).offset(offset).limit(limit).all()
+
+    total = db.query(CompanyActivityLog).filter(
+        CompanyActivityLog.company_id == current["company_id"]
+    ).count()
+
+    return {
+        "logs": [
+            ActivityLogEntry(
+                id=log.id,
+                action_type=log.action_type,
+                description=log.description,
+                timestamp=log.timestamp
+            ) for log in logs
+        ],
+        "total": total
+    }
 
 
 # =============================================================================
@@ -1313,12 +1421,19 @@ async def delete_conversation(
     if not conversation:
         raise HTTPException(status_code=404, detail="Konversation finns inte")
 
+    reference_id = conversation.reference_id
     # Spara statistik innan radering
     await save_conversation_stats(db, conversation)
 
     # Radera (meddelanden tas bort via cascade)
     db.delete(conversation)
     db.commit()
+
+    # Log activity
+    log_company_activity(
+        db, current["company_id"], "conversation_delete",
+        f"Raderade konversation: {reference_id}"
+    )
 
     return {"message": "Konversation raderad. Anonymiserad statistik sparad."}
 
@@ -1373,6 +1488,11 @@ async def add_knowledge(
     db: Session = Depends(get_db)
 ):
     """Lägg till fråga/svar"""
+    # Check knowledge limit
+    allowed, msg = check_knowledge_limit(db, current["company_id"])
+    if not allowed:
+        raise HTTPException(status_code=429, detail=msg)
+
     new_item = KnowledgeItem(
         company_id=current["company_id"],
         question=item.question,
@@ -1382,6 +1502,12 @@ async def add_knowledge(
     db.add(new_item)
     db.commit()
     db.refresh(new_item)
+
+    # Log activity
+    log_company_activity(
+        db, current["company_id"], "knowledge_create",
+        f"Lade till kunskapspost: {item.question[:50]}..."
+    )
 
     return KnowledgeItemResponse(
         id=new_item.id,
@@ -1412,6 +1538,12 @@ async def update_knowledge(
     db_item.category = item.category or ""
     db.commit()
 
+    # Log activity
+    log_company_activity(
+        db, current["company_id"], "knowledge_update",
+        f"Uppdaterade kunskapspost: {item.question[:50]}..."
+    )
+
     return KnowledgeItemResponse(
         id=db_item.id,
         question=db_item.question,
@@ -1435,8 +1567,15 @@ async def delete_knowledge(
     if not db_item:
         raise HTTPException(status_code=404, detail="Finns inte")
 
+    question_preview = db_item.question[:50]
     db.delete(db_item)
     db.commit()
+
+    # Log activity
+    log_company_activity(
+        db, current["company_id"], "knowledge_delete",
+        f"Raderade kunskapspost: {question_preview}..."
+    )
 
     return {"message": "Borttagen"}
 
@@ -2499,7 +2638,8 @@ async def list_companies(
             knowledge_count=knowledge_count,
             chat_count=chat_count,
             max_conversations_month=settings.max_conversations_month if settings else 0,
-            current_month_conversations=settings.current_month_conversations if settings else 0
+            current_month_conversations=settings.current_month_conversations if settings else 0,
+            max_knowledge_items=settings.max_knowledge_items if settings else 0
         ))
 
     return result
@@ -2820,6 +2960,7 @@ async def export_company_data(
 
 class UsageLimitUpdate(BaseModel):
     max_conversations_month: int = 0  # 0 = unlimited
+    max_knowledge_items: int = 0  # 0 = unlimited
 
 
 @app.put("/admin/companies/{company_id}/usage-limit")
@@ -2833,23 +2974,31 @@ async def update_usage_limit(
     """Update usage limit for a company"""
     settings = get_or_create_settings(db, company_id)
 
-    old_limit = settings.max_conversations_month
+    old_conv_limit = settings.max_conversations_month
+    old_knowledge_limit = settings.max_knowledge_items or 0
     settings.max_conversations_month = max(0, update.max_conversations_month)
+    settings.max_knowledge_items = max(0, update.max_knowledge_items)
     db.commit()
 
     # Log admin action
     log_admin_action(
         db, admin["username"], "update_usage_limit",
         target_company_id=company_id,
-        description=f"Updated usage limit from {old_limit} to {settings.max_conversations_month}",
-        details={"old_limit": old_limit, "new_limit": settings.max_conversations_month},
+        description=f"Updated limits: conv {old_conv_limit}→{settings.max_conversations_month}, knowledge {old_knowledge_limit}→{settings.max_knowledge_items}",
+        details={
+            "old_conv_limit": old_conv_limit,
+            "new_conv_limit": settings.max_conversations_month,
+            "old_knowledge_limit": old_knowledge_limit,
+            "new_knowledge_limit": settings.max_knowledge_items
+        },
         ip_address=req.client.host if req else None
     )
 
     return {
-        "message": f"Användningsgräns uppdaterad till {settings.max_conversations_month} konversationer/månad",
+        "message": "Användningsgränser uppdaterade",
         "max_conversations_month": settings.max_conversations_month,
-        "current_month_conversations": settings.current_month_conversations
+        "current_month_conversations": settings.current_month_conversations,
+        "max_knowledge_items": settings.max_knowledge_items
     }
 
 

@@ -79,6 +79,7 @@ class CompanySettings(Base):
     # Usage Limits
     max_conversations_month = Column(Integer, default=0)  # 0 = unlimited
     current_month_conversations = Column(Integer, default=0)
+    max_knowledge_items = Column(Integer, default=0)  # 0 = unlimited
     usage_reset_date = Column(Date)  # When to reset monthly counter
     limit_warning_sent = Column(Boolean, default=False)  # Track if warning was sent
 
@@ -255,6 +256,22 @@ class AdminAuditLog(Base):
 
     # Metadata
     ip_address = Column(String)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+
+class CompanyActivityLog(Base):
+    """Activity log for company admin actions - retained for 12 months"""
+    __tablename__ = "company_activity_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+
+    # Action details
+    action_type = Column(String, nullable=False)  # "knowledge_create", "knowledge_update", "knowledge_delete", "settings_update", "conversation_delete", "export_data"
+    description = Column(Text)  # Human-readable description
+    details = Column(Text)  # JSON with additional details (e.g., which item was affected)
+
+    # Metadata
     timestamp = Column(DateTime, default=datetime.utcnow)
 
 

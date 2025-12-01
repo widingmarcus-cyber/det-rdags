@@ -24,7 +24,7 @@ function SuperAdmin() {
   const [auditLoading, setAuditLoading] = useState(false)
   const [maintenanceMode, setMaintenanceMode] = useState({ enabled: false, message: '' })
   const [showUsageLimitModal, setShowUsageLimitModal] = useState(null)
-  const [usageLimitValue, setUsageLimitValue] = useState(0)
+  const [usageLimitValue, setUsageLimitValue] = useState({ conversations: 0, knowledge: 0 })
 
   useEffect(() => {
     fetchCompanies()
@@ -269,22 +269,28 @@ function SuperAdmin() {
     try {
       const response = await adminFetch(`${API_BASE}/admin/companies/${companyId}/usage-limit`, {
         method: 'PUT',
-        body: JSON.stringify({ max_conversations_month: usageLimitValue })
+        body: JSON.stringify({
+          max_conversations_month: usageLimitValue.conversations,
+          max_knowledge_items: usageLimitValue.knowledge
+        })
       })
       if (response.ok) {
-        showNotification('Användningsgräns uppdaterad')
+        showNotification('Användningsgränser uppdaterade')
         setShowUsageLimitModal(null)
         fetchCompanies()
       }
     } catch (error) {
       console.error('Failed to set usage limit:', error)
-      showNotification('Kunde inte uppdatera gräns', 'error')
+      showNotification('Kunde inte uppdatera gränser', 'error')
     }
   }
 
   const openUsageLimitModal = (company) => {
     setShowUsageLimitModal(company)
-    setUsageLimitValue(company.max_conversations_month || 0)
+    setUsageLimitValue({
+      conversations: company.max_conversations_month || 0,
+      knowledge: company.max_knowledge_items || 0
+    })
   }
 
   const formatDate = (dateString) => {
@@ -373,12 +379,14 @@ function SuperAdmin() {
                 </svg>
               </div>
               <div>
-                <span className="font-semibold text-text-primary">Bobot Admin</span>
-                <span className="text-xs text-text-tertiary ml-2">Super Admin</span>
+                <span className="font-semibold text-text-primary">Bobot</span>
+                <span className="text-xs text-text-tertiary ml-2">Systemöversikt</span>
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-text-secondary">{adminAuth.username}</span>
+              <span className="text-sm text-text-secondary px-2 py-1 bg-warning-soft text-warning rounded-full text-xs font-medium">
+                {adminAuth.username}
+              </span>
               <button
                 onClick={handleAdminLogout}
                 className="btn btn-ghost text-sm"
@@ -1080,9 +1088,9 @@ function SuperAdmin() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
             <div className="p-6 border-b border-border-subtle">
-              <h2 className="text-lg font-semibold text-text-primary">Användningsgräns</h2>
+              <h2 className="text-lg font-semibold text-text-primary">Användningsgränser</h2>
               <p className="text-sm text-text-secondary mt-1">
-                Ange max konversationer per månad för {showUsageLimitModal.name}
+                Ange gränser för {showUsageLimitModal.name}
               </p>
             </div>
             <div className="p-6 space-y-4">
@@ -1090,8 +1098,8 @@ function SuperAdmin() {
                 <label className="input-label">Max konversationer/månad</label>
                 <input
                   type="number"
-                  value={usageLimitValue}
-                  onChange={(e) => setUsageLimitValue(parseInt(e.target.value) || 0)}
+                  value={usageLimitValue.conversations}
+                  onChange={(e) => setUsageLimitValue({ ...usageLimitValue, conversations: parseInt(e.target.value) || 0 })}
                   placeholder="0 = obegränsat"
                   className="input"
                   min="0"
@@ -1099,14 +1107,33 @@ function SuperAdmin() {
                 <p className="text-xs text-text-tertiary mt-1">Sätt till 0 för obegränsat</p>
               </div>
 
-              {showUsageLimitModal.current_month_conversations > 0 && (
-                <div className="p-3 rounded-lg bg-bg-secondary">
-                  <p className="text-sm text-text-secondary">Nuvarande användning denna månad</p>
-                  <p className="text-lg font-medium text-text-primary">
-                    {showUsageLimitModal.current_month_conversations || 0} konversationer
-                  </p>
+              <div>
+                <label className="input-label">Max kunskapsposter</label>
+                <input
+                  type="number"
+                  value={usageLimitValue.knowledge}
+                  onChange={(e) => setUsageLimitValue({ ...usageLimitValue, knowledge: parseInt(e.target.value) || 0 })}
+                  placeholder="0 = obegränsat"
+                  className="input"
+                  min="0"
+                />
+                <p className="text-xs text-text-tertiary mt-1">Sätt till 0 för obegränsat</p>
+              </div>
+
+              <div className="p-3 rounded-lg bg-bg-secondary space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-text-secondary">Konversationer denna månad</span>
+                  <span className="text-sm font-medium text-text-primary">
+                    {showUsageLimitModal.current_month_conversations || 0}
+                  </span>
                 </div>
-              )}
+                <div className="flex justify-between">
+                  <span className="text-sm text-text-secondary">Kunskapsposter</span>
+                  <span className="text-sm font-medium text-text-primary">
+                    {showUsageLimitModal.knowledge_count || 0}
+                  </span>
+                </div>
+              </div>
 
               <div className="flex justify-end gap-3 pt-4">
                 <button
