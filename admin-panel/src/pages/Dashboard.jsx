@@ -18,10 +18,12 @@ function Dashboard() {
   const [allDailyStats, setAllDailyStats] = useState([])
   const [loading, setLoading] = useState(true)
   const [chartPeriod, setChartPeriod] = useState(7) // 7 or 30 days
+  const [usage, setUsage] = useState(null)
 
   useEffect(() => {
     fetchStats()
     fetchAnalytics()
+    fetchUsage()
   }, [])
 
   const fetchStats = async () => {
@@ -59,6 +61,18 @@ function Dashboard() {
     }
   }
 
+  const fetchUsage = async () => {
+    try {
+      const response = await authFetch(`${API_BASE}/my-usage`)
+      if (response.ok) {
+        const data = await response.json()
+        setUsage(data)
+      }
+    } catch (error) {
+      console.error('Kunde inte hämta användning:', error)
+    }
+  }
+
   useEffect(() => {
     setDailyStats(allDailyStats.slice(-chartPeriod))
   }, [chartPeriod, allDailyStats])
@@ -85,6 +99,49 @@ function Dashboard() {
       </div>
     </div>
   )
+
+  const getUsageColor = (percent) => {
+    if (percent >= 90) return { bar: 'bg-red-500', text: 'text-red-600', bg: 'bg-red-50' }
+    if (percent >= 75) return { bar: 'bg-amber-500', text: 'text-amber-600', bg: 'bg-amber-50' }
+    return { bar: 'bg-accent', text: 'text-accent', bg: 'bg-accent-soft' }
+  }
+
+  const UsageMeter = ({ label, current, limit, percent, icon, hasLimit }) => {
+    if (!hasLimit) return null
+    const colors = getUsageColor(percent)
+    const isNearLimit = percent >= 75
+    const isAtLimit = percent >= 100
+
+    return (
+      <div className={`p-4 rounded-xl border ${isAtLimit ? 'border-red-200 bg-red-50/50' : isNearLimit ? 'border-amber-200 bg-amber-50/50' : 'border-border-default bg-bg-primary'}`}>
+        <div className="flex items-center gap-3 mb-3">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colors.bg} ${colors.text}`}>
+            {icon}
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-text-primary">{label}</p>
+            <p className="text-xs text-text-secondary">
+              {isAtLimit ? 'Gränsen nådd' : isNearLimit ? 'Närmar dig gränsen' : 'Inom gränsen'}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className={`text-lg font-semibold ${colors.text}`}>{current}</p>
+            <p className="text-xs text-text-tertiary">av {limit}</p>
+          </div>
+        </div>
+        <div className="h-2 bg-bg-secondary rounded-full overflow-hidden">
+          <div
+            className={`h-full ${colors.bar} rounded-full transition-all duration-500`}
+            style={{ width: `${Math.min(100, percent)}%` }}
+          />
+        </div>
+        <div className="flex justify-between mt-1">
+          <span className="text-xs text-text-tertiary">{percent.toFixed(0)}% använt</span>
+          <span className="text-xs text-text-tertiary">{Math.max(0, limit - current)} kvar</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="animate-fade-in">
@@ -155,6 +212,47 @@ function Dashboard() {
           trend="frågor"
         />
       </div>
+
+      {/* Usage Limits */}
+      {usage && (usage.conversations.has_limit || usage.knowledge.has_limit) && (
+        <div className="card mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-text-secondary">
+              <path d="M12 20V10" />
+              <path d="M18 20V4" />
+              <path d="M6 20v-4" />
+            </svg>
+            <h2 className="text-lg font-medium text-text-primary">Användningsgränser</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <UsageMeter
+              label="Konversationer denna månad"
+              current={usage.conversations.current}
+              limit={usage.conversations.limit}
+              percent={usage.conversations.percent}
+              hasLimit={usage.conversations.has_limit}
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              }
+            />
+            <UsageMeter
+              label="Kunskapsposter totalt"
+              current={usage.knowledge.current}
+              limit={usage.knowledge.limit}
+              percent={usage.knowledge.percent}
+              hasLimit={usage.knowledge.has_limit}
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg>
+              }
+            />
+          </div>
+        </div>
+      )}
 
       {/* Activity Chart */}
       {dailyStats.length > 0 && (

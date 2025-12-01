@@ -2060,6 +2060,62 @@ async def get_stats(
     )
 
 
+@app.get("/my-usage")
+async def get_my_usage(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Get usage limits and current usage for the logged-in company"""
+    company_id = current["company_id"]
+    settings = db.query(CompanySettings).filter(
+        CompanySettings.company_id == company_id
+    ).first()
+
+    knowledge_count = db.query(KnowledgeItem).filter(
+        KnowledgeItem.company_id == company_id
+    ).count()
+
+    if not settings:
+        return {
+            "conversations": {
+                "current": 0,
+                "limit": 0,
+                "percent": 0,
+                "has_limit": False
+            },
+            "knowledge": {
+                "current": knowledge_count,
+                "limit": 0,
+                "percent": 0,
+                "has_limit": False
+            }
+        }
+
+    # Conversation usage
+    conv_limit = settings.max_conversations_month or 0
+    conv_current = settings.current_month_conversations or 0
+    conv_percent = (conv_current / conv_limit * 100) if conv_limit > 0 else 0
+
+    # Knowledge usage
+    knowledge_limit = settings.max_knowledge_items or 0
+    knowledge_percent = (knowledge_count / knowledge_limit * 100) if knowledge_limit > 0 else 0
+
+    return {
+        "conversations": {
+            "current": conv_current,
+            "limit": conv_limit,
+            "percent": min(100, round(conv_percent, 1)),
+            "has_limit": conv_limit > 0
+        },
+        "knowledge": {
+            "current": knowledge_count,
+            "limit": knowledge_limit,
+            "percent": min(100, round(knowledge_percent, 1)),
+            "has_limit": knowledge_limit > 0
+        }
+    }
+
+
 @app.get("/analytics", response_model=AnalyticsResponse)
 async def get_analytics(
     current: dict = Depends(get_current_company),
@@ -3029,6 +3085,32 @@ async def get_company_usage(
         "current_month_conversations": settings.current_month_conversations,
         "usage_percent": round(usage_percent, 1),
         "usage_reset_date": settings.usage_reset_date.isoformat() if settings.usage_reset_date else None
+    }
+
+
+@app.get("/admin/company-activity/{company_id}")
+async def get_company_activity(
+    company_id: str,
+    limit: int = 20,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get activity logs for a specific company"""
+    logs = db.query(CompanyActivityLog).filter(
+        CompanyActivityLog.company_id == company_id
+    ).order_by(CompanyActivityLog.timestamp.desc()).limit(limit).all()
+
+    return {
+        "logs": [
+            {
+                "id": log.id,
+                "action_type": log.action_type,
+                "description": log.description,
+                "details": log.details,
+                "timestamp": log.timestamp.isoformat() if log.timestamp else None
+            }
+            for log in logs
+        ]
     }
 
 

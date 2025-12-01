@@ -661,57 +661,157 @@ function Settings() {
 
           {/* Activity Tab */}
           {activeTab === 'activity' && (
-            <div className="card animate-fade-in">
-              <h2 className="text-lg font-medium text-text-primary mb-2">Aktivitetslogg</h2>
-              <p className="text-text-secondary text-sm mb-6">
-                Se vad som hänt i ditt konto (sparas i 12 månader)
-              </p>
+            <div className="space-y-6 animate-fade-in">
+              {/* Header Card */}
+              <div className="card">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-medium text-text-primary">Aktivitetslogg</h2>
+                    <p className="text-sm text-text-secondary">Historik över ändringar i ditt konto</p>
+                  </div>
+                </div>
 
-              {activityLoading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin w-6 h-6 border-2 border-accent border-t-transparent rounded-full mx-auto mb-2" />
-                  <p className="text-text-secondary text-sm">Laddar...</p>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-bg-secondary rounded-lg p-3 text-center">
+                    <p className="text-2xl font-semibold text-text-primary">
+                      {activityLogs.filter(l => l.action_type.includes('create')).length}
+                    </p>
+                    <p className="text-xs text-text-secondary mt-1">Skapade</p>
+                  </div>
+                  <div className="bg-bg-secondary rounded-lg p-3 text-center">
+                    <p className="text-2xl font-semibold text-text-primary">
+                      {activityLogs.filter(l => l.action_type.includes('update')).length}
+                    </p>
+                    <p className="text-xs text-text-secondary mt-1">Uppdaterade</p>
+                  </div>
+                  <div className="bg-bg-secondary rounded-lg p-3 text-center">
+                    <p className="text-2xl font-semibold text-text-primary">
+                      {activityLogs.filter(l => l.action_type.includes('delete')).length}
+                    </p>
+                    <p className="text-xs text-text-secondary mt-1">Borttagna</p>
+                  </div>
                 </div>
-              ) : activityLogs.length === 0 ? (
-                <div className="text-center py-8 text-text-secondary">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-2 text-text-tertiary">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                  <p>Ingen aktivitet ännu</p>
+              </div>
+
+              {/* Activity List */}
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-medium text-text-primary">Senaste händelser</h3>
+                  <span className="text-xs text-text-tertiary bg-bg-secondary px-2 py-1 rounded">
+                    Sparas i 12 månader
+                  </span>
                 </div>
-              ) : (
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {activityLogs.map((log) => (
-                    <div key={log.id} className="flex items-start gap-3 p-3 rounded-lg bg-bg-secondary">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        log.action_type.includes('create') ? 'bg-success-soft text-success' :
-                        log.action_type.includes('delete') ? 'bg-error-soft text-error' :
-                        log.action_type.includes('update') ? 'bg-warning-soft text-warning' :
-                        'bg-accent-soft text-accent'
-                      }`}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          {log.action_type.includes('knowledge') ? (
-                            <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></>
-                          ) : log.action_type.includes('settings') ? (
-                            <><circle cx="12" cy="12" r="3" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /></>
-                          ) : log.action_type.includes('conversation') ? (
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                          ) : (
-                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-                          )}
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-text-primary">{log.description}</p>
-                        <p className="text-xs text-text-tertiary mt-1">
-                          {new Date(log.timestamp).toLocaleString('sv-SE')}
-                        </p>
-                      </div>
+
+                {activityLoading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full mx-auto mb-3" />
+                    <p className="text-text-secondary text-sm">Laddar aktivitetslogg...</p>
+                  </div>
+                ) : activityLogs.length === 0 ? (
+                  <div className="text-center py-12 text-text-secondary">
+                    <div className="w-16 h-16 bg-bg-secondary rounded-full flex items-center justify-center mx-auto mb-3">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
                     </div>
-                  ))}
-                </div>
-              )}
+                    <p className="font-medium">Ingen aktivitet ännu</p>
+                    <p className="text-sm text-text-tertiary mt-1">Händelser visas här när du gör ändringar</p>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    {/* Timeline line */}
+                    <div className="absolute left-4 top-0 bottom-0 w-px bg-border-subtle" />
+
+                    <div className="space-y-4">
+                      {activityLogs.map((log, index) => {
+                        const isCreate = log.action_type.includes('create')
+                        const isDelete = log.action_type.includes('delete')
+                        const isUpdate = log.action_type.includes('update')
+                        const isKnowledge = log.action_type.includes('knowledge')
+                        const isSettings = log.action_type.includes('settings')
+                        const isConversation = log.action_type.includes('conversation')
+
+                        const bgColor = isCreate ? 'bg-green-50 dark:bg-green-900/20' :
+                                       isDelete ? 'bg-red-50 dark:bg-red-900/20' :
+                                       isUpdate ? 'bg-amber-50 dark:bg-amber-900/20' :
+                                       'bg-accent-soft'
+                        const iconBg = isCreate ? 'bg-green-500' :
+                                      isDelete ? 'bg-red-500' :
+                                      isUpdate ? 'bg-amber-500' :
+                                      'bg-accent'
+                        const actionLabel = isCreate ? 'Skapad' :
+                                           isDelete ? 'Borttagen' :
+                                           isUpdate ? 'Uppdaterad' :
+                                           'Händelse'
+                        const categoryLabel = isKnowledge ? 'Kunskapsbas' :
+                                             isSettings ? 'Inställningar' :
+                                             isConversation ? 'Konversation' :
+                                             'System'
+
+                        return (
+                          <div key={log.id} className="relative pl-10">
+                            {/* Timeline dot */}
+                            <div className={`absolute left-2 top-3 w-5 h-5 rounded-full ${iconBg} flex items-center justify-center ring-4 ring-bg-primary`}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                                {isCreate ? (
+                                  <path d="M12 5v14M5 12h14" />
+                                ) : isDelete ? (
+                                  <path d="M18 6L6 18M6 6l12 12" />
+                                ) : isUpdate ? (
+                                  <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                                ) : (
+                                  <circle cx="12" cy="12" r="4" />
+                                )}
+                              </svg>
+                            </div>
+
+                            <div className={`${bgColor} rounded-lg p-4 border border-border-subtle`}>
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                                      isCreate ? 'bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200' :
+                                      isDelete ? 'bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200' :
+                                      isUpdate ? 'bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-200' :
+                                      'bg-accent-soft text-accent'
+                                    }`}>
+                                      {actionLabel}
+                                    </span>
+                                    <span className="text-xs text-text-tertiary bg-bg-secondary px-2 py-0.5 rounded">
+                                      {categoryLabel}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-text-primary font-medium">{log.description}</p>
+                                  {log.details && (
+                                    <p className="text-xs text-text-secondary mt-1 line-clamp-2">
+                                      {typeof log.details === 'string' ? log.details : JSON.stringify(log.details)}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="text-right flex-shrink-0">
+                                  <p className="text-xs text-text-tertiary">
+                                    {new Date(log.timestamp).toLocaleDateString('sv-SE')}
+                                  </p>
+                                  <p className="text-xs text-text-tertiary">
+                                    {new Date(log.timestamp).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

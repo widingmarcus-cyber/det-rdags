@@ -25,6 +25,10 @@ function SuperAdmin() {
   const [maintenanceMode, setMaintenanceMode] = useState({ enabled: false, message: '' })
   const [showUsageLimitModal, setShowUsageLimitModal] = useState(null)
   const [usageLimitValue, setUsageLimitValue] = useState({ conversations: 0, knowledge: 0 })
+  const [showCompanyDashboard, setShowCompanyDashboard] = useState(null)
+  const [companyUsage, setCompanyUsage] = useState(null)
+  const [companyActivity, setCompanyActivity] = useState([])
+  const [companyLoading, setCompanyLoading] = useState(false)
 
   useEffect(() => {
     fetchCompanies()
@@ -291,6 +295,39 @@ function SuperAdmin() {
       conversations: company.max_conversations_month || 0,
       knowledge: company.max_knowledge_items || 0
     })
+  }
+
+  const openCompanyDashboard = async (company) => {
+    setShowCompanyDashboard(company)
+    setCompanyLoading(true)
+    setCompanyUsage(null)
+    setCompanyActivity([])
+
+    try {
+      // Fetch usage data
+      const usageRes = await adminFetch(`${API_BASE}/admin/companies/${company.id}/usage`)
+      if (usageRes.ok) {
+        const usageData = await usageRes.json()
+        setCompanyUsage(usageData)
+      }
+
+      // Fetch activity logs for this company
+      const activityRes = await adminFetch(`${API_BASE}/admin/company-activity/${company.id}?limit=10`)
+      if (activityRes.ok) {
+        const activityData = await activityRes.json()
+        setCompanyActivity(activityData.logs || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch company details:', error)
+    } finally {
+      setCompanyLoading(false)
+    }
+  }
+
+  const getUsageColor = (percent) => {
+    if (percent >= 90) return { bar: 'bg-red-500', text: 'text-red-600', bg: 'bg-red-100' }
+    if (percent >= 75) return { bar: 'bg-amber-500', text: 'text-amber-600', bg: 'bg-amber-100' }
+    return { bar: 'bg-green-500', text: 'text-green-600', bg: 'bg-green-100' }
   }
 
   const formatDate = (dateString) => {
@@ -664,46 +701,97 @@ function SuperAdmin() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Företag</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Status</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Kunskapsbas</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Meddelanden</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Skapad</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Konversationer</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Användning</th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">Åtgärder</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-subtle">
-                    {filteredCompanies.map((company) => (
-                      <tr key={company.id} className="hover:bg-bg-secondary transition-colors">
-                        <td className="px-4 py-4">
-                          <input
-                            type="checkbox"
-                            checked={selectedCompanies.has(company.id)}
-                            onChange={() => toggleSelectCompany(company.id)}
-                            className="rounded border-border"
-                          />
-                        </td>
-                        <td className="px-4 py-4">
-                          <div>
-                            <p className="font-medium text-text-primary">{company.name}</p>
-                            <p className="text-sm text-text-tertiary">{company.id}</p>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                            company.is_active
-                              ? 'bg-success-soft text-success'
-                              : 'bg-error-soft text-error'
-                          }`}>
-                            {company.is_active ? 'Aktiv' : 'Inaktiv'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-sm text-text-secondary">
-                          {company.knowledge_count} poster
-                        </td>
-                        <td className="px-4 py-4 text-sm text-text-secondary">
-                          {company.chat_count || 0}
-                        </td>
-                        <td className="px-4 py-4 text-sm text-text-secondary">
-                          {formatDate(company.created_at)}
-                        </td>
+                    {filteredCompanies.map((company) => {
+                      // Calculate usage percentages
+                      const convLimit = company.max_conversations_month || 0
+                      const convCurrent = company.current_month_conversations || 0
+                      const convPercent = convLimit > 0 ? Math.min(100, (convCurrent / convLimit) * 100) : 0
+                      const hasConvLimit = convLimit > 0
+
+                      const knowledgeLimit = company.max_knowledge_items || 0
+                      const knowledgeCurrent = company.knowledge_count || 0
+                      const knowledgePercent = knowledgeLimit > 0 ? Math.min(100, (knowledgeCurrent / knowledgeLimit) * 100) : 0
+                      const hasKnowledgeLimit = knowledgeLimit > 0
+
+                      const hasAnyLimit = hasConvLimit || hasKnowledgeLimit
+                      const maxPercent = Math.max(hasConvLimit ? convPercent : 0, hasKnowledgeLimit ? knowledgePercent : 0)
+                      const usageColors = getUsageColor(maxPercent)
+
+                      return (
+                        <tr key={company.id} className="hover:bg-bg-secondary transition-colors">
+                          <td className="px-4 py-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedCompanies.has(company.id)}
+                              onChange={() => toggleSelectCompany(company.id)}
+                              className="rounded border-border"
+                            />
+                          </td>
+                          <td className="px-4 py-4">
+                            <button
+                              onClick={() => openCompanyDashboard(company)}
+                              className="text-left hover:bg-bg-primary p-1 -m-1 rounded-lg transition-colors"
+                            >
+                              <p className="font-medium text-text-primary hover:text-accent transition-colors">{company.name}</p>
+                              <p className="text-sm text-text-tertiary">{company.id}</p>
+                            </button>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                              company.is_active
+                                ? 'bg-success-soft text-success'
+                                : 'bg-error-soft text-error'
+                            }`}>
+                              {company.is_active ? 'Aktiv' : 'Inaktiv'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="text-sm">
+                              <span className="text-text-primary font-medium">{knowledgeCurrent}</span>
+                              {hasKnowledgeLimit && (
+                                <span className="text-text-tertiary"> / {knowledgeLimit}</span>
+                              )}
+                              {!hasKnowledgeLimit && (
+                                <span className="text-text-tertiary"> poster</span>
+                              )}
+                            </div>
+                            {hasKnowledgeLimit && (
+                              <div className="w-16 h-1.5 bg-bg-secondary rounded-full mt-1 overflow-hidden">
+                                <div className={`h-full ${getUsageColor(knowledgePercent).bar} rounded-full`} style={{ width: `${knowledgePercent}%` }} />
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="text-sm">
+                              <span className="text-text-primary font-medium">{convCurrent}</span>
+                              {hasConvLimit && (
+                                <span className="text-text-tertiary"> / {convLimit}</span>
+                              )}
+                              {!hasConvLimit && (
+                                <span className="text-text-tertiary"> denna mån</span>
+                              )}
+                            </div>
+                            {hasConvLimit && (
+                              <div className="w-16 h-1.5 bg-bg-secondary rounded-full mt-1 overflow-hidden">
+                                <div className={`h-full ${getUsageColor(convPercent).bar} rounded-full`} style={{ width: `${convPercent}%` }} />
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-4">
+                            {hasAnyLimit ? (
+                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${usageColors.bg} ${usageColors.text}`}>
+                                {maxPercent >= 100 ? 'Gräns nådd' : maxPercent >= 75 ? 'Nära gräns' : 'OK'}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-text-tertiary">Obegränsat</span>
+                            )}
+                          </td>
                         <td className="px-4 py-4 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button
@@ -1151,6 +1239,223 @@ function SuperAdmin() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Company Dashboard Modal */}
+      {showCompanyDashboard && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-4xl animate-scale-in my-8">
+            {/* Header */}
+            <div className="p-6 border-b border-border-subtle flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center text-accent">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-text-primary">{showCompanyDashboard.name}</h2>
+                  <p className="text-sm text-text-secondary">{showCompanyDashboard.id}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCompanyDashboard(null)}
+                className="p-2 rounded-lg text-text-tertiary hover:bg-bg-secondary hover:text-text-primary transition-colors"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {companyLoading ? (
+              <div className="p-12 text-center">
+                <div className="animate-spin w-10 h-10 border-3 border-accent border-t-transparent rounded-full mx-auto mb-4" />
+                <p className="text-text-secondary">Laddar företagsdata...</p>
+              </div>
+            ) : (
+              <div className="p-6">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-bg-secondary rounded-xl p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 bg-accent-soft rounded-lg flex items-center justify-center text-accent">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                        </svg>
+                      </div>
+                      <span className="text-xs text-text-tertiary">Kunskapsposter</span>
+                    </div>
+                    <p className="text-2xl font-semibold text-text-primary">{showCompanyDashboard.knowledge_count || 0}</p>
+                  </div>
+                  <div className="bg-bg-secondary rounded-xl p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 bg-success-soft rounded-lg flex items-center justify-center text-success">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                      </div>
+                      <span className="text-xs text-text-tertiary">Konversationer</span>
+                    </div>
+                    <p className="text-2xl font-semibold text-text-primary">{showCompanyDashboard.chat_count || 0}</p>
+                  </div>
+                  <div className="bg-bg-secondary rounded-xl p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 bg-warning-soft rounded-lg flex items-center justify-center text-warning">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                          <line x1="16" y1="2" x2="16" y2="6" />
+                          <line x1="8" y1="2" x2="8" y2="6" />
+                          <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg>
+                      </div>
+                      <span className="text-xs text-text-tertiary">Skapad</span>
+                    </div>
+                    <p className="text-sm font-medium text-text-primary">{formatDate(showCompanyDashboard.created_at)}</p>
+                  </div>
+                  <div className="bg-bg-secondary rounded-xl p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${showCompanyDashboard.is_active ? 'bg-success-soft text-success' : 'bg-error-soft text-error'}`}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10" />
+                          {showCompanyDashboard.is_active && <polyline points="9 12 11 14 15 10" />}
+                          {!showCompanyDashboard.is_active && <path d="M15 9l-6 6M9 9l6 6" />}
+                        </svg>
+                      </div>
+                      <span className="text-xs text-text-tertiary">Status</span>
+                    </div>
+                    <p className={`text-sm font-medium ${showCompanyDashboard.is_active ? 'text-success' : 'text-error'}`}>
+                      {showCompanyDashboard.is_active ? 'Aktiv' : 'Inaktiv'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Usage Meters */}
+                {companyUsage && (companyUsage.max_conversations_month > 0 || (showCompanyDashboard.max_knowledge_items || 0) > 0) && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-medium text-text-primary mb-3">Användningsgränser</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {companyUsage.max_conversations_month > 0 && (
+                        <div className={`p-4 rounded-xl border ${companyUsage.usage_percent >= 90 ? 'border-red-200 bg-red-50' : companyUsage.usage_percent >= 75 ? 'border-amber-200 bg-amber-50' : 'border-border-default bg-bg-primary'}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm text-text-secondary">Konversationer denna månad</span>
+                            <span className={`text-sm font-medium ${getUsageColor(companyUsage.usage_percent).text}`}>
+                              {companyUsage.current_month_conversations} / {companyUsage.max_conversations_month}
+                            </span>
+                          </div>
+                          <div className="h-2 bg-bg-secondary rounded-full overflow-hidden">
+                            <div
+                              className={`h-full ${getUsageColor(companyUsage.usage_percent).bar} rounded-full transition-all`}
+                              style={{ width: `${Math.min(100, companyUsage.usage_percent)}%` }}
+                            />
+                          </div>
+                          <p className="text-xs text-text-tertiary mt-1">{Math.round(companyUsage.usage_percent)}% använt</p>
+                        </div>
+                      )}
+                      {(showCompanyDashboard.max_knowledge_items || 0) > 0 && (() => {
+                        const knowledgePercent = (showCompanyDashboard.knowledge_count / showCompanyDashboard.max_knowledge_items) * 100
+                        return (
+                          <div className={`p-4 rounded-xl border ${knowledgePercent >= 90 ? 'border-red-200 bg-red-50' : knowledgePercent >= 75 ? 'border-amber-200 bg-amber-50' : 'border-border-default bg-bg-primary'}`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm text-text-secondary">Kunskapsposter</span>
+                              <span className={`text-sm font-medium ${getUsageColor(knowledgePercent).text}`}>
+                                {showCompanyDashboard.knowledge_count} / {showCompanyDashboard.max_knowledge_items}
+                              </span>
+                            </div>
+                            <div className="h-2 bg-bg-secondary rounded-full overflow-hidden">
+                              <div
+                                className={`h-full ${getUsageColor(knowledgePercent).bar} rounded-full transition-all`}
+                                style={{ width: `${Math.min(100, knowledgePercent)}%` }}
+                              />
+                            </div>
+                            <p className="text-xs text-text-tertiary mt-1">{Math.round(knowledgePercent)}% använt</p>
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Activity */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-text-primary mb-3">Senaste aktivitet</h3>
+                  {companyActivity.length === 0 ? (
+                    <div className="bg-bg-secondary rounded-xl p-6 text-center">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-2 text-text-tertiary">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                      <p className="text-sm text-text-secondary">Ingen aktivitet registrerad</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {companyActivity.map((log) => (
+                        <div key={log.id} className="flex items-center gap-3 p-3 rounded-lg bg-bg-secondary">
+                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                            log.action_type.includes('create') ? 'bg-green-500' :
+                            log.action_type.includes('delete') ? 'bg-red-500' :
+                            log.action_type.includes('update') ? 'bg-amber-500' :
+                            'bg-accent'
+                          }`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-text-primary truncate">{log.description}</p>
+                          </div>
+                          <span className="text-xs text-text-tertiary flex-shrink-0">
+                            {new Date(log.timestamp).toLocaleDateString('sv-SE')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => { setShowCompanyDashboard(null); handleImpersonate(showCompanyDashboard.id) }}
+                    className="btn btn-primary"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    Logga in som
+                  </button>
+                  <button
+                    onClick={() => { setShowCompanyDashboard(null); openUsageLimitModal(showCompanyDashboard) }}
+                    className="btn btn-secondary"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 20V10" />
+                      <path d="M18 20V4" />
+                      <path d="M6 20v-4" />
+                    </svg>
+                    Ändra gränser
+                  </button>
+                  <button
+                    onClick={() => handleExport(showCompanyDashboard.id)}
+                    className="btn btn-secondary"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Exportera
+                  </button>
+                  <button
+                    onClick={() => { setShowCompanyDashboard(null); handleToggle(showCompanyDashboard.id) }}
+                    className={`btn ${showCompanyDashboard.is_active ? 'btn-ghost text-warning' : 'btn-ghost text-success'}`}
+                  >
+                    {showCompanyDashboard.is_active ? 'Inaktivera' : 'Aktivera'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
