@@ -13,12 +13,39 @@ import SuperAdmin from './pages/SuperAdmin'
 
 const API_BASE = '/api'
 
-// Context för att dela auth-data
+// Context för att dela auth-data och dark mode
 export const AuthContext = createContext(null)
+
+// Helper to detect system dark mode preference
+function getSystemDarkMode() {
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  }
+  return false
+}
 
 function App() {
   const location = useLocation()
   const isAdminRoute = location.pathname.startsWith('/admin')
+
+  // Dark mode state - check localStorage first, then system preference
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('bobot_dark_mode')
+    if (saved !== null) return saved === 'true'
+    return getSystemDarkMode()
+  })
+
+  // Apply dark mode class to html element
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+    localStorage.setItem('bobot_dark_mode', darkMode)
+  }, [darkMode])
+
+  const toggleDarkMode = () => setDarkMode(!darkMode)
 
   // Company auth
   const [auth, setAuth] = useState(() => {
@@ -165,12 +192,14 @@ function App() {
   }
 
   return (
-    <AuthContext.Provider value={{ auth, authFetch }}>
+    <AuthContext.Provider value={{ auth, authFetch, darkMode, toggleDarkMode }}>
       <div className="flex min-h-screen bg-bg-primary">
         <Navbar
           companyId={auth.companyId}
           companyName={auth.companyName}
           onLogout={handleLogout}
+          darkMode={darkMode}
+          toggleDarkMode={toggleDarkMode}
         />
         <main className="flex-1 p-8 overflow-auto">
           <Routes>

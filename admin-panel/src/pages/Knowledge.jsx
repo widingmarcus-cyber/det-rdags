@@ -32,6 +32,9 @@ function Knowledge() {
   const [importingUrl, setImportingUrl] = useState(false)
   const [selectedItems, setSelectedItems] = useState(new Set())
   const [selectMode, setSelectMode] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [similarQuestions, setSimilarQuestions] = useState([])
+  const [checkingSimilar, setCheckingSimilar] = useState(false)
 
   useEffect(() => {
     fetchKnowledge()
@@ -47,6 +50,38 @@ function Knowledge() {
       window.history.replaceState({}, document.title)
     }
   }, [location.state])
+
+  // Check for similar questions when typing (debounced)
+  useEffect(() => {
+    if (!showModal || editItem) {
+      setSimilarQuestions([])
+      return
+    }
+
+    const timeoutId = setTimeout(async () => {
+      if (formData.question.length >= 5) {
+        setCheckingSimilar(true)
+        try {
+          const response = await authFetch(`${API_BASE}/knowledge/check-similar`, {
+            method: 'POST',
+            body: JSON.stringify({ question: formData.question })
+          })
+          if (response.ok) {
+            const data = await response.json()
+            setSimilarQuestions(data)
+          }
+        } catch (error) {
+          console.error('Kunde inte söka liknande:', error)
+        } finally {
+          setCheckingSimilar(false)
+        }
+      } else {
+        setSimilarQuestions([])
+      }
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
+  }, [formData.question, showModal, editItem])
 
   const fetchKnowledge = async () => {
     try {
@@ -215,6 +250,32 @@ function Knowledge() {
     }
   }
 
+  const handleExport = async (format) => {
+    setExporting(true)
+    try {
+      const response = await authFetch(`${API_BASE}/export/knowledge?format=${format}`)
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `kunskapsbas.${format}`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        a.remove()
+        setUploadResult({ success: true, message: `Kunskapsbasen exporterad som ${format.toUpperCase()}` })
+      } else {
+        setUploadResult({ success: false, message: 'Export misslyckades' })
+      }
+    } catch (error) {
+      console.error('Export failed:', error)
+      setUploadResult({ success: false, message: 'Export misslyckades: ' + error.message })
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -290,18 +351,52 @@ function Knowledge() {
           ) : (
             <>
               {items.length > 0 && (
-                <button
-                  onClick={() => setSelectMode(true)}
-                  className="btn btn-ghost"
-                  title="Välj flera"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="3" width="7" height="7" rx="1" />
-                    <rect x="14" y="3" width="7" height="7" rx="1" />
-                    <rect x="3" y="14" width="7" height="7" rx="1" />
-                    <rect x="14" y="14" width="7" height="7" rx="1" />
-                  </svg>
-                </button>
+                <>
+                  <button
+                    onClick={() => setSelectMode(true)}
+                    className="btn btn-ghost"
+                    title="Välj flera"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="7" height="7" rx="1" />
+                      <rect x="14" y="3" width="7" height="7" rx="1" />
+                      <rect x="3" y="14" width="7" height="7" rx="1" />
+                      <rect x="14" y="14" width="7" height="7" rx="1" />
+                    </svg>
+                  </button>
+                  <div className="relative group">
+                    <button
+                      className="btn btn-ghost"
+                      title="Exportera kunskapsbas"
+                      disabled={exporting}
+                    >
+                      {exporting ? (
+                        <span className="animate-spin">⏳</span>
+                      ) : (
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                      )}
+                      Exportera
+                    </button>
+                    <div className="absolute right-0 top-full mt-1 bg-bg-tertiary border border-border-subtle rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 min-w-[140px]">
+                      <button
+                        onClick={() => handleExport('csv')}
+                        className="w-full px-4 py-2 text-left text-sm text-text-primary hover:bg-bg-secondary rounded-t-lg transition-colors"
+                      >
+                        Exportera CSV
+                      </button>
+                      <button
+                        onClick={() => handleExport('json')}
+                        className="w-full px-4 py-2 text-left text-sm text-text-primary hover:bg-bg-secondary rounded-b-lg transition-colors"
+                      >
+                        Exportera JSON
+                      </button>
+                    </div>
+                  </div>
+                </>
               )}
               <button
                 onClick={() => setShowUrlModal(true)}
@@ -562,6 +657,34 @@ function Knowledge() {
                   className="input"
                   required
                 />
+                {/* Similar questions warning */}
+                {!editItem && (checkingSimilar || similarQuestions.length > 0) && (
+                  <div className="mt-2">
+                    {checkingSimilar ? (
+                      <p className="text-xs text-text-tertiary">Söker liknande frågor...</p>
+                    ) : similarQuestions.length > 0 ? (
+                      <div className="bg-warning/10 border border-warning/20 rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-warning flex-shrink-0 mt-0.5">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                            <line x1="12" y1="9" x2="12" y2="13" />
+                            <line x1="12" y1="17" x2="12.01" y2="17" />
+                          </svg>
+                          <div className="flex-1">
+                            <p className="text-xs font-medium text-warning mb-1">Liknande frågor finns redan:</p>
+                            <div className="space-y-1">
+                              {similarQuestions.map(sq => (
+                                <div key={sq.id} className="text-xs text-text-secondary bg-bg-secondary rounded px-2 py-1">
+                                  <span className="font-medium">{sq.similarity}% likhet:</span> {sq.question}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="input-label">Svar</label>

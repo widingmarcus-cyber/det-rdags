@@ -10,12 +10,15 @@ function Dashboard() {
     totalQuestions: 0,
     totalKnowledge: 0,
     questionsToday: 0,
-    questionsWeek: 0
+    questionsWeek: 0,
+    answerRate: 0
   })
+  const [dailyStats, setDailyStats] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchStats()
+    fetchAnalytics()
   }, [])
 
   const fetchStats = async () => {
@@ -27,13 +30,26 @@ function Dashboard() {
           totalKnowledge: data.knowledge_items || 0,
           totalQuestions: data.total_questions || 0,
           questionsToday: data.questions_today || 0,
-          questionsWeek: data.questions_this_week || 0
+          questionsWeek: data.questions_this_week || 0,
+          answerRate: data.answer_rate || 0
         })
       }
     } catch (error) {
       console.error('Kunde inte hämta statistik:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchAnalytics = async () => {
+    try {
+      const response = await authFetch(`${API_BASE}/analytics`)
+      if (response.ok) {
+        const data = await response.json()
+        setDailyStats(data.daily_stats?.slice(-7) || [])
+      }
+    } catch (error) {
+      console.error('Kunde inte hämta analytics:', error)
     }
   }
 
@@ -115,6 +131,50 @@ function Dashboard() {
           trend="frågor"
         />
       </div>
+
+      {/* Weekly Chart */}
+      {dailyStats.length > 0 && (
+        <div className="card mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium text-text-primary">Aktivitet senaste 7 dagarna</h2>
+            <div className="flex items-center gap-4 text-xs text-text-tertiary">
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-accent"></span> Frågor
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-success"></span> Besvarade
+              </span>
+            </div>
+          </div>
+          <div className="h-40 flex items-end gap-2">
+            {dailyStats.map((day, i) => {
+              const maxQuestions = Math.max(...dailyStats.map(d => d.questions || 0), 1)
+              const questionHeight = ((day.questions || 0) / maxQuestions) * 100
+              const answeredHeight = ((day.answered || 0) / maxQuestions) * 100
+              const date = new Date(day.date)
+              const dayName = date.toLocaleDateString('sv-SE', { weekday: 'short' })
+
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="w-full flex items-end gap-1 h-32">
+                    <div
+                      className="flex-1 bg-accent/20 rounded-t transition-all hover:bg-accent/30"
+                      style={{ height: `${questionHeight}%`, minHeight: day.questions ? '4px' : '0' }}
+                      title={`${day.questions || 0} frågor`}
+                    />
+                    <div
+                      className="flex-1 bg-success/30 rounded-t transition-all hover:bg-success/40"
+                      style={{ height: `${answeredHeight}%`, minHeight: day.answered ? '4px' : '0' }}
+                      title={`${day.answered || 0} besvarade`}
+                    />
+                  </div>
+                  <span className="text-xs text-text-tertiary capitalize">{dayName}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Actions Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

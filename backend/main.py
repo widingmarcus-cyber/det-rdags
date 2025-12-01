@@ -152,6 +152,35 @@ class ChatResponse(BaseModel):
     session_id: str
     conversation_id: str  # Short readable ID for user reference (e.g., "BOB-A1B2")
     had_answer: bool = True
+    confidence: int = 100  # Confidence score 0-100
+
+
+# Simple in-memory cache for responses
+response_cache = {}
+CACHE_TTL = 300  # 5 minutes
+
+
+def get_cached_response(company_id: str, question: str):
+    """Get cached response if available and not expired"""
+    cache_key = f"{company_id}:{question.lower().strip()}"
+    if cache_key in response_cache:
+        cached, timestamp = response_cache[cache_key]
+        if datetime.utcnow().timestamp() - timestamp < CACHE_TTL:
+            return cached
+        else:
+            del response_cache[cache_key]
+    return None
+
+
+def set_cached_response(company_id: str, question: str, response: dict):
+    """Cache a response"""
+    cache_key = f"{company_id}:{question.lower().strip()}"
+    response_cache[cache_key] = (response, datetime.utcnow().timestamp())
+    # Clean old entries if cache gets too large
+    if len(response_cache) > 1000:
+        oldest_keys = sorted(response_cache.keys(), key=lambda k: response_cache[k][1])[:100]
+        for k in oldest_keys:
+            del response_cache[k]
 
 
 class KnowledgeItemCreate(BaseModel):
@@ -759,6 +788,20 @@ async def chat(
     if not company or not company.is_active:
         raise HTTPException(status_code=404, detail="Företag finns inte")
 
+    # Check cache first
+    cached = get_cached_response(company_id, request.question)
+    if cached:
+        # Return cached response with new session handling
+        session_id = request.session_id or str(uuid.uuid4())
+        return ChatResponse(
+            answer=cached["answer"],
+            sources=cached.get("sources", []),
+            session_id=session_id,
+            conversation_id=cached.get("conversation_id", "BOB-CACHE"),
+            had_answer=cached.get("had_answer", True),
+            confidence=cached.get("confidence", 100)
+        )
+
     # Hämta inställningar
     settings = get_or_create_settings(db, company_id)
 
@@ -859,12 +902,39 @@ async def chat(
 
     db.commit()
 
+    # Calculate confidence score based on context quality
+    # 100% = exact match in knowledge base
+    # 80% = partial match / category match
+    # 50% = AI-generated without knowledge base
+    # 30% = fallback message
+    if len(context) >= 2:
+        confidence = 100
+    elif len(context) == 1:
+        confidence = 90
+    elif had_answer and category != "allmant":
+        confidence = 75
+    elif had_answer:
+        confidence = 60
+    else:
+        confidence = 40
+
+    # Cache the response
+    cache_data = {
+        "answer": answer,
+        "sources": sources,
+        "conversation_id": conversation.reference_id,
+        "had_answer": had_answer,
+        "confidence": confidence
+    }
+    set_cached_response(company_id, request.question, cache_data)
+
     return ChatResponse(
         answer=answer,
         sources=sources,
         session_id=session_id,
         conversation_id=conversation.reference_id,
-        had_answer=had_answer
+        had_answer=had_answer,
+        confidence=confidence
     )
 
 
@@ -1225,6 +1295,67 @@ async def delete_knowledge(
     db.commit()
 
     return {"message": "Borttagen"}
+
+
+class SimilarQuestionRequest(BaseModel):
+    question: str
+
+
+class SimilarQuestionResponse(BaseModel):
+    id: int
+    question: str
+    answer: str
+    similarity: float
+
+
+def calculate_similarity(str1: str, str2: str) -> float:
+    """Calculate simple word-based similarity between two strings"""
+    # Normalize strings
+    s1 = str1.lower().strip()
+    s2 = str2.lower().strip()
+
+    # Exact match
+    if s1 == s2:
+        return 1.0
+
+    # Word-based Jaccard similarity
+    words1 = set(s1.split())
+    words2 = set(s2.split())
+
+    if not words1 or not words2:
+        return 0.0
+
+    intersection = words1 & words2
+    union = words1 | words2
+
+    return len(intersection) / len(union) if union else 0.0
+
+
+@app.post("/knowledge/check-similar", response_model=List[SimilarQuestionResponse])
+async def check_similar_questions(
+    request: SimilarQuestionRequest,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Check for similar questions in the knowledge base"""
+    items = db.query(KnowledgeItem).filter(
+        KnowledgeItem.company_id == current["company_id"]
+    ).all()
+
+    similar = []
+    for item in items:
+        sim = calculate_similarity(request.question, item.question)
+        if sim > 0.3:  # Threshold for similarity
+            similar.append(SimilarQuestionResponse(
+                id=item.id,
+                question=item.question,
+                answer=item.answer[:100] + "..." if len(item.answer) > 100 else item.answer,
+                similarity=round(sim * 100, 1)
+            ))
+
+    # Sort by similarity descending
+    similar.sort(key=lambda x: x.similarity, reverse=True)
+    return similar[:5]  # Return top 5 similar
 
 
 class UploadResponse(BaseModel):
@@ -1925,10 +2056,11 @@ async def export_statistics(
 
 @app.get("/export/knowledge")
 async def export_knowledge(
+    format: str = "csv",
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db)
 ):
-    """Export knowledge base as CSV"""
+    """Export knowledge base as CSV or JSON"""
     from fastapi.responses import StreamingResponse
     import io
     import csv
@@ -1939,26 +2071,43 @@ async def export_knowledge(
         KnowledgeItem.company_id == company_id
     ).all()
 
-    output = io.StringIO()
-    writer = csv.writer(output)
+    if format.lower() == "json":
+        # Export as JSON
+        data = [{
+            "question": item.question,
+            "answer": item.answer,
+            "category": item.category or "",
+            "created_at": item.created_at.isoformat()
+        } for item in items]
 
-    # Header
-    writer.writerow(["Question", "Answer", "Category", "Created At"])
+        output = json.dumps(data, ensure_ascii=False, indent=2)
+        return StreamingResponse(
+            iter([output]),
+            media_type="application/json",
+            headers={"Content-Disposition": "attachment; filename=knowledge_base.json"}
+        )
+    else:
+        # Export as CSV (default)
+        output = io.StringIO()
+        writer = csv.writer(output)
 
-    for item in items:
-        writer.writerow([
-            item.question,
-            item.answer,
-            item.category or "",
-            item.created_at.isoformat()
-        ])
+        # Header
+        writer.writerow(["Question", "Answer", "Category", "Created At"])
 
-    output.seek(0)
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=knowledge_base.csv"}
-    )
+        for item in items:
+            writer.writerow([
+                item.question,
+                item.answer,
+                item.category or "",
+                item.created_at.isoformat()
+            ])
+
+        output.seek(0)
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=knowledge_base.csv"}
+        )
 
 
 # =============================================================================
