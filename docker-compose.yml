@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama3.1
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+  # Ollama (lokal AI)
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    # Kör "docker exec -it <container> ollama pull llama3.1" efter uppstart
+
+  # Admin-panel
+  admin:
+    build: ./admin-panel
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Chat-widget demo
+  widget:
+    build: ./chat-widget
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  ollama_data:

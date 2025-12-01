@@ -7,6 +7,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
+from collections import defaultdict
 import httpx
 import os
 from dotenv import load_dotenv
@@ -62,6 +64,24 @@ knowledge_base: dict[str, list[dict]] = {
         },
     ]
 }
+
+
+# =============================================================================
+# Statistik (in-memory)
+# =============================================================================
+
+# Struktur: {tenant_id: {"total_questions": int, "questions_by_date": {date: count}}}
+stats: dict[str, dict] = defaultdict(lambda: {
+    "total_questions": 0,
+    "questions_by_date": defaultdict(int)
+})
+
+
+def record_question(tenant_id: str):
+    """Registrera en fråga för statistik"""
+    today = datetime.now().strftime("%Y-%m-%d")
+    stats[tenant_id]["total_questions"] += 1
+    stats[tenant_id]["questions_by_date"][today] += 1
 
 
 # =============================================================================
@@ -196,6 +216,9 @@ async def chat(request: ChatRequest):
     Huvudendpoint för chatbot.
     Tar emot en fråga och returnerar AI-genererat svar.
     """
+    # Registrera fråga för statistik
+    record_question(request.tenant_id)
+
     # Hitta relevant kontext
     context = find_relevant_context(request.question, request.tenant_id)
 
@@ -248,6 +271,24 @@ async def delete_knowledge(tenant_id: str, index: int):
 
     removed = knowledge_base[tenant_id].pop(index)
     return {"message": "Borttagen", "item": removed}
+
+
+# =============================================================================
+# Statistik-endpoints
+# =============================================================================
+
+@app.get("/stats/{tenant_id}")
+async def get_stats(tenant_id: str):
+    """Hämta statistik för en tenant"""
+    tenant_stats = stats[tenant_id]
+    knowledge_count = len(knowledge_base.get(tenant_id, []))
+
+    return {
+        "tenant_id": tenant_id,
+        "total_questions": tenant_stats["total_questions"],
+        "knowledge_items": knowledge_count,
+        "questions_by_date": dict(tenant_stats["questions_by_date"])
+    }
 
 
 # =============================================================================
