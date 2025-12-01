@@ -6,7 +6,7 @@ export default defineConfig({
   build: {
     lib: {
       entry: 'src/widget.jsx',
-      name: 'FastighetsAI',
+      name: 'Bobot',
       fileName: 'widget',
       formats: ['iife']
     },

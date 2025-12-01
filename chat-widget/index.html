@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FastighetsAI Widget Demo</title>
+  <title>Bobot Widget Demo</title>
   <style>
     body {
       font-family: system-ui, -apple-system, sans-serif;
@@ -47,11 +47,9 @@
 
     // Vänta tills scriptet laddats
     setTimeout(() => {
-      FastighetsAI.init({
-        tenantId: 'demo',
-        apiUrl: 'http://localhost:8000',
-        title: 'Fastighetsbolaget AB',
-        welcomeMessage: 'Hej! Jag är din digitala assistent. Hur kan jag hjälpa dig idag?'
+      Bobot.init({
+        companyId: 'demo',
+        apiUrl: 'http://localhost:8000'
       })
     }, 100)
   </script>
