@@ -2,6 +2,119 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+@layer base {
+  body {
+    @apply bg-bg-primary text-text-primary;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Focus states */
+  :focus-visible {
+    @apply outline-2 outline-accent outline-offset-2;
+  }
+
+  :focus:not(:focus-visible) {
+    @apply outline-none;
+  }
+}
+
+@layer components {
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-medium rounded-md transition-all duration-150 cursor-pointer;
+  }
+
+  .btn-primary {
+    @apply bg-accent text-text-inverse hover:bg-accent-hover hover:-translate-y-0.5 hover:shadow-md active:translate-y-0;
+  }
+
+  .btn-secondary {
+    @apply bg-bg-secondary text-text-primary border border-border hover:bg-bg-tertiary hover:border-text-tertiary;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-text-secondary hover:bg-bg-secondary hover:text-text-primary;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-bg-tertiary border border-border-subtle rounded-lg p-6 transition-all duration-200;
+  }
+
+  .card:hover {
+    @apply border-border shadow-sm;
+  }
+
+  /* Inputs */
+  .input {
+    @apply w-full px-4 py-3 text-sm bg-bg-tertiary border border-border rounded-md transition-all duration-150;
+  }
+
+  .input::placeholder {
+    @apply text-text-tertiary;
+  }
+
+  .input:hover {
+    @apply border-text-tertiary;
+  }
+
+  .input:focus {
+    @apply outline-none border-accent shadow-[0_0_0_3px_rgba(217,119,87,0.15)];
+  }
+
+  .input-label {
+    @apply block text-sm font-medium text-text-primary mb-2;
+  }
+
+  /* Sidebar items */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-md text-text-secondary text-sm font-medium transition-all duration-150;
+  }
+
+  .sidebar-item:hover {
+    @apply bg-bg-tertiary text-text-primary;
+  }
+
+  .sidebar-item.active {
+    @apply bg-accent-soft text-accent;
+  }
+
+  /* Table */
+  .table-header {
+    @apply text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-text-tertiary border-b border-border-subtle;
+  }
+
+  .table-cell {
+    @apply px-4 py-4 text-sm text-text-primary border-b border-border-subtle;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex px-2 py-1 text-xs font-medium rounded-full;
+  }
+
+  .badge-success {
+    @apply bg-success-soft text-success;
+  }
+
+  .badge-warning {
+    @apply bg-warning-soft text-warning;
+  }
+
+  .badge-error {
+    @apply bg-error-soft text-error;
+  }
+
+  .badge-accent {
+    @apply bg-accent-soft text-accent;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

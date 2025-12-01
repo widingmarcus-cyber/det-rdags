@@ -4,6 +4,8 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Knowledge from './pages/Knowledge'
 import Preview from './pages/Preview'
+import Settings from './pages/Settings'
+import Conversations from './pages/Conversations'
 import Navbar from './components/Navbar'
 import AdminLogin from './pages/AdminLogin'
 import SuperAdmin from './pages/SuperAdmin'
@@ -163,16 +165,18 @@ function App() {
 
   return (
     <AuthContext.Provider value={{ auth, authFetch }}>
-      <div className="min-h-screen bg-gray-50">
+      <div className="flex min-h-screen bg-bg-primary">
         <Navbar
           companyId={auth.companyId}
           companyName={auth.companyName}
           onLogout={handleLogout}
         />
-        <main className="container mx-auto px-4 py-8">
+        <main className="flex-1 p-8 overflow-auto">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/knowledge" element={<Knowledge />} />
+            <Route path="/conversations" element={<Conversations />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/preview" element={<Preview />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

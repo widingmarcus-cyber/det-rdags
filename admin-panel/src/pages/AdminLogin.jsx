@@ -30,19 +30,20 @@ function AdminLogin({ onLogin }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
+    <div className="min-h-screen bg-[#161514] flex items-center justify-center p-4">
+      <div className="bg-[#1C1B1A] rounded-xl shadow-lg border border-[#2A2826] w-full max-w-md p-8 animate-scale-in">
+        {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-yellow-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-gray-900 font-bold text-2xl">A</span>
+          <div className="w-16 h-16 bg-gradient-to-br from-warning to-[#B8893D] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-md">
+            <span className="text-[#161514] font-bold text-2xl">A</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">Super Admin</h1>
-          <p className="text-gray-500 mt-2">Bobot administratörsportal</p>
+          <h1 className="text-2xl font-semibold text-[#F5F5F4] tracking-tight">Super Admin</h1>
+          <p className="text-[#A8A29E] mt-2">Bobot administratörsportal</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="username" className="block text-sm font-medium text-[#F5F5F4] mb-2">
               Användarnamn
             </label>
             <input
@@ -51,13 +52,13 @@ function AdminLogin({ onLogin }) {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="admin"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent outline-none transition-all"
+              className="w-full px-4 py-3 text-sm bg-[#242321] border border-[#2A2826] rounded-md text-[#F5F5F4] placeholder-[#78716C] focus:outline-none focus:border-warning focus:shadow-[0_0_0_3px_rgba(212,160,84,0.15)] transition-all duration-150"
               disabled={loading}
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="password" className="block text-sm font-medium text-[#F5F5F4] mb-2">
               Lösenord
             </label>
             <input
@@ -66,13 +67,13 @@ function AdminLogin({ onLogin }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Ditt lösenord"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent outline-none transition-all"
+              className="w-full px-4 py-3 text-sm bg-[#242321] border border-[#2A2826] rounded-md text-[#F5F5F4] placeholder-[#78716C] focus:outline-none focus:border-warning focus:shadow-[0_0_0_3px_rgba(212,160,84,0.15)] transition-all duration-150"
               disabled={loading}
             />
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-error-soft text-error px-4 py-3 rounded-md text-sm animate-slide-up">
               {error}
             </div>
           )}
@@ -80,14 +81,14 @@ function AdminLogin({ onLogin }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-yellow-500 text-gray-900 py-3 px-4 rounded-lg font-medium hover:bg-yellow-400 transition-colors disabled:opacity-50"
+            className="w-full px-5 py-3 text-sm font-medium rounded-md bg-warning text-[#161514] hover:bg-[#C4923D] hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 transition-all duration-150 disabled:opacity-50"
           >
             {loading ? 'Loggar in...' : 'Logga in'}
           </button>
         </form>
 
-        <div className="mt-6 pt-6 border-t text-center">
-          <a href="/" className="text-sm text-gray-500 hover:text-primary-600">
+        <div className="mt-6 pt-6 border-t border-[#2A2826] text-center">
+          <a href="/" className="text-sm text-[#78716C] hover:text-warning transition-colors">
             Tillbaka till företagsinloggning
           </a>
         </div>

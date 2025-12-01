@@ -11,12 +11,12 @@ function Login({ onLogin }) {
     setError('')
 
     if (!companyId.trim()) {
-      setError('Ange ett företags-ID')
+      setError('Ange ditt Företags-ID')
       return
     }
 
     if (!password.trim()) {
-      setError('Ange lösenord')
+      setError('Ange ditt lösenord')
       return
     }
 
@@ -30,19 +30,22 @@ function Login({ onLogin }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
+    <div className="min-h-screen bg-bg-primary flex items-center justify-center p-4">
+      <div className="bg-bg-tertiary rounded-xl shadow-lg border border-border-subtle w-full max-w-md p-8 animate-scale-in">
+        {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-2xl">B</span>
+          <div className="w-16 h-16 bg-gradient-to-br from-accent to-accent-hover rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-md">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">Bobot</h1>
-          <p className="text-gray-500 mt-2">Admin-panel</p>
+          <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Bobot</h1>
+          <p className="text-text-secondary mt-2">Logga in på din admin-panel</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="companyId" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="companyId" className="input-label">
               Företags-ID
             </label>
             <input
@@ -51,13 +54,13 @@ function Login({ onLogin }) {
               value={companyId}
               onChange={(e) => setCompanyId(e.target.value)}
               placeholder="t.ex. bostadsbolaget"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+              className="input"
               disabled={loading}
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="password" className="input-label">
               Lösenord
             </label>
             <input
@@ -66,13 +69,13 @@ function Login({ onLogin }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Ditt lösenord"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+              className="input"
               disabled={loading}
             />
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-error-soft text-error px-4 py-3 rounded-md text-sm animate-slide-up">
               {error}
             </div>
           )}
@@ -80,15 +83,17 @@ function Login({ onLogin }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-primary-700 transition-colors disabled:opacity-50"
+            className="btn btn-primary w-full"
           >
             {loading ? 'Loggar in...' : 'Logga in'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
-          Demo: Företags-ID "demo", lösenord "demo123"
-        </p>
+        <div className="mt-6 pt-6 border-t border-border-subtle text-center">
+          <a href="/admin" className="text-sm text-text-tertiary hover:text-accent transition-colors">
+            Super Admin-inloggning
+          </a>
+        </div>
       </div>
     </div>
   )
