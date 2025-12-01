@@ -14,6 +14,10 @@ const translations = {
     no: 'Nej',
     thanksFeedback: 'Tack för din feedback!',
     errorMessage: 'Ett fel uppstod. Vänligen försök igen.',
+    serviceUnavailable: 'Chatten är tillfälligt otillgänglig. Vänligen försök igen om en stund eller kontakta oss direkt.',
+    emailConversation: 'Skicka till support',
+    newConversation: 'Ny konversation',
+    clearHistory: 'Rensa historik',
   },
   en: {
     welcomeMessage: 'Hi! How can I help you today?',
@@ -26,6 +30,10 @@ const translations = {
     no: 'No',
     thanksFeedback: 'Thanks for your feedback!',
     errorMessage: 'An error occurred. Please try again.',
+    serviceUnavailable: 'Chat is temporarily unavailable. Please try again later or contact us directly.',
+    emailConversation: 'Email to support',
+    newConversation: 'New conversation',
+    clearHistory: 'Clear history',
   },
   ar: {
     welcomeMessage: 'مرحباً! كيف يمكنني مساعدتك اليوم؟',
@@ -38,6 +46,10 @@ const translations = {
     no: 'لا',
     thanksFeedback: 'شكراً على ملاحظاتك!',
     errorMessage: 'حدث خطأ. يرجى المحاولة مرة أخرى.',
+    serviceUnavailable: 'الدردشة غير متاحة مؤقتاً. يرجى المحاولة لاحقاً أو الاتصال بنا مباشرة.',
+    emailConversation: 'أرسل إلى الدعم',
+    newConversation: 'محادثة جديدة',
+    clearHistory: 'مسح المحفوظات',
   }
 }
 
@@ -78,6 +90,48 @@ const defaultColors = {
 // Generate session ID
 function generateSessionId() {
   return 'widget-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11)
+}
+
+// LocalStorage helpers for conversation persistence
+const STORAGE_KEY_PREFIX = 'bobot_chat_'
+
+function getStorageKey(companyId) {
+  return `${STORAGE_KEY_PREFIX}${companyId}`
+}
+
+function loadConversationFromStorage(companyId) {
+  try {
+    const data = localStorage.getItem(getStorageKey(companyId))
+    if (data) {
+      const parsed = JSON.parse(data)
+      // Check if conversation is less than 24 hours old
+      if (parsed.timestamp && Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
+        return parsed
+      }
+    }
+  } catch (e) {
+    console.log('Could not load chat history')
+  }
+  return null
+}
+
+function saveConversationToStorage(companyId, data) {
+  try {
+    localStorage.setItem(getStorageKey(companyId), JSON.stringify({
+      ...data,
+      timestamp: Date.now()
+    }))
+  } catch (e) {
+    console.log('Could not save chat history')
+  }
+}
+
+function clearConversationStorage(companyId) {
+  try {
+    localStorage.removeItem(getStorageKey(companyId))
+  } catch (e) {
+    console.log('Could not clear chat history')
+  }
 }
 
 // Darken/lighten hex color
@@ -138,10 +192,11 @@ function ChatWidget({ config }) {
   const [inputFocused, setInputFocused] = useState(false)
   const [sendHover, setSendHover] = useState(false)
   const [showContact, setShowContact] = useState(false)
-  const [sessionId] = useState(() => generateSessionId())
+  const [sessionId, setSessionId] = useState(() => generateSessionId())
   const [feedbackGiven, setFeedbackGiven] = useState({})
   const [companyConfig, setCompanyConfig] = useState(null)
   const [conversationId, setConversationId] = useState(null)
+  const [showMenu, setShowMenu] = useState(false)
   const messagesEndRef = useRef(null)
 
   // Auto-detect language from browser
@@ -149,11 +204,23 @@ function ChatWidget({ config }) {
   const t = translations[lang] || translations.sv
   const isRTL = lang === 'ar'
 
-  // Fetch company config from backend
+  // Fetch company config from backend and restore conversation
   useEffect(() => {
     injectStyles()
     fetchCompanyConfig()
   }, [])
+
+  // Save conversation to localStorage whenever messages change
+  useEffect(() => {
+    if (messages.length > 1 && companyConfig) {
+      saveConversationToStorage(config.companyId, {
+        messages,
+        sessionId,
+        conversationId,
+        feedbackGiven
+      })
+    }
+  }, [messages, sessionId, conversationId, feedbackGiven])
 
   const fetchCompanyConfig = async () => {
     try {
@@ -161,9 +228,19 @@ function ChatWidget({ config }) {
       if (response.ok) {
         const data = await response.json()
         setCompanyConfig(data)
-        // Set welcome message
-        const welcomeMsg = data.welcome_message || t.welcomeMessage
-        setMessages([{ id: 0, type: 'bot', text: welcomeMsg }])
+
+        // Try to restore previous conversation
+        const saved = loadConversationFromStorage(config.companyId)
+        if (saved && saved.messages && saved.messages.length > 1) {
+          setMessages(saved.messages)
+          if (saved.sessionId) setSessionId(saved.sessionId)
+          if (saved.conversationId) setConversationId(saved.conversationId)
+          if (saved.feedbackGiven) setFeedbackGiven(saved.feedbackGiven)
+        } else {
+          // Set welcome message
+          const welcomeMsg = data.welcome_message || t.welcomeMessage
+          setMessages([{ id: 0, type: 'bot', text: welcomeMsg }])
+        }
       } else {
         // Fallback to default welcome
         setMessages([{ id: 0, type: 'bot', text: t.welcomeMessage }])
@@ -172,6 +249,34 @@ function ChatWidget({ config }) {
       console.log('Could not fetch company config')
       setMessages([{ id: 0, type: 'bot', text: t.welcomeMessage }])
     }
+  }
+
+  const startNewConversation = () => {
+    clearConversationStorage(config.companyId)
+    setMessages([{ id: 0, type: 'bot', text: companyConfig?.welcome_message || t.welcomeMessage }])
+    setSessionId(generateSessionId())
+    setConversationId(null)
+    setFeedbackGiven({})
+    setShowContact(false)
+    setShowMenu(false)
+  }
+
+  const emailConversation = () => {
+    const email = companyConfig?.contact_email
+    if (!email) return
+
+    // Build conversation summary
+    const conversationText = messages
+      .filter(m => m.id !== 0) // Skip welcome message
+      .map(m => `${m.type === 'user' ? 'Kund' : 'Bot'}: ${m.text}`)
+      .join('\n\n')
+
+    const refId = conversationId || 'Ej tilldelat'
+    const subject = encodeURIComponent(`Chattkonversation ${refId}`)
+    const body = encodeURIComponent(`Hej,\n\nJag behöver hjälp med min chattkonversation.\n\nReferens-ID: ${refId}\n\n--- Konversation ---\n\n${conversationText}\n\n--- Slut ---\n\nVänligen kontakta mig för vidare hjälp.\n`)
+
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`
+    setShowMenu(false)
   }
 
   useEffect(() => {
@@ -230,10 +335,16 @@ function ChatWidget({ config }) {
         setShowContact(true)
       }
     } catch (error) {
+      // Better error message for service unavailable (Ollama down, etc.)
+      const errorMsg = error.message?.includes('503') || error.message?.includes('fetch')
+        ? t.serviceUnavailable
+        : t.errorMessage
+
       setMessages(prev => [...prev, {
         id: Date.now(),
         type: 'bot',
-        text: t.errorMessage
+        text: errorMsg,
+        isError: true
       }])
       setShowContact(true)
     } finally {
@@ -471,6 +582,85 @@ function ChatWidget({ config }) {
               <p style={styles.headerSubtitle}>
                 {conversationId ? `${t.subtitle} • ${conversationId}` : t.subtitle}
               </p>
+            </div>
+            <div style={{ position: 'relative' }}>
+              <button
+                style={styles.closeButton}
+                onClick={() => setShowMenu(!showMenu)}
+                title="Menu"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="1" />
+                  <circle cx="12" cy="5" r="1" />
+                  <circle cx="12" cy="19" r="1" />
+                </svg>
+              </button>
+              {showMenu && (
+                <div style={{
+                  position: 'absolute',
+                  top: '40px',
+                  right: isRTL ? 'auto' : '0',
+                  left: isRTL ? '0' : 'auto',
+                  backgroundColor: defaultColors.bgTertiary,
+                  borderRadius: '8px',
+                  boxShadow: defaultColors.shadowLg,
+                  border: `1px solid ${defaultColors.borderSubtle}`,
+                  minWidth: '160px',
+                  zIndex: 10,
+                  overflow: 'hidden'
+                }}>
+                  <button
+                    onClick={startNewConversation}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      color: defaultColors.textPrimary,
+                      fontSize: '13px',
+                      textAlign: isRTL ? 'right' : 'left'
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = defaultColors.bgSecondary}
+                    onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    {t.newConversation}
+                  </button>
+                  {companyConfig?.contact_email && messages.length > 1 && (
+                    <button
+                      onClick={emailConversation}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: 'none',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        color: defaultColors.textPrimary,
+                        fontSize: '13px',
+                        textAlign: isRTL ? 'right' : 'left'
+                      }}
+                      onMouseOver={(e) => e.target.style.backgroundColor = defaultColors.bgSecondary}
+                      onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                        <polyline points="22,6 12,13 2,6" />
+                      </svg>
+                      {t.emailConversation}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <button style={styles.closeButton} onClick={() => setIsOpen(false)}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

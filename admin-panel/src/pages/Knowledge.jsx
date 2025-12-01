@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext } from 'react'
+import { useLocation } from 'react-router-dom'
 import { AuthContext } from '../App'
 
 const API_BASE = '/api'
@@ -15,6 +16,7 @@ const CATEGORIES = [
 
 function Knowledge() {
   const { authFetch } = useContext(AuthContext)
+  const location = useLocation()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -25,10 +27,26 @@ function Knowledge() {
   const [searchQuery, setSearchQuery] = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadResult, setUploadResult] = useState(null)
+  const [showUrlModal, setShowUrlModal] = useState(false)
+  const [urlInput, setUrlInput] = useState('')
+  const [importingUrl, setImportingUrl] = useState(false)
+  const [selectedItems, setSelectedItems] = useState(new Set())
+  const [selectMode, setSelectMode] = useState(false)
 
   useEffect(() => {
     fetchKnowledge()
   }, [])
+
+  // Handle prefilled question from Analytics page
+  useEffect(() => {
+    if (location.state?.prefillQuestion) {
+      setEditItem(null)
+      setFormData({ question: location.state.prefillQuestion, answer: '', category: '' })
+      setShowModal(true)
+      // Clear the state so it doesn't trigger again on refresh
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state])
 
   const fetchKnowledge = async () => {
     try {
@@ -115,6 +133,88 @@ function Knowledge() {
     return cat ? cat.label : value
   }
 
+  const handleUrlImport = async (e) => {
+    e.preventDefault()
+    if (!urlInput.trim()) return
+
+    setImportingUrl(true)
+    setUploadResult(null)
+
+    try {
+      const response = await authFetch(`${API_BASE}/knowledge/import-url`, {
+        method: 'POST',
+        body: JSON.stringify({ url: urlInput.trim() })
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        setUploadResult({
+          success: true,
+          message: result.message,
+          count: result.items_added
+        })
+        fetchKnowledge()
+        setShowUrlModal(false)
+        setUrlInput('')
+      } else {
+        setUploadResult({
+          success: false,
+          message: result.message || result.detail || 'Import misslyckades'
+        })
+      }
+    } catch (error) {
+      setUploadResult({
+        success: false,
+        message: 'Ett fel uppstod vid import: ' + error.message
+      })
+    } finally {
+      setImportingUrl(false)
+    }
+  }
+
+  const toggleSelectItem = (id) => {
+    const newSelected = new Set(selectedItems)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedItems(newSelected)
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedItems.size === filteredItems.length) {
+      setSelectedItems(new Set())
+    } else {
+      setSelectedItems(new Set(filteredItems.map(i => i.id)))
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedItems.size === 0) return
+    if (!confirm(`Är du säker på att du vill ta bort ${selectedItems.size} poster?`)) return
+
+    try {
+      const response = await authFetch(`${API_BASE}/knowledge/bulk`, {
+        method: 'DELETE',
+        body: JSON.stringify(Array.from(selectedItems))
+      })
+
+      if (response.ok) {
+        setUploadResult({
+          success: true,
+          message: `${selectedItems.size} poster har tagits bort`
+        })
+        setSelectedItems(new Set())
+        setSelectMode(false)
+        fetchKnowledge()
+      }
+    } catch (error) {
+      console.error('Kunde inte ta bort:', error)
+    }
+  }
+
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -167,32 +267,81 @@ function Knowledge() {
           <p className="text-text-secondary mt-1">Hantera frågor och svar för din chatbot</p>
         </div>
         <div className="flex gap-2">
-          <label className={`btn btn-ghost cursor-pointer ${uploading ? 'opacity-50' : ''}`}>
-            <input
-              type="file"
-              accept=".xlsx,.xls,.docx,.txt,.csv"
-              onChange={handleFileUpload}
-              disabled={uploading}
-              className="hidden"
-            />
-            {uploading ? (
-              <span className="animate-spin">⏳</span>
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
-            )}
-            {uploading ? 'Laddar upp...' : 'Ladda upp fil'}
-          </label>
-          <button onClick={handleAdd} className="btn btn-primary">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Lägg till
-          </button>
+          {selectMode ? (
+            <>
+              <button
+                onClick={() => { setSelectMode(false); setSelectedItems(new Set()) }}
+                className="btn btn-ghost"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={selectedItems.size === 0}
+                className="btn btn-ghost text-error hover:bg-error-soft"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+                Ta bort ({selectedItems.size})
+              </button>
+            </>
+          ) : (
+            <>
+              {items.length > 0 && (
+                <button
+                  onClick={() => setSelectMode(true)}
+                  className="btn btn-ghost"
+                  title="Välj flera"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                </button>
+              )}
+              <button
+                onClick={() => setShowUrlModal(true)}
+                className="btn btn-ghost"
+                title="Importera från URL"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                </svg>
+                Importera URL
+              </button>
+              <label className={`btn btn-ghost cursor-pointer ${uploading ? 'opacity-50' : ''}`}>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.docx,.txt,.csv"
+                  onChange={handleFileUpload}
+                  disabled={uploading}
+                  className="hidden"
+                />
+                {uploading ? (
+                  <span className="animate-spin">⏳</span>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                )}
+                {uploading ? 'Laddar upp...' : 'Ladda upp fil'}
+              </label>
+              <button onClick={handleAdd} className="btn btn-primary">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Lägg till
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -306,9 +455,39 @@ function Knowledge() {
         </div>
       ) : (
         <div className="space-y-3">
+          {selectMode && filteredItems.length > 0 && (
+            <div className="flex items-center gap-3 py-2 px-4 bg-bg-tertiary rounded-lg border border-border-subtle">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedItems.size === filteredItems.length}
+                  onChange={toggleSelectAll}
+                  className="w-4 h-4 rounded border-border accent-accent"
+                />
+                <span className="text-sm text-text-secondary">
+                  Välj alla ({filteredItems.length})
+                </span>
+              </label>
+            </div>
+          )}
           {filteredItems.map((item) => (
-            <div key={item.id} className="card group">
+            <div
+              key={item.id}
+              className={`card group ${selectMode ? 'cursor-pointer' : ''} ${selectedItems.has(item.id) ? 'ring-2 ring-accent' : ''}`}
+              onClick={selectMode ? () => toggleSelectItem(item.id) : undefined}
+            >
               <div className="flex items-start justify-between gap-4">
+                {selectMode && (
+                  <div className="flex items-center pt-1">
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.has(item.id)}
+                      onChange={() => toggleSelectItem(item.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-4 h-4 rounded border-border accent-accent"
+                    />
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
                     {item.category && (
@@ -320,28 +499,30 @@ function Knowledge() {
                   <h3 className="font-medium text-text-primary">{item.question}</h3>
                   <p className="text-text-secondary mt-2 text-sm whitespace-pre-wrap line-clamp-3">{item.answer}</p>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => handleEdit(item)}
-                    className="p-2 text-text-tertiary hover:text-accent hover:bg-accent-soft rounded-md transition-colors"
-                    title="Redigera"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => handleDelete(item)}
-                    className="p-2 text-text-tertiary hover:text-error hover:bg-error-soft rounded-md transition-colors"
-                    title="Ta bort"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    </svg>
-                  </button>
-                </div>
+                {!selectMode && (
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleEdit(item)}
+                      className="p-2 text-text-tertiary hover:text-accent hover:bg-accent-soft rounded-md transition-colors"
+                      title="Redigera"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(item)}
+                      className="p-2 text-text-tertiary hover:text-error hover:bg-error-soft rounded-md transition-colors"
+                      title="Ta bort"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -407,6 +588,78 @@ function Knowledge() {
                   className="btn btn-primary"
                 >
                   {saving ? 'Sparar...' : 'Spara'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* URL Import Modal */}
+      {showUrlModal && (
+        <div className="fixed inset-0 bg-text-primary/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-lg border border-border-subtle w-full max-w-lg animate-scale-in">
+            <div className="p-6 border-b border-border-subtle">
+              <h2 className="text-lg font-semibold text-text-primary">
+                Importera från URL
+              </h2>
+              <p className="text-sm text-text-secondary mt-1">
+                AI analyserar innehållet och skapar frågor/svar automatiskt
+              </p>
+            </div>
+            <form onSubmit={handleUrlImport} className="p-6 space-y-4">
+              <div>
+                <label className="input-label">URL</label>
+                <input
+                  type="text"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  placeholder="https://exempel.se/vanliga-fragor"
+                  className="input"
+                  disabled={importingUrl}
+                  required
+                />
+              </div>
+              <div className="bg-accent-soft border border-accent/20 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent flex-shrink-0 mt-0.5">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                  <p className="text-xs text-text-secondary">
+                    Fungerar bäst med sidor som innehåller FAQ, vanliga frågor, eller strukturerad information.
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => { setShowUrlModal(false); setUrlInput('') }}
+                  className="btn btn-ghost"
+                  disabled={importingUrl}
+                >
+                  Avbryt
+                </button>
+                <button
+                  type="submit"
+                  disabled={importingUrl || !urlInput.trim()}
+                  className="btn btn-primary"
+                >
+                  {importingUrl ? (
+                    <>
+                      <span className="animate-spin mr-2">⏳</span>
+                      Importerar...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                      </svg>
+                      Importera
+                    </>
+                  )}
                 </button>
               </div>
             </form>

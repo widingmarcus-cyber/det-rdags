@@ -14,6 +14,8 @@ function Settings() {
     contact_email: '',
     contact_phone: '',
     data_retention_days: 30,
+    notify_unanswered: false,
+    notification_email: '',
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -24,6 +26,7 @@ function Settings() {
     { id: 'general', label: 'Allmänt', icon: 'building' },
     { id: 'chatbot', label: 'Chatbot', icon: 'chat' },
     { id: 'appearance', label: 'Utseende', icon: 'palette' },
+    { id: 'notifications', label: 'Notiser', icon: 'bell' },
     { id: 'privacy', label: 'Integritet', icon: 'shield' },
     { id: 'install', label: 'Installation', icon: 'code' },
   ]
@@ -104,6 +107,13 @@ function Settings() {
             <circle cx="8.5" cy="7.5" r="2.5" />
             <circle cx="6.5" cy="12.5" r="2.5" />
             <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z" />
+          </svg>
+        )
+      case 'bell':
+        return (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
           </svg>
         )
       case 'shield':
@@ -263,6 +273,76 @@ function Settings() {
                       <line x1="12" y1="8" x2="12.01" y2="8" />
                     </svg>
                     <span>Chatboten svarar automatiskt på samma språk som användaren skriver</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Notifications Tab */}
+          {activeTab === 'notifications' && (
+            <div className="card animate-fade-in">
+              <div className="flex items-start gap-3 mb-6">
+                <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-lg font-medium text-text-primary">E-postnotifieringar</h2>
+                  <p className="text-sm text-text-secondary">Få meddelanden om obesvarade frågor</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-center justify-between p-4 bg-bg-secondary rounded-lg border border-border-subtle">
+                  <div>
+                    <p className="font-medium text-text-primary">Notifiera vid obesvarade frågor</p>
+                    <p className="text-sm text-text-secondary mt-1">
+                      Få ett e-postmeddelande när chatboten inte kan svara på en fråga
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings.notify_unanswered}
+                      onChange={(e) => setSettings({ ...settings, notify_unanswered: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-bg-tertiary border border-border rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text-tertiary after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent peer-checked:after:bg-white"></div>
+                  </label>
+                </div>
+
+                {settings.notify_unanswered && (
+                  <div className="animate-fade-in">
+                    <label className="input-label">E-postadress för notifieringar</label>
+                    <input
+                      type="email"
+                      value={settings.notification_email}
+                      onChange={(e) => setSettings({ ...settings, notification_email: e.target.value })}
+                      placeholder="notis@foretag.se"
+                      className="input"
+                    />
+                    <p className="text-xs text-text-tertiary mt-1">
+                      Lämna tomt för att använda kontakt-e-posten ({settings.contact_email || 'ej angiven'})
+                    </p>
+                  </div>
+                )}
+
+                <div className="bg-warning/10 border border-warning/20 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-warning flex-shrink-0 mt-0.5">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <div className="text-sm">
+                      <p className="font-medium text-text-primary">Kräver e-postkonfiguration</p>
+                      <p className="text-text-secondary mt-1">
+                        E-postnotifieringar kräver att en SMTP-server är konfigurerad. Kontakta support för att aktivera denna funktion.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

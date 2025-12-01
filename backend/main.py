@@ -203,6 +203,8 @@ class SettingsUpdate(BaseModel):
     primary_color: Optional[str] = None
     language: Optional[str] = None
     data_retention_days: Optional[int] = None
+    notify_unanswered: Optional[bool] = None
+    notification_email: Optional[str] = None
 
 
 class SettingsResponse(BaseModel):
@@ -214,6 +216,8 @@ class SettingsResponse(BaseModel):
     primary_color: str
     language: str
     data_retention_days: int
+    notify_unanswered: bool
+    notification_email: str
 
 
 class MessageResponse(BaseModel):
@@ -928,7 +932,9 @@ async def get_settings(
         fallback_message=settings.fallback_message or "",
         primary_color=settings.primary_color or "#D97757",
         language=settings.language or "sv",
-        data_retention_days=settings.data_retention_days or 30
+        data_retention_days=settings.data_retention_days or 30,
+        notify_unanswered=settings.notify_unanswered or False,
+        notification_email=settings.notification_email or ""
     )
 
 
@@ -961,6 +967,10 @@ async def update_settings(
     if update.data_retention_days is not None:
         # Validera retention (7-365 dagar)
         settings.data_retention_days = max(7, min(365, update.data_retention_days))
+    if update.notify_unanswered is not None:
+        settings.notify_unanswered = update.notify_unanswered
+    if update.notification_email is not None:
+        settings.notification_email = update.notification_email
 
     db.commit()
     db.refresh(settings)
@@ -973,7 +983,9 @@ async def update_settings(
         fallback_message=settings.fallback_message or "",
         primary_color=settings.primary_color or "#D97757",
         language=settings.language or "sv",
-        data_retention_days=settings.data_retention_days or 30
+        data_retention_days=settings.data_retention_days or 30,
+        notify_unanswered=settings.notify_unanswered or False,
+        notification_email=settings.notification_email or ""
     )
 
 
@@ -1222,6 +1234,10 @@ class UploadResponse(BaseModel):
     items: List[KnowledgeItemResponse] = []
 
 
+class URLImportRequest(BaseModel):
+    url: str
+
+
 async def parse_excel_file(content: bytes) -> List[dict]:
     """Parse Excel file and extract Q&A pairs"""
     import io
@@ -1307,6 +1323,50 @@ async def parse_text_file(content: bytes) -> str:
             return content.decode('latin-1')
         except:
             return ""
+
+
+async def fetch_url_content(url: str) -> str:
+    """Fetch and extract text content from a URL"""
+    try:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.get(url, headers={
+                'User-Agent': 'Mozilla/5.0 (compatible; BobotBot/1.0)'
+            })
+            response.raise_for_status()
+            html = response.text
+
+            # Simple HTML to text conversion
+            import re
+            # Remove script and style elements
+            html = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
+            html = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL | re.IGNORECASE)
+            html = re.sub(r'<nav[^>]*>.*?</nav>', '', html, flags=re.DOTALL | re.IGNORECASE)
+            html = re.sub(r'<footer[^>]*>.*?</footer>', '', html, flags=re.DOTALL | re.IGNORECASE)
+            html = re.sub(r'<header[^>]*>.*?</header>', '', html, flags=re.DOTALL | re.IGNORECASE)
+
+            # Convert common HTML elements
+            html = re.sub(r'<br\s*/?>', '\n', html)
+            html = re.sub(r'<p[^>]*>', '\n\n', html)
+            html = re.sub(r'</p>', '', html)
+            html = re.sub(r'<h[1-6][^>]*>', '\n\n## ', html)
+            html = re.sub(r'</h[1-6]>', '\n', html)
+            html = re.sub(r'<li[^>]*>', '\n- ', html)
+
+            # Remove remaining HTML tags
+            text = re.sub(r'<[^>]+>', '', html)
+
+            # Decode HTML entities
+            import html as html_module
+            text = html_module.unescape(text)
+
+            # Clean up whitespace
+            text = re.sub(r'\n\s*\n\s*\n', '\n\n', text)
+            text = text.strip()
+
+            return text
+    except Exception as e:
+        print(f"URL fetch error: {e}")
+        return ""
 
 
 async def ai_extract_qa_pairs(text: str, company_name: str = "") -> List[dict]:
@@ -1443,6 +1503,101 @@ async def upload_knowledge_file(
         message=f"{len(added_items)} frågor/svar har lagts till i kunskapsbasen",
         items=added_items
     )
+
+
+@app.post("/knowledge/import-url", response_model=UploadResponse)
+async def import_knowledge_from_url(
+    request: URLImportRequest,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Import knowledge base items from a URL"""
+    import re
+
+    # Validate URL
+    url = request.url.strip()
+    if not url.startswith(('http://', 'https://')):
+        url = 'https://' + url
+
+    if not re.match(r'https?://[^\s/$.?#].[^\s]*', url):
+        raise HTTPException(status_code=400, detail="Ogiltig URL")
+
+    # Fetch content
+    text = await fetch_url_content(url)
+
+    if not text or len(text) < 50:
+        return UploadResponse(
+            success=False,
+            items_added=0,
+            message="Kunde inte hämta innehåll från URL:en. Kontrollera att sidan är tillgänglig."
+        )
+
+    # Use AI to extract Q&A pairs
+    settings = get_or_create_settings(db, current["company_id"])
+    items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
+
+    if not items_to_add:
+        return UploadResponse(
+            success=False,
+            items_added=0,
+            message="Kunde inte hitta några frågor/svar på sidan. Försök med en annan sida."
+        )
+
+    # Auto-categorize items without category
+    for item in items_to_add:
+        if not item.get("category"):
+            item["category"] = detect_category(item["question"] + " " + item["answer"])
+
+    # Add to database
+    added_items = []
+    for item in items_to_add:
+        new_item = KnowledgeItem(
+            company_id=current["company_id"],
+            question=item["question"],
+            answer=item["answer"],
+            category=item.get("category", "allmant")
+        )
+        db.add(new_item)
+        db.flush()
+        added_items.append(KnowledgeItemResponse(
+            id=new_item.id,
+            question=new_item.question,
+            answer=new_item.answer,
+            category=new_item.category or ""
+        ))
+
+    db.commit()
+
+    return UploadResponse(
+        success=True,
+        items_added=len(added_items),
+        message=f"{len(added_items)} frågor/svar har importerats från {url}",
+        items=added_items
+    )
+
+
+@app.delete("/knowledge/bulk")
+async def delete_knowledge_bulk(
+    item_ids: List[int],
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Delete multiple knowledge items at once"""
+    deleted_count = 0
+
+    for item_id in item_ids:
+        db_item = db.query(KnowledgeItem).filter(
+            KnowledgeItem.id == item_id,
+            KnowledgeItem.company_id == current["company_id"]
+        ).first()
+
+        if db_item:
+            db.delete(db_item)
+            deleted_count += 1
+
+    db.commit()
+
+    return {"message": f"{deleted_count} poster har tagits bort", "deleted_count": deleted_count}
 
 
 # =============================================================================

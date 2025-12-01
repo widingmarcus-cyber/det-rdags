@@ -61,6 +61,10 @@ class CompanySettings(Base):
     # GDPR - Datalagring
     data_retention_days = Column(Integer, default=30)  # Antal dagar att spara konversationer
 
+    # Notifieringar
+    notify_unanswered = Column(Boolean, default=False)  # Skicka notis vid obesvarade frågor
+    notification_email = Column(String, default="")  # E-post för notifieringar
+
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relations
