@@ -143,12 +143,14 @@ class LoginResponse(BaseModel):
 class ChatRequest(BaseModel):
     question: str
     session_id: Optional[str] = None
+    language: Optional[str] = None  # Language code from widget (sv, en, ar)
 
 
 class ChatResponse(BaseModel):
     answer: str
     sources: List[str] = []
     session_id: str
+    conversation_id: str  # Short readable ID for user reference (e.g., "BOB-A1B2")
     had_answer: bool = True
 
 
@@ -226,18 +228,24 @@ class MessageResponse(BaseModel):
 class ConversationResponse(BaseModel):
     id: int
     session_id: str
+    reference_id: str  # Short readable ID (e.g., "BOB-A1B2")
     started_at: datetime
     message_count: int
     was_helpful: Optional[bool] = None
+    category: Optional[str] = None  # Auto-detected category
+    language: Optional[str] = None  # Detected language
     messages: Optional[List[MessageResponse]] = None
 
 
 class ConversationListResponse(BaseModel):
     id: int
     session_id: str
+    reference_id: str  # Short readable ID
     started_at: datetime
     message_count: int
     was_helpful: Optional[bool] = None
+    category: Optional[str] = None
+    language: Optional[str] = None
     first_message: Optional[str] = None
 
 
@@ -265,6 +273,18 @@ class AnalyticsResponse(BaseModel):
 
     # Category breakdown
     category_stats: dict
+
+    # Language distribution
+    language_stats: dict
+
+    # Feedback breakdown
+    feedback_stats: dict
+
+    # Hourly distribution (0-23)
+    hourly_stats: dict
+
+    # Top unanswered questions
+    top_unanswered: List[str]
 
 
 # =============================================================================
@@ -413,36 +433,78 @@ def detect_language(text: str) -> str:
 def get_language_instruction(lang: str) -> str:
     """Get language instruction for the AI prompt"""
     instructions = {
-        "sv": "Svara på svenska, trevligt och professionellt.",
-        "en": "Reply in English, friendly and professionally.",
-        "ar": "أجب باللغة العربية بشكل ودي ومهني. Reply in Arabic, friendly and professionally."
+        "sv": "Du MÅSTE svara på SVENSKA. Svara alltid på svenska oavsett vad.",
+        "en": "You MUST reply in ENGLISH. Always respond in English no matter what.",
+        "ar": "يجب أن تجيب باللغة العربية. You MUST reply in ARABIC. Always respond in Arabic."
     }
     return instructions.get(lang, instructions["sv"])
 
 
-def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None) -> str:
-    """Bygg prompt med kontext - detekterar språk automatiskt"""
-    # Detect the language of the question
-    detected_lang = detect_language(question)
-    lang_instruction = get_language_instruction(detected_lang)
+def generate_reference_id() -> str:
+    """Generate a short, readable conversation reference ID (e.g., BOB-A1B2)"""
+    import random
+    import string
+    chars = string.ascii_uppercase + string.digits
+    suffix = ''.join(random.choices(chars, k=4))
+    return f"BOB-{suffix}"
+
+
+def detect_category(text: str) -> str:
+    """Auto-detect category based on message content using keywords"""
+    text_lower = text.lower()
+
+    # Category keywords mapping (Swedish and English)
+    categories = {
+        "hyra": ["hyra", "hyran", "betala", "faktura", "avgift", "rent", "payment", "fee", "invoice"],
+        "felanmalan": ["fel", "trasig", "reparera", "laga", "fungerar inte", "broken", "repair", "fix", "damage", "felanmälan", "felanmalan"],
+        "kontrakt": ["kontrakt", "uppsägning", "säga upp", "avtal", "flytta", "contract", "lease", "terminate", "move"],
+        "tvattstuga": ["tvätt", "tvättstuga", "tvättid", "boka", "laundry", "washing", "book", "tvatt", "tvattstuga"],
+        "parkering": ["parkering", "parkera", "garage", "bil", "parking", "car", "vehicle"],
+        "kontakt": ["kontakt", "telefon", "email", "ring", "contact", "phone", "call", "reach"],
+        "allmant": []  # Default category
+    }
+
+    # Count matches for each category
+    scores = {}
+    for category, keywords in categories.items():
+        score = sum(1 for kw in keywords if kw in text_lower)
+        if score > 0:
+            scores[category] = score
+
+    # Return category with highest score, or "allmant" if none match
+    if scores:
+        return max(scores, key=scores.get)
+    return "allmant"
+
+
+def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None) -> str:
+    """Bygg prompt med kontext - använder specificerat eller detekterat språk"""
+    # Use provided language or detect from question
+    lang = language if language in ["sv", "en", "ar"] else detect_language(question)
+    lang_instruction = get_language_instruction(lang)
+
+    # Language-specific system messages
+    lang_names = {"sv": "Swedish", "en": "English", "ar": "Arabic"}
+    target_lang = lang_names.get(lang, "Swedish")
 
     context_text = ""
     if context:
-        context_text = "Relevant information:\n\n"
+        context_text = "Relevant information from knowledge base:\n\n"
         for item in context:
             context_text += f"Q: {item.question}\nA: {item.answer}\n\n"
 
     company_name = settings.company_name if settings else "fastighetsbolaget"
 
     return f"""You are a helpful customer service assistant for {company_name}.
-{lang_instruction}
-If you don't know the answer, say so honestly.
-IMPORTANT: Always respond in the SAME language as the customer's question.
+
+CRITICAL LANGUAGE REQUIREMENT: {lang_instruction}
+You are responding to a customer who speaks {target_lang}. Your ENTIRE response must be in {target_lang}.
+DO NOT use any other language. If the knowledge base answers are in a different language, translate them.
 
 {context_text}
 Customer question: {question}
 
-Answer:"""
+Provide a helpful, friendly answer in {target_lang}:"""
 
 
 def anonymize_ip(ip: str) -> str:
@@ -613,6 +675,12 @@ async def chat(
     # Hantera session
     session_id = request.session_id or str(uuid.uuid4())
 
+    # Determine language (from request or detect from question)
+    language = request.language if request.language in ["sv", "en", "ar"] else detect_language(request.question)
+
+    # Auto-detect category from question
+    category = detect_category(request.question)
+
     # Hitta eller skapa konversation
     conversation = db.query(Conversation).filter(
         Conversation.session_id == session_id,
@@ -624,15 +692,25 @@ async def chat(
         client_ip = req.client.host if req.client else None
         user_agent = req.headers.get("user-agent", "")
 
+        # Generate a short reference ID
+        reference_id = generate_reference_id()
+
         conversation = Conversation(
             company_id=company_id,
             session_id=session_id,
+            reference_id=reference_id,
             user_ip_anonymous=anonymize_ip(client_ip),
-            user_agent_anonymous=anonymize_user_agent(user_agent)
+            user_agent_anonymous=anonymize_user_agent(user_agent),
+            language=language,
+            category=category
         )
         db.add(conversation)
         db.commit()
         db.refresh(conversation)
+    else:
+        # Update category if new one is more specific
+        if category != "allmant" and conversation.category == "allmant":
+            conversation.category = category
 
     # Spara användarens meddelande
     user_message = Message(
@@ -649,15 +727,21 @@ async def chat(
     # Mät svarstid
     start_time = datetime.utcnow()
 
-    # Bygg prompt och fråga AI
-    prompt = build_prompt(request.question, context, settings)
+    # Bygg prompt och fråga AI med rätt språk
+    prompt = build_prompt(request.question, context, settings, language)
     answer = await query_ollama(prompt)
 
     response_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
 
-    # Om inget svar hittades, använd fallback
+    # Om inget svar hittades, använd fallback på rätt språk
     if not had_answer:
-        answer = settings.fallback_message
+        # Use language-appropriate fallback
+        fallback_messages = {
+            "sv": settings.fallback_message or "Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt.",
+            "en": "I couldn't find an answer to your question. Please contact us directly.",
+            "ar": "لم أتمكن من العثور على إجابة لسؤالك. يرجى الاتصال بنا مباشرة."
+        }
+        answer = fallback_messages.get(language, settings.fallback_message)
 
     # Spara bot-svaret
     sources = [item.question for item in context]
@@ -685,6 +769,7 @@ async def chat(
         answer=answer,
         sources=sources,
         session_id=session_id,
+        conversation_id=conversation.reference_id,
         had_answer=had_answer
     )
 
@@ -811,12 +896,24 @@ async def get_conversations(
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db),
     limit: int = 50,
-    offset: int = 0
+    offset: int = 0,
+    category: Optional[str] = None,
+    language: Optional[str] = None
 ):
     """Hämta konversationer för inloggat företag"""
-    conversations = db.query(Conversation).filter(
+    query = db.query(Conversation).filter(
         Conversation.company_id == current["company_id"]
-    ).order_by(Conversation.started_at.desc()).offset(offset).limit(limit).all()
+    )
+
+    # Filter by category if provided
+    if category:
+        query = query.filter(Conversation.category == category)
+
+    # Filter by language if provided
+    if language:
+        query = query.filter(Conversation.language == language)
+
+    conversations = query.order_by(Conversation.started_at.desc()).offset(offset).limit(limit).all()
 
     result = []
     for conv in conversations:
@@ -829,9 +926,12 @@ async def get_conversations(
         result.append(ConversationListResponse(
             id=conv.id,
             session_id=conv.session_id,
+            reference_id=conv.reference_id or f"BOB-{conv.id:04d}",
             started_at=conv.started_at,
             message_count=conv.message_count,
             was_helpful=conv.was_helpful,
+            category=conv.category,
+            language=conv.language,
             first_message=first_msg.content[:100] if first_msg else None
         ))
 
@@ -872,9 +972,12 @@ async def get_conversation(
     return ConversationResponse(
         id=conversation.id,
         session_id=conversation.session_id,
+        reference_id=conversation.reference_id or f"BOB-{conversation.id:04d}",
         started_at=conversation.started_at,
         message_count=conversation.message_count,
         was_helpful=conversation.was_helpful,
+        category=conversation.category,
+        language=conversation.language,
         messages=message_responses
     )
 
@@ -1085,8 +1188,35 @@ async def get_analytics(
     total_conversations += len(active_convs)
     total_messages += sum(c.message_count for c in active_convs)
 
-    # Räkna answered/unanswered för aktiva
+    # Initialize new stats collectors
+    language_stats = {}
+    category_stats = {}
+    hourly_stats = {str(h): 0 for h in range(24)}
+    feedback_stats = {"helpful": 0, "not_helpful": 0, "no_feedback": 0}
+    unanswered_questions = []
+
+    # Räkna answered/unanswered för aktiva + collect new stats
     for conv in active_convs:
+        # Language stats
+        lang = conv.language or "sv"
+        language_stats[lang] = language_stats.get(lang, 0) + 1
+
+        # Category stats
+        cat = conv.category or "allmant"
+        category_stats[cat] = category_stats.get(cat, 0) + 1
+
+        # Hourly stats
+        hour = str(conv.started_at.hour)
+        hourly_stats[hour] = hourly_stats.get(hour, 0) + 1
+
+        # Feedback stats
+        if conv.was_helpful is True:
+            feedback_stats["helpful"] += 1
+        elif conv.was_helpful is False:
+            feedback_stats["not_helpful"] += 1
+        else:
+            feedback_stats["no_feedback"] += 1
+
         msgs = db.query(Message).filter(
             Message.conversation_id == conv.id,
             Message.role == "bot"
@@ -1096,6 +1226,13 @@ async def get_analytics(
                 total_answered += 1
             else:
                 total_unanswered += 1
+                # Collect unanswered question
+                user_msg = db.query(Message).filter(
+                    Message.conversation_id == conv.id,
+                    Message.role == "user"
+                ).order_by(Message.created_at.desc()).first()
+                if user_msg and user_msg.content not in unanswered_questions:
+                    unanswered_questions.append(user_msg.content[:100])
 
     # Today
     today_stats = db.query(DailyStatistics).filter(
@@ -1144,14 +1281,14 @@ async def get_analytics(
     answer_rate = (total_answered / (total_answered + total_unanswered) * 100) if (total_answered + total_unanswered) > 0 else 100
 
     # Daily breakdown (senaste 30 dagarna)
-    daily_stats = []
+    daily_stats_list = []
     month_stats = db.query(DailyStatistics).filter(
         DailyStatistics.company_id == company_id,
         DailyStatistics.date >= month_ago
     ).order_by(DailyStatistics.date.asc()).all()
 
     for s in month_stats:
-        daily_stats.append({
+        daily_stats_list.append({
             "date": s.date.isoformat(),
             "conversations": s.total_conversations,
             "messages": s.total_messages,
@@ -1159,9 +1296,9 @@ async def get_analytics(
             "unanswered": s.questions_unanswered
         })
 
-    # Category breakdown
-    category_stats = {}
+    # Merge historical stats
     for s in stats:
+        # Category counts from history
         if s.category_counts:
             try:
                 cats = json.loads(s.category_counts)
@@ -1169,6 +1306,28 @@ async def get_analytics(
                     category_stats[cat] = category_stats.get(cat, 0) + count
             except:
                 pass
+
+        # Language counts from history
+        if hasattr(s, 'language_counts') and s.language_counts:
+            try:
+                langs = json.loads(s.language_counts)
+                for lang, count in langs.items():
+                    language_stats[lang] = language_stats.get(lang, 0) + count
+            except:
+                pass
+
+        # Hourly counts from history
+        if hasattr(s, 'hourly_counts') and s.hourly_counts:
+            try:
+                hours = json.loads(s.hourly_counts)
+                for hour, count in hours.items():
+                    hourly_stats[hour] = hourly_stats.get(hour, 0) + count
+            except:
+                pass
+
+        # Feedback from history
+        feedback_stats["helpful"] += s.helpful_count or 0
+        feedback_stats["not_helpful"] += s.not_helpful_count or 0
 
     return AnalyticsResponse(
         total_conversations=total_conversations,
@@ -1181,8 +1340,149 @@ async def get_analytics(
         messages_week=messages_week,
         avg_response_time_ms=avg_response_time,
         answer_rate=answer_rate,
-        daily_stats=daily_stats,
-        category_stats=category_stats
+        daily_stats=daily_stats_list,
+        category_stats=category_stats,
+        language_stats=language_stats,
+        feedback_stats=feedback_stats,
+        hourly_stats=hourly_stats,
+        top_unanswered=unanswered_questions[:10]  # Top 10 unanswered
+    )
+
+
+# =============================================================================
+# Export Endpoints
+# =============================================================================
+
+@app.get("/export/conversations")
+async def export_conversations(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db),
+    format: str = "csv"
+):
+    """Export conversations as CSV"""
+    from fastapi.responses import StreamingResponse
+    import io
+    import csv
+
+    company_id = current["company_id"]
+
+    conversations = db.query(Conversation).filter(
+        Conversation.company_id == company_id
+    ).order_by(Conversation.started_at.desc()).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header
+    writer.writerow([
+        "Reference ID", "Started At", "Messages", "Category", "Language",
+        "Was Helpful", "First Message"
+    ])
+
+    for conv in conversations:
+        first_msg = db.query(Message).filter(
+            Message.conversation_id == conv.id,
+            Message.role == "user"
+        ).order_by(Message.created_at.asc()).first()
+
+        writer.writerow([
+            conv.reference_id or f"BOB-{conv.id:04d}",
+            conv.started_at.isoformat(),
+            conv.message_count,
+            conv.category or "allmant",
+            conv.language or "sv",
+            "Yes" if conv.was_helpful else ("No" if conv.was_helpful is False else "N/A"),
+            first_msg.content[:100] if first_msg else ""
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=conversations.csv"}
+    )
+
+
+@app.get("/export/statistics")
+async def export_statistics(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Export daily statistics as CSV"""
+    from fastapi.responses import StreamingResponse
+    import io
+    import csv
+
+    company_id = current["company_id"]
+
+    stats = db.query(DailyStatistics).filter(
+        DailyStatistics.company_id == company_id
+    ).order_by(DailyStatistics.date.desc()).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header
+    writer.writerow([
+        "Date", "Conversations", "Messages", "Answered", "Unanswered",
+        "Avg Response Time (ms)", "Helpful", "Not Helpful"
+    ])
+
+    for s in stats:
+        writer.writerow([
+            s.date.isoformat(),
+            s.total_conversations,
+            s.total_messages,
+            s.questions_answered,
+            s.questions_unanswered,
+            round(s.avg_response_time_ms or 0, 2),
+            s.helpful_count or 0,
+            s.not_helpful_count or 0
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=statistics.csv"}
+    )
+
+
+@app.get("/export/knowledge")
+async def export_knowledge(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Export knowledge base as CSV"""
+    from fastapi.responses import StreamingResponse
+    import io
+    import csv
+
+    company_id = current["company_id"]
+
+    items = db.query(KnowledgeItem).filter(
+        KnowledgeItem.company_id == company_id
+    ).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header
+    writer.writerow(["Question", "Answer", "Category", "Created At"])
+
+    for item in items:
+        writer.writerow([
+            item.question,
+            item.answer,
+            item.category or "",
+            item.created_at.isoformat()
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=knowledge_base.csv"}
     )
 
 

@@ -141,6 +141,7 @@ function ChatWidget({ config }) {
   const [sessionId] = useState(() => generateSessionId())
   const [feedbackGiven, setFeedbackGiven] = useState({})
   const [companyConfig, setCompanyConfig] = useState(null)
+  const [conversationId, setConversationId] = useState(null)
   const messagesEndRef = useRef(null)
 
   // Auto-detect language from browser
@@ -194,13 +195,20 @@ function ChatWidget({ config }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: userMessage,
-          session_id: sessionId
+          session_id: sessionId,
+          language: lang  // Send detected language to backend
         })
       })
 
       if (response.ok) {
         const data = await response.json()
         const botMsgId = Date.now()
+
+        // Store conversation ID from response
+        if (data.conversation_id) {
+          setConversationId(data.conversation_id)
+        }
+
         setMessages(prev => [...prev, {
           id: botMsgId,
           type: 'bot',
@@ -460,7 +468,9 @@ function ChatWidget({ config }) {
             </div>
             <div style={{ flex: 1 }}>
               <p style={styles.headerTitle}>{companyName}</p>
-              <p style={styles.headerSubtitle}>{t.subtitle}</p>
+              <p style={styles.headerSubtitle}>
+                {conversationId ? `${t.subtitle} • ${conversationId}` : t.subtitle}
+              </p>
             </div>
             <button style={styles.closeButton} onClick={() => setIsOpen(false)}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
