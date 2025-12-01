@@ -14,8 +14,6 @@ const translations = {
     no: 'Nej',
     thanksFeedback: 'Tack för din feedback!',
     errorMessage: 'Ett fel uppstod. Vänligen försök igen.',
-    closed: 'Utanför öppettider',
-    closedMessage: 'Vi är stängda just nu. Lämna ett meddelande så återkommer vi!'
   },
   en: {
     welcomeMessage: 'Hi! How can I help you today?',
@@ -28,8 +26,6 @@ const translations = {
     no: 'No',
     thanksFeedback: 'Thanks for your feedback!',
     errorMessage: 'An error occurred. Please try again.',
-    closed: 'Outside opening hours',
-    closedMessage: "We're closed right now. Leave a message and we'll get back to you!"
   },
   ar: {
     welcomeMessage: 'مرحباً! كيف يمكنني مساعدتك اليوم؟',
@@ -42,13 +38,23 @@ const translations = {
     no: 'لا',
     thanksFeedback: 'شكراً على ملاحظاتك!',
     errorMessage: 'حدث خطأ. يرجى المحاولة مرة أخرى.',
-    closed: 'خارج ساعات العمل',
-    closedMessage: 'نحن مغلقون الآن. اترك رسالة وسنعود إليك!'
   }
 }
 
-// Design tokens from specification
-const colors = {
+// Detect browser language
+function detectLanguage() {
+  const browserLang = navigator.language || navigator.userLanguage || 'sv'
+  const langCode = browserLang.split('-')[0].toLowerCase()
+
+  // Return supported language or default to Swedish
+  if (translations[langCode]) {
+    return langCode
+  }
+  return 'sv'
+}
+
+// Design tokens
+const defaultColors = {
   bgPrimary: '#FAFAFA',
   bgSecondary: '#F5F5F4',
   bgTertiary: '#FFFFFF',
@@ -66,8 +72,6 @@ const colors = {
   border: '#D6D3D1',
   success: '#22C55E',
   successSoft: '#DCFCE7',
-  shadowSm: '0 1px 2px rgba(28, 25, 23, 0.04)',
-  shadowMd: '0 4px 12px rgba(28, 25, 23, 0.06)',
   shadowLg: '0 12px 32px rgba(28, 25, 23, 0.08)',
 }
 
@@ -76,10 +80,19 @@ function generateSessionId() {
   return 'widget-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11)
 }
 
+// Darken/lighten hex color
+function adjustColor(hex, amount) {
+  if (!hex) return '#C4613D'
+  const num = parseInt(hex.replace('#', ''), 16)
+  const r = Math.min(255, Math.max(0, (num >> 16) + amount))
+  const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amount))
+  const b = Math.min(255, Math.max(0, (num & 0x0000FF) + amount))
+  return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`
+}
+
 // CSS animations
 const injectStyles = () => {
   if (document.getElementById('bobot-styles')) return
-
   const styleSheet = document.createElement('style')
   styleSheet.id = 'bobot-styles'
   styleSheet.textContent = `
@@ -127,20 +140,38 @@ function ChatWidget({ config }) {
   const [showContact, setShowContact] = useState(false)
   const [sessionId] = useState(() => generateSessionId())
   const [feedbackGiven, setFeedbackGiven] = useState({})
-  const [lastBotMessageId, setLastBotMessageId] = useState(null)
+  const [companyConfig, setCompanyConfig] = useState(null)
   const messagesEndRef = useRef(null)
 
-  // Get current language translations
-  const lang = config.language || 'sv'
+  // Auto-detect language from browser
+  const lang = detectLanguage()
   const t = translations[lang] || translations.sv
   const isRTL = lang === 'ar'
 
-  // Initialize with welcome message
+  // Fetch company config from backend
   useEffect(() => {
     injectStyles()
-    const welcomeMsg = config.welcomeMessage || t.welcomeMessage
-    setMessages([{ id: 0, type: 'bot', text: welcomeMsg }])
+    fetchCompanyConfig()
   }, [])
+
+  const fetchCompanyConfig = async () => {
+    try {
+      const response = await fetch(`${config.apiUrl}/widget/${config.companyId}/config`)
+      if (response.ok) {
+        const data = await response.json()
+        setCompanyConfig(data)
+        // Set welcome message
+        const welcomeMsg = data.welcome_message || t.welcomeMessage
+        setMessages([{ id: 0, type: 'bot', text: welcomeMsg }])
+      } else {
+        // Fallback to default welcome
+        setMessages([{ id: 0, type: 'bot', text: t.welcomeMessage }])
+      }
+    } catch (error) {
+      console.log('Could not fetch company config')
+      setMessages([{ id: 0, type: 'bot', text: t.welcomeMessage }])
+    }
+  }
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -176,18 +207,17 @@ function ChatWidget({ config }) {
           text: data.answer,
           hadAnswer: data.had_answer
         }])
-        setLastBotMessageId(botMsgId)
 
         // Show contact button if bot couldn't answer
-        if (!data.had_answer || data.answer.includes('osäker') || data.answer.includes('kontakta')) {
+        if (!data.had_answer) {
           setShowContact(true)
         }
       } else {
-        const botMsgId = Date.now()
+        const fallback = companyConfig?.fallback_message || t.fallbackMessage
         setMessages(prev => [...prev, {
-          id: botMsgId,
+          id: Date.now(),
           type: 'bot',
-          text: config.fallbackMessage || t.fallbackMessage
+          text: fallback
         }])
         setShowContact(true)
       }
@@ -205,8 +235,6 @@ function ChatWidget({ config }) {
 
   const handleFeedback = async (messageId, helpful) => {
     setFeedbackGiven(prev => ({ ...prev, [messageId]: helpful }))
-
-    // Send feedback to API
     try {
       await fetch(`${config.apiUrl}/chat/${config.companyId}/feedback?session_id=${sessionId}&helpful=${helpful}`, {
         method: 'POST'
@@ -217,12 +245,19 @@ function ChatWidget({ config }) {
   }
 
   const handleContact = () => {
-    if (config.contactEmail) {
-      window.location.href = `mailto:${config.contactEmail}`
-    } else if (config.contactPhone) {
-      window.location.href = `tel:${config.contactPhone}`
+    const email = companyConfig?.contact_email
+    const phone = companyConfig?.contact_phone
+    if (email) {
+      window.location.href = `mailto:${email}`
+    } else if (phone) {
+      window.location.href = `tel:${phone}`
     }
   }
+
+  // Dynamic colors from company config
+  const primaryColor = companyConfig?.primary_color || defaultColors.accent
+  const companyName = companyConfig?.company_name || config.title || 'Bobot'
+  const hasContact = companyConfig?.contact_email || companyConfig?.contact_phone
 
   // Styles
   const styles = {
@@ -238,13 +273,13 @@ function ChatWidget({ config }) {
       width: '56px',
       height: '56px',
       borderRadius: '50%',
-      background: `linear-gradient(135deg, ${config.primaryColor || colors.accent}, ${adjustColor(config.primaryColor || colors.accent, -20)})`,
+      background: `linear-gradient(135deg, ${primaryColor}, ${adjustColor(primaryColor, -20)})`,
       border: 'none',
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      boxShadow: colors.shadowLg,
+      boxShadow: defaultColors.shadowLg,
       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       transform: buttonHover ? 'scale(1.05)' : 'scale(1)',
     },
@@ -255,18 +290,18 @@ function ChatWidget({ config }) {
       left: isRTL ? '0' : 'auto',
       width: '400px',
       height: '600px',
-      backgroundColor: colors.bgTertiary,
+      backgroundColor: defaultColors.bgTertiary,
       borderRadius: '16px',
-      boxShadow: colors.shadowLg,
-      border: `1px solid ${colors.borderSubtle}`,
+      boxShadow: defaultColors.shadowLg,
+      border: `1px solid ${defaultColors.borderSubtle}`,
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
       animation: 'bobot-slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
     },
     header: {
-      background: `linear-gradient(135deg, ${config.primaryColor || colors.accent}, ${adjustColor(config.primaryColor || colors.accent, -20)})`,
-      color: colors.textInverse,
+      background: `linear-gradient(135deg, ${primaryColor}, ${adjustColor(primaryColor, -20)})`,
+      color: defaultColors.textInverse,
       padding: '16px 20px',
       display: 'flex',
       alignItems: 'center',
@@ -297,7 +332,7 @@ function ChatWidget({ config }) {
       background: 'rgba(255,255,255,0.15)',
       border: 'none',
       borderRadius: '8px',
-      color: colors.textInverse,
+      color: defaultColors.textInverse,
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
@@ -309,7 +344,7 @@ function ChatWidget({ config }) {
       flex: 1,
       overflowY: 'auto',
       padding: '16px',
-      backgroundColor: colors.bgSecondary,
+      backgroundColor: defaultColors.bgSecondary,
     },
     message: {
       marginBottom: '12px',
@@ -324,15 +359,15 @@ function ChatWidget({ config }) {
       lineHeight: '1.5',
     },
     messageBubbleUser: {
-      backgroundColor: colors.bgChatUser,
-      color: colors.textPrimary,
+      backgroundColor: defaultColors.bgChatUser,
+      color: defaultColors.textPrimary,
       borderBottomRightRadius: isRTL ? '12px' : '4px',
       borderBottomLeftRadius: isRTL ? '4px' : '12px',
     },
     messageBubbleBot: {
-      backgroundColor: colors.bgChatBot,
-      color: colors.textPrimary,
-      border: `1px solid ${colors.borderSubtle}`,
+      backgroundColor: defaultColors.bgChatBot,
+      color: defaultColors.textPrimary,
+      border: `1px solid ${defaultColors.borderSubtle}`,
       borderBottomLeftRadius: isRTL ? '12px' : '4px',
       borderBottomRightRadius: isRTL ? '4px' : '12px',
     },
@@ -341,30 +376,25 @@ function ChatWidget({ config }) {
       gap: '8px',
       marginTop: '8px',
       paddingTop: '8px',
-      borderTop: `1px solid ${colors.borderSubtle}`,
+      borderTop: `1px solid ${defaultColors.borderSubtle}`,
     },
     feedbackBtn: {
       padding: '4px 12px',
       fontSize: '12px',
-      border: `1px solid ${colors.border}`,
+      border: `1px solid ${defaultColors.border}`,
       borderRadius: '16px',
       background: 'transparent',
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
       gap: '4px',
-      color: colors.textSecondary,
+      color: defaultColors.textSecondary,
       transition: 'all 0.15s ease',
-    },
-    feedbackBtnActive: {
-      backgroundColor: colors.successSoft,
-      borderColor: colors.success,
-      color: colors.success,
     },
     inputArea: {
       padding: '12px',
-      borderTop: `1px solid ${colors.borderSubtle}`,
-      backgroundColor: colors.bgSecondary,
+      borderTop: `1px solid ${defaultColors.borderSubtle}`,
+      backgroundColor: defaultColors.bgSecondary,
     },
     inputForm: {
       display: 'flex',
@@ -375,21 +405,21 @@ function ChatWidget({ config }) {
     input: {
       flex: 1,
       padding: '12px 16px',
-      border: `1px solid ${inputFocused ? (config.primaryColor || colors.accent) : colors.borderSubtle}`,
+      border: `1px solid ${inputFocused ? primaryColor : defaultColors.borderSubtle}`,
       borderRadius: '24px',
       fontSize: '14px',
       outline: 'none',
-      backgroundColor: colors.bgTertiary,
-      color: colors.textPrimary,
+      backgroundColor: defaultColors.bgTertiary,
+      color: defaultColors.textPrimary,
       transition: 'all 0.2s ease',
-      boxShadow: inputFocused ? `0 0 0 3px ${colors.accentGlow}` : 'none',
+      boxShadow: inputFocused ? `0 0 0 3px ${defaultColors.accentGlow}` : 'none',
       textAlign: isRTL ? 'right' : 'left',
     },
     sendButton: {
       width: '40px',
       height: '40px',
-      backgroundColor: config.primaryColor || colors.accent,
-      color: colors.textInverse,
+      backgroundColor: primaryColor,
+      color: defaultColors.textInverse,
       border: 'none',
       borderRadius: '50%',
       cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
@@ -405,37 +435,15 @@ function ChatWidget({ config }) {
       padding: '10px 16px',
       marginTop: '8px',
       backgroundColor: 'transparent',
-      border: `1px solid ${colors.border}`,
+      border: `1px solid ${defaultColors.border}`,
       borderRadius: '8px',
-      color: colors.textSecondary,
+      color: defaultColors.textSecondary,
       fontSize: '13px',
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       gap: '8px',
-    },
-    langSelector: {
-      position: 'absolute',
-      top: '8px',
-      right: isRTL ? 'auto' : '8px',
-      left: isRTL ? '8px' : 'auto',
-      display: 'flex',
-      gap: '4px',
-    },
-    langBtn: {
-      padding: '2px 6px',
-      fontSize: '10px',
-      border: 'none',
-      borderRadius: '4px',
-      cursor: 'pointer',
-      opacity: 0.7,
-      background: 'rgba(255,255,255,0.2)',
-      color: 'white',
-    },
-    langBtnActive: {
-      opacity: 1,
-      background: 'rgba(255,255,255,0.3)',
     },
   }
 
@@ -451,7 +459,7 @@ function ChatWidget({ config }) {
               </svg>
             </div>
             <div style={{ flex: 1 }}>
-              <p style={styles.headerTitle}>{config.title || 'Bobot'}</p>
+              <p style={styles.headerTitle}>{companyName}</p>
               <p style={styles.headerSubtitle}>{t.subtitle}</p>
             </div>
             <button style={styles.closeButton} onClick={() => setIsOpen(false)}>
@@ -481,23 +489,17 @@ function ChatWidget({ config }) {
                     {/* Feedback buttons for bot messages */}
                     {msg.type === 'bot' && msg.id !== 0 && !feedbackGiven[msg.id] && (
                       <div style={styles.feedbackButtons}>
-                        <span style={{ fontSize: '12px', color: colors.textTertiary }}>{t.helpful}</span>
-                        <button
-                          style={styles.feedbackBtn}
-                          onClick={() => handleFeedback(msg.id, true)}
-                        >
+                        <span style={{ fontSize: '12px', color: defaultColors.textTertiary }}>{t.helpful}</span>
+                        <button style={styles.feedbackBtn} onClick={() => handleFeedback(msg.id, true)}>
                           👍 {t.yes}
                         </button>
-                        <button
-                          style={styles.feedbackBtn}
-                          onClick={() => handleFeedback(msg.id, false)}
-                        >
+                        <button style={styles.feedbackBtn} onClick={() => handleFeedback(msg.id, false)}>
                           👎 {t.no}
                         </button>
                       </div>
                     )}
                     {feedbackGiven[msg.id] !== undefined && (
-                      <div style={{ fontSize: '12px', color: colors.success, marginTop: '8px' }}>
+                      <div style={{ fontSize: '12px', color: defaultColors.success, marginTop: '8px' }}>
                         ✓ {t.thanksFeedback}
                       </div>
                     )}
@@ -510,15 +512,15 @@ function ChatWidget({ config }) {
               <div style={{ ...styles.message, justifyContent: isRTL ? 'flex-end' : 'flex-start' }}>
                 <div style={{ ...styles.messageBubble, ...styles.messageBubbleBot }}>
                   <div style={{ display: 'flex', gap: '6px' }}>
-                    <div className="bobot-typing-dot" style={{ width: 8, height: 8, backgroundColor: colors.textTertiary, borderRadius: '50%' }}></div>
-                    <div className="bobot-typing-dot" style={{ width: 8, height: 8, backgroundColor: colors.textTertiary, borderRadius: '50%' }}></div>
-                    <div className="bobot-typing-dot" style={{ width: 8, height: 8, backgroundColor: colors.textTertiary, borderRadius: '50%' }}></div>
+                    <div className="bobot-typing-dot" style={{ width: 8, height: 8, backgroundColor: defaultColors.textTertiary, borderRadius: '50%' }}></div>
+                    <div className="bobot-typing-dot" style={{ width: 8, height: 8, backgroundColor: defaultColors.textTertiary, borderRadius: '50%' }}></div>
+                    <div className="bobot-typing-dot" style={{ width: 8, height: 8, backgroundColor: defaultColors.textTertiary, borderRadius: '50%' }}></div>
                   </div>
                 </div>
               </div>
             )}
 
-            {showContact && (config.contactEmail || config.contactPhone) && (
+            {showContact && hasContact && (
               <button style={styles.contactButton} onClick={handleContact}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
@@ -584,16 +586,6 @@ function ChatWidget({ config }) {
   )
 }
 
-// Helper function to darken/lighten a hex color
-function adjustColor(hex, amount) {
-  if (!hex) return '#C4613D'
-  const num = parseInt(hex.replace('#', ''), 16)
-  const r = Math.min(255, Math.max(0, (num >> 16) + amount))
-  const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amount))
-  const b = Math.min(255, Math.max(0, (num & 0x0000FF) + amount))
-  return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`
-}
-
 // Global init function
 window.Bobot = {
   init: function(config) {
@@ -604,13 +596,7 @@ window.Bobot = {
     const defaultConfig = {
       apiUrl: 'http://localhost:8000',
       companyId: 'demo',
-      title: 'Bobot',
-      language: 'sv', // 'sv', 'en', 'ar'
-      primaryColor: '#D97757',
-      welcomeMessage: '', // Empty = use translation default
-      fallbackMessage: '',
-      contactEmail: '',
-      contactPhone: '',
+      title: 'Bobot', // Fallback if company name not set
       ...config
     }
 

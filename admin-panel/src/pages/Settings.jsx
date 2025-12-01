@@ -13,14 +13,7 @@ function Settings() {
     contact_email: '',
     contact_phone: '',
     data_retention_days: 30,
-    language: 'sv',
   })
-
-  const languages = [
-    { code: 'sv', name: 'Svenska', flag: '🇸🇪' },
-    { code: 'en', name: 'English', flag: '🇬🇧' },
-    { code: 'ar', name: 'العربية', flag: '🇸🇦' },
-  ]
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -49,17 +42,11 @@ function Settings() {
   }
 
   const generateEmbedCode = () => {
+    // Simplified embed code - widget fetches settings from backend automatically
     const code = `<script src="https://cdn.bobot.se/widget.js"></script>
 <script>
   Bobot.init({
-    companyId: '${auth.companyId}',
-    title: '${settings.company_name || 'Kundtjänst'}',
-    language: '${settings.language || 'sv'}',
-    primaryColor: '${settings.primary_color || '#D97757'}',
-    welcomeMessage: '${settings.welcome_message || ''}',
-    fallbackMessage: '${settings.fallback_message || ''}',
-    contactEmail: '${settings.contact_email || ''}',
-    contactPhone: '${settings.contact_phone || ''}',
+    companyId: '${auth.companyId}'
   });
 </script>`
     setEmbedCode(code)
@@ -176,62 +163,35 @@ function Settings() {
           </div>
         </section>
 
-        {/* Utseende & Språk */}
+        {/* Utseende */}
         <section className="card">
-          <h2 className="text-lg font-medium text-text-primary mb-4">Utseende & Språk</h2>
-          <div className="space-y-6">
-            <div>
-              <label className="input-label">Primärfärg</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={settings.primary_color}
-                  onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
-                  className="w-12 h-12 rounded-md border border-border cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={settings.primary_color}
-                  onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
-                  className="input w-32"
-                  placeholder="#D97757"
-                />
-                <div
-                  className="px-4 py-2 rounded-md text-white text-sm font-medium"
-                  style={{ backgroundColor: settings.primary_color }}
-                >
-                  Förhandsvisning
-                </div>
+          <h2 className="text-lg font-medium text-text-primary mb-4">Utseende</h2>
+          <div>
+            <label className="input-label">Primärfärg</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={settings.primary_color}
+                onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
+                className="w-12 h-12 rounded-md border border-border cursor-pointer"
+              />
+              <input
+                type="text"
+                value={settings.primary_color}
+                onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
+                className="input w-32"
+                placeholder="#D97757"
+              />
+              <div
+                className="px-4 py-2 rounded-md text-white text-sm font-medium"
+                style={{ backgroundColor: settings.primary_color }}
+              >
+                Förhandsvisning
               </div>
             </div>
-
-            <div>
-              <label className="input-label">Widgetens språk</label>
-              <div className="flex gap-3 mt-2">
-                {languages.map((lang) => (
-                  <button
-                    key={lang.code}
-                    type="button"
-                    onClick={() => setSettings({ ...settings, language: lang.code })}
-                    className={`flex items-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
-                      settings.language === lang.code
-                        ? 'border-accent bg-accent-soft'
-                        : 'border-border-subtle hover:border-border bg-bg-secondary'
-                    }`}
-                  >
-                    <span className="text-xl">{lang.flag}</span>
-                    <span className={`text-sm font-medium ${
-                      settings.language === lang.code ? 'text-accent' : 'text-text-primary'
-                    }`}>
-                      {lang.name}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-text-tertiary mt-2">
-                Påverkar texter i widgeten (välkomstmeddelande, knappar, etc.)
-              </p>
-            </div>
+            <p className="text-xs text-text-tertiary mt-2">
+              Widgeten anpassar automatiskt språket efter besökarens webbläsare (svenska, engelska, arabiska)
+            </p>
           </div>
         </section>
 
@@ -315,7 +275,8 @@ function Settings() {
       <section className="card mt-8">
         <h2 className="text-lg font-medium text-text-primary mb-2">Widget-kod</h2>
         <p className="text-text-secondary text-sm mb-4">
-          Klistra in denna kod precis före <code className="bg-bg-secondary px-1.5 py-0.5 rounded text-xs">&lt;/body&gt;</code> på din webbplats
+          Klistra in denna kod precis före <code className="bg-bg-secondary px-1.5 py-0.5 rounded text-xs">&lt;/body&gt;</code> på din webbplats.
+          Widgeten hämtar automatiskt dina inställningar och anpassar språket efter besökarens webbläsare.
         </p>
         <div className="relative">
           <pre className="bg-bg-secondary border border-border-subtle rounded-lg p-4 text-sm text-text-primary overflow-x-auto">

@@ -668,6 +668,28 @@ async def chat_feedback(
     return {"message": "Tack för din feedback!"}
 
 
+@app.get("/widget/{company_id}/config")
+async def get_widget_config(
+    company_id: str,
+    db: Session = Depends(get_db)
+):
+    """Hämta widget-konfiguration (publik endpoint för widget)"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company or not company.is_active:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    settings = get_or_create_settings(db, company_id)
+
+    return {
+        "company_name": settings.company_name or company.name,
+        "welcome_message": settings.welcome_message or "",
+        "fallback_message": settings.fallback_message or "",
+        "primary_color": settings.primary_color or "#D97757",
+        "contact_email": settings.contact_email or "",
+        "contact_phone": settings.contact_phone or "",
+    }
+
+
 # =============================================================================
 # Settings Endpoints (Autentiserade)
 # =============================================================================
