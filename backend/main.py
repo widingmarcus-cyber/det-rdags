@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 
 from database import (
     create_tables, get_db, Company, KnowledgeItem, ChatLog, SuperAdmin,
-    CompanySettings, Conversation, Message, DailyStatistics
+    CompanySettings, Conversation, Message, DailyStatistics, GDPRAuditLog
 )
 from auth import (
     hash_password, verify_password, create_token,
@@ -237,6 +237,12 @@ class SettingsUpdate(BaseModel):
     notify_unanswered: Optional[bool] = None
     notification_email: Optional[str] = None
     custom_categories: Optional[str] = None  # JSON string
+    # PuB/GDPR Compliance
+    privacy_policy_url: Optional[str] = None
+    require_consent: Optional[bool] = None
+    consent_text: Optional[str] = None
+    data_controller_name: Optional[str] = None
+    data_controller_email: Optional[str] = None
 
 
 class SettingsResponse(BaseModel):
@@ -252,6 +258,12 @@ class SettingsResponse(BaseModel):
     notify_unanswered: bool
     notification_email: str
     custom_categories: str
+    # PuB/GDPR Compliance
+    privacy_policy_url: str
+    require_consent: bool
+    consent_text: str
+    data_controller_name: str
+    data_controller_email: str
 
 
 class MessageResponse(BaseModel):
@@ -985,6 +997,11 @@ async def get_widget_config(
         "primary_color": settings.primary_color or "#D97757",
         "contact_email": settings.contact_email or "",
         "contact_phone": settings.contact_phone or "",
+        # PuB/GDPR Compliance
+        "privacy_policy_url": settings.privacy_policy_url or "",
+        "require_consent": settings.require_consent if settings.require_consent is not None else True,
+        "consent_text": settings.consent_text or "Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.",
+        "data_controller_name": settings.data_controller_name or "",
     }
 
 
@@ -1012,7 +1029,12 @@ async def get_settings(
         data_retention_days=settings.data_retention_days or 30,
         notify_unanswered=settings.notify_unanswered or False,
         notification_email=settings.notification_email or "",
-        custom_categories=settings.custom_categories or ""
+        custom_categories=settings.custom_categories or "",
+        privacy_policy_url=settings.privacy_policy_url or "",
+        require_consent=settings.require_consent if settings.require_consent is not None else True,
+        consent_text=settings.consent_text or "Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.",
+        data_controller_name=settings.data_controller_name or "",
+        data_controller_email=settings.data_controller_email or ""
     )
 
 
@@ -1053,6 +1075,17 @@ async def update_settings(
         settings.subtitle = update.subtitle
     if update.custom_categories is not None:
         settings.custom_categories = update.custom_categories
+    # PuB/GDPR Compliance fields
+    if update.privacy_policy_url is not None:
+        settings.privacy_policy_url = update.privacy_policy_url
+    if update.require_consent is not None:
+        settings.require_consent = update.require_consent
+    if update.consent_text is not None:
+        settings.consent_text = update.consent_text
+    if update.data_controller_name is not None:
+        settings.data_controller_name = update.data_controller_name
+    if update.data_controller_email is not None:
+        settings.data_controller_email = update.data_controller_email
 
     db.commit()
     db.refresh(settings)
@@ -1069,7 +1102,12 @@ async def update_settings(
         data_retention_days=settings.data_retention_days or 30,
         notify_unanswered=settings.notify_unanswered or False,
         notification_email=settings.notification_email or "",
-        custom_categories=settings.custom_categories or ""
+        custom_categories=settings.custom_categories or "",
+        privacy_policy_url=settings.privacy_policy_url or "",
+        require_consent=settings.require_consent if settings.require_consent is not None else True,
+        consent_text=settings.consent_text or "Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.",
+        data_controller_name=settings.data_controller_name or "",
+        data_controller_email=settings.data_controller_email or ""
     )
 
 
@@ -2133,6 +2171,214 @@ async def export_knowledge(
             media_type="text/csv",
             headers={"Content-Disposition": "attachment; filename=knowledge_base.csv"}
         )
+
+
+# =============================================================================
+# GDPR/PuB Data Rights Endpoints (Public - for widget users)
+# =============================================================================
+
+class GDPRConsentRequest(BaseModel):
+    session_id: str
+    consent_given: bool
+
+
+class GDPRDataRequest(BaseModel):
+    session_id: str
+
+
+@app.post("/gdpr/{company_id}/consent")
+async def record_consent(
+    company_id: str,
+    request: GDPRConsentRequest,
+    req: Request,
+    db: Session = Depends(get_db)
+):
+    """Record user consent for data processing (PuB compliance)"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company or not company.is_active:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    # Find or create conversation
+    conversation = db.query(Conversation).filter(
+        Conversation.session_id == request.session_id,
+        Conversation.company_id == company_id
+    ).first()
+
+    if conversation:
+        conversation.consent_given = request.consent_given
+        conversation.consent_timestamp = datetime.utcnow() if request.consent_given else None
+    else:
+        # Create new conversation with consent
+        client_ip = req.client.host if req.client else None
+        conversation = Conversation(
+            company_id=company_id,
+            session_id=request.session_id,
+            reference_id=generate_reference_id(),
+            user_ip_anonymous=anonymize_ip(client_ip),
+            consent_given=request.consent_given,
+            consent_timestamp=datetime.utcnow() if request.consent_given else None
+        )
+        db.add(conversation)
+
+    # Log the consent action
+    audit_log = GDPRAuditLog(
+        company_id=company_id,
+        action_type="consent_given" if request.consent_given else "consent_withdrawn",
+        session_id=request.session_id,
+        description=f"User {'gave' if request.consent_given else 'withdrew'} consent for data processing",
+        requester_ip_anonymous=anonymize_ip(req.client.host if req.client else None),
+        success=True
+    )
+    db.add(audit_log)
+    db.commit()
+
+    return {"message": "Samtycke registrerat", "consent_given": request.consent_given}
+
+
+@app.get("/gdpr/{company_id}/my-data")
+async def get_my_data(
+    company_id: str,
+    session_id: str,
+    req: Request,
+    db: Session = Depends(get_db)
+):
+    """Get all data associated with a session (Right to Access - GDPR Art. 15)"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    # Find conversation
+    conversation = db.query(Conversation).filter(
+        Conversation.session_id == session_id,
+        Conversation.company_id == company_id
+    ).first()
+
+    if not conversation:
+        return {
+            "message": "Ingen data hittades för denna session",
+            "data": None
+        }
+
+    # Get all messages
+    messages = db.query(Message).filter(
+        Message.conversation_id == conversation.id
+    ).order_by(Message.created_at.asc()).all()
+
+    # Log the data access
+    audit_log = GDPRAuditLog(
+        company_id=company_id,
+        action_type="data_access",
+        session_id=session_id,
+        description="User requested access to their data (GDPR Art. 15)",
+        requester_ip_anonymous=anonymize_ip(req.client.host if req.client else None),
+        success=True
+    )
+    db.add(audit_log)
+    db.commit()
+
+    return {
+        "message": "Din data har hämtats",
+        "data": {
+            "conversation_id": conversation.reference_id,
+            "started_at": conversation.started_at.isoformat(),
+            "ended_at": conversation.ended_at.isoformat() if conversation.ended_at else None,
+            "consent_given": conversation.consent_given,
+            "consent_timestamp": conversation.consent_timestamp.isoformat() if conversation.consent_timestamp else None,
+            "message_count": conversation.message_count,
+            "anonymized_ip": conversation.user_ip_anonymous,
+            "anonymized_browser": conversation.user_agent_anonymous,
+            "messages": [
+                {
+                    "role": msg.role,
+                    "content": msg.content,
+                    "timestamp": msg.created_at.isoformat()
+                }
+                for msg in messages
+            ]
+        },
+        "data_controller": {
+            "company": company.name,
+            "retention_days": db.query(CompanySettings).filter(
+                CompanySettings.company_id == company_id
+            ).first().data_retention_days if db.query(CompanySettings).filter(
+                CompanySettings.company_id == company_id
+            ).first() else 30
+        }
+    }
+
+
+@app.delete("/gdpr/{company_id}/my-data")
+async def delete_my_data(
+    company_id: str,
+    session_id: str,
+    req: Request,
+    db: Session = Depends(get_db)
+):
+    """Delete all data associated with a session (Right to Erasure - GDPR Art. 17)"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    # Find conversation
+    conversation = db.query(Conversation).filter(
+        Conversation.session_id == session_id,
+        Conversation.company_id == company_id
+    ).first()
+
+    if not conversation:
+        return {"message": "Ingen data att radera för denna session"}
+
+    # Save anonymized stats before deletion (for aggregate statistics)
+    await save_conversation_stats(db, conversation)
+
+    # Log the deletion request
+    audit_log = GDPRAuditLog(
+        company_id=company_id,
+        action_type="data_deletion",
+        session_id=session_id,
+        description="User requested deletion of their data (GDPR Art. 17)",
+        requester_ip_anonymous=anonymize_ip(req.client.host if req.client else None),
+        success=True
+    )
+    db.add(audit_log)
+
+    # Delete the conversation (messages cascade)
+    db.delete(conversation)
+    db.commit()
+
+    return {
+        "message": "Din data har raderats. Anonymiserad statistik kan fortfarande finnas kvar.",
+        "deleted": True
+    }
+
+
+@app.get("/gdpr/{company_id}/audit-log")
+async def get_audit_log(
+    company_id: str,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db),
+    limit: int = 100
+):
+    """Get GDPR audit log for company (Admin only)"""
+    if current["company_id"] != company_id:
+        raise HTTPException(status_code=403, detail="Ej behörig")
+
+    logs = db.query(GDPRAuditLog).filter(
+        GDPRAuditLog.company_id == company_id
+    ).order_by(GDPRAuditLog.request_timestamp.desc()).limit(limit).all()
+
+    return [
+        {
+            "id": log.id,
+            "action_type": log.action_type,
+            "session_id": log.session_id,
+            "description": log.description,
+            "timestamp": log.request_timestamp.isoformat(),
+            "success": log.success,
+            "error_message": log.error_message
+        }
+        for log in logs
+    ]
 
 
 # =============================================================================

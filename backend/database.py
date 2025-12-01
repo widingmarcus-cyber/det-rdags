@@ -69,6 +69,13 @@ class CompanySettings(Base):
     notify_unanswered = Column(Boolean, default=False)  # Skicka notis vid obesvarade frågor
     notification_email = Column(String, default="")  # E-post för notifieringar
 
+    # PuB/GDPR Compliance
+    privacy_policy_url = Column(String, default="")  # Link to privacy policy
+    require_consent = Column(Boolean, default=True)  # Require consent before chat
+    consent_text = Column(Text, default="Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.")
+    data_controller_name = Column(String, default="")  # Name of data controller (PuB)
+    data_controller_email = Column(String, default="")  # DPO/privacy contact email
+
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relations
@@ -126,6 +133,10 @@ class Conversation(Base):
     was_helpful = Column(Boolean)  # Feedback från användaren
     category = Column(String, default="allmant")  # Auto-detected category
     language = Column(String, default="sv")  # Detected/provided language
+
+    # GDPR/PuB Consent tracking
+    consent_given = Column(Boolean, default=False)  # User gave consent
+    consent_timestamp = Column(DateTime)  # When consent was given
 
     # Relations
     company = relationship("Company", back_populates="conversations")
@@ -200,6 +211,27 @@ class SuperAdmin(Base):
     username = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class GDPRAuditLog(Base):
+    """Audit log for GDPR/PuB compliance - records data processing activities"""
+    __tablename__ = "gdpr_audit_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+
+    # Action details
+    action_type = Column(String, nullable=False)  # "data_access", "data_deletion", "consent_given", "data_export"
+    session_id = Column(String)  # Related session if applicable
+    description = Column(Text)  # Human-readable description
+
+    # Request metadata (anonymized)
+    requester_ip_anonymous = Column(String)  # Anonymized IP
+    request_timestamp = Column(DateTime, default=datetime.utcnow)
+
+    # Outcome
+    success = Column(Boolean, default=True)
+    error_message = Column(Text)
 
 
 # =============================================================================

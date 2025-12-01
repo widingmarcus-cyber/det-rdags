@@ -18,6 +18,12 @@ function Settings() {
     notify_unanswered: false,
     notification_email: '',
     custom_categories: '',
+    // PuB/GDPR Compliance
+    privacy_policy_url: '',
+    require_consent: true,
+    consent_text: 'Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.',
+    data_controller_name: '',
+    data_controller_email: '',
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -431,61 +437,191 @@ function Settings() {
 
           {/* Privacy Tab */}
           {activeTab === 'privacy' && (
-            <div className="card animate-fade-in">
-              <div className="flex items-start gap-3 mb-6">
-                <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center flex-shrink-0">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  </svg>
+            <div className="space-y-6 animate-fade-in">
+              {/* Data Retention Section */}
+              <div className="card">
+                <div className="flex items-start gap-3 mb-6">
+                  <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-medium text-text-primary">GDPR & Datalagring</h2>
+                    <p className="text-sm text-text-secondary">Hantera hur länge användardata sparas</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-lg font-medium text-text-primary">GDPR & Integritet</h2>
-                  <p className="text-sm text-text-secondary">Hantera hur länge användardata sparas</p>
+
+                <div className="space-y-6">
+                  <div>
+                    <label className="input-label">Datalagring (dagar)</label>
+                    <div className="flex items-center gap-4 mt-2">
+                      <input
+                        type="range"
+                        min="7"
+                        max="365"
+                        value={settings.data_retention_days}
+                        onChange={(e) => setSettings({ ...settings, data_retention_days: parseInt(e.target.value) })}
+                        className="flex-1 h-2 bg-bg-secondary rounded-lg appearance-none cursor-pointer accent-accent"
+                      />
+                      <input
+                        type="number"
+                        min="7"
+                        max="365"
+                        value={settings.data_retention_days}
+                        onChange={(e) => setSettings({ ...settings, data_retention_days: parseInt(e.target.value) || 30 })}
+                        className="input w-20 text-center"
+                      />
+                    </div>
+                    <p className="text-xs text-text-tertiary mt-2">
+                      Konversationer raderas automatiskt efter {settings.data_retention_days} dagar
+                    </p>
+                  </div>
+
+                  <div className="bg-bg-secondary rounded-lg p-4 border border-border-subtle">
+                    <h4 className="text-sm font-medium text-text-primary mb-3">Vad sparas?</h4>
+                    <ul className="space-y-2">
+                      <li className="flex items-center gap-3 text-sm">
+                        <span className="w-2 h-2 bg-success rounded-full flex-shrink-0"></span>
+                        <span className="text-text-secondary">Anonymiserad statistik (antal frågor, svarstider) - sparas permanent</span>
+                      </li>
+                      <li className="flex items-center gap-3 text-sm">
+                        <span className="w-2 h-2 bg-warning rounded-full flex-shrink-0"></span>
+                        <span className="text-text-secondary">Konversationshistorik - raderas efter {settings.data_retention_days} dagar</span>
+                      </li>
+                      <li className="flex items-center gap-3 text-sm">
+                        <span className="w-2 h-2 bg-accent rounded-full flex-shrink-0"></span>
+                        <span className="text-text-secondary">IP-adresser anonymiseras direkt (xxx.xxx.xxx.xxx)</span>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-6">
-                <div>
-                  <label className="input-label">Datalagring (dagar)</label>
-                  <div className="flex items-center gap-4 mt-2">
-                    <input
-                      type="range"
-                      min="7"
-                      max="365"
-                      value={settings.data_retention_days}
-                      onChange={(e) => setSettings({ ...settings, data_retention_days: parseInt(e.target.value) })}
-                      className="flex-1 h-2 bg-bg-secondary rounded-lg appearance-none cursor-pointer accent-accent"
-                    />
-                    <input
-                      type="number"
-                      min="7"
-                      max="365"
-                      value={settings.data_retention_days}
-                      onChange={(e) => setSettings({ ...settings, data_retention_days: parseInt(e.target.value) || 30 })}
-                      className="input w-20 text-center"
-                    />
+              {/* PuB Compliance Section */}
+              <div className="card">
+                <div className="flex items-start gap-3 mb-6">
+                  <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-success">
+                      <path d="M9 11l3 3L22 4" />
+                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                    </svg>
                   </div>
-                  <p className="text-xs text-text-tertiary mt-2">
-                    Konversationer raderas automatiskt efter {settings.data_retention_days} dagar
-                  </p>
+                  <div>
+                    <h2 className="text-lg font-medium text-text-primary">PuB-avtal & Samtycke</h2>
+                    <p className="text-sm text-text-secondary">Personuppgiftsbiträdesavtal (PuB) och samtyckeshantering</p>
+                  </div>
                 </div>
 
-                <div className="bg-bg-secondary rounded-lg p-4 border border-border-subtle">
-                  <h4 className="text-sm font-medium text-text-primary mb-3">Vad sparas?</h4>
-                  <ul className="space-y-2">
-                    <li className="flex items-center gap-3 text-sm">
-                      <span className="w-2 h-2 bg-success rounded-full flex-shrink-0"></span>
-                      <span className="text-text-secondary">Anonymiserad statistik (antal frågor, svarstider) - sparas permanent</span>
-                    </li>
-                    <li className="flex items-center gap-3 text-sm">
-                      <span className="w-2 h-2 bg-warning rounded-full flex-shrink-0"></span>
-                      <span className="text-text-secondary">Konversationshistorik - raderas efter {settings.data_retention_days} dagar</span>
-                    </li>
-                    <li className="flex items-center gap-3 text-sm">
-                      <span className="w-2 h-2 bg-accent rounded-full flex-shrink-0"></span>
-                      <span className="text-text-secondary">IP-adresser anonymiseras direkt (xxx.xxx.xxx.xxx)</span>
-                    </li>
-                  </ul>
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between p-4 bg-bg-secondary rounded-lg border border-border-subtle">
+                    <div>
+                      <p className="font-medium text-text-primary">Kräv samtycke innan chatt</p>
+                      <p className="text-sm text-text-secondary mt-1">
+                        Användare måste godkänna innan de kan chatta
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={settings.require_consent}
+                        onChange={(e) => setSettings({ ...settings, require_consent: e.target.checked })}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-bg-tertiary border border-border rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text-tertiary after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent peer-checked:after:bg-white"></div>
+                    </label>
+                  </div>
+
+                  {settings.require_consent && (
+                    <div className="animate-fade-in">
+                      <label className="input-label">Samtyckestext</label>
+                      <textarea
+                        value={settings.consent_text}
+                        onChange={(e) => setSettings({ ...settings, consent_text: e.target.value })}
+                        placeholder="Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn."
+                        rows={2}
+                        className="input resize-none"
+                      />
+                      <p className="text-xs text-text-tertiary mt-1">Texten som visas bredvid checkboxen för samtycke</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="input-label">Länk till integritetspolicy</label>
+                    <input
+                      type="url"
+                      value={settings.privacy_policy_url}
+                      onChange={(e) => setSettings({ ...settings, privacy_policy_url: e.target.value })}
+                      placeholder="https://dittforetag.se/integritetspolicy"
+                      className="input"
+                    />
+                    <p className="text-xs text-text-tertiary mt-1">Visas i widgeten så användare kan läsa policyn</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Data Controller Section */}
+              <div className="card">
+                <div className="flex items-start gap-3 mb-6">
+                  <div className="w-10 h-10 bg-warning/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-warning">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-medium text-text-primary">Personuppgiftsansvarig</h2>
+                    <p className="text-sm text-text-secondary">Information om vem som ansvarar för personuppgifter</p>
+                  </div>
+                </div>
+
+                <div className="space-y-5">
+                  <div>
+                    <label className="input-label">Namn på personuppgiftsansvarig</label>
+                    <input
+                      type="text"
+                      value={settings.data_controller_name}
+                      onChange={(e) => setSettings({ ...settings, data_controller_name: e.target.value })}
+                      placeholder="T.ex. Bostadsbolaget AB"
+                      className="input"
+                    />
+                  </div>
+                  <div>
+                    <label className="input-label">E-post för dataskyddsfrågor</label>
+                    <input
+                      type="email"
+                      value={settings.data_controller_email}
+                      onChange={(e) => setSettings({ ...settings, data_controller_email: e.target.value })}
+                      placeholder="gdpr@dittforetag.se"
+                      className="input"
+                    />
+                    <p className="text-xs text-text-tertiary mt-1">Dit användare kan vända sig för GDPR-förfrågningar (registerutdrag, radering)</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* GDPR Rights Info */}
+              <div className="card bg-accent/5 border-accent/20">
+                <div className="flex items-start gap-3">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent flex-shrink-0 mt-0.5">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                  <div className="text-sm">
+                    <p className="font-medium text-text-primary">Automatiska GDPR-rättigheter</p>
+                    <p className="text-text-secondary mt-1">
+                      Widgeten ger automatiskt användare möjlighet att:
+                    </p>
+                    <ul className="mt-2 space-y-1 text-text-secondary">
+                      <li>• Se sin data (registerutdrag)</li>
+                      <li>• Radera sin konversationshistorik</li>
+                      <li>• Dra tillbaka samtycke</li>
+                    </ul>
+                    <p className="text-text-secondary mt-2">
+                      Alla åtgärder loggas i GDPR-revisionsloggen.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
