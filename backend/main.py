@@ -571,61 +571,55 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
     """Bygg prompt med kontext - använder specificerat eller detekterat språk"""
     # Use provided language or detect from question
     lang = language if language in ["sv", "en", "ar"] else detect_language(question)
-    lang_instruction = get_language_instruction(lang)
 
-    # Language-specific system messages
+    # Language names for the prompt
     lang_names = {"sv": "Swedish", "en": "English", "ar": "Arabic"}
     target_lang = lang_names.get(lang, "Swedish")
 
-    context_text = ""
-    if context:
-        context_text = "Relevant information from knowledge base:\n\n"
-        for item in context:
-            context_text += f"Q: {item.question}\nA: {item.answer}\n\n"
+    company_name = settings.company_name if settings else "the company"
 
-    company_name = settings.company_name if settings else "fastighetsbolaget"
-
-    # GDPR/Privacy info for the AI to use
-    gdpr_info = ""
+    # Build company facts section
+    company_facts = []
     if settings:
+        if settings.contact_email:
+            company_facts.append(f"Contact email: {settings.contact_email}")
+        if settings.contact_phone:
+            company_facts.append(f"Contact phone: {settings.contact_phone}")
         if settings.data_controller_name:
-            gdpr_info += f"\nCompany GDPR/Privacy contact: {settings.data_controller_name}"
+            gdpr_contact = f"GDPR/Privacy responsible: {settings.data_controller_name}"
             if settings.data_controller_email:
-                gdpr_info += f" ({settings.data_controller_email})"
+                gdpr_contact += f" ({settings.data_controller_email})"
+            company_facts.append(gdpr_contact)
         if settings.privacy_policy_url:
-            gdpr_info += f"\nPrivacy policy: {settings.privacy_policy_url}"
+            company_facts.append(f"Privacy policy: {settings.privacy_policy_url}")
 
-    # Category-specific guidance when no exact context found
-    category_guidance = ""
-    if not context and category and category != "allmant":
-        category_hints = {
-            "felanmalan": "The customer seems to want to report a problem/fault. Ask what the issue is and where it's located. Common issues include plumbing, heating, electricity, doors/locks, etc.",
-            "hyra": "The customer has a question about rent. Common topics: payment dates, amounts, late payments, included costs.",
-            "kontrakt": "The customer has a contract question. Common topics: lease terms, termination notice, moving in/out.",
-            "tvattstuga": "The customer has a laundry room question. Common topics: booking times, rules, broken machines.",
-            "parkering": "The customer has a parking question. Common topics: available spots, permits, costs.",
-            "kontakt": "The customer wants contact information. Provide relevant contact details if available."
-        }
-        if category in category_hints:
-            category_guidance = f"\n\nNote: {category_hints[category]}\n"
+    company_info = ""
+    if company_facts:
+        company_info = "Company information:\n" + "\n".join(f"- {fact}" for fact in company_facts)
 
-    # Additional instruction when message is very short
-    short_message_hint = ""
-    if len(question.split()) <= 2:
-        short_message_hint = "\nThe customer's message is brief. Be friendly and ask a clarifying question to better help them.\n"
+    # Build knowledge base context
+    knowledge = ""
+    if context:
+        knowledge = "Knowledge base (use this to answer):\n"
+        for item in context:
+            knowledge += f"Q: {item.question}\nA: {item.answer}\n\n"
 
-    return f"""You are a helpful, friendly customer service assistant for {company_name}.
-{gdpr_info}
-CRITICAL LANGUAGE REQUIREMENT: {lang_instruction}
-You are responding to a customer who speaks {target_lang}. Your ENTIRE response must be in {target_lang}.
-DO NOT use any other language. If the knowledge base answers are in a different language, translate them.
+    return f"""You are a helpful customer service assistant for {company_name}.
 
-IMPORTANT: Only state facts from the knowledge base or company info provided above. Do NOT make up names, contact persons, or any other information. If you don't have the information, say so honestly.
-{category_guidance}{short_message_hint}
-{context_text}
-Customer question: {question}
+{company_info}
 
-Be conversational and helpful. If you're not sure exactly what they need, ask a friendly follow-up question. Provide a helpful answer in {target_lang}:"""
+{knowledge}
+
+RULES:
+1. Reply in {target_lang} only. Match the customer's language.
+2. Be concise. 1-3 sentences is ideal. No walls of text.
+3. If you have the answer, give it directly. Don't ask unnecessary questions.
+4. If you need clarification, ask ONE short question.
+5. NEVER invent facts, names, titles, prices, or contact info. Only use what's provided above.
+6. If you don't know something, say so briefly and offer to help with something else.
+7. Be warm and natural, like a helpful human colleague.
+
+Customer: {question}"""
 
 
 def anonymize_ip(ip: str) -> str:
