@@ -1,27 +1,32 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useContext } from 'react'
+import { AuthContext } from '../App'
 
 const API_BASE = '/api'
 
-function Dashboard({ tenantId }) {
+function Dashboard() {
+  const { auth, authFetch } = useContext(AuthContext)
   const [stats, setStats] = useState({
     totalQuestions: 0,
-    totalKnowledge: 0
+    totalKnowledge: 0,
+    questionsToday: 0,
+    questionsWeek: 0
   })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchStats()
-  }, [tenantId])
+  }, [])
 
   const fetchStats = async () => {
     try {
-      // Hämta statistik från backend
-      const response = await fetch(`${API_BASE}/stats/${tenantId}`)
+      const response = await authFetch(`${API_BASE}/stats`)
       if (response.ok) {
         const data = await response.json()
         setStats({
           totalKnowledge: data.knowledge_items || 0,
-          totalQuestions: data.total_questions || 0
+          totalQuestions: data.total_questions || 0,
+          questionsToday: data.questions_today || 0,
+          questionsWeek: data.questions_this_week || 0
         })
       }
     } catch (error) {
@@ -51,26 +56,32 @@ function Dashboard({ tenantId }) {
     <div>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-        <p className="text-gray-500 mt-1">Översikt för {tenantId}</p>
+        <p className="text-gray-500 mt-1">Översikt för {auth.companyName}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
-          title="Frågor/Svar i kunskapsbas"
+          title="Frågor/Svar"
           value={stats.totalKnowledge}
           icon="📚"
           color="bg-blue-100"
         />
         <StatCard
-          title="Totalt antal chatfrågor"
+          title="Totalt antal frågor"
           value={stats.totalQuestions}
           icon="💬"
           color="bg-green-100"
         />
         <StatCard
-          title="Aktiva sessioner"
-          value={Math.floor(Math.random() * 10) + 1}
-          icon="👥"
+          title="Frågor idag"
+          value={stats.questionsToday}
+          icon="📅"
+          color="bg-yellow-100"
+        />
+        <StatCard
+          title="Denna vecka"
+          value={stats.questionsWeek}
+          icon="📊"
           color="bg-purple-100"
         />
       </div>
@@ -115,13 +126,13 @@ function Dashboard({ tenantId }) {
             <pre>{`<script src="https://cdn.bobot.se/widget.js"></script>
 <script>
   Bobot.init({
-    tenantId: "${tenantId}"
+    companyId: "${auth.companyId}"
   });
 </script>`}</pre>
           </div>
           <button
             onClick={() => {
-              navigator.clipboard.writeText(`<script src="https://cdn.bobot.se/widget.js"></script>\n<script>\n  Bobot.init({\n    tenantId: "${tenantId}"\n  });\n</script>`)
+              navigator.clipboard.writeText(`<script src="https://cdn.bobot.se/widget.js"></script>\n<script>\n  Bobot.init({\n    companyId: "${auth.companyId}"\n  });\n</script>`)
               alert('Kopierat!')
             }}
             className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 transition-colors"

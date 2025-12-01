@@ -3,28 +3,35 @@ Bobot Backend API
 En GDPR-säker AI-chatbot för fastighetsbolag
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
-from collections import defaultdict
+from sqlalchemy.orm import Session
+from sqlalchemy import func
 import httpx
 import os
 from dotenv import load_dotenv
+
+from database import create_tables, get_db, Company, KnowledgeItem, ChatLog, SuperAdmin
+from auth import (
+    hash_password, verify_password, create_token,
+    get_current_company, get_super_admin
+)
 
 load_dotenv()
 
 app = FastAPI(
     title="Bobot API",
     description="AI-chatbot backend för fastighetsbolag",
-    version="1.0.0"
+    version="2.0.0"
 )
 
-# CORS för att tillåta widget-anrop
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # I produktion: begränsa till specifika domäner
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,150 +43,173 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1")
 
 
 # =============================================================================
-# In-memory kunskapsbas (multi-tenant)
+# Pydantic Models
 # =============================================================================
 
-# Struktur: {tenant_id: [{"question": str, "answer": str}, ...]}
-knowledge_base: dict[str, list[dict]] = {
-    "demo": [
-        {
-            "question": "Hur säger jag upp min lägenhet?",
-            "answer": "För att säga upp din lägenhet behöver du skicka en skriftlig uppsägning till oss. Uppsägningstiden är vanligtvis 3 månader. Du kan skicka uppsägningen via e-post till uppsagning@fastighetsbolag.se eller via post."
-        },
-        {
-            "question": "Vad ingår i hyran?",
-            "answer": "I hyran ingår vanligtvis värme, vatten, sophämtning och tillgång till gemensamma utrymmen som tvättstuga. El och internet betalar hyresgästen själv om inget annat avtalats."
-        },
-        {
-            "question": "Hur anmäler jag ett fel i lägenheten?",
-            "answer": "Felanmälan görs enklast via vår hemsida under 'Felanmälan' eller genom att ringa vår kundtjänst på 08-123 456 78. Beskriv felet så detaljerat som möjligt och ange dina kontaktuppgifter."
-        },
-        {
-            "question": "När är tvättstugan öppen?",
-            "answer": "Tvättstugan är öppen dygnet runt. Du bokar tvättid via bokningstavlan i tvättstugan eller via vår app. Varje bokning är 3 timmar lång."
-        },
-        {
-            "question": "Får jag ha husdjur i lägenheten?",
-            "answer": "Ja, husdjur är tillåtna i våra lägenheter så länge de inte stör grannar eller orsakar skada. Kontrollera ditt hyresavtal för eventuella specifika villkor."
-        },
-    ]
-}
+class LoginRequest(BaseModel):
+    company_id: str
+    password: str
 
 
-# =============================================================================
-# Statistik (in-memory)
-# =============================================================================
+class LoginResponse(BaseModel):
+    token: str
+    company_id: str
+    name: str
 
-# Struktur: {tenant_id: {"total_questions": int, "questions_by_date": {date: count}}}
-stats: dict[str, dict] = defaultdict(lambda: {
-    "total_questions": 0,
-    "questions_by_date": defaultdict(int)
-})
-
-
-def record_question(tenant_id: str):
-    """Registrera en fråga för statistik"""
-    today = datetime.now().strftime("%Y-%m-%d")
-    stats[tenant_id]["total_questions"] += 1
-    stats[tenant_id]["questions_by_date"][today] += 1
-
-
-# =============================================================================
-# Pydantic-modeller
-# =============================================================================
 
 class ChatRequest(BaseModel):
     question: str
-    tenant_id: str = "demo"
 
 
 class ChatResponse(BaseModel):
     answer: str
-    sources: list[str] = []
+    sources: List[str] = []
 
 
-class KnowledgeItem(BaseModel):
+class KnowledgeItemCreate(BaseModel):
     question: str
     answer: str
+
+
+class KnowledgeItemResponse(BaseModel):
+    id: int
+    question: str
+    answer: str
+
+
+class CompanyCreate(BaseModel):
+    id: str
+    name: str
+    password: str
+
+
+class CompanyResponse(BaseModel):
+    id: str
+    name: str
+    is_active: bool
+    created_at: datetime
+    knowledge_count: int = 0
+    chat_count: int = 0
+
+
+class SuperAdminLogin(BaseModel):
+    username: str
+    password: str
+
+
+class StatsResponse(BaseModel):
+    total_questions: int
+    knowledge_items: int
+    questions_today: int
+    questions_this_week: int
+
+
+# =============================================================================
+# Startup
+# =============================================================================
+
+@app.on_event("startup")
+async def startup():
+    """Skapa tabeller och demo-data vid start"""
+    create_tables()
+
+    db = next(get_db())
+
+    # Skapa super admin om den inte finns
+    admin = db.query(SuperAdmin).filter(SuperAdmin.username == "admin").first()
+    if not admin:
+        admin = SuperAdmin(
+            username="admin",
+            password_hash=hash_password("admin123")  # Byt i produktion!
+        )
+        db.add(admin)
+        db.commit()
+        print("Super admin skapad: admin / admin123")
+
+    # Skapa demo-företag om det inte finns
+    demo = db.query(Company).filter(Company.id == "demo").first()
+    if not demo:
+        demo = Company(
+            id="demo",
+            name="Demo Fastigheter AB",
+            password_hash=hash_password("demo123")
+        )
+        db.add(demo)
+        db.commit()
+
+        # Lägg till demo-kunskapsbas
+        demo_items = [
+            ("Hur säger jag upp min lägenhet?",
+             "För att säga upp din lägenhet behöver du skicka en skriftlig uppsägning till oss. Uppsägningstiden är vanligtvis 3 månader."),
+            ("Vad ingår i hyran?",
+             "I hyran ingår vanligtvis värme, vatten, sophämtning och tillgång till gemensamma utrymmen som tvättstuga."),
+            ("Hur anmäler jag ett fel i lägenheten?",
+             "Felanmälan görs via vår hemsida under 'Felanmälan' eller genom att ringa kundtjänst på 08-123 456 78."),
+            ("När är tvättstugan öppen?",
+             "Tvättstugan är öppen dygnet runt. Du bokar tvättid via bokningstavlan eller vår app."),
+            ("Får jag ha husdjur?",
+             "Ja, husdjur är tillåtna så länge de inte stör grannar eller orsakar skada."),
+        ]
+
+        for q, a in demo_items:
+            item = KnowledgeItem(company_id="demo", question=q, answer=a)
+            db.add(item)
+
+        db.commit()
+        print("Demo-företag skapat: demo / demo123")
+
+    db.close()
 
 
 # =============================================================================
 # Hjälpfunktioner
 # =============================================================================
 
-def find_relevant_context(question: str, tenant_id: str, top_k: int = 3) -> list[dict]:
-    """
-    Hitta relevanta frågor/svar från kunskapsbasen.
-    Enkel sökning baserad på ordmatchning (kan bytas till vektorsökning senare).
-    """
-    if tenant_id not in knowledge_base:
-        return []
+def find_relevant_context(question: str, company_id: str, db: Session, top_k: int = 3) -> List[KnowledgeItem]:
+    """Hitta relevanta frågor/svar från kunskapsbasen"""
+    items = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == company_id).all()
 
-    kb = knowledge_base[tenant_id]
     question_lower = question.lower()
     question_words = set(question_lower.split())
 
-    # Poängsätt varje kunskapsobjekt baserat på ordmatchning
     scored_items = []
-    for item in kb:
-        item_words = set(item["question"].lower().split())
-        # Räkna gemensamma ord
+    for item in items:
+        item_words = set(item.question.lower().split())
         common_words = question_words & item_words
         score = len(common_words)
         if score > 0:
             scored_items.append((score, item))
 
-    # Sortera efter poäng och returnera top_k
     scored_items.sort(key=lambda x: x[0], reverse=True)
     return [item for _, item in scored_items[:top_k]]
 
 
 async def query_ollama(prompt: str) -> str:
-    """
-    Skicka en fråga till Ollama och returnera svaret.
-    """
+    """Skicka fråga till Ollama"""
     async with httpx.AsyncClient(timeout=60.0) as client:
         try:
             response = await client.post(
                 f"{OLLAMA_BASE_URL}/api/generate",
-                json={
-                    "model": OLLAMA_MODEL,
-                    "prompt": prompt,
-                    "stream": False
-                }
+                json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
             )
             response.raise_for_status()
-            result = response.json()
-            return result.get("response", "Kunde inte generera svar.")
+            return response.json().get("response", "Kunde inte generera svar.")
         except httpx.ConnectError:
-            raise HTTPException(
-                status_code=503,
-                detail="Kan inte ansluta till Ollama. Kontrollera att Ollama körs lokalt."
-            )
-        except httpx.TimeoutException:
-            raise HTTPException(
-                status_code=504,
-                detail="Timeout vid anslutning till Ollama."
-            )
+            raise HTTPException(status_code=503, detail="Kan inte ansluta till Ollama")
         except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Fel vid kommunikation med Ollama: {str(e)}"
-            )
+            raise HTTPException(status_code=500, detail=str(e))
 
 
-def build_prompt(question: str, context: list[dict]) -> str:
-    """
-    Bygg prompt med kontext för Ollama.
-    """
+def build_prompt(question: str, context: List[KnowledgeItem]) -> str:
+    """Bygg prompt med kontext"""
     context_text = ""
     if context:
-        context_text = "Här är relevant information från vår kunskapsbas:\n\n"
+        context_text = "Relevant information:\n\n"
         for item in context:
-            context_text += f"Fråga: {item['question']}\nSvar: {item['answer']}\n\n"
+            context_text += f"F: {item.question}\nS: {item.answer}\n\n"
 
-    prompt = f"""Du är en hjälpsam kundtjänstassistent för ett fastighetsbolag.
-Svara på svenska och var trevlig och professionell.
+    return f"""Du är en hjälpsam kundtjänstassistent för ett fastighetsbolag.
+Svara på svenska, trevligt och professionellt.
 Om du inte vet svaret, säg det ärligt.
 
 {context_text}
@@ -187,108 +217,290 @@ Kundens fråga: {question}
 
 Svar:"""
 
-    return prompt
-
 
 # =============================================================================
-# API-endpoints
+# Public Endpoints
 # =============================================================================
 
 @app.get("/")
 async def root():
-    """Hälsningssida"""
-    return {
-        "message": "Välkommen till Bobot API",
-        "version": "1.0.0",
-        "docs": "/docs"
-    }
+    return {"message": "Välkommen till Bobot API", "version": "2.0.0"}
 
 
 @app.get("/health")
-async def health_check():
-    """Hälsokontroll"""
+async def health():
     return {"status": "healthy"}
 
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
-    """
-    Huvudendpoint för chatbot.
-    Tar emot en fråga och returnerar AI-genererat svar.
-    """
-    # Registrera fråga för statistik
-    record_question(request.tenant_id)
+# =============================================================================
+# Auth Endpoints
+# =============================================================================
 
-    # Hitta relevant kontext
-    context = find_relevant_context(request.question, request.tenant_id)
+@app.post("/auth/login", response_model=LoginResponse)
+async def login(request: LoginRequest, db: Session = Depends(get_db)):
+    """Logga in som företag"""
+    company = db.query(Company).filter(Company.id == request.company_id).first()
 
-    # Bygg prompt med kontext
+    if not company or not verify_password(request.password, company.password_hash):
+        raise HTTPException(status_code=401, detail="Fel företags-ID eller lösenord")
+
+    if not company.is_active:
+        raise HTTPException(status_code=403, detail="Kontot är inaktiverat")
+
+    token = create_token({
+        "sub": company.id,
+        "name": company.name,
+        "type": "company"
+    })
+
+    return LoginResponse(token=token, company_id=company.id, name=company.name)
+
+
+@app.post("/auth/admin/login")
+async def admin_login(request: SuperAdminLogin, db: Session = Depends(get_db)):
+    """Logga in som super admin"""
+    admin = db.query(SuperAdmin).filter(SuperAdmin.username == request.username).first()
+
+    if not admin or not verify_password(request.password, admin.password_hash):
+        raise HTTPException(status_code=401, detail="Fel användarnamn eller lösenord")
+
+    token = create_token({
+        "sub": admin.username,
+        "type": "super_admin"
+    })
+
+    return {"token": token, "username": admin.username}
+
+
+# =============================================================================
+# Chat Endpoints (Public - används av widget)
+# =============================================================================
+
+@app.post("/chat/{company_id}", response_model=ChatResponse)
+async def chat(company_id: str, request: ChatRequest, db: Session = Depends(get_db)):
+    """Chatta med AI - öppen endpoint för widget"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company or not company.is_active:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    # Hitta kontext
+    context = find_relevant_context(request.question, company_id, db)
+
+    # Bygg prompt och fråga AI
     prompt = build_prompt(request.question, context)
-
-    # Fråga Ollama
     answer = await query_ollama(prompt)
 
-    # Samla källor (frågor som användes som kontext)
-    sources = [item["question"] for item in context]
+    # Logga frågan
+    log = ChatLog(company_id=company_id, question=request.question, answer=answer)
+    db.add(log)
+    db.commit()
 
+    sources = [item.question for item in context]
     return ChatResponse(answer=answer, sources=sources)
 
 
 # =============================================================================
-# Kunskapsbas-endpoints (för admin-panel)
+# Company Endpoints (Autentiserade)
 # =============================================================================
 
-@app.get("/knowledge/{tenant_id}")
-async def get_knowledge(tenant_id: str):
-    """Hämta alla frågor/svar för en tenant"""
-    if tenant_id not in knowledge_base:
-        knowledge_base[tenant_id] = []
-    return {"tenant_id": tenant_id, "items": knowledge_base[tenant_id]}
+@app.get("/knowledge", response_model=List[KnowledgeItemResponse])
+async def get_knowledge(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Hämta kunskapsbas för inloggat företag"""
+    items = db.query(KnowledgeItem).filter(
+        KnowledgeItem.company_id == current["company_id"]
+    ).all()
+
+    return [KnowledgeItemResponse(id=i.id, question=i.question, answer=i.answer) for i in items]
 
 
-@app.post("/knowledge/{tenant_id}")
-async def add_knowledge(tenant_id: str, item: KnowledgeItem):
-    """Lägg till en fråga/svar för en tenant"""
-    if tenant_id not in knowledge_base:
-        knowledge_base[tenant_id] = []
+@app.post("/knowledge", response_model=KnowledgeItemResponse)
+async def add_knowledge(
+    item: KnowledgeItemCreate,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Lägg till fråga/svar"""
+    new_item = KnowledgeItem(
+        company_id=current["company_id"],
+        question=item.question,
+        answer=item.answer
+    )
+    db.add(new_item)
+    db.commit()
+    db.refresh(new_item)
 
-    knowledge_base[tenant_id].append({
-        "question": item.question,
-        "answer": item.answer
-    })
-
-    return {"message": "Tillagd", "item": item}
+    return KnowledgeItemResponse(id=new_item.id, question=new_item.question, answer=new_item.answer)
 
 
-@app.delete("/knowledge/{tenant_id}/{index}")
-async def delete_knowledge(tenant_id: str, index: int):
-    """Ta bort en fråga/svar för en tenant"""
-    if tenant_id not in knowledge_base:
-        raise HTTPException(status_code=404, detail="Tenant finns inte")
+@app.put("/knowledge/{item_id}", response_model=KnowledgeItemResponse)
+async def update_knowledge(
+    item_id: int,
+    item: KnowledgeItemCreate,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Uppdatera fråga/svar"""
+    db_item = db.query(KnowledgeItem).filter(
+        KnowledgeItem.id == item_id,
+        KnowledgeItem.company_id == current["company_id"]
+    ).first()
 
-    if index < 0 or index >= len(knowledge_base[tenant_id]):
-        raise HTTPException(status_code=404, detail="Index finns inte")
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Finns inte")
 
-    removed = knowledge_base[tenant_id].pop(index)
-    return {"message": "Borttagen", "item": removed}
+    db_item.question = item.question
+    db_item.answer = item.answer
+    db.commit()
+
+    return KnowledgeItemResponse(id=db_item.id, question=db_item.question, answer=db_item.answer)
+
+
+@app.delete("/knowledge/{item_id}")
+async def delete_knowledge(
+    item_id: int,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Ta bort fråga/svar"""
+    db_item = db.query(KnowledgeItem).filter(
+        KnowledgeItem.id == item_id,
+        KnowledgeItem.company_id == current["company_id"]
+    ).first()
+
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Finns inte")
+
+    db.delete(db_item)
+    db.commit()
+
+    return {"message": "Borttagen"}
+
+
+@app.get("/stats", response_model=StatsResponse)
+async def get_stats(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Hämta statistik för inloggat företag"""
+    company_id = current["company_id"]
+
+    total = db.query(ChatLog).filter(ChatLog.company_id == company_id).count()
+    knowledge = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == company_id).count()
+
+    today = datetime.utcnow().date()
+    today_count = db.query(ChatLog).filter(
+        ChatLog.company_id == company_id,
+        func.date(ChatLog.created_at) == today
+    ).count()
+
+    from datetime import timedelta
+    week_ago = datetime.utcnow() - timedelta(days=7)
+    week_count = db.query(ChatLog).filter(
+        ChatLog.company_id == company_id,
+        ChatLog.created_at >= week_ago
+    ).count()
+
+    return StatsResponse(
+        total_questions=total,
+        knowledge_items=knowledge,
+        questions_today=today_count,
+        questions_this_week=week_count
+    )
 
 
 # =============================================================================
-# Statistik-endpoints
+# Super Admin Endpoints
 # =============================================================================
 
-@app.get("/stats/{tenant_id}")
-async def get_stats(tenant_id: str):
-    """Hämta statistik för en tenant"""
-    tenant_stats = stats[tenant_id]
-    knowledge_count = len(knowledge_base.get(tenant_id, []))
+@app.get("/admin/companies", response_model=List[CompanyResponse])
+async def list_companies(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Lista alla företag"""
+    companies = db.query(Company).all()
 
-    return {
-        "tenant_id": tenant_id,
-        "total_questions": tenant_stats["total_questions"],
-        "knowledge_items": knowledge_count,
-        "questions_by_date": dict(tenant_stats["questions_by_date"])
-    }
+    result = []
+    for c in companies:
+        knowledge_count = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == c.id).count()
+        chat_count = db.query(ChatLog).filter(ChatLog.company_id == c.id).count()
+
+        result.append(CompanyResponse(
+            id=c.id,
+            name=c.name,
+            is_active=c.is_active,
+            created_at=c.created_at,
+            knowledge_count=knowledge_count,
+            chat_count=chat_count
+        ))
+
+    return result
+
+
+@app.post("/admin/companies", response_model=CompanyResponse)
+async def create_company(
+    company: CompanyCreate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Skapa nytt företag"""
+    existing = db.query(Company).filter(Company.id == company.id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Företags-ID finns redan")
+
+    new_company = Company(
+        id=company.id,
+        name=company.name,
+        password_hash=hash_password(company.password)
+    )
+    db.add(new_company)
+    db.commit()
+
+    return CompanyResponse(
+        id=new_company.id,
+        name=new_company.name,
+        is_active=new_company.is_active,
+        created_at=new_company.created_at,
+        knowledge_count=0,
+        chat_count=0
+    )
+
+
+@app.delete("/admin/companies/{company_id}")
+async def delete_company(
+    company_id: str,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Ta bort företag"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    db.delete(company)
+    db.commit()
+
+    return {"message": f"Företag {company_id} borttaget"}
+
+
+@app.put("/admin/companies/{company_id}/toggle")
+async def toggle_company(
+    company_id: str,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Aktivera/inaktivera företag"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    company.is_active = not company.is_active
+    db.commit()
+
+    return {"message": f"Företag {'aktiverat' if company.is_active else 'inaktiverat'}"}
 
 
 # =============================================================================

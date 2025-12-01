@@ -199,12 +199,11 @@ function ChatWidget({ config }) {
     setLoading(true)
 
     try {
-      const response = await fetch(`${config.apiUrl}/chat`, {
+      const response = await fetch(`${config.apiUrl}/chat/${config.companyId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question: userMessage,
-          tenant_id: config.tenantId
+          question: userMessage
         })
       })
 
@@ -328,8 +327,8 @@ window.Bobot = {
     document.body.appendChild(container)
 
     const defaultConfig = {
-      apiUrl: 'http://localhost:8000',
-      tenantId: 'demo',
+      apiUrl: 'https://api.bobot.se',
+      companyId: 'demo',
       title: 'Bobot',
       welcomeMessage: 'Hej! Hur kan jag hjälpa dig idag?',
       ...config

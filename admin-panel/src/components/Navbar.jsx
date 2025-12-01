@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 
-function Navbar({ tenantId, onLogout }) {
+function Navbar({ companyId, companyName, onLogout }) {
   const location = useLocation()
 
   const isActive = (path) => location.pathname === path
@@ -36,9 +36,10 @@ function Navbar({ tenantId, onLogout }) {
           </div>
 
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500">
-              Tenant: <span className="font-medium text-gray-700">{tenantId}</span>
-            </span>
+            <div className="text-right">
+              <p className="text-sm font-medium text-gray-700">{companyName}</p>
+              <p className="text-xs text-gray-500">{companyId}</p>
+            </div>
             <button
               onClick={onLogout}
               className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"

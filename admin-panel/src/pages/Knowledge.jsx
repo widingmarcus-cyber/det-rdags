@@ -1,25 +1,27 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useContext } from 'react'
+import { AuthContext } from '../App'
 
 const API_BASE = '/api'
 
-function Knowledge({ tenantId }) {
+function Knowledge() {
+  const { authFetch } = useContext(AuthContext)
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
-  const [editIndex, setEditIndex] = useState(null)
+  const [editItem, setEditItem] = useState(null)
   const [formData, setFormData] = useState({ question: '', answer: '' })
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     fetchKnowledge()
-  }, [tenantId])
+  }, [])
 
   const fetchKnowledge = async () => {
     try {
-      const response = await fetch(`${API_BASE}/knowledge/${tenantId}`)
+      const response = await authFetch(`${API_BASE}/knowledge`)
       if (response.ok) {
         const data = await response.json()
-        setItems(data.items || [])
+        setItems(data)
       }
     } catch (error) {
       console.error('Kunde inte hämta kunskapsbas:', error)
@@ -29,22 +31,22 @@ function Knowledge({ tenantId }) {
   }
 
   const handleAdd = () => {
-    setEditIndex(null)
+    setEditItem(null)
     setFormData({ question: '', answer: '' })
     setShowModal(true)
   }
 
-  const handleEdit = (index) => {
-    setEditIndex(index)
-    setFormData(items[index])
+  const handleEdit = (item) => {
+    setEditItem(item)
+    setFormData({ question: item.question, answer: item.answer })
     setShowModal(true)
   }
 
-  const handleDelete = async (index) => {
+  const handleDelete = async (item) => {
     if (!confirm('Är du säker på att du vill ta bort denna post?')) return
 
     try {
-      const response = await fetch(`${API_BASE}/knowledge/${tenantId}/${index}`, {
+      const response = await authFetch(`${API_BASE}/knowledge/${item.id}`, {
         method: 'DELETE'
       })
       if (response.ok) {
@@ -60,22 +62,26 @@ function Knowledge({ tenantId }) {
     setSaving(true)
 
     try {
-      if (editIndex !== null) {
-        // Ta bort gammal och lägg till ny
-        await fetch(`${API_BASE}/knowledge/${tenantId}/${editIndex}`, {
-          method: 'DELETE'
+      if (editItem) {
+        // Uppdatera befintlig
+        const response = await authFetch(`${API_BASE}/knowledge/${editItem.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(formData)
         })
-      }
-
-      const response = await fetch(`${API_BASE}/knowledge/${tenantId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      })
-
-      if (response.ok) {
-        setShowModal(false)
-        fetchKnowledge()
+        if (response.ok) {
+          setShowModal(false)
+          fetchKnowledge()
+        }
+      } else {
+        // Lägg till ny
+        const response = await authFetch(`${API_BASE}/knowledge`, {
+          method: 'POST',
+          body: JSON.stringify(formData)
+        })
+        if (response.ok) {
+          setShowModal(false)
+          fetchKnowledge()
+        }
       }
     } catch (error) {
       console.error('Kunde inte spara:', error)
@@ -118,8 +124,8 @@ function Knowledge({ tenantId }) {
         </div>
       ) : (
         <div className="space-y-4">
-          {items.map((item, index) => (
-            <div key={index} className="bg-white rounded-xl shadow-sm border p-6">
+          {items.map((item) => (
+            <div key={item.id} className="bg-white rounded-xl shadow-sm border p-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <h3 className="font-medium text-gray-800">{item.question}</h3>
@@ -127,14 +133,14 @@ function Knowledge({ tenantId }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => handleEdit(index)}
+                    onClick={() => handleEdit(item)}
                     className="p-2 text-gray-500 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
                     title="Redigera"
                   >
                     ✏️
                   </button>
                   <button
-                    onClick={() => handleDelete(index)}
+                    onClick={() => handleDelete(item)}
                     className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     title="Ta bort"
                   >
@@ -153,7 +159,7 @@ function Knowledge({ tenantId }) {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
             <div className="p-6 border-b">
               <h2 className="text-lg font-semibold text-gray-800">
-                {editIndex !== null ? 'Redigera post' : 'Lägg till ny post'}
+                {editItem ? 'Redigera post' : 'Lägg till ny post'}
               </h2>
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-4">

@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useState, useContext } from 'react'
+import { AuthContext } from '../App'
 
 const API_BASE = '/api'
 
-function Preview({ tenantId }) {
+function Preview() {
+  const { auth } = useContext(AuthContext)
   const [messages, setMessages] = useState([
     {
       type: 'bot',
@@ -22,12 +24,11 @@ function Preview({ tenantId }) {
     setLoading(true)
 
     try {
-      const response = await fetch(`${API_BASE}/chat`, {
+      const response = await fetch(`${API_BASE}/chat/${auth.companyId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question: userMessage,
-          tenant_id: tenantId
+          question: userMessage
         })
       })
 
