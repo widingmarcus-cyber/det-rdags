@@ -585,6 +585,16 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
 
     company_name = settings.company_name if settings else "fastighetsbolaget"
 
+    # GDPR/Privacy info for the AI to use
+    gdpr_info = ""
+    if settings:
+        if settings.data_controller_name:
+            gdpr_info += f"\nCompany GDPR/Privacy contact: {settings.data_controller_name}"
+            if settings.data_controller_email:
+                gdpr_info += f" ({settings.data_controller_email})"
+        if settings.privacy_policy_url:
+            gdpr_info += f"\nPrivacy policy: {settings.privacy_policy_url}"
+
     # Category-specific guidance when no exact context found
     category_guidance = ""
     if not context and category and category != "allmant":
@@ -605,10 +615,12 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
         short_message_hint = "\nThe customer's message is brief. Be friendly and ask a clarifying question to better help them.\n"
 
     return f"""You are a helpful, friendly customer service assistant for {company_name}.
-
+{gdpr_info}
 CRITICAL LANGUAGE REQUIREMENT: {lang_instruction}
 You are responding to a customer who speaks {target_lang}. Your ENTIRE response must be in {target_lang}.
 DO NOT use any other language. If the knowledge base answers are in a different language, translate them.
+
+IMPORTANT: Only state facts from the knowledge base or company info provided above. Do NOT make up names, contact persons, or any other information. If you don't have the information, say so honestly.
 {category_guidance}{short_message_hint}
 {context_text}
 Customer question: {question}

@@ -238,8 +238,8 @@ function Knowledge() {
   })
 
   const getCategoryLabel = (value) => {
-    const cat = CATEGORIES.find(c => c.value === value)
-    return cat ? cat.label : value
+    // Categories are now simple strings, so just return the value
+    return value || 'Ingen kategori'
   }
 
   const handleUrlImport = async (e) => {
