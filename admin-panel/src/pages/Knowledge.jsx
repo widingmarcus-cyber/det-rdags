@@ -4,14 +4,14 @@ import { AuthContext } from '../App'
 
 const API_BASE = '/api'
 
-// Default categories (used if no custom categories are set)
+// Default categories
 const DEFAULT_CATEGORIES = [
-  { value: 'hyra', label: 'Hyra & Betalning' },
-  { value: 'felanmalan', label: 'Felanmälan' },
-  { value: 'tvattstuga', label: 'Tvättstuga' },
-  { value: 'parkering', label: 'Parkering' },
-  { value: 'kontrakt', label: 'Kontrakt & Uppsägning' },
-  { value: 'allmant', label: 'Allmänt' },
+  'Hyra & Betalning',
+  'Felanmälan',
+  'Tvättstuga',
+  'Parkering',
+  'Kontrakt & Uppsägning',
+  'Allmänt',
 ]
 
 function Knowledge() {
@@ -35,13 +35,10 @@ function Knowledge() {
   const [exporting, setExporting] = useState(false)
   const [similarQuestions, setSimilarQuestions] = useState([])
   const [checkingSimilar, setCheckingSimilar] = useState(false)
-  const [customCategories, setCustomCategories] = useState([])
-
-  // Get categories with "All" option prepended
-  const CATEGORIES = [
-    { value: '', label: 'Alla kategorier' },
-    ...(customCategories.length > 0 ? customCategories : DEFAULT_CATEGORIES)
-  ]
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES)
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [editingCategory, setEditingCategory] = useState(null)
 
   useEffect(() => {
     fetchKnowledge()
@@ -57,7 +54,9 @@ function Knowledge() {
           try {
             const parsed = JSON.parse(data.custom_categories)
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setCustomCategories(parsed)
+              // Support both old format [{value, label}] and new format [string]
+              const cats = parsed.map(c => typeof c === 'string' ? c : c.label)
+              setCategories(cats)
             }
           } catch {
             // Use default categories if parsing fails
@@ -67,6 +66,52 @@ function Knowledge() {
     } catch (error) {
       console.error('Kunde inte hämta inställningar:', error)
     }
+  }
+
+  const saveCategories = async (newCategories) => {
+    try {
+      await authFetch(`${API_BASE}/settings`, {
+        method: 'PUT',
+        body: JSON.stringify({ custom_categories: JSON.stringify(newCategories) })
+      })
+      setCategories(newCategories)
+    } catch (error) {
+      console.error('Kunde inte spara kategorier:', error)
+    }
+  }
+
+  const addCategory = () => {
+    if (!newCategoryName.trim()) return
+    if (categories.includes(newCategoryName.trim())) return
+    const newCategories = [...categories, newCategoryName.trim()]
+    saveCategories(newCategories)
+    setNewCategoryName('')
+  }
+
+  const updateCategory = (oldName, newName) => {
+    if (!newName.trim() || oldName === newName.trim()) {
+      setEditingCategory(null)
+      return
+    }
+    const newCategories = categories.map(c => c === oldName ? newName.trim() : c)
+    saveCategories(newCategories)
+    setEditingCategory(null)
+    // Update items with old category name
+    items.forEach(item => {
+      if (item.category === oldName) {
+        authFetch(`${API_BASE}/knowledge/${item.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ ...item, category: newName.trim() })
+        })
+      }
+    })
+    fetchKnowledge()
+  }
+
+  const deleteCategory = (name) => {
+    if (!confirm(`Ta bort kategorin "${name}"? Frågor i denna kategori blir utan kategori.`)) return
+    const newCategories = categories.filter(c => c !== name)
+    saveCategories(newCategories)
   }
 
   // Handle prefilled question from Analytics page
@@ -547,11 +592,24 @@ function Knowledge() {
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
           className="input w-48"
+          aria-label="Filtrera efter kategori"
         >
-          {CATEGORIES.map(cat => (
-            <option key={cat.value} value={cat.value}>{cat.label}</option>
+          <option value="">Alla kategorier</option>
+          {categories.map(cat => (
+            <option key={cat} value={cat}>{cat}</option>
           ))}
         </select>
+        <button
+          onClick={() => setShowCategoryModal(true)}
+          className="btn btn-ghost"
+          title="Hantera kategorier"
+          aria-label="Hantera kategorier"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7m0-18H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7m0-18v18" />
+          </svg>
+          Kategorier
+        </button>
       </div>
 
       {loading ? (
@@ -670,8 +728,8 @@ function Knowledge() {
                   className="input"
                 >
                   <option value="">Välj kategori (valfritt)</option>
-                  {CATEGORIES.slice(1).map(cat => (
-                    <option key={cat.value} value={cat.value}>{cat.label}</option>
+                  {categories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
               </div>
@@ -814,6 +872,108 @@ function Knowledge() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Category Management Modal */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="category-modal-title">
+          <div className="bg-bg-tertiary rounded-xl shadow-lg w-full max-w-md animate-scale-in">
+            <div className="flex items-center justify-between p-4 border-b border-border-subtle">
+              <h3 id="category-modal-title" className="text-lg font-medium text-text-primary">Hantera kategorier</h3>
+              <button
+                onClick={() => setShowCategoryModal(false)}
+                className="p-2 hover:bg-bg-secondary rounded-lg transition-colors"
+                aria-label="Stäng"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              {/* Add new category */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addCategory()}
+                  placeholder="Ny kategori..."
+                  className="input flex-1"
+                  aria-label="Ny kategori"
+                />
+                <button
+                  onClick={addCategory}
+                  disabled={!newCategoryName.trim()}
+                  className="btn btn-primary"
+                  aria-label="Lägg till kategori"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Category list */}
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {categories.length === 0 ? (
+                  <p className="text-center py-4 text-text-tertiary">Inga kategorier. Lägg till din första!</p>
+                ) : (
+                  categories.map((cat) => (
+                    <div key={cat} className="flex items-center gap-2 p-2 bg-bg-secondary rounded-lg">
+                      {editingCategory === cat ? (
+                        <input
+                          type="text"
+                          defaultValue={cat}
+                          autoFocus
+                          onBlur={(e) => updateCategory(cat, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') updateCategory(cat, e.target.value)
+                            if (e.key === 'Escape') setEditingCategory(null)
+                          }}
+                          className="input flex-1 py-1"
+                          aria-label="Redigera kategori"
+                        />
+                      ) : (
+                        <>
+                          <span className="flex-1 text-text-primary">{cat}</span>
+                          <button
+                            onClick={() => setEditingCategory(cat)}
+                            className="p-1.5 hover:bg-bg-tertiary rounded transition-colors"
+                            title="Redigera"
+                            aria-label={`Redigera ${cat}`}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => deleteCategory(cat)}
+                            className="p-1.5 hover:bg-error-soft hover:text-error rounded transition-colors"
+                            title="Ta bort"
+                            aria-label={`Ta bort ${cat}`}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <p className="text-xs text-text-tertiary">
+                Klicka på pennan för att redigera, eller papperskorgen för att ta bort.
+              </p>
+            </div>
           </div>
         </div>
       )}

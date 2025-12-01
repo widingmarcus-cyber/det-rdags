@@ -19,7 +19,6 @@ function Settings() {
     notification_email: '',
     custom_categories: '',
   })
-  const [newCategory, setNewCategory] = useState({ value: '', label: '' })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -28,38 +27,11 @@ function Settings() {
   const tabs = [
     { id: 'general', label: 'Allmänt', icon: 'building' },
     { id: 'chatbot', label: 'Chatbot', icon: 'chat' },
-    { id: 'categories', label: 'Kategorier', icon: 'folder' },
     { id: 'appearance', label: 'Utseende', icon: 'palette' },
     { id: 'notifications', label: 'Notiser', icon: 'bell' },
     { id: 'privacy', label: 'Integritet', icon: 'shield' },
     { id: 'install', label: 'Installation', icon: 'code' },
   ]
-
-  // Parse categories from JSON string
-  const getCategories = () => {
-    try {
-      return settings.custom_categories ? JSON.parse(settings.custom_categories) : []
-    } catch {
-      return []
-    }
-  }
-
-  // Add a new category
-  const addCategory = () => {
-    if (!newCategory.value.trim() || !newCategory.label.trim()) return
-    const categories = getCategories()
-    // Check if value already exists
-    if (categories.some(c => c.value === newCategory.value.trim())) return
-    categories.push({ value: newCategory.value.trim(), label: newCategory.label.trim() })
-    setSettings({ ...settings, custom_categories: JSON.stringify(categories) })
-    setNewCategory({ value: '', label: '' })
-  }
-
-  // Remove a category
-  const removeCategory = (value) => {
-    const categories = getCategories().filter(c => c.value !== value)
-    setSettings({ ...settings, custom_categories: JSON.stringify(categories) })
-  }
 
   useEffect(() => {
     fetchSettings()
@@ -157,12 +129,6 @@ function Settings() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <polyline points="16 18 22 12 16 6" />
             <polyline points="8 6 2 12 8 18" />
-          </svg>
-        )
-      case 'folder':
-        return (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
           </svg>
         )
       default:
@@ -320,109 +286,6 @@ function Settings() {
                       <line x1="12" y1="8" x2="12.01" y2="8" />
                     </svg>
                     <span>Chatboten svarar automatiskt på samma språk som användaren skriver</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Categories Tab */}
-          {activeTab === 'categories' && (
-            <div className="card animate-fade-in">
-              <div className="flex items-start gap-3 mb-6">
-                <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center flex-shrink-0">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
-                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-lg font-medium text-text-primary">Kategorier</h2>
-                  <p className="text-sm text-text-secondary">Skapa egna kategorier för din kunskapsbas</p>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                {/* Add new category */}
-                <div className="bg-bg-secondary rounded-lg p-4 border border-border-subtle">
-                  <h4 className="text-sm font-medium text-text-primary mb-3">Lägg till kategori</h4>
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={newCategory.value}
-                        onChange={(e) => setNewCategory({ ...newCategory, value: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') })}
-                        placeholder="kategori-id (t.ex. hyra)"
-                        className="input"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={newCategory.label}
-                        onChange={(e) => setNewCategory({ ...newCategory, label: e.target.value })}
-                        placeholder="Visningsnamn (t.ex. Hyra & Betalning)"
-                        className="input"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={addCategory}
-                      disabled={!newCategory.value.trim() || !newCategory.label.trim()}
-                      className="btn btn-primary"
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <line x1="12" y1="5" x2="12" y2="19" />
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                      </svg>
-                      Lägg till
-                    </button>
-                  </div>
-                </div>
-
-                {/* Existing categories */}
-                <div>
-                  <h4 className="text-sm font-medium text-text-primary mb-3">Dina kategorier</h4>
-                  {getCategories().length === 0 ? (
-                    <div className="text-center py-8 bg-bg-secondary rounded-lg border border-border-subtle">
-                      <p className="text-text-tertiary">Inga kategorier ännu. Lägg till din första kategori ovan.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {getCategories().map((cat) => (
-                        <div
-                          key={cat.value}
-                          className="flex items-center justify-between p-3 bg-bg-secondary rounded-lg border border-border-subtle"
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="badge badge-accent">{cat.label}</span>
-                            <span className="text-xs text-text-tertiary font-mono">{cat.value}</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeCategory(cat.value)}
-                            className="p-2 text-text-tertiary hover:text-error hover:bg-error-soft rounded-md transition-colors"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                              <polyline points="3 6 5 6 21 6" />
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                            </svg>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-accent-soft border border-accent/20 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent flex-shrink-0 mt-0.5">
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" y1="16" x2="12" y2="12" />
-                      <line x1="12" y1="8" x2="12.01" y2="8" />
-                    </svg>
-                    <p className="text-sm text-text-secondary">
-                      Kategorier hjälper dig organisera din kunskapsbas. De visas i filtret på kunskapsbas-sidan och kan väljas när du lägger till frågor/svar.
-                    </p>
                   </div>
                 </div>
               </div>

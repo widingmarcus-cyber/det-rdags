@@ -221,6 +221,7 @@ class StatsResponse(BaseModel):
     knowledge_items: int
     questions_today: int
     questions_this_week: int
+    questions_this_month: int
 
 
 class SettingsUpdate(BaseModel):
@@ -1775,11 +1776,18 @@ async def get_stats(
         ChatLog.created_at >= week_ago
     ).count()
 
+    month_ago = datetime.utcnow() - timedelta(days=30)
+    month_count = db.query(ChatLog).filter(
+        ChatLog.company_id == company_id,
+        ChatLog.created_at >= month_ago
+    ).count()
+
     return StatsResponse(
         total_questions=total,
         knowledge_items=knowledge,
         questions_today=today_count,
-        questions_this_week=week_count
+        questions_this_week=week_count,
+        questions_this_month=month_count
     )
 
 

@@ -11,10 +11,13 @@ function Dashboard() {
     totalKnowledge: 0,
     questionsToday: 0,
     questionsWeek: 0,
+    questionsMonth: 0,
     answerRate: 0
   })
   const [dailyStats, setDailyStats] = useState([])
+  const [allDailyStats, setAllDailyStats] = useState([])
   const [loading, setLoading] = useState(true)
+  const [chartPeriod, setChartPeriod] = useState(7) // 7 or 30 days
 
   useEffect(() => {
     fetchStats()
@@ -31,6 +34,7 @@ function Dashboard() {
           totalQuestions: data.total_questions || 0,
           questionsToday: data.questions_today || 0,
           questionsWeek: data.questions_this_week || 0,
+          questionsMonth: data.questions_this_month || 0,
           answerRate: data.answer_rate || 0
         })
       }
@@ -46,12 +50,18 @@ function Dashboard() {
       const response = await authFetch(`${API_BASE}/analytics`)
       if (response.ok) {
         const data = await response.json()
-        setDailyStats(data.daily_stats?.slice(-7) || [])
+        const allStats = data.daily_stats || []
+        setAllDailyStats(allStats)
+        setDailyStats(allStats.slice(-7))
       }
     } catch (error) {
       console.error('Kunde inte hämta analytics:', error)
     }
   }
+
+  useEffect(() => {
+    setDailyStats(allDailyStats.slice(-chartPeriod))
+  }, [chartPeriod, allDailyStats])
 
   const StatCard = ({ title, value, icon, trend }) => (
     <div className="card group hover:shadow-md">
@@ -85,7 +95,7 @@ function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         <StatCard
           title="Kunskapsposter"
           value={stats.totalKnowledge}
@@ -130,20 +140,54 @@ function Dashboard() {
           }
           trend="frågor"
         />
+        <StatCard
+          title="Senaste 30 dagar"
+          value={stats.questionsMonth}
+          icon={
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+              <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
+            </svg>
+          }
+          trend="frågor"
+        />
       </div>
 
-      {/* Weekly Chart */}
+      {/* Activity Chart */}
       {dailyStats.length > 0 && (
         <div className="card mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-text-primary">Aktivitet senaste 7 dagarna</h2>
-            <div className="flex items-center gap-4 text-xs text-text-tertiary">
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-accent"></span> Frågor
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-success"></span> Besvarade
-              </span>
+            <h2 className="text-lg font-medium text-text-primary">
+              Aktivitet senaste {chartPeriod} dagarna
+            </h2>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 text-xs text-text-tertiary">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-accent"></span> Frågor
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-success"></span> Besvarade
+                </span>
+              </div>
+              <div className="flex rounded-lg bg-bg-secondary p-1">
+                <button
+                  onClick={() => setChartPeriod(7)}
+                  className={`px-3 py-1 text-xs rounded-md transition-colors ${chartPeriod === 7 ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary'}`}
+                  aria-pressed={chartPeriod === 7}
+                >
+                  7 dagar
+                </button>
+                <button
+                  onClick={() => setChartPeriod(30)}
+                  className={`px-3 py-1 text-xs rounded-md transition-colors ${chartPeriod === 30 ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary'}`}
+                  aria-pressed={chartPeriod === 30}
+                >
+                  30 dagar
+                </button>
+              </div>
             </div>
           </div>
           <div className="h-40 flex items-end gap-2">
