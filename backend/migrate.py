@@ -88,6 +88,128 @@ def migrate():
         """)
         cursor.execute("CREATE INDEX ix_global_settings_id ON global_settings (id)")
 
+    # Check if subscriptions table exists
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='subscriptions'")
+    if not cursor.fetchone():
+        print("Creating subscriptions table...")
+        cursor.execute("""
+            CREATE TABLE subscriptions (
+                id INTEGER PRIMARY KEY,
+                company_id VARCHAR UNIQUE NOT NULL,
+                plan_name VARCHAR DEFAULT 'free',
+                plan_price REAL DEFAULT 0,
+                billing_cycle VARCHAR DEFAULT 'monthly',
+                status VARCHAR DEFAULT 'active',
+                trial_ends_at DATETIME,
+                current_period_start DATETIME,
+                current_period_end DATETIME,
+                plan_features TEXT DEFAULT '{}',
+                external_customer_id VARCHAR,
+                external_subscription_id VARCHAR,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (company_id) REFERENCES companies(id)
+            )
+        """)
+
+    # Check if invoices table exists
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='invoices'")
+    if not cursor.fetchone():
+        print("Creating invoices table...")
+        cursor.execute("""
+            CREATE TABLE invoices (
+                id INTEGER PRIMARY KEY,
+                company_id VARCHAR NOT NULL,
+                invoice_number VARCHAR UNIQUE NOT NULL,
+                amount REAL NOT NULL,
+                currency VARCHAR DEFAULT 'SEK',
+                description TEXT,
+                period_start DATE,
+                period_end DATE,
+                status VARCHAR DEFAULT 'pending',
+                due_date DATE,
+                paid_at DATETIME,
+                payment_method VARCHAR,
+                external_invoice_id VARCHAR,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (company_id) REFERENCES companies(id)
+            )
+        """)
+
+    # Check if company_notes table exists
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='company_notes'")
+    if not cursor.fetchone():
+        print("Creating company_notes table...")
+        cursor.execute("""
+            CREATE TABLE company_notes (
+                id INTEGER PRIMARY KEY,
+                company_id VARCHAR NOT NULL,
+                content TEXT NOT NULL,
+                created_by VARCHAR NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                is_pinned INTEGER DEFAULT 0,
+                FOREIGN KEY (company_id) REFERENCES companies(id)
+            )
+        """)
+
+    # Check if widget_performance table exists
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='widget_performance'")
+    if not cursor.fetchone():
+        print("Creating widget_performance table...")
+        cursor.execute("""
+            CREATE TABLE widget_performance (
+                id INTEGER PRIMARY KEY,
+                company_id VARCHAR NOT NULL,
+                hour DATETIME NOT NULL,
+                total_requests INTEGER DEFAULT 0,
+                successful_requests INTEGER DEFAULT 0,
+                failed_requests INTEGER DEFAULT 0,
+                rate_limited_requests INTEGER DEFAULT 0,
+                avg_response_time REAL DEFAULT 0,
+                min_response_time INTEGER DEFAULT 0,
+                max_response_time INTEGER DEFAULT 0,
+                p95_response_time INTEGER DEFAULT 0,
+                error_counts TEXT DEFAULT '{}',
+                FOREIGN KEY (company_id) REFERENCES companies(id)
+            )
+        """)
+
+    # Check if email_notification_queue table exists
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='email_notification_queue'")
+    if not cursor.fetchone():
+        print("Creating email_notification_queue table...")
+        cursor.execute("""
+            CREATE TABLE email_notification_queue (
+                id INTEGER PRIMARY KEY,
+                company_id VARCHAR,
+                notification_type VARCHAR NOT NULL,
+                recipient_email VARCHAR NOT NULL,
+                subject VARCHAR NOT NULL,
+                body TEXT NOT NULL,
+                status VARCHAR DEFAULT 'pending',
+                scheduled_for DATETIME DEFAULT CURRENT_TIMESTAMP,
+                sent_at DATETIME,
+                error_message TEXT,
+                notification_key VARCHAR UNIQUE,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (company_id) REFERENCES companies(id)
+            )
+        """)
+
+    # Add 2FA columns to super_admins
+    cursor.execute("PRAGMA table_info(super_admins)")
+    admin_columns = {row[1] for row in cursor.fetchall()}
+
+    if "totp_secret" not in admin_columns:
+        print("Adding 2FA columns to super_admins...")
+        cursor.execute("ALTER TABLE super_admins ADD COLUMN totp_secret VARCHAR")
+        cursor.execute("ALTER TABLE super_admins ADD COLUMN totp_enabled INTEGER DEFAULT 0")
+        cursor.execute("ALTER TABLE super_admins ADD COLUMN backup_codes TEXT")
+        cursor.execute("ALTER TABLE super_admins ADD COLUMN last_login DATETIME")
+        cursor.execute("ALTER TABLE super_admins ADD COLUMN last_login_ip VARCHAR")
+        cursor.execute("ALTER TABLE super_admins ADD COLUMN dark_mode INTEGER DEFAULT 0")
+
     conn.commit()
     conn.close()
 

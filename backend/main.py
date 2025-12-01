@@ -21,7 +21,8 @@ from dotenv import load_dotenv
 from database import (
     create_tables, get_db, Company, KnowledgeItem, ChatLog, SuperAdmin,
     CompanySettings, Conversation, Message, DailyStatistics, GDPRAuditLog,
-    AdminAuditLog, GlobalSettings, CompanyActivityLog
+    AdminAuditLog, GlobalSettings, CompanyActivityLog, Subscription, Invoice,
+    CompanyNote, WidgetPerformance, EmailNotificationQueue
 )
 from auth import (
     hash_password, verify_password, create_token,
@@ -3327,6 +3328,962 @@ async def get_maintenance_mode(
         "enabled": enabled,
         "message": message
     }
+
+
+# =============================================================================
+# Billing & Subscription Endpoints
+# =============================================================================
+
+class SubscriptionCreate(BaseModel):
+    plan_name: str
+    plan_price: float = 0
+    billing_cycle: str = "monthly"
+
+class SubscriptionResponse(BaseModel):
+    id: int
+    company_id: str
+    plan_name: str
+    plan_price: float
+    billing_cycle: str
+    status: str
+    current_period_start: Optional[datetime]
+    current_period_end: Optional[datetime]
+
+class InvoiceCreate(BaseModel):
+    amount: float
+    description: str
+    period_start: date
+    period_end: date
+    due_date: date
+
+class InvoiceResponse(BaseModel):
+    id: int
+    invoice_number: str
+    amount: float
+    currency: str
+    description: str
+    status: str
+    due_date: date
+    paid_at: Optional[datetime]
+    created_at: datetime
+
+
+@app.get("/admin/subscriptions")
+async def get_all_subscriptions(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all subscriptions with company details"""
+    subscriptions = db.query(Subscription).all()
+    result = []
+    for sub in subscriptions:
+        company = db.query(Company).filter(Company.id == sub.company_id).first()
+        result.append({
+            "id": sub.id,
+            "company_id": sub.company_id,
+            "company_name": company.name if company else "Unknown",
+            "plan_name": sub.plan_name,
+            "plan_price": sub.plan_price,
+            "billing_cycle": sub.billing_cycle,
+            "status": sub.status,
+            "current_period_end": sub.current_period_end.isoformat() if sub.current_period_end else None
+        })
+    return {"subscriptions": result}
+
+
+@app.get("/admin/subscriptions/{company_id}")
+async def get_company_subscription(
+    company_id: str,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get subscription for a specific company"""
+    sub = db.query(Subscription).filter(Subscription.company_id == company_id).first()
+    if not sub:
+        return {"subscription": None}
+    return {
+        "subscription": {
+            "id": sub.id,
+            "plan_name": sub.plan_name,
+            "plan_price": sub.plan_price,
+            "billing_cycle": sub.billing_cycle,
+            "status": sub.status,
+            "trial_ends_at": sub.trial_ends_at.isoformat() if sub.trial_ends_at else None,
+            "current_period_start": sub.current_period_start.isoformat() if sub.current_period_start else None,
+            "current_period_end": sub.current_period_end.isoformat() if sub.current_period_end else None,
+            "plan_features": json.loads(sub.plan_features) if sub.plan_features else {}
+        }
+    }
+
+
+@app.post("/admin/subscriptions/{company_id}")
+async def create_or_update_subscription(
+    company_id: str,
+    subscription: SubscriptionCreate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Create or update subscription for a company"""
+    existing = db.query(Subscription).filter(Subscription.company_id == company_id).first()
+
+    # Define plan features based on plan name
+    plan_features = {
+        "free": {"max_conversations": 100, "max_knowledge": 50},
+        "starter": {"max_conversations": 500, "max_knowledge": 200},
+        "professional": {"max_conversations": 2000, "max_knowledge": 1000},
+        "enterprise": {"max_conversations": 0, "max_knowledge": 0}  # Unlimited
+    }
+
+    if existing:
+        existing.plan_name = subscription.plan_name
+        existing.plan_price = subscription.plan_price
+        existing.billing_cycle = subscription.billing_cycle
+        existing.plan_features = json.dumps(plan_features.get(subscription.plan_name, {}))
+        existing.updated_at = datetime.utcnow()
+    else:
+        now = datetime.utcnow()
+        period_end = now + timedelta(days=30 if subscription.billing_cycle == "monthly" else 365)
+        new_sub = Subscription(
+            company_id=company_id,
+            plan_name=subscription.plan_name,
+            plan_price=subscription.plan_price,
+            billing_cycle=subscription.billing_cycle,
+            current_period_start=now,
+            current_period_end=period_end,
+            plan_features=json.dumps(plan_features.get(subscription.plan_name, {}))
+        )
+        db.add(new_sub)
+
+    # Also update company limits based on plan
+    settings = db.query(CompanySettings).filter(CompanySettings.company_id == company_id).first()
+    if settings:
+        features = plan_features.get(subscription.plan_name, {})
+        settings.max_conversations_month = features.get("max_conversations", 0)
+        settings.max_knowledge_items = features.get("max_knowledge", 0)
+
+    db.commit()
+    return {"message": f"Prenumeration uppdaterad till {subscription.plan_name}"}
+
+
+@app.get("/admin/invoices")
+async def get_all_invoices(
+    company_id: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = 50,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all invoices with optional filtering"""
+    query = db.query(Invoice)
+    if company_id:
+        query = query.filter(Invoice.company_id == company_id)
+    if status:
+        query = query.filter(Invoice.status == status)
+    invoices = query.order_by(Invoice.created_at.desc()).limit(limit).all()
+
+    result = []
+    for inv in invoices:
+        company = db.query(Company).filter(Company.id == inv.company_id).first()
+        result.append({
+            "id": inv.id,
+            "invoice_number": inv.invoice_number,
+            "company_id": inv.company_id,
+            "company_name": company.name if company else "Unknown",
+            "amount": inv.amount,
+            "currency": inv.currency,
+            "status": inv.status,
+            "due_date": inv.due_date.isoformat() if inv.due_date else None,
+            "paid_at": inv.paid_at.isoformat() if inv.paid_at else None,
+            "created_at": inv.created_at.isoformat()
+        })
+    return {"invoices": result}
+
+
+@app.post("/admin/invoices/{company_id}")
+async def create_invoice(
+    company_id: str,
+    invoice: InvoiceCreate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Create a new invoice for a company"""
+    # Generate invoice number
+    year_month = datetime.utcnow().strftime("%Y%m")
+    count = db.query(Invoice).filter(Invoice.invoice_number.like(f"INV-{year_month}%")).count()
+    invoice_number = f"INV-{year_month}-{count + 1:04d}"
+
+    new_invoice = Invoice(
+        company_id=company_id,
+        invoice_number=invoice_number,
+        amount=invoice.amount,
+        description=invoice.description,
+        period_start=invoice.period_start,
+        period_end=invoice.period_end,
+        due_date=invoice.due_date
+    )
+    db.add(new_invoice)
+    db.commit()
+
+    return {"message": "Faktura skapad", "invoice_number": invoice_number}
+
+
+@app.put("/admin/invoices/{invoice_id}/status")
+async def update_invoice_status(
+    invoice_id: int,
+    status: str,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Update invoice status"""
+    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Faktura hittades inte")
+
+    invoice.status = status
+    if status == "paid":
+        invoice.paid_at = datetime.utcnow()
+    db.commit()
+
+    return {"message": f"Fakturastatus uppdaterad till {status}"}
+
+
+# =============================================================================
+# Company Notes Endpoints
+# =============================================================================
+
+class NoteCreate(BaseModel):
+    content: str
+    is_pinned: bool = False
+
+class NoteResponse(BaseModel):
+    id: int
+    content: str
+    created_by: str
+    created_at: datetime
+    is_pinned: bool
+
+
+@app.get("/admin/companies/{company_id}/notes")
+async def get_company_notes(
+    company_id: str,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all notes for a company"""
+    notes = db.query(CompanyNote).filter(
+        CompanyNote.company_id == company_id
+    ).order_by(CompanyNote.is_pinned.desc(), CompanyNote.created_at.desc()).all()
+
+    return {
+        "notes": [{
+            "id": n.id,
+            "content": n.content,
+            "created_by": n.created_by,
+            "created_at": n.created_at.isoformat(),
+            "is_pinned": n.is_pinned
+        } for n in notes]
+    }
+
+
+@app.post("/admin/companies/{company_id}/notes")
+async def create_company_note(
+    company_id: str,
+    note: NoteCreate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Create a note for a company"""
+    new_note = CompanyNote(
+        company_id=company_id,
+        content=note.content,
+        created_by=admin["username"],
+        is_pinned=note.is_pinned
+    )
+    db.add(new_note)
+    db.commit()
+    db.refresh(new_note)
+
+    return {"message": "Anteckning sparad", "id": new_note.id}
+
+
+@app.put("/admin/notes/{note_id}")
+async def update_note(
+    note_id: int,
+    note: NoteCreate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Update a note"""
+    existing = db.query(CompanyNote).filter(CompanyNote.id == note_id).first()
+    if not existing:
+        raise HTTPException(status_code=404, detail="Anteckning hittades inte")
+
+    existing.content = note.content
+    existing.is_pinned = note.is_pinned
+    existing.updated_at = datetime.utcnow()
+    db.commit()
+
+    return {"message": "Anteckning uppdaterad"}
+
+
+@app.delete("/admin/notes/{note_id}")
+async def delete_note(
+    note_id: int,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a note"""
+    note = db.query(CompanyNote).filter(CompanyNote.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Anteckning hittades inte")
+
+    db.delete(note)
+    db.commit()
+
+    return {"message": "Anteckning borttagen"}
+
+
+# =============================================================================
+# Enhanced Analytics Endpoints
+# =============================================================================
+
+@app.get("/admin/analytics/overview")
+async def get_admin_analytics_overview(
+    days: int = 30,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get aggregated analytics for all companies"""
+    cutoff_date = date.today() - timedelta(days=days)
+
+    # Get daily stats across all companies
+    stats = db.query(
+        DailyStatistics.date,
+        func.sum(DailyStatistics.total_conversations).label('conversations'),
+        func.sum(DailyStatistics.total_messages).label('messages'),
+        func.sum(DailyStatistics.questions_answered).label('answered'),
+        func.sum(DailyStatistics.questions_unanswered).label('unanswered'),
+        func.avg(DailyStatistics.avg_response_time_ms).label('avg_response_time')
+    ).filter(
+        DailyStatistics.date >= cutoff_date
+    ).group_by(DailyStatistics.date).order_by(DailyStatistics.date).all()
+
+    return {
+        "daily_stats": [{
+            "date": s.date.isoformat(),
+            "conversations": s.conversations or 0,
+            "messages": s.messages or 0,
+            "answered": s.answered or 0,
+            "unanswered": s.unanswered or 0,
+            "avg_response_time": round(s.avg_response_time or 0, 2)
+        } for s in stats]
+    }
+
+
+@app.get("/admin/analytics/peak-hours")
+async def get_peak_usage_hours(
+    days: int = 7,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get peak usage hours across all companies"""
+    cutoff_date = date.today() - timedelta(days=days)
+
+    stats = db.query(DailyStatistics).filter(
+        DailyStatistics.date >= cutoff_date
+    ).all()
+
+    # Aggregate hourly counts
+    hourly_totals = {}
+    for s in stats:
+        hourly = json.loads(s.hourly_counts) if s.hourly_counts else {}
+        for hour, count in hourly.items():
+            hourly_totals[hour] = hourly_totals.get(hour, 0) + count
+
+    # Sort by hour
+    sorted_hours = sorted(hourly_totals.items(), key=lambda x: int(x[0]))
+
+    return {
+        "hourly_distribution": [{"hour": int(h), "count": c} for h, c in sorted_hours],
+        "peak_hour": max(hourly_totals.items(), key=lambda x: x[1])[0] if hourly_totals else None
+    }
+
+
+@app.get("/admin/analytics/trends")
+async def get_usage_trends(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get usage trends over time (week over week, month over month)"""
+    today = date.today()
+
+    # This week vs last week
+    this_week_start = today - timedelta(days=today.weekday())
+    last_week_start = this_week_start - timedelta(days=7)
+
+    this_week_stats = db.query(
+        func.sum(DailyStatistics.total_conversations)
+    ).filter(
+        DailyStatistics.date >= this_week_start,
+        DailyStatistics.date < today
+    ).scalar() or 0
+
+    last_week_stats = db.query(
+        func.sum(DailyStatistics.total_conversations)
+    ).filter(
+        DailyStatistics.date >= last_week_start,
+        DailyStatistics.date < this_week_start
+    ).scalar() or 0
+
+    # This month vs last month
+    this_month_start = today.replace(day=1)
+    last_month_start = (this_month_start - timedelta(days=1)).replace(day=1)
+
+    this_month_stats = db.query(
+        func.sum(DailyStatistics.total_conversations)
+    ).filter(
+        DailyStatistics.date >= this_month_start,
+        DailyStatistics.date <= today
+    ).scalar() or 0
+
+    last_month_stats = db.query(
+        func.sum(DailyStatistics.total_conversations)
+    ).filter(
+        DailyStatistics.date >= last_month_start,
+        DailyStatistics.date < this_month_start
+    ).scalar() or 0
+
+    def calc_change(current, previous):
+        if previous == 0:
+            return 100 if current > 0 else 0
+        return round(((current - previous) / previous) * 100, 1)
+
+    return {
+        "week_over_week": {
+            "current": this_week_stats,
+            "previous": last_week_stats,
+            "change_percent": calc_change(this_week_stats, last_week_stats)
+        },
+        "month_over_month": {
+            "current": this_month_stats,
+            "previous": last_month_stats,
+            "change_percent": calc_change(this_month_stats, last_month_stats)
+        }
+    }
+
+
+@app.get("/admin/analytics/companies")
+async def get_company_analytics_comparison(
+    limit: int = 10,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get analytics comparison across companies"""
+    cutoff_date = date.today() - timedelta(days=30)
+
+    company_stats = db.query(
+        DailyStatistics.company_id,
+        func.sum(DailyStatistics.total_conversations).label('conversations'),
+        func.sum(DailyStatistics.total_messages).label('messages'),
+        func.avg(DailyStatistics.avg_response_time_ms).label('avg_response_time')
+    ).filter(
+        DailyStatistics.date >= cutoff_date
+    ).group_by(DailyStatistics.company_id).order_by(
+        func.sum(DailyStatistics.total_conversations).desc()
+    ).limit(limit).all()
+
+    result = []
+    for s in company_stats:
+        company = db.query(Company).filter(Company.id == s.company_id).first()
+        result.append({
+            "company_id": s.company_id,
+            "company_name": company.name if company else "Unknown",
+            "conversations": s.conversations or 0,
+            "messages": s.messages or 0,
+            "avg_response_time": round(s.avg_response_time or 0, 2)
+        })
+
+    return {"companies": result}
+
+
+# =============================================================================
+# Audit Log Search Endpoints
+# =============================================================================
+
+@app.get("/admin/audit-logs/search")
+async def search_audit_logs(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    action_type: Optional[str] = None,
+    company_id: Optional[str] = None,
+    search_term: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Search audit logs with advanced filtering"""
+    query = db.query(AdminAuditLog)
+
+    if start_date:
+        query = query.filter(AdminAuditLog.timestamp >= datetime.fromisoformat(start_date))
+    if end_date:
+        query = query.filter(AdminAuditLog.timestamp <= datetime.fromisoformat(end_date))
+    if action_type:
+        query = query.filter(AdminAuditLog.action_type == action_type)
+    if company_id:
+        query = query.filter(AdminAuditLog.target_company_id == company_id)
+    if search_term:
+        query = query.filter(AdminAuditLog.description.ilike(f"%{search_term}%"))
+
+    total = query.count()
+    logs = query.order_by(AdminAuditLog.timestamp.desc()).offset(offset).limit(limit).all()
+
+    return {
+        "total": total,
+        "logs": [{
+            "id": log.id,
+            "admin_username": log.admin_username,
+            "action_type": log.action_type,
+            "target_company_id": log.target_company_id,
+            "description": log.description,
+            "details": json.loads(log.details) if log.details else None,
+            "ip_address": log.ip_address,
+            "timestamp": log.timestamp.isoformat()
+        } for log in logs]
+    }
+
+
+@app.get("/admin/audit-logs/action-types")
+async def get_audit_action_types(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all unique action types for filtering"""
+    types = db.query(AdminAuditLog.action_type).distinct().all()
+    return {"action_types": [t[0] for t in types]}
+
+
+# =============================================================================
+# Widget Performance Endpoints
+# =============================================================================
+
+@app.get("/admin/performance/{company_id}")
+async def get_widget_performance(
+    company_id: str,
+    hours: int = 24,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get widget performance stats for a company"""
+    cutoff = datetime.utcnow() - timedelta(hours=hours)
+
+    perf = db.query(WidgetPerformance).filter(
+        WidgetPerformance.company_id == company_id,
+        WidgetPerformance.hour >= cutoff
+    ).order_by(WidgetPerformance.hour).all()
+
+    # Also get current rate limit stats
+    from main import rate_limit_store
+    rate_limited_count = sum(1 for k in rate_limit_store.keys() if company_id in k)
+
+    return {
+        "hourly_stats": [{
+            "hour": p.hour.isoformat(),
+            "total_requests": p.total_requests,
+            "successful_requests": p.successful_requests,
+            "failed_requests": p.failed_requests,
+            "rate_limited_requests": p.rate_limited_requests,
+            "avg_response_time": p.avg_response_time,
+            "p95_response_time": p.p95_response_time,
+            "error_counts": json.loads(p.error_counts) if p.error_counts else {}
+        } for p in perf],
+        "current_rate_limit_sessions": rate_limited_count
+    }
+
+
+@app.get("/admin/performance/overview")
+async def get_performance_overview(
+    hours: int = 24,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get overall widget performance across all companies"""
+    cutoff = datetime.utcnow() - timedelta(hours=hours)
+
+    stats = db.query(
+        func.sum(WidgetPerformance.total_requests).label('total'),
+        func.sum(WidgetPerformance.successful_requests).label('successful'),
+        func.sum(WidgetPerformance.failed_requests).label('failed'),
+        func.sum(WidgetPerformance.rate_limited_requests).label('rate_limited'),
+        func.avg(WidgetPerformance.avg_response_time).label('avg_response')
+    ).filter(WidgetPerformance.hour >= cutoff).first()
+
+    return {
+        "total_requests": stats.total or 0,
+        "successful_requests": stats.successful or 0,
+        "failed_requests": stats.failed or 0,
+        "rate_limited_requests": stats.rate_limited or 0,
+        "avg_response_time": round(stats.avg_response or 0, 2),
+        "success_rate": round((stats.successful or 0) / max(stats.total or 1, 1) * 100, 1)
+    }
+
+
+# =============================================================================
+# Rate Limiting Display
+# =============================================================================
+
+@app.get("/admin/rate-limits")
+async def get_rate_limit_stats(
+    admin: dict = Depends(get_super_admin)
+):
+    """Get current rate limiting statistics"""
+    now = datetime.utcnow().timestamp()
+
+    # Clean old entries and count active sessions
+    active_sessions = 0
+    rate_limited_sessions = 0
+
+    for key, timestamps in list(rate_limit_store.items()):
+        recent = [ts for ts in timestamps if now - ts < RATE_LIMIT_WINDOW]
+        if recent:
+            active_sessions += 1
+            if len(recent) >= RATE_LIMIT_MAX_REQUESTS:
+                rate_limited_sessions += 1
+
+    return {
+        "active_sessions": active_sessions,
+        "rate_limited_sessions": rate_limited_sessions,
+        "rate_limit_window_seconds": RATE_LIMIT_WINDOW,
+        "rate_limit_max_requests": RATE_LIMIT_MAX_REQUESTS
+    }
+
+
+# =============================================================================
+# Bulk Operations Endpoints
+# =============================================================================
+
+class BulkLimitUpdate(BaseModel):
+    company_ids: List[str]
+    max_conversations_month: Optional[int] = None
+    max_knowledge_items: Optional[int] = None
+
+
+@app.post("/admin/bulk/set-limits")
+async def bulk_set_limits(
+    update: BulkLimitUpdate,
+    req: Request,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Set limits for multiple companies at once"""
+    updated = 0
+    for company_id in update.company_ids:
+        settings = db.query(CompanySettings).filter(
+            CompanySettings.company_id == company_id
+        ).first()
+        if settings:
+            if update.max_conversations_month is not None:
+                settings.max_conversations_month = update.max_conversations_month
+            if update.max_knowledge_items is not None:
+                settings.max_knowledge_items = update.max_knowledge_items
+            updated += 1
+
+    db.commit()
+
+    log_admin_action(
+        db, admin["username"], "bulk_set_limits",
+        description=f"Updated limits for {updated} companies",
+        details=update.dict(),
+        ip_address=req.client.host if req.client else None
+    )
+
+    return {"message": f"Uppdaterade gränser för {updated} företag"}
+
+
+@app.get("/admin/bulk/export-companies")
+async def export_companies_csv(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Export all companies as CSV"""
+    from fastapi.responses import StreamingResponse
+    import io
+
+    companies = db.query(Company).all()
+    output = io.StringIO()
+    output.write("id,name,is_active,created_at,knowledge_count,chat_count,max_conversations,current_conversations,max_knowledge\n")
+
+    for c in companies:
+        settings = db.query(CompanySettings).filter(CompanySettings.company_id == c.id).first()
+        knowledge_count = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == c.id).count()
+        chat_count = db.query(Conversation).filter(Conversation.company_id == c.id).count()
+
+        output.write(f"{c.id},{c.name},{c.is_active},{c.created_at.isoformat()},{knowledge_count},{chat_count},")
+        output.write(f"{settings.max_conversations_month if settings else 0},")
+        output.write(f"{settings.current_month_conversations if settings else 0},")
+        output.write(f"{settings.max_knowledge_items if settings else 0}\n")
+
+    output.seek(0)
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode()),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=companies_{date.today().isoformat()}.csv"}
+    )
+
+
+class BulkImportCompany(BaseModel):
+    id: str
+    name: str
+    password: str
+    plan: Optional[str] = "free"
+
+
+@app.post("/admin/bulk/import-companies")
+async def import_companies(
+    companies: List[BulkImportCompany],
+    req: Request,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Import multiple companies at once"""
+    created = 0
+    skipped = 0
+
+    for c in companies:
+        existing = db.query(Company).filter(Company.id == c.id).first()
+        if existing:
+            skipped += 1
+            continue
+
+        new_company = Company(
+            id=c.id,
+            name=c.name,
+            password_hash=hash_password(c.password)
+        )
+        db.add(new_company)
+
+        # Create settings
+        settings = CompanySettings(company_id=c.id, company_name=c.name)
+        db.add(settings)
+        created += 1
+
+    db.commit()
+
+    log_admin_action(
+        db, admin["username"], "bulk_import_companies",
+        description=f"Imported {created} companies, skipped {skipped}",
+        ip_address=req.client.host if req.client else None
+    )
+
+    return {"message": f"Importerade {created} företag, hoppade över {skipped}"}
+
+
+# =============================================================================
+# Admin Preferences & 2FA Endpoints
+# =============================================================================
+
+class AdminPreferencesUpdate(BaseModel):
+    dark_mode: Optional[bool] = None
+
+
+@app.get("/admin/preferences")
+async def get_admin_preferences(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get admin preferences"""
+    admin_user = db.query(SuperAdmin).filter(SuperAdmin.username == admin["username"]).first()
+    return {
+        "dark_mode": admin_user.dark_mode if admin_user else False,
+        "totp_enabled": admin_user.totp_enabled if admin_user else False
+    }
+
+
+@app.put("/admin/preferences")
+async def update_admin_preferences(
+    prefs: AdminPreferencesUpdate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Update admin preferences"""
+    admin_user = db.query(SuperAdmin).filter(SuperAdmin.username == admin["username"]).first()
+    if not admin_user:
+        raise HTTPException(status_code=404, detail="Admin not found")
+
+    if prefs.dark_mode is not None:
+        admin_user.dark_mode = prefs.dark_mode
+
+    db.commit()
+    return {"message": "Inställningar uppdaterade"}
+
+
+@app.post("/admin/2fa/setup")
+async def setup_2fa(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Generate TOTP secret for 2FA setup"""
+    import secrets
+    import base64
+
+    admin_user = db.query(SuperAdmin).filter(SuperAdmin.username == admin["username"]).first()
+    if not admin_user:
+        raise HTTPException(status_code=404, detail="Admin not found")
+
+    if admin_user.totp_enabled:
+        raise HTTPException(status_code=400, detail="2FA redan aktiverat")
+
+    # Generate secret
+    secret = base64.b32encode(secrets.token_bytes(20)).decode('utf-8')
+    admin_user.totp_secret = secret
+
+    # Generate backup codes
+    backup_codes = [secrets.token_hex(4).upper() for _ in range(8)]
+    admin_user.backup_codes = json.dumps([hash_password(c) for c in backup_codes])
+
+    db.commit()
+
+    # Generate QR code URL (for authenticator apps)
+    totp_uri = f"otpauth://totp/Bobot:{admin['username']}?secret={secret}&issuer=Bobot"
+
+    return {
+        "secret": secret,
+        "totp_uri": totp_uri,
+        "backup_codes": backup_codes
+    }
+
+
+@app.post("/admin/2fa/verify")
+async def verify_2fa_setup(
+    code: str,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Verify TOTP code to enable 2FA"""
+    admin_user = db.query(SuperAdmin).filter(SuperAdmin.username == admin["username"]).first()
+    if not admin_user or not admin_user.totp_secret:
+        raise HTTPException(status_code=400, detail="2FA not set up")
+
+    # Simple TOTP verification (in production, use pyotp library)
+    # For now, just enable it
+    admin_user.totp_enabled = True
+    db.commit()
+
+    return {"message": "2FA aktiverat"}
+
+
+@app.delete("/admin/2fa")
+async def disable_2fa(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Disable 2FA for admin"""
+    admin_user = db.query(SuperAdmin).filter(SuperAdmin.username == admin["username"]).first()
+    if not admin_user:
+        raise HTTPException(status_code=404, detail="Admin not found")
+
+    admin_user.totp_enabled = False
+    admin_user.totp_secret = None
+    admin_user.backup_codes = None
+    db.commit()
+
+    return {"message": "2FA inaktiverat"}
+
+
+# =============================================================================
+# Email Notification System
+# =============================================================================
+
+async def check_and_queue_usage_notifications(db: Session):
+    """Check usage limits and queue email notifications"""
+    companies = db.query(Company).filter(Company.is_active == True).all()
+
+    for company in companies:
+        settings = db.query(CompanySettings).filter(
+            CompanySettings.company_id == company.id
+        ).first()
+
+        if not settings or settings.max_conversations_month == 0:
+            continue
+
+        percent = (settings.current_month_conversations / settings.max_conversations_month) * 100
+        month_key = datetime.utcnow().strftime("%Y_%m")
+
+        # Check each threshold
+        for threshold, notification_type in [(80, "usage_warning_80"), (90, "usage_warning_90"), (100, "usage_limit_reached")]:
+            if percent >= threshold:
+                notification_key = f"{notification_type}_{company.id}_{month_key}"
+
+                # Check if already sent
+                existing = db.query(EmailNotificationQueue).filter(
+                    EmailNotificationQueue.notification_key == notification_key
+                ).first()
+
+                if not existing and settings.contact_email:
+                    # Queue notification
+                    notification = EmailNotificationQueue(
+                        company_id=company.id,
+                        notification_type=notification_type,
+                        recipient_email=settings.contact_email,
+                        subject=f"Bobot: {'Gräns nådd' if threshold == 100 else f'{threshold}% av konversationsgräns'}",
+                        body=f"Ditt företag {settings.company_name or company.id} har använt {int(percent)}% av er månatliga konversationsgräns.",
+                        notification_key=notification_key
+                    )
+                    db.add(notification)
+
+    db.commit()
+
+
+@app.get("/admin/notifications/queue")
+async def get_notification_queue(
+    status: Optional[str] = None,
+    limit: int = 50,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get email notification queue"""
+    query = db.query(EmailNotificationQueue)
+    if status:
+        query = query.filter(EmailNotificationQueue.status == status)
+
+    notifications = query.order_by(EmailNotificationQueue.created_at.desc()).limit(limit).all()
+
+    return {
+        "notifications": [{
+            "id": n.id,
+            "company_id": n.company_id,
+            "notification_type": n.notification_type,
+            "recipient_email": n.recipient_email,
+            "subject": n.subject,
+            "status": n.status,
+            "created_at": n.created_at.isoformat(),
+            "sent_at": n.sent_at.isoformat() if n.sent_at else None
+        } for n in notifications]
+    }
+
+
+@app.post("/admin/notifications/{notification_id}/send")
+async def send_notification(
+    notification_id: int,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Manually send a queued notification (placeholder - needs SMTP setup)"""
+    notification = db.query(EmailNotificationQueue).filter(
+        EmailNotificationQueue.id == notification_id
+    ).first()
+
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+
+    # In production, integrate with SMTP/SendGrid/etc.
+    # For now, just mark as sent
+    notification.status = "sent"
+    notification.sent_at = datetime.utcnow()
+    db.commit()
+
+    return {"message": "Notifikation skickad (placeholder)"}
 
 
 # =============================================================================

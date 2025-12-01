@@ -30,6 +30,36 @@ function SuperAdmin() {
   const [companyActivity, setCompanyActivity] = useState([])
   const [companyLoading, setCompanyLoading] = useState(false)
 
+  // Analytics state
+  const [analyticsData, setAnalyticsData] = useState(null)
+  const [peakHours, setPeakHours] = useState(null)
+  const [trends, setTrends] = useState(null)
+  const [topCompanies, setTopCompanies] = useState([])
+
+  // Billing state
+  const [subscriptions, setSubscriptions] = useState([])
+  const [invoices, setInvoices] = useState([])
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(null)
+
+  // Company notes
+  const [companyNotes, setCompanyNotes] = useState([])
+  const [newNote, setNewNote] = useState('')
+
+  // Admin preferences
+  const [adminPrefs, setAdminPrefs] = useState({ dark_mode: false, totp_enabled: false })
+  const [show2FASetup, setShow2FASetup] = useState(false)
+  const [twoFAData, setTwoFAData] = useState(null)
+
+  // Rate limiting & performance
+  const [rateLimitStats, setRateLimitStats] = useState(null)
+  const [performanceStats, setPerformanceStats] = useState(null)
+
+  // Audit log search
+  const [auditSearchTerm, setAuditSearchTerm] = useState('')
+  const [auditActionType, setAuditActionType] = useState('')
+  const [auditDateRange, setAuditDateRange] = useState({ start: '', end: '' })
+  const [auditActionTypes, setAuditActionTypes] = useState([])
+
   useEffect(() => {
     fetchCompanies()
     fetchSystemHealth()
@@ -39,6 +69,13 @@ function SuperAdmin() {
   useEffect(() => {
     if (activeTab === 'audit') {
       fetchAuditLogs()
+      fetchAuditActionTypes()
+    } else if (activeTab === 'analytics') {
+      fetchAnalytics()
+    } else if (activeTab === 'billing') {
+      fetchBilling()
+    } else if (activeTab === 'preferences') {
+      fetchAdminPrefs()
     }
   }, [activeTab])
 
@@ -99,6 +136,191 @@ function SuperAdmin() {
     } catch (error) {
       // Endpoint might not exist yet
       setMaintenanceMode({ enabled: false, message: '' })
+    }
+  }
+
+  const fetchAnalytics = async () => {
+    try {
+      const [overviewRes, peakRes, trendsRes, companiesRes, rateRes, perfRes] = await Promise.all([
+        adminFetch(`${API_BASE}/admin/analytics/overview?days=30`),
+        adminFetch(`${API_BASE}/admin/analytics/peak-hours`),
+        adminFetch(`${API_BASE}/admin/analytics/trends`),
+        adminFetch(`${API_BASE}/admin/analytics/companies`),
+        adminFetch(`${API_BASE}/admin/rate-limits`),
+        adminFetch(`${API_BASE}/admin/performance/overview`)
+      ])
+
+      if (overviewRes.ok) setAnalyticsData(await overviewRes.json())
+      if (peakRes.ok) setPeakHours(await peakRes.json())
+      if (trendsRes.ok) setTrends(await trendsRes.json())
+      if (companiesRes.ok) {
+        const data = await companiesRes.json()
+        setTopCompanies(data.companies || [])
+      }
+      if (rateRes.ok) setRateLimitStats(await rateRes.json())
+      if (perfRes.ok) setPerformanceStats(await perfRes.json())
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error)
+    }
+  }
+
+  const fetchBilling = async () => {
+    try {
+      const [subsRes, invRes] = await Promise.all([
+        adminFetch(`${API_BASE}/admin/subscriptions`),
+        adminFetch(`${API_BASE}/admin/invoices?limit=20`)
+      ])
+
+      if (subsRes.ok) {
+        const data = await subsRes.json()
+        setSubscriptions(data.subscriptions || [])
+      }
+      if (invRes.ok) {
+        const data = await invRes.json()
+        setInvoices(data.invoices || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch billing:', error)
+    }
+  }
+
+  const fetchAdminPrefs = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/preferences`)
+      if (response.ok) {
+        const data = await response.json()
+        setAdminPrefs(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch preferences:', error)
+    }
+  }
+
+  const fetchAuditActionTypes = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/audit-logs/action-types`)
+      if (response.ok) {
+        const data = await response.json()
+        setAuditActionTypes(data.action_types || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch action types:', error)
+    }
+  }
+
+  const fetchCompanyNotes = async (companyId) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/companies/${companyId}/notes`)
+      if (response.ok) {
+        const data = await response.json()
+        setCompanyNotes(data.notes || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch notes:', error)
+    }
+  }
+
+  const searchAuditLogs = async () => {
+    setAuditLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (auditSearchTerm) params.append('search_term', auditSearchTerm)
+      if (auditActionType) params.append('action_type', auditActionType)
+      if (auditDateRange.start) params.append('start_date', auditDateRange.start)
+      if (auditDateRange.end) params.append('end_date', auditDateRange.end)
+
+      const response = await adminFetch(`${API_BASE}/admin/audit-logs/search?${params}`)
+      if (response.ok) {
+        const data = await response.json()
+        setAuditLogs(data.logs || [])
+      }
+    } catch (error) {
+      console.error('Failed to search audit logs:', error)
+    } finally {
+      setAuditLoading(false)
+    }
+  }
+
+  const handleAddNote = async (companyId) => {
+    if (!newNote.trim()) return
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/companies/${companyId}/notes`, {
+        method: 'POST',
+        body: JSON.stringify({ content: newNote, is_pinned: false })
+      })
+      if (response.ok) {
+        setNewNote('')
+        fetchCompanyNotes(companyId)
+        showNotification('Anteckning sparad')
+      }
+    } catch (error) {
+      console.error('Failed to add note:', error)
+    }
+  }
+
+  const handleToggleDarkMode = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/preferences`, {
+        method: 'PUT',
+        body: JSON.stringify({ dark_mode: !adminPrefs.dark_mode })
+      })
+      if (response.ok) {
+        setAdminPrefs(prev => ({ ...prev, dark_mode: !prev.dark_mode }))
+        // Apply dark mode to document
+        document.documentElement.classList.toggle('dark', !adminPrefs.dark_mode)
+        showNotification('Inställningar uppdaterade')
+      }
+    } catch (error) {
+      console.error('Failed to toggle dark mode:', error)
+    }
+  }
+
+  const handleSetup2FA = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/2fa/setup`, { method: 'POST' })
+      if (response.ok) {
+        const data = await response.json()
+        setTwoFAData(data)
+        setShow2FASetup(true)
+      }
+    } catch (error) {
+      console.error('Failed to setup 2FA:', error)
+    }
+  }
+
+  const handleBulkSetLimits = async (limits) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/bulk/set-limits`, {
+        method: 'POST',
+        body: JSON.stringify({
+          company_ids: Array.from(selectedCompanies),
+          ...limits
+        })
+      })
+      if (response.ok) {
+        showNotification(`Gränser uppdaterade för ${selectedCompanies.size} företag`)
+        setSelectedCompanies(new Set())
+        fetchCompanies()
+      }
+    } catch (error) {
+      console.error('Failed to bulk set limits:', error)
+    }
+  }
+
+  const handleExportCompanies = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/bulk/export-companies`)
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `companies_${new Date().toISOString().split('T')[0]}.csv`
+        a.click()
+        showNotification('Export nedladdad')
+      }
+    } catch (error) {
+      console.error('Failed to export:', error)
     }
   }
 
@@ -442,9 +664,11 @@ function SuperAdmin() {
             {[
               { id: 'overview', label: 'Översikt', icon: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /> },
               { id: 'companies', label: 'Företag', icon: <><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></> },
-              { id: 'audit', label: 'Aktivitetslogg', icon: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><line x1="10" y1="9" x2="8" y2="9" /></> },
+              { id: 'analytics', label: 'Analys', icon: <><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></> },
+              { id: 'billing', label: 'Fakturering', icon: <><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></> },
+              { id: 'audit', label: 'Logg', icon: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></> },
               { id: 'system', label: 'System', icon: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></> },
-              { id: 'gdpr', label: 'GDPR', icon: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /> }
+              { id: 'preferences', label: 'Konto', icon: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></> }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -813,6 +1037,42 @@ function SuperAdmin() {
               <p className="text-text-secondary mt-1">Spåra alla admin-åtgärder i systemet</p>
             </div>
 
+            {/* Search Filters */}
+            <div className="card mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input
+                  type="text"
+                  value={auditSearchTerm}
+                  onChange={(e) => setAuditSearchTerm(e.target.value)}
+                  placeholder="Sök i beskrivning..."
+                  className="input"
+                />
+                <select
+                  value={auditActionType}
+                  onChange={(e) => setAuditActionType(e.target.value)}
+                  className="input"
+                >
+                  <option value="">Alla åtgärder</option>
+                  {auditActionTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+                <input
+                  type="date"
+                  value={auditDateRange.start}
+                  onChange={(e) => setAuditDateRange(prev => ({ ...prev, start: e.target.value }))}
+                  className="input"
+                  placeholder="Från datum"
+                />
+                <button
+                  onClick={searchAuditLogs}
+                  className="btn btn-primary"
+                >
+                  Sök
+                </button>
+              </div>
+            </div>
+
             {auditLoading ? (
               <div className="card text-center py-12">
                 <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full mx-auto mb-4" />
@@ -1033,6 +1293,310 @@ function SuperAdmin() {
                     <span className="text-text-primary">Samtyckesspårning</span>
                     <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-success-soft text-success">Aktiv</span>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Analytics Tab */}
+        {activeTab === 'analytics' && (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Analys & Prestanda</h1>
+              <p className="text-text-secondary mt-1">Detaljerad statistik och trender</p>
+            </div>
+
+            {/* Trends Overview */}
+            {trends && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div className="card">
+                  <h3 className="text-sm font-medium text-text-secondary mb-2">Vecka-över-vecka</h3>
+                  <div className="flex items-end gap-4">
+                    <span className="text-3xl font-semibold text-text-primary">{trends.week_over_week.current}</span>
+                    <span className={`text-sm font-medium ${trends.week_over_week.change_percent >= 0 ? 'text-success' : 'text-error'}`}>
+                      {trends.week_over_week.change_percent >= 0 ? '+' : ''}{trends.week_over_week.change_percent}%
+                    </span>
+                  </div>
+                  <p className="text-xs text-text-tertiary mt-1">vs förra veckan ({trends.week_over_week.previous})</p>
+                </div>
+                <div className="card">
+                  <h3 className="text-sm font-medium text-text-secondary mb-2">Månad-över-månad</h3>
+                  <div className="flex items-end gap-4">
+                    <span className="text-3xl font-semibold text-text-primary">{trends.month_over_month.current}</span>
+                    <span className={`text-sm font-medium ${trends.month_over_month.change_percent >= 0 ? 'text-success' : 'text-error'}`}>
+                      {trends.month_over_month.change_percent >= 0 ? '+' : ''}{trends.month_over_month.change_percent}%
+                    </span>
+                  </div>
+                  <p className="text-xs text-text-tertiary mt-1">vs förra månaden ({trends.month_over_month.previous})</p>
+                </div>
+              </div>
+            )}
+
+            {/* Performance Stats */}
+            {performanceStats && (
+              <div className="card mb-8">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Widgetprestanda (24h)</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-4 bg-bg-secondary rounded-lg">
+                    <p className="text-2xl font-semibold text-text-primary">{performanceStats.total_requests}</p>
+                    <p className="text-xs text-text-secondary">Totala förfrågningar</p>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-lg">
+                    <p className="text-2xl font-semibold text-success">{performanceStats.success_rate}%</p>
+                    <p className="text-xs text-text-secondary">Lyckandefrekvens</p>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-lg">
+                    <p className="text-2xl font-semibold text-text-primary">{performanceStats.avg_response_time}ms</p>
+                    <p className="text-xs text-text-secondary">Snitt svarstid</p>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-lg">
+                    <p className="text-2xl font-semibold text-warning">{performanceStats.rate_limited_requests}</p>
+                    <p className="text-xs text-text-secondary">Rate limited</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Rate Limit Stats */}
+            {rateLimitStats && (
+              <div className="card mb-8">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Rate Limiting</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 bg-bg-secondary rounded-lg">
+                    <p className="text-2xl font-semibold text-text-primary">{rateLimitStats.active_sessions}</p>
+                    <p className="text-xs text-text-secondary">Aktiva sessioner</p>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-lg">
+                    <p className="text-2xl font-semibold text-error">{rateLimitStats.rate_limited_sessions}</p>
+                    <p className="text-xs text-text-secondary">Begränsade sessioner</p>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-lg">
+                    <p className="text-sm text-text-primary">{rateLimitStats.rate_limit_max_requests} förfrågningar / {rateLimitStats.rate_limit_window_seconds}s</p>
+                    <p className="text-xs text-text-secondary">Begränsningsgräns</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Peak Hours */}
+            {peakHours && peakHours.hourly_distribution.length > 0 && (
+              <div className="card mb-8">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Aktivitet per timme</h3>
+                <div className="flex items-end gap-1 h-32">
+                  {peakHours.hourly_distribution.map(({ hour, count }) => {
+                    const max = Math.max(...peakHours.hourly_distribution.map(h => h.count))
+                    const height = max > 0 ? (count / max) * 100 : 0
+                    return (
+                      <div key={hour} className="flex-1 flex flex-col items-center">
+                        <div
+                          className={`w-full rounded-t ${hour === parseInt(peakHours.peak_hour) ? 'bg-accent' : 'bg-accent/30'}`}
+                          style={{ height: `${height}%` }}
+                        />
+                        <span className="text-xs text-text-tertiary mt-1">{hour}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+                {peakHours.peak_hour && (
+                  <p className="text-sm text-text-secondary mt-2">
+                    Mest aktiv timme: <span className="font-medium text-accent">{peakHours.peak_hour}:00</span>
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Top Companies */}
+            {topCompanies.length > 0 && (
+              <div className="card">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Mest aktiva företag (30 dagar)</h3>
+                <div className="space-y-3">
+                  {topCompanies.map((company, index) => (
+                    <div key={company.company_id} className="flex items-center gap-4 p-3 bg-bg-secondary rounded-lg">
+                      <span className="w-6 h-6 flex items-center justify-center bg-accent-soft rounded text-accent text-sm font-medium">
+                        {index + 1}
+                      </span>
+                      <div className="flex-1">
+                        <p className="font-medium text-text-primary">{company.company_name}</p>
+                        <p className="text-xs text-text-secondary">{company.company_id}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-text-primary">{company.conversations}</p>
+                        <p className="text-xs text-text-tertiary">konversationer</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Billing Tab */}
+        {activeTab === 'billing' && (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Fakturering</h1>
+              <p className="text-text-secondary mt-1">Hantera prenumerationer och fakturor</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Subscriptions */}
+              <div className="card">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Prenumerationer</h3>
+                {subscriptions.length === 0 ? (
+                  <p className="text-text-secondary text-center py-8">Inga prenumerationer ännu</p>
+                ) : (
+                  <div className="space-y-3">
+                    {subscriptions.map(sub => (
+                      <div key={sub.id} className="p-4 bg-bg-secondary rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-text-primary">{sub.company_name}</p>
+                            <p className="text-xs text-text-secondary">{sub.company_id}</p>
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            sub.plan_name === 'enterprise' ? 'bg-accent-soft text-accent' :
+                            sub.plan_name === 'professional' ? 'bg-success-soft text-success' :
+                            sub.plan_name === 'starter' ? 'bg-warning-soft text-warning' :
+                            'bg-bg-primary text-text-secondary'
+                          }`}>
+                            {sub.plan_name}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-sm text-text-secondary">{sub.plan_price} SEK/{sub.billing_cycle === 'monthly' ? 'mån' : 'år'}</span>
+                          <span className={`text-xs ${sub.status === 'active' ? 'text-success' : 'text-warning'}`}>
+                            {sub.status === 'active' ? 'Aktiv' : sub.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Invoices */}
+              <div className="card">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Senaste fakturor</h3>
+                {invoices.length === 0 ? (
+                  <p className="text-text-secondary text-center py-8">Inga fakturor ännu</p>
+                ) : (
+                  <div className="space-y-3">
+                    {invoices.map(inv => (
+                      <div key={inv.id} className="p-4 bg-bg-secondary rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-text-primary">{inv.invoice_number}</p>
+                            <p className="text-xs text-text-secondary">{inv.company_name}</p>
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            inv.status === 'paid' ? 'bg-success-soft text-success' :
+                            inv.status === 'pending' ? 'bg-warning-soft text-warning' :
+                            'bg-error-soft text-error'
+                          }`}>
+                            {inv.status === 'paid' ? 'Betald' : inv.status === 'pending' ? 'Väntar' : inv.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-lg font-medium text-text-primary">{inv.amount} {inv.currency}</span>
+                          <span className="text-xs text-text-tertiary">{new Date(inv.created_at).toLocaleDateString('sv-SE')}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Preferences Tab */}
+        {activeTab === 'preferences' && (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Kontoinställningar</h1>
+              <p className="text-text-secondary mt-1">Hantera ditt adminkonto</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Appearance */}
+              <div className="card">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Utseende</h3>
+                <div className="flex items-center justify-between p-4 bg-bg-secondary rounded-lg">
+                  <div>
+                    <p className="font-medium text-text-primary">Mörkt läge</p>
+                    <p className="text-sm text-text-secondary">Använd mörkt tema i admingränssnittet</p>
+                  </div>
+                  <button
+                    onClick={handleToggleDarkMode}
+                    className={`w-12 h-6 rounded-full transition-colors ${adminPrefs.dark_mode ? 'bg-accent' : 'bg-bg-primary'}`}
+                  >
+                    <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${adminPrefs.dark_mode ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Security */}
+              <div className="card">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Säkerhet</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-bg-secondary rounded-lg">
+                    <div>
+                      <p className="font-medium text-text-primary">Tvåfaktorsautentisering</p>
+                      <p className="text-sm text-text-secondary">Extra säkerhet för ditt konto</p>
+                    </div>
+                    {adminPrefs.totp_enabled ? (
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-success-soft text-success">Aktiverad</span>
+                    ) : (
+                      <button
+                        onClick={handleSetup2FA}
+                        className="btn btn-secondary text-sm"
+                      >
+                        Aktivera
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="p-4 bg-bg-secondary rounded-lg">
+                    <p className="font-medium text-text-primary mb-2">Inloggad som</p>
+                    <p className="text-sm text-text-secondary">{adminAuth.username}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bulk Operations */}
+              <div className="card lg:col-span-2">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Massoperationer</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button
+                    onClick={handleExportCompanies}
+                    className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary transition-all"
+                  >
+                    <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center text-accent">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-text-primary">Exportera företag</p>
+                      <p className="text-sm text-text-secondary">Ladda ner CSV med alla företag</p>
+                    </div>
+                  </button>
+
+                  {selectedCompanies.size > 0 && (
+                    <div className="p-4 bg-accent-soft rounded-lg">
+                      <p className="font-medium text-accent mb-2">{selectedCompanies.size} företag valda</p>
+                      <button
+                        onClick={() => handleBulkSetLimits({ max_conversations_month: 500 })}
+                        className="btn btn-primary text-sm"
+                      >
+                        Sätt gränser för alla
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

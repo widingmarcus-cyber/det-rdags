@@ -219,6 +219,18 @@ class SuperAdmin(Base):
     password_hash = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # Two-factor authentication
+    totp_secret = Column(String)  # Base32 encoded TOTP secret
+    totp_enabled = Column(Boolean, default=False)
+    backup_codes = Column(Text)  # JSON array of hashed backup codes
+
+    # Session management
+    last_login = Column(DateTime)
+    last_login_ip = Column(String)
+
+    # Preferences
+    dark_mode = Column(Boolean, default=False)  # Dark mode preference
+
 
 class GDPRAuditLog(Base):
     """Audit log for GDPR/PuB compliance - records data processing activities"""
@@ -284,6 +296,129 @@ class GlobalSettings(Base):
     value = Column(Text)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     updated_by = Column(String)  # Admin username
+
+
+class Subscription(Base):
+    """Billing subscription for a company"""
+    __tablename__ = "subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(String, ForeignKey("companies.id"), unique=True, nullable=False)
+
+    # Plan details
+    plan_name = Column(String, default="free")  # free, starter, professional, enterprise
+    plan_price = Column(Float, default=0)  # Monthly price in SEK
+    billing_cycle = Column(String, default="monthly")  # monthly, yearly
+
+    # Status
+    status = Column(String, default="active")  # active, cancelled, past_due, trialing
+    trial_ends_at = Column(DateTime)
+    current_period_start = Column(DateTime)
+    current_period_end = Column(DateTime)
+
+    # Features included (JSON: {"max_conversations": 1000, "max_knowledge": 500, ...})
+    plan_features = Column(Text, default="{}")
+
+    # Stripe/Payment IDs (for future integration)
+    external_customer_id = Column(String)
+    external_subscription_id = Column(String)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Invoice(Base):
+    """Invoice history for billing"""
+    __tablename__ = "invoices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    invoice_number = Column(String, unique=True, nullable=False)
+
+    # Invoice details
+    amount = Column(Float, nullable=False)
+    currency = Column(String, default="SEK")
+    description = Column(Text)
+    period_start = Column(Date)
+    period_end = Column(Date)
+
+    # Status
+    status = Column(String, default="pending")  # pending, paid, overdue, cancelled
+    due_date = Column(Date)
+    paid_at = Column(DateTime)
+
+    # Payment details
+    payment_method = Column(String)  # card, invoice, bank_transfer
+    external_invoice_id = Column(String)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class CompanyNote(Base):
+    """Internal admin notes about a company"""
+    __tablename__ = "company_notes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+
+    content = Column(Text, nullable=False)
+    created_by = Column(String, nullable=False)  # Admin username
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_pinned = Column(Boolean, default=False)
+
+
+class WidgetPerformance(Base):
+    """Hourly performance stats for widget monitoring"""
+    __tablename__ = "widget_performance"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    hour = Column(DateTime, nullable=False)  # Rounded to hour
+
+    # Request counts
+    total_requests = Column(Integer, default=0)
+    successful_requests = Column(Integer, default=0)
+    failed_requests = Column(Integer, default=0)
+    rate_limited_requests = Column(Integer, default=0)
+
+    # Response times (ms)
+    avg_response_time = Column(Float, default=0)
+    min_response_time = Column(Integer, default=0)
+    max_response_time = Column(Integer, default=0)
+    p95_response_time = Column(Integer, default=0)
+
+    # Error breakdown (JSON: {"timeout": 5, "ollama_error": 2, ...})
+    error_counts = Column(Text, default="{}")
+
+
+class EmailNotificationQueue(Base):
+    """Queue for email notifications"""
+    __tablename__ = "email_notification_queue"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(String, ForeignKey("companies.id"))
+
+    # Notification details
+    notification_type = Column(String, nullable=False)  # usage_warning_80, usage_warning_90, usage_limit_reached
+    recipient_email = Column(String, nullable=False)
+    subject = Column(String, nullable=False)
+    body = Column(Text, nullable=False)
+
+    # Status
+    status = Column(String, default="pending")  # pending, sent, failed
+    scheduled_for = Column(DateTime, default=datetime.utcnow)
+    sent_at = Column(DateTime)
+    error_message = Column(Text)
+
+    # Prevent duplicate notifications
+    notification_key = Column(String, unique=True)  # e.g., "usage_80_company_id_2024_01"
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# Extend SuperAdmin with 2FA fields (we'll modify the existing class)
+# Note: Add these columns via migration
 
 
 # =============================================================================
