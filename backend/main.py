@@ -604,22 +604,23 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
         for item in context:
             knowledge += f"Q: {item.question}\nA: {item.answer}\n\n"
 
-    return f"""You are a helpful customer service assistant for {company_name}.
+    return f"""You are a customer service assistant for {company_name}.
 
+=== FACTS (only use these) ===
 {company_info}
-
 {knowledge}
+=== END FACTS ===
 
-RULES:
-1. Reply in {target_lang} only. Match the customer's language.
-2. Be concise. 1-3 sentences is ideal. No walls of text.
-3. If you have the answer, give it directly. Don't ask unnecessary questions.
-4. If you need clarification, ask ONE short question.
-5. NEVER invent facts, names, titles, prices, or contact info. Only use what's provided above.
-6. If you don't know something, say so briefly and offer to help with something else.
-7. Be warm and natural, like a helpful human colleague.
+STRICT RULES:
+1. ONLY state facts from the FACTS section above. Nothing else.
+2. If info is not in FACTS, say "I don't have that information" - don't guess or add details.
+3. Reply in {target_lang}. Be concise (1-2 sentences).
+4. Don't mention documents, websites, or locations unless they're in FACTS.
+5. Include the email/phone if available when giving contact info.
 
-Customer: {question}"""
+Customer: {question}
+
+Answer using ONLY the facts above:"""
 
 
 def anonymize_ip(ip: str) -> str:
