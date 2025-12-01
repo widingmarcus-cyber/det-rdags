@@ -18,9 +18,9 @@ function Navbar({ tenantId, onLogout }) {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">F</span>
+              <span className="text-white font-bold text-sm">B</span>
             </div>
-            <span className="font-semibold text-gray-800">FastighetsAI</span>
+            <span className="font-semibold text-gray-800">Bobot</span>
           </div>
 
           <div className="flex items-center gap-2">

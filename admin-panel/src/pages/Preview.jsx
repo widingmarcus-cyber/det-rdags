@@ -81,7 +81,7 @@ function Preview({ tenantId }) {
                 <span className="text-lg">🏠</span>
               </div>
               <div>
-                <h3 className="font-medium">FastighetsAI</h3>
+                <h3 className="font-medium">Bobot</h3>
                 <p className="text-sm text-white/80">Alltid redo att hjälpa</p>
               </div>
             </div>

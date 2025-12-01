@@ -1,4 +1,4 @@
-# FastighetsAI
+# Bobot
 
 En GDPR-säker AI-chatbot för fastighetsbolag där kunder själva bygger sin kunskapsbas.
 
@@ -54,7 +54,7 @@ En GDPR-säker AI-chatbot för fastighetsbolag där kunder själva bygger sin ku
 docker-compose up -d
 
 # Ladda ner AI-modellen (kör efter första uppstarten)
-docker exec -it det-rdags-ollama-1 ollama pull llama3.1
+docker exec -it bobot-ollama-1 ollama pull llama3.1
 
 # Tjänster:
 # - Backend API: http://localhost:8000
@@ -117,7 +117,7 @@ curl -X POST http://localhost:8000/chat \
 ```html
 <script src="http://localhost:3001/widget.js"></script>
 <script>
-  FastighetsAI.init({
+  Bobot.init({
     tenantId: "demo",
     apiUrl: "http://localhost:8000",
     title: "Fastighetsbolaget AB",
@@ -145,7 +145,7 @@ curl -X POST http://localhost:8000/chat \
 ## Projektstruktur
 
 ```
-fastighetsai/
+bobot/
 ├── backend/
 │   ├── main.py           # FastAPI-app
 │   ├── requirements.txt  # Python-beroenden

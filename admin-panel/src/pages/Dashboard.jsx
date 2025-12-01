@@ -112,16 +112,16 @@ function Dashboard({ tenantId }) {
             Kopiera denna kod och klistra in på din hemsida:
           </p>
           <div className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm font-mono overflow-x-auto">
-            <pre>{`<script src="https://cdn.fastighetsai.se/widget.js"></script>
+            <pre>{`<script src="https://cdn.bobot.se/widget.js"></script>
 <script>
-  FastighetsAI.init({
+  Bobot.init({
     tenantId: "${tenantId}"
   });
 </script>`}</pre>
           </div>
           <button
             onClick={() => {
-              navigator.clipboard.writeText(`<script src="https://cdn.fastighetsai.se/widget.js"></script>\n<script>\n  FastighetsAI.init({\n    tenantId: "${tenantId}"\n  });\n</script>`)
+              navigator.clipboard.writeText(`<script src="https://cdn.bobot.se/widget.js"></script>\n<script>\n  Bobot.init({\n    tenantId: "${tenantId}"\n  });\n</script>`)
               alert('Kopierat!')
             }}
             className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 transition-colors"

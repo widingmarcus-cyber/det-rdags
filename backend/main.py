@@ -1,5 +1,5 @@
 """
-FastighetsAI Backend API
+Bobot Backend API
 En GDPR-säker AI-chatbot för fastighetsbolag
 """
 
@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = FastAPI(
-    title="FastighetsAI API",
+    title="Bobot API",
     description="AI-chatbot backend för fastighetsbolag",
     version="1.0.0"
 )
@@ -198,7 +198,7 @@ Svar:"""
 async def root():
     """Hälsningssida"""
     return {
-        "message": "Välkommen till FastighetsAI API",
+        "message": "Välkommen till Bobot API",
         "version": "1.0.0",
         "docs": "/docs"
     }

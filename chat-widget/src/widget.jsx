@@ -156,10 +156,10 @@ const styles = {
 
 // CSS för animationer
 const injectStyles = () => {
-  if (document.getElementById('fastighetsai-styles')) return
+  if (document.getElementById('bobot-styles')) return
 
   const styleSheet = document.createElement('style')
-  styleSheet.id = 'fastighetsai-styles'
+  styleSheet.id = 'bobot-styles'
   styleSheet.textContent = `
     @keyframes bounce {
       0%, 60%, 100% { transform: translateY(0); }
@@ -234,7 +234,7 @@ function ChatWidget({ config }) {
           <div style={styles.header}>
             <div style={styles.headerIcon}>🏠</div>
             <div style={styles.headerText}>
-              <p style={styles.headerTitle}>{config.title || 'FastighetsAI'}</p>
+              <p style={styles.headerTitle}>{config.title || 'Bobot'}</p>
               <p style={styles.headerSubtitle}>Alltid redo att hjälpa</p>
             </div>
             <button style={styles.closeButton} onClick={() => setIsOpen(false)}>
@@ -321,16 +321,16 @@ function ChatWidget({ config }) {
 }
 
 // Global init-funktion
-window.FastighetsAI = {
+window.Bobot = {
   init: function(config) {
     const container = document.createElement('div')
-    container.id = 'fastighetsai-widget'
+    container.id = 'bobot-widget'
     document.body.appendChild(container)
 
     const defaultConfig = {
       apiUrl: 'http://localhost:8000',
       tenantId: 'demo',
-      title: 'FastighetsAI',
+      title: 'Bobot',
       welcomeMessage: 'Hej! Hur kan jag hjälpa dig idag?',
       ...config
     }

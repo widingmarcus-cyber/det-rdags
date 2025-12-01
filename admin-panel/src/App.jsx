@@ -8,15 +8,15 @@ import Navbar from './components/Navbar'
 
 function App() {
   const [auth, setAuth] = useState(() => {
-    const saved = localStorage.getItem('fastighetsai_auth')
+    const saved = localStorage.getItem('bobot_auth')
     return saved ? JSON.parse(saved) : null
   })
 
   useEffect(() => {
     if (auth) {
-      localStorage.setItem('fastighetsai_auth', JSON.stringify(auth))
+      localStorage.setItem('bobot_auth', JSON.stringify(auth))
     } else {
-      localStorage.removeItem('fastighetsai_auth')
+      localStorage.removeItem('bobot_auth')
     }
   }, [auth])
 
