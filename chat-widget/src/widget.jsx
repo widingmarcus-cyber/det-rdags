@@ -14,6 +14,10 @@ const translations = {
     no: 'Nej',
     thanksFeedback: 'Tack för din feedback!',
     errorMessage: 'Ett fel uppstod. Vänligen försök igen.',
+    serviceUnavailable: 'Chatten är tillfälligt otillgänglig. Vänligen försök igen om en stund eller kontakta oss direkt.',
+    emailConversation: 'Skicka till support',
+    newConversation: 'Ny konversation',
+    clearHistory: 'Rensa historik',
   },
   en: {
     welcomeMessage: 'Hi! How can I help you today?',
@@ -26,6 +30,10 @@ const translations = {
     no: 'No',
     thanksFeedback: 'Thanks for your feedback!',
     errorMessage: 'An error occurred. Please try again.',
+    serviceUnavailable: 'Chat is temporarily unavailable. Please try again later or contact us directly.',
+    emailConversation: 'Email to support',
+    newConversation: 'New conversation',
+    clearHistory: 'Clear history',
   },
   ar: {
     welcomeMessage: 'مرحباً! كيف يمكنني مساعدتك اليوم؟',
@@ -38,6 +46,10 @@ const translations = {
     no: 'لا',
     thanksFeedback: 'شكراً على ملاحظاتك!',
     errorMessage: 'حدث خطأ. يرجى المحاولة مرة أخرى.',
+    serviceUnavailable: 'الدردشة غير متاحة مؤقتاً. يرجى المحاولة لاحقاً أو الاتصال بنا مباشرة.',
+    emailConversation: 'أرسل إلى الدعم',
+    newConversation: 'محادثة جديدة',
+    clearHistory: 'مسح المحفوظات',
   }
 }
 
@@ -53,8 +65,8 @@ function detectLanguage() {
   return 'sv'
 }
 
-// Design tokens
-const defaultColors = {
+// Design tokens - Light mode
+const lightColors = {
   bgPrimary: '#FAFAFA',
   bgSecondary: '#F5F5F4',
   bgTertiary: '#FFFFFF',
@@ -75,9 +87,76 @@ const defaultColors = {
   shadowLg: '0 12px 32px rgba(28, 25, 23, 0.08)',
 }
 
+// Design tokens - Dark mode
+const darkColors = {
+  bgPrimary: '#1C1917',
+  bgSecondary: '#292524',
+  bgTertiary: '#1C1917',
+  bgChatUser: '#44403C',
+  bgChatBot: '#292524',
+  textPrimary: '#FAFAF9',
+  textSecondary: '#D6D3D1',
+  textTertiary: '#A8A29E',
+  textInverse: '#1C1917',
+  accent: '#D97757',
+  accentHover: '#E8886A',
+  accentSoft: 'rgba(217, 119, 87, 0.15)',
+  accentGlow: 'rgba(217, 119, 87, 0.25)',
+  borderSubtle: '#44403C',
+  border: '#57534E',
+  success: '#4ADE80',
+  successSoft: 'rgba(74, 222, 128, 0.15)',
+  shadowLg: '0 12px 32px rgba(0, 0, 0, 0.3)',
+}
+
+// Default to light mode (can be overridden)
+const defaultColors = lightColors
+
 // Generate session ID
 function generateSessionId() {
   return 'widget-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11)
+}
+
+// LocalStorage helpers for conversation persistence
+const STORAGE_KEY_PREFIX = 'bobot_chat_'
+
+function getStorageKey(companyId) {
+  return `${STORAGE_KEY_PREFIX}${companyId}`
+}
+
+function loadConversationFromStorage(companyId) {
+  try {
+    const data = localStorage.getItem(getStorageKey(companyId))
+    if (data) {
+      const parsed = JSON.parse(data)
+      // Check if conversation is less than 24 hours old
+      if (parsed.timestamp && Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
+        return parsed
+      }
+    }
+  } catch (e) {
+    console.log('Could not load chat history')
+  }
+  return null
+}
+
+function saveConversationToStorage(companyId, data) {
+  try {
+    localStorage.setItem(getStorageKey(companyId), JSON.stringify({
+      ...data,
+      timestamp: Date.now()
+    }))
+  } catch (e) {
+    console.log('Could not save chat history')
+  }
+}
+
+function clearConversationStorage(companyId) {
+  try {
+    localStorage.removeItem(getStorageKey(companyId))
+  } catch (e) {
+    console.log('Could not clear chat history')
+  }
 }
 
 // Darken/lighten hex color
@@ -129,6 +208,14 @@ const injectStyles = () => {
   document.head.appendChild(styleSheet)
 }
 
+// Detect system dark mode preference
+function detectDarkMode() {
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  }
+  return false
+}
+
 function ChatWidget({ config }) {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState([])
@@ -138,22 +225,39 @@ function ChatWidget({ config }) {
   const [inputFocused, setInputFocused] = useState(false)
   const [sendHover, setSendHover] = useState(false)
   const [showContact, setShowContact] = useState(false)
-  const [sessionId] = useState(() => generateSessionId())
+  const [sessionId, setSessionId] = useState(() => generateSessionId())
   const [feedbackGiven, setFeedbackGiven] = useState({})
   const [companyConfig, setCompanyConfig] = useState(null)
   const [conversationId, setConversationId] = useState(null)
+  const [showMenu, setShowMenu] = useState(false)
+  const [darkMode, setDarkMode] = useState(() => detectDarkMode())
   const messagesEndRef = useRef(null)
+
+  // Get colors based on dark mode
+  const colors = darkMode ? darkColors : lightColors
 
   // Auto-detect language from browser
   const lang = detectLanguage()
   const t = translations[lang] || translations.sv
   const isRTL = lang === 'ar'
 
-  // Fetch company config from backend
+  // Fetch company config from backend and restore conversation
   useEffect(() => {
     injectStyles()
     fetchCompanyConfig()
   }, [])
+
+  // Save conversation to localStorage whenever messages change
+  useEffect(() => {
+    if (messages.length > 1 && companyConfig) {
+      saveConversationToStorage(config.companyId, {
+        messages,
+        sessionId,
+        conversationId,
+        feedbackGiven
+      })
+    }
+  }, [messages, sessionId, conversationId, feedbackGiven])
 
   const fetchCompanyConfig = async () => {
     try {
@@ -161,9 +265,19 @@ function ChatWidget({ config }) {
       if (response.ok) {
         const data = await response.json()
         setCompanyConfig(data)
-        // Set welcome message
-        const welcomeMsg = data.welcome_message || t.welcomeMessage
-        setMessages([{ id: 0, type: 'bot', text: welcomeMsg }])
+
+        // Try to restore previous conversation
+        const saved = loadConversationFromStorage(config.companyId)
+        if (saved && saved.messages && saved.messages.length > 1) {
+          setMessages(saved.messages)
+          if (saved.sessionId) setSessionId(saved.sessionId)
+          if (saved.conversationId) setConversationId(saved.conversationId)
+          if (saved.feedbackGiven) setFeedbackGiven(saved.feedbackGiven)
+        } else {
+          // Set welcome message
+          const welcomeMsg = data.welcome_message || t.welcomeMessage
+          setMessages([{ id: 0, type: 'bot', text: welcomeMsg }])
+        }
       } else {
         // Fallback to default welcome
         setMessages([{ id: 0, type: 'bot', text: t.welcomeMessage }])
@@ -172,6 +286,34 @@ function ChatWidget({ config }) {
       console.log('Could not fetch company config')
       setMessages([{ id: 0, type: 'bot', text: t.welcomeMessage }])
     }
+  }
+
+  const startNewConversation = () => {
+    clearConversationStorage(config.companyId)
+    setMessages([{ id: 0, type: 'bot', text: companyConfig?.welcome_message || t.welcomeMessage }])
+    setSessionId(generateSessionId())
+    setConversationId(null)
+    setFeedbackGiven({})
+    setShowContact(false)
+    setShowMenu(false)
+  }
+
+  const emailConversation = () => {
+    const email = companyConfig?.contact_email
+    if (!email) return
+
+    // Build conversation summary
+    const conversationText = messages
+      .filter(m => m.id !== 0) // Skip welcome message
+      .map(m => `${m.type === 'user' ? 'Kund' : 'Bot'}: ${m.text}`)
+      .join('\n\n')
+
+    const refId = conversationId || 'Ej tilldelat'
+    const subject = encodeURIComponent(`Chattkonversation ${refId}`)
+    const body = encodeURIComponent(`Hej,\n\nJag behöver hjälp med min chattkonversation.\n\nReferens-ID: ${refId}\n\n--- Konversation ---\n\n${conversationText}\n\n--- Slut ---\n\nVänligen kontakta mig för vidare hjälp.\n`)
+
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`
+    setShowMenu(false)
   }
 
   useEffect(() => {
@@ -213,7 +355,8 @@ function ChatWidget({ config }) {
           id: botMsgId,
           type: 'bot',
           text: data.answer,
-          hadAnswer: data.had_answer
+          hadAnswer: data.had_answer,
+          confidence: data.confidence || 100
         }])
 
         // Show contact button if bot couldn't answer
@@ -230,10 +373,16 @@ function ChatWidget({ config }) {
         setShowContact(true)
       }
     } catch (error) {
+      // Better error message for service unavailable (Ollama down, etc.)
+      const errorMsg = error.message?.includes('503') || error.message?.includes('fetch')
+        ? t.serviceUnavailable
+        : t.errorMessage
+
       setMessages(prev => [...prev, {
         id: Date.now(),
         type: 'bot',
-        text: t.errorMessage
+        text: errorMsg,
+        isError: true
       }])
       setShowContact(true)
     } finally {
@@ -267,7 +416,7 @@ function ChatWidget({ config }) {
   const companyName = companyConfig?.company_name || config.title || 'Bobot'
   const hasContact = companyConfig?.contact_email || companyConfig?.contact_phone
 
-  // Styles
+  // Styles - using dynamic colors based on dark mode
   const styles = {
     container: {
       position: 'fixed',
@@ -287,7 +436,7 @@ function ChatWidget({ config }) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      boxShadow: defaultColors.shadowLg,
+      boxShadow: colors.shadowLg,
       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       transform: buttonHover ? 'scale(1.05)' : 'scale(1)',
     },
@@ -298,10 +447,10 @@ function ChatWidget({ config }) {
       left: isRTL ? '0' : 'auto',
       width: '400px',
       height: '600px',
-      backgroundColor: defaultColors.bgTertiary,
+      backgroundColor: colors.bgTertiary,
       borderRadius: '16px',
-      boxShadow: defaultColors.shadowLg,
-      border: `1px solid ${defaultColors.borderSubtle}`,
+      boxShadow: colors.shadowLg,
+      border: `1px solid ${colors.borderSubtle}`,
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
@@ -309,7 +458,7 @@ function ChatWidget({ config }) {
     },
     header: {
       background: `linear-gradient(135deg, ${primaryColor}, ${adjustColor(primaryColor, -20)})`,
-      color: defaultColors.textInverse,
+      color: colors.textInverse,
       padding: '16px 20px',
       display: 'flex',
       alignItems: 'center',
@@ -340,7 +489,7 @@ function ChatWidget({ config }) {
       background: 'rgba(255,255,255,0.15)',
       border: 'none',
       borderRadius: '8px',
-      color: defaultColors.textInverse,
+      color: colors.textInverse,
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
@@ -352,7 +501,7 @@ function ChatWidget({ config }) {
       flex: 1,
       overflowY: 'auto',
       padding: '16px',
-      backgroundColor: defaultColors.bgSecondary,
+      backgroundColor: colors.bgSecondary,
     },
     message: {
       marginBottom: '12px',
@@ -367,15 +516,15 @@ function ChatWidget({ config }) {
       lineHeight: '1.5',
     },
     messageBubbleUser: {
-      backgroundColor: defaultColors.bgChatUser,
-      color: defaultColors.textPrimary,
+      backgroundColor: colors.bgChatUser,
+      color: colors.textPrimary,
       borderBottomRightRadius: isRTL ? '12px' : '4px',
       borderBottomLeftRadius: isRTL ? '4px' : '12px',
     },
     messageBubbleBot: {
-      backgroundColor: defaultColors.bgChatBot,
-      color: defaultColors.textPrimary,
-      border: `1px solid ${defaultColors.borderSubtle}`,
+      backgroundColor: colors.bgChatBot,
+      color: colors.textPrimary,
+      border: `1px solid ${colors.borderSubtle}`,
       borderBottomLeftRadius: isRTL ? '12px' : '4px',
       borderBottomRightRadius: isRTL ? '4px' : '12px',
     },
@@ -384,25 +533,25 @@ function ChatWidget({ config }) {
       gap: '8px',
       marginTop: '8px',
       paddingTop: '8px',
-      borderTop: `1px solid ${defaultColors.borderSubtle}`,
+      borderTop: `1px solid ${colors.borderSubtle}`,
     },
     feedbackBtn: {
       padding: '4px 12px',
       fontSize: '12px',
-      border: `1px solid ${defaultColors.border}`,
+      border: `1px solid ${colors.border}`,
       borderRadius: '16px',
       background: 'transparent',
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
       gap: '4px',
-      color: defaultColors.textSecondary,
+      color: colors.textSecondary,
       transition: 'all 0.15s ease',
     },
     inputArea: {
       padding: '12px',
-      borderTop: `1px solid ${defaultColors.borderSubtle}`,
-      backgroundColor: defaultColors.bgSecondary,
+      borderTop: `1px solid ${colors.borderSubtle}`,
+      backgroundColor: colors.bgSecondary,
     },
     inputForm: {
       display: 'flex',
@@ -413,21 +562,21 @@ function ChatWidget({ config }) {
     input: {
       flex: 1,
       padding: '12px 16px',
-      border: `1px solid ${inputFocused ? primaryColor : defaultColors.borderSubtle}`,
+      border: `1px solid ${inputFocused ? primaryColor : colors.borderSubtle}`,
       borderRadius: '24px',
       fontSize: '14px',
       outline: 'none',
-      backgroundColor: defaultColors.bgTertiary,
-      color: defaultColors.textPrimary,
+      backgroundColor: colors.bgTertiary,
+      color: colors.textPrimary,
       transition: 'all 0.2s ease',
-      boxShadow: inputFocused ? `0 0 0 3px ${defaultColors.accentGlow}` : 'none',
+      boxShadow: inputFocused ? `0 0 0 3px ${colors.accentGlow}` : 'none',
       textAlign: isRTL ? 'right' : 'left',
     },
     sendButton: {
       width: '40px',
       height: '40px',
       backgroundColor: primaryColor,
-      color: defaultColors.textInverse,
+      color: colors.textInverse,
       border: 'none',
       borderRadius: '50%',
       cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
@@ -443,9 +592,9 @@ function ChatWidget({ config }) {
       padding: '10px 16px',
       marginTop: '8px',
       backgroundColor: 'transparent',
-      border: `1px solid ${defaultColors.border}`,
+      border: `1px solid ${colors.border}`,
       borderRadius: '8px',
-      color: defaultColors.textSecondary,
+      color: colors.textSecondary,
       fontSize: '13px',
       cursor: 'pointer',
       display: 'flex',
@@ -472,6 +621,122 @@ function ChatWidget({ config }) {
                 {conversationId ? `${t.subtitle} • ${conversationId}` : t.subtitle}
               </p>
             </div>
+            <div style={{ position: 'relative' }}>
+              <button
+                style={styles.closeButton}
+                onClick={() => setShowMenu(!showMenu)}
+                title="Menu"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="1" />
+                  <circle cx="12" cy="5" r="1" />
+                  <circle cx="12" cy="19" r="1" />
+                </svg>
+              </button>
+              {showMenu && (
+                <div style={{
+                  position: 'absolute',
+                  top: '40px',
+                  right: isRTL ? 'auto' : '0',
+                  left: isRTL ? '0' : 'auto',
+                  backgroundColor: colors.bgTertiary,
+                  borderRadius: '8px',
+                  boxShadow: colors.shadowLg,
+                  border: `1px solid ${colors.borderSubtle}`,
+                  minWidth: '160px',
+                  zIndex: 10,
+                  overflow: 'hidden'
+                }}>
+                  <button
+                    onClick={startNewConversation}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      color: colors.textPrimary,
+                      fontSize: '13px',
+                      textAlign: isRTL ? 'right' : 'left'
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = colors.bgSecondary}
+                    onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    {t.newConversation}
+                  </button>
+                  {companyConfig?.contact_email && messages.length > 1 && (
+                    <button
+                      onClick={emailConversation}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: 'none',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        color: colors.textPrimary,
+                        fontSize: '13px',
+                        textAlign: isRTL ? 'right' : 'left'
+                      }}
+                      onMouseOver={(e) => e.target.style.backgroundColor = colors.bgSecondary}
+                      onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                        <polyline points="22,6 12,13 2,6" />
+                      </svg>
+                      {t.emailConversation}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { setDarkMode(!darkMode); setShowMenu(false) }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      color: colors.textPrimary,
+                      fontSize: '13px',
+                      textAlign: isRTL ? 'right' : 'left'
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = colors.bgSecondary}
+                    onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                  >
+                    {darkMode ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="5" />
+                        <line x1="12" y1="1" x2="12" y2="3" />
+                        <line x1="12" y1="21" x2="12" y2="23" />
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                        <line x1="1" y1="12" x2="3" y2="12" />
+                        <line x1="21" y1="12" x2="23" y2="12" />
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                      </svg>
+                    )}
+                    {darkMode ? 'Ljust läge' : 'Mörkt läge'}
+                  </button>
+                </div>
+              )}
+            </div>
             <button style={styles.closeButton} onClick={() => setIsOpen(false)}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -496,10 +761,28 @@ function ChatWidget({ config }) {
                   }}>
                     {msg.text}
 
+                    {/* Confidence score for bot messages */}
+                    {msg.type === 'bot' && msg.confidence && msg.confidence < 100 && msg.id !== 0 && (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        marginTop: '6px',
+                        fontSize: '11px',
+                        color: msg.confidence >= 70 ? colors.success : colors.textTertiary
+                      }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10" />
+                          <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                        {msg.confidence}% säkerhet
+                      </div>
+                    )}
+
                     {/* Feedback buttons for bot messages */}
                     {msg.type === 'bot' && msg.id !== 0 && !feedbackGiven[msg.id] && (
                       <div style={styles.feedbackButtons}>
-                        <span style={{ fontSize: '12px', color: defaultColors.textTertiary }}>{t.helpful}</span>
+                        <span style={{ fontSize: '12px', color: colors.textTertiary }}>{t.helpful}</span>
                         <button style={styles.feedbackBtn} onClick={() => handleFeedback(msg.id, true)}>
                           👍 {t.yes}
                         </button>
@@ -509,7 +792,7 @@ function ChatWidget({ config }) {
                       </div>
                     )}
                     {feedbackGiven[msg.id] !== undefined && (
-                      <div style={{ fontSize: '12px', color: defaultColors.success, marginTop: '8px' }}>
+                      <div style={{ fontSize: '12px', color: colors.success, marginTop: '8px' }}>
                         ✓ {t.thanksFeedback}
                       </div>
                     )}
@@ -521,10 +804,15 @@ function ChatWidget({ config }) {
             {loading && (
               <div style={{ ...styles.message, justifyContent: isRTL ? 'flex-end' : 'flex-start' }}>
                 <div style={{ ...styles.messageBubble, ...styles.messageBubbleBot }}>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <div className="bobot-typing-dot" style={{ width: 8, height: 8, backgroundColor: defaultColors.textTertiary, borderRadius: '50%' }}></div>
-                    <div className="bobot-typing-dot" style={{ width: 8, height: 8, backgroundColor: defaultColors.textTertiary, borderRadius: '50%' }}></div>
-                    <div className="bobot-typing-dot" style={{ width: 8, height: 8, backgroundColor: defaultColors.textTertiary, borderRadius: '50%' }}></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '13px', color: colors.textSecondary }}>
+                      {companyName} skriver
+                    </span>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <div className="bobot-typing-dot" style={{ width: 6, height: 6, backgroundColor: colors.textTertiary, borderRadius: '50%' }}></div>
+                      <div className="bobot-typing-dot" style={{ width: 6, height: 6, backgroundColor: colors.textTertiary, borderRadius: '50%' }}></div>
+                      <div className="bobot-typing-dot" style={{ width: 6, height: 6, backgroundColor: colors.textTertiary, borderRadius: '50%' }}></div>
+                    </div>
                   </div>
                 </div>
               </div>

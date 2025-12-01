@@ -1,12 +1,15 @@
 import { useState, useEffect, useContext } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AuthContext } from '../App'
 
 const API_BASE = '/api'
 
 function Analytics() {
   const { authFetch, token } = useContext(AuthContext)
+  const navigate = useNavigate()
   const [analytics, setAnalytics] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [addingQuestion, setAddingQuestion] = useState(null)
 
   useEffect(() => {
     fetchAnalytics()
@@ -26,6 +29,14 @@ function Analytics() {
     }
   }
 
+  const [exporting, setExporting] = useState(null)
+
+  const handleAddToKnowledge = async (question) => {
+    setAddingQuestion(question)
+    // Navigate to knowledge page with pre-filled question
+    navigate('/knowledge', { state: { prefillQuestion: question } })
+  }
+
   const handleExport = async (type) => {
     const endpoints = {
       conversations: '/export/conversations',
@@ -33,12 +44,9 @@ function Analytics() {
       knowledge: '/export/knowledge'
     }
 
+    setExporting(type)
     try {
-      const response = await fetch(`${API_BASE}${endpoints[type]}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
+      const response = await authFetch(`${API_BASE}${endpoints[type]}`)
       if (response.ok) {
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
@@ -49,9 +57,14 @@ function Analytics() {
         a.click()
         window.URL.revokeObjectURL(url)
         a.remove()
+      } else {
+        alert('Export misslyckades. Försök igen.')
       }
     } catch (error) {
       console.error('Export failed:', error)
+      alert('Export misslyckades: ' + error.message)
+    } finally {
+      setExporting(null)
     }
   }
 
@@ -89,24 +102,34 @@ function Analytics() {
         <div className="flex gap-2">
           <button
             onClick={() => handleExport('statistics')}
-            className="btn btn-ghost text-sm"
+            disabled={exporting !== null}
+            className="btn btn-ghost text-sm disabled:opacity-50"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
+            {exporting === 'statistics' ? (
+              <span className="animate-spin">⏳</span>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            )}
             Exportera statistik
           </button>
           <button
             onClick={() => handleExport('conversations')}
-            className="btn btn-ghost text-sm"
+            disabled={exporting !== null}
+            className="btn btn-ghost text-sm disabled:opacity-50"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
+            {exporting === 'conversations' ? (
+              <span className="animate-spin">⏳</span>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            )}
             Exportera konversationer
           </button>
         </div>
@@ -373,14 +396,24 @@ function Analytics() {
             <div>
               <h3 className="text-lg font-medium text-text-primary">Obesvarade frågor</h3>
               <p className="text-sm text-text-secondary">
-                Lägg till dessa i kunskapsbasen för att förbättra svarsfrekvensen
+                Klicka på "+" för att lägga till i kunskapsbasen
               </p>
             </div>
           </div>
           <div className="space-y-2">
             {analytics.top_unanswered.map((question, index) => (
-              <div key={index} className="p-3 bg-bg-secondary rounded-lg">
-                <p className="text-sm text-text-primary">{question}</p>
+              <div key={index} className="p-3 bg-bg-secondary rounded-lg flex items-center justify-between gap-3 group">
+                <p className="text-sm text-text-primary flex-1">{question}</p>
+                <button
+                  onClick={() => handleAddToKnowledge(question)}
+                  className="flex-shrink-0 p-2 text-text-tertiary hover:text-accent hover:bg-accent-soft rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                  title="Lägg till i kunskapsbasen"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
               </div>
             ))}
           </div>

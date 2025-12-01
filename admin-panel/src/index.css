@@ -2,10 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CSS Variables for light/dark mode */
+:root {
+  /* Light mode (default) */
+  --bg-primary: #FAFAFA;
+  --bg-secondary: #F5F5F4;
+  --bg-tertiary: #FFFFFF;
+  --bg-chat-user: #F0EBE3;
+  --bg-chat-bot: #FFFFFF;
+  --text-primary: #1C1917;
+  --text-secondary: #57534E;
+  --text-tertiary: #A8A29E;
+  --text-inverse: #FAFAFA;
+  --border-subtle: #E7E5E4;
+  --border: #D6D3D1;
+}
+
+.dark {
+  /* Dark mode */
+  --bg-primary: #0F0F0F;
+  --bg-secondary: #1A1A1A;
+  --bg-tertiary: #141414;
+  --bg-chat-user: #2A2A2A;
+  --bg-chat-bot: #1A1A1A;
+  --text-primary: #FAFAF9;
+  --text-secondary: #D6D3D1;
+  --text-tertiary: #A8A29E;
+  --text-inverse: #1C1917;
+  --border-subtle: #2A2A2A;
+  --border: #3A3A3A;
+}
+
 @layer base {
   body {
     @apply bg-bg-primary text-text-primary;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   /* Focus states */

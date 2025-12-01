@@ -4,23 +4,24 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // Backgrounds
+        // Backgrounds - Light mode (default)
         bg: {
-          primary: '#FAFAFA',
-          secondary: '#F5F5F4',
-          tertiary: '#FFFFFF',
-          'chat-user': '#F0EBE3',
-          'chat-bot': '#FFFFFF',
+          primary: 'var(--bg-primary)',
+          secondary: 'var(--bg-secondary)',
+          tertiary: 'var(--bg-tertiary)',
+          'chat-user': 'var(--bg-chat-user)',
+          'chat-bot': 'var(--bg-chat-bot)',
         },
         // Text
         text: {
-          primary: '#1C1917',
-          secondary: '#57534E',
-          tertiary: '#A8A29E',
-          inverse: '#FAFAFA',
+          primary: 'var(--text-primary)',
+          secondary: 'var(--text-secondary)',
+          tertiary: 'var(--text-tertiary)',
+          inverse: 'var(--text-inverse)',
         },
         // Accent (warm terracotta)
         accent: {
@@ -44,8 +45,8 @@ export default {
         },
         // Borders
         border: {
-          subtle: '#E7E5E4',
-          DEFAULT: '#D6D3D1',
+          subtle: 'var(--border-subtle)',
+          DEFAULT: 'var(--border)',
         },
       },
       fontFamily: {

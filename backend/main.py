@@ -3,7 +3,7 @@ Bobot Backend API
 En GDPR-säker AI-chatbot för fastighetsbolag
 """
 
-from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
@@ -152,6 +152,35 @@ class ChatResponse(BaseModel):
     session_id: str
     conversation_id: str  # Short readable ID for user reference (e.g., "BOB-A1B2")
     had_answer: bool = True
+    confidence: int = 100  # Confidence score 0-100
+
+
+# Simple in-memory cache for responses
+response_cache = {}
+CACHE_TTL = 300  # 5 minutes
+
+
+def get_cached_response(company_id: str, question: str):
+    """Get cached response if available and not expired"""
+    cache_key = f"{company_id}:{question.lower().strip()}"
+    if cache_key in response_cache:
+        cached, timestamp = response_cache[cache_key]
+        if datetime.utcnow().timestamp() - timestamp < CACHE_TTL:
+            return cached
+        else:
+            del response_cache[cache_key]
+    return None
+
+
+def set_cached_response(company_id: str, question: str, response: dict):
+    """Cache a response"""
+    cache_key = f"{company_id}:{question.lower().strip()}"
+    response_cache[cache_key] = (response, datetime.utcnow().timestamp())
+    # Clean old entries if cache gets too large
+    if len(response_cache) > 1000:
+        oldest_keys = sorted(response_cache.keys(), key=lambda k: response_cache[k][1])[:100]
+        for k in oldest_keys:
+            del response_cache[k]
 
 
 class KnowledgeItemCreate(BaseModel):
@@ -203,6 +232,8 @@ class SettingsUpdate(BaseModel):
     primary_color: Optional[str] = None
     language: Optional[str] = None
     data_retention_days: Optional[int] = None
+    notify_unanswered: Optional[bool] = None
+    notification_email: Optional[str] = None
 
 
 class SettingsResponse(BaseModel):
@@ -214,6 +245,8 @@ class SettingsResponse(BaseModel):
     primary_color: str
     language: str
     data_retention_days: int
+    notify_unanswered: bool
+    notification_email: str
 
 
 class MessageResponse(BaseModel):
@@ -367,18 +400,58 @@ def init_demo_data():
 # Helper Functions
 # =============================================================================
 
+def normalize_text(text: str) -> str:
+    """Remove punctuation and normalize text for matching"""
+    import re
+    # Remove punctuation, keep letters and numbers
+    text = re.sub(r'[^\w\s]', '', text.lower())
+    return text
+
+
 def find_relevant_context(question: str, company_id: str, db: Session, top_k: int = 3) -> List[KnowledgeItem]:
-    """Hitta relevanta frågor/svar från kunskapsbasen"""
+    """Hitta relevanta frågor/svar från kunskapsbasen - fuzzy matching"""
     items = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == company_id).all()
 
-    question_lower = question.lower()
-    question_words = set(question_lower.split())
+    question_normalized = normalize_text(question)
+    question_words = set(question_normalized.split())
+
+    # Common stopwords to ignore
+    stopwords = {'jag', 'vill', 'kan', 'hur', 'vad', 'är', 'har', 'en', 'ett', 'att', 'och',
+                 'för', 'med', 'om', 'på', 'av', 'i', 'det', 'den', 'de', 'du', 'vi', 'ni',
+                 'göra', 'gör', 'ska', 'skulle', 'a', 'the', 'is', 'are', 'to', 'how', 'what'}
+
+    # Get meaningful words (not stopwords)
+    meaningful_words = question_words - stopwords
 
     scored_items = []
     for item in items:
-        item_words = set(item.question.lower().split())
-        common_words = question_words & item_words
-        score = len(common_words)
+        item_question_normalized = normalize_text(item.question)
+        item_answer_normalized = normalize_text(item.answer)
+        item_words = set(item_question_normalized.split()) | set(item_answer_normalized.split())
+
+        score = 0
+
+        # Exact word matches (high score)
+        common_words = meaningful_words & item_words
+        score += len(common_words) * 3
+
+        # Partial/substring matches (medium score) - important for compound words
+        for q_word in meaningful_words:
+            if len(q_word) >= 4:  # Only check words with 4+ chars
+                for i_word in item_words:
+                    if len(i_word) >= 4:
+                        # Check if one contains the other (handles "felanmälan" matching "felanmalan")
+                        if q_word in i_word or i_word in q_word:
+                            score += 2
+                        # Check root similarity (first 4 chars match)
+                        elif q_word[:4] == i_word[:4]:
+                            score += 1
+
+        # Category match bonus
+        if item.category:
+            if item.category.lower() in question_normalized:
+                score += 2
+
         if score > 0:
             scored_items.append((score, item))
 
@@ -477,7 +550,7 @@ def detect_category(text: str) -> str:
     return "allmant"
 
 
-def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None) -> str:
+def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None, category: str = None) -> str:
     """Bygg prompt med kontext - använder specificerat eller detekterat språk"""
     # Use provided language or detect from question
     lang = language if language in ["sv", "en", "ar"] else detect_language(question)
@@ -495,16 +568,35 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
 
     company_name = settings.company_name if settings else "fastighetsbolaget"
 
-    return f"""You are a helpful customer service assistant for {company_name}.
+    # Category-specific guidance when no exact context found
+    category_guidance = ""
+    if not context and category and category != "allmant":
+        category_hints = {
+            "felanmalan": "The customer seems to want to report a problem/fault. Ask what the issue is and where it's located. Common issues include plumbing, heating, electricity, doors/locks, etc.",
+            "hyra": "The customer has a question about rent. Common topics: payment dates, amounts, late payments, included costs.",
+            "kontrakt": "The customer has a contract question. Common topics: lease terms, termination notice, moving in/out.",
+            "tvattstuga": "The customer has a laundry room question. Common topics: booking times, rules, broken machines.",
+            "parkering": "The customer has a parking question. Common topics: available spots, permits, costs.",
+            "kontakt": "The customer wants contact information. Provide relevant contact details if available."
+        }
+        if category in category_hints:
+            category_guidance = f"\n\nNote: {category_hints[category]}\n"
+
+    # Additional instruction when message is very short
+    short_message_hint = ""
+    if len(question.split()) <= 2:
+        short_message_hint = "\nThe customer's message is brief. Be friendly and ask a clarifying question to better help them.\n"
+
+    return f"""You are a helpful, friendly customer service assistant for {company_name}.
 
 CRITICAL LANGUAGE REQUIREMENT: {lang_instruction}
 You are responding to a customer who speaks {target_lang}. Your ENTIRE response must be in {target_lang}.
 DO NOT use any other language. If the knowledge base answers are in a different language, translate them.
-
+{category_guidance}{short_message_hint}
 {context_text}
 Customer question: {question}
 
-Provide a helpful, friendly answer in {target_lang}:"""
+Be conversational and helpful. If you're not sure exactly what they need, ask a friendly follow-up question. Provide a helpful answer in {target_lang}:"""
 
 
 def anonymize_ip(ip: str) -> str:
@@ -570,6 +662,33 @@ async def save_conversation_stats(db: Session, conversation: Conversation):
         daily_stat.helpful_count += 1
     elif conversation.was_helpful is False:
         daily_stat.not_helpful_count += 1
+
+    # Update category counts
+    category = conversation.category or "allmant"
+    try:
+        cat_counts = json.loads(daily_stat.category_counts or "{}")
+    except:
+        cat_counts = {}
+    cat_counts[category] = cat_counts.get(category, 0) + 1
+    daily_stat.category_counts = json.dumps(cat_counts)
+
+    # Update language counts
+    language = conversation.language or "sv"
+    try:
+        lang_counts = json.loads(daily_stat.language_counts or "{}")
+    except:
+        lang_counts = {}
+    lang_counts[language] = lang_counts.get(language, 0) + 1
+    daily_stat.language_counts = json.dumps(lang_counts)
+
+    # Update hourly counts
+    hour = str(conversation.started_at.hour)
+    try:
+        hour_counts = json.loads(daily_stat.hourly_counts or "{}")
+    except:
+        hour_counts = {}
+    hour_counts[hour] = hour_counts.get(hour, 0) + 1
+    daily_stat.hourly_counts = json.dumps(hour_counts)
 
     # Beräkna genomsnittlig svarstid
     response_times = [m.response_time_ms for m in messages if m.response_time_ms]
@@ -669,6 +788,20 @@ async def chat(
     if not company or not company.is_active:
         raise HTTPException(status_code=404, detail="Företag finns inte")
 
+    # Check cache first
+    cached = get_cached_response(company_id, request.question)
+    if cached:
+        # Return cached response with new session handling
+        session_id = request.session_id or str(uuid.uuid4())
+        return ChatResponse(
+            answer=cached["answer"],
+            sources=cached.get("sources", []),
+            session_id=session_id,
+            conversation_id=cached.get("conversation_id", "BOB-CACHE"),
+            had_answer=cached.get("had_answer", True),
+            confidence=cached.get("confidence", 100)
+        )
+
     # Hämta inställningar
     settings = get_or_create_settings(db, company_id)
 
@@ -722,26 +855,30 @@ async def chat(
 
     # Hitta kontext
     context = find_relevant_context(request.question, company_id, db)
-    had_answer = len(context) > 0
+    # Consider it "had_answer" if we found context OR if we detected a specific category
+    had_answer = len(context) > 0 or category != "allmant"
 
     # Mät svarstid
     start_time = datetime.utcnow()
 
-    # Bygg prompt och fråga AI med rätt språk
-    prompt = build_prompt(request.question, context, settings, language)
+    # Bygg prompt och fråga AI med rätt språk och kategori
+    prompt = build_prompt(request.question, context, settings, language, category)
     answer = await query_ollama(prompt)
 
     response_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
 
-    # Om inget svar hittades, använd fallback på rätt språk
-    if not had_answer:
-        # Use language-appropriate fallback
+    # Only use fallback if no context AND no specific category detected (truly generic question)
+    # The AI should try to help based on category even without exact knowledge base matches
+    if not context and category == "allmant" and len(request.question.split()) <= 2:
+        # Only fallback for very short, uncategorized messages where AI can't help
         fallback_messages = {
             "sv": settings.fallback_message or "Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt.",
             "en": "I couldn't find an answer to your question. Please contact us directly.",
             "ar": "لم أتمكن من العثور على إجابة لسؤالك. يرجى الاتصال بنا مباشرة."
         }
-        answer = fallback_messages.get(language, settings.fallback_message)
+        # Only use fallback if AI gave a very short/unhelpful response
+        if len(answer.strip()) < 50:
+            answer = fallback_messages.get(language, settings.fallback_message)
 
     # Spara bot-svaret
     sources = [item.question for item in context]
@@ -765,12 +902,39 @@ async def chat(
 
     db.commit()
 
+    # Calculate confidence score based on context quality
+    # 100% = exact match in knowledge base
+    # 80% = partial match / category match
+    # 50% = AI-generated without knowledge base
+    # 30% = fallback message
+    if len(context) >= 2:
+        confidence = 100
+    elif len(context) == 1:
+        confidence = 90
+    elif had_answer and category != "allmant":
+        confidence = 75
+    elif had_answer:
+        confidence = 60
+    else:
+        confidence = 40
+
+    # Cache the response
+    cache_data = {
+        "answer": answer,
+        "sources": sources,
+        "conversation_id": conversation.reference_id,
+        "had_answer": had_answer,
+        "confidence": confidence
+    }
+    set_cached_response(company_id, request.question, cache_data)
+
     return ChatResponse(
         answer=answer,
         sources=sources,
         session_id=session_id,
         conversation_id=conversation.reference_id,
-        had_answer=had_answer
+        had_answer=had_answer,
+        confidence=confidence
     )
 
 
@@ -838,7 +1002,9 @@ async def get_settings(
         fallback_message=settings.fallback_message or "",
         primary_color=settings.primary_color or "#D97757",
         language=settings.language or "sv",
-        data_retention_days=settings.data_retention_days or 30
+        data_retention_days=settings.data_retention_days or 30,
+        notify_unanswered=settings.notify_unanswered or False,
+        notification_email=settings.notification_email or ""
     )
 
 
@@ -871,6 +1037,10 @@ async def update_settings(
     if update.data_retention_days is not None:
         # Validera retention (7-365 dagar)
         settings.data_retention_days = max(7, min(365, update.data_retention_days))
+    if update.notify_unanswered is not None:
+        settings.notify_unanswered = update.notify_unanswered
+    if update.notification_email is not None:
+        settings.notification_email = update.notification_email
 
     db.commit()
     db.refresh(settings)
@@ -883,7 +1053,9 @@ async def update_settings(
         fallback_message=settings.fallback_message or "",
         primary_color=settings.primary_color or "#D97757",
         language=settings.language or "sv",
-        data_retention_days=settings.data_retention_days or 30
+        data_retention_days=settings.data_retention_days or 30,
+        notify_unanswered=settings.notify_unanswered or False,
+        notification_email=settings.notification_email or ""
     )
 
 
@@ -1123,6 +1295,440 @@ async def delete_knowledge(
     db.commit()
 
     return {"message": "Borttagen"}
+
+
+class SimilarQuestionRequest(BaseModel):
+    question: str
+
+
+class SimilarQuestionResponse(BaseModel):
+    id: int
+    question: str
+    answer: str
+    similarity: float
+
+
+def calculate_similarity(str1: str, str2: str) -> float:
+    """Calculate simple word-based similarity between two strings"""
+    # Normalize strings
+    s1 = str1.lower().strip()
+    s2 = str2.lower().strip()
+
+    # Exact match
+    if s1 == s2:
+        return 1.0
+
+    # Word-based Jaccard similarity
+    words1 = set(s1.split())
+    words2 = set(s2.split())
+
+    if not words1 or not words2:
+        return 0.0
+
+    intersection = words1 & words2
+    union = words1 | words2
+
+    return len(intersection) / len(union) if union else 0.0
+
+
+@app.post("/knowledge/check-similar", response_model=List[SimilarQuestionResponse])
+async def check_similar_questions(
+    request: SimilarQuestionRequest,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Check for similar questions in the knowledge base"""
+    items = db.query(KnowledgeItem).filter(
+        KnowledgeItem.company_id == current["company_id"]
+    ).all()
+
+    similar = []
+    for item in items:
+        sim = calculate_similarity(request.question, item.question)
+        if sim > 0.3:  # Threshold for similarity
+            similar.append(SimilarQuestionResponse(
+                id=item.id,
+                question=item.question,
+                answer=item.answer[:100] + "..." if len(item.answer) > 100 else item.answer,
+                similarity=round(sim * 100, 1)
+            ))
+
+    # Sort by similarity descending
+    similar.sort(key=lambda x: x.similarity, reverse=True)
+    return similar[:5]  # Return top 5 similar
+
+
+class UploadResponse(BaseModel):
+    success: bool
+    items_added: int
+    message: str
+    items: List[KnowledgeItemResponse] = []
+
+
+class URLImportRequest(BaseModel):
+    url: str
+
+
+async def parse_excel_file(content: bytes) -> List[dict]:
+    """Parse Excel file and extract Q&A pairs"""
+    import io
+    try:
+        import openpyxl
+    except ImportError:
+        return []
+
+    items = []
+    try:
+        workbook = openpyxl.load_workbook(io.BytesIO(content))
+        sheet = workbook.active
+
+        # Try to find headers
+        headers = []
+        for col in range(1, sheet.max_column + 1):
+            val = sheet.cell(row=1, column=col).value
+            headers.append(str(val).lower() if val else "")
+
+        # Map columns to Q&A
+        q_col = None
+        a_col = None
+        cat_col = None
+
+        for i, h in enumerate(headers):
+            if any(x in h for x in ['fråga', 'question', 'q']):
+                q_col = i + 1
+            elif any(x in h for x in ['svar', 'answer', 'a']):
+                a_col = i + 1
+            elif any(x in h for x in ['kategori', 'category', 'cat']):
+                cat_col = i + 1
+
+        # If no headers found, assume first two columns
+        if q_col is None:
+            q_col = 1
+        if a_col is None:
+            a_col = 2
+
+        # Read rows
+        for row in range(2, sheet.max_row + 1):
+            q = sheet.cell(row=row, column=q_col).value
+            a = sheet.cell(row=row, column=a_col).value
+            cat = sheet.cell(row=row, column=cat_col).value if cat_col else None
+
+            if q and a:
+                items.append({
+                    "question": str(q).strip(),
+                    "answer": str(a).strip(),
+                    "category": str(cat).strip() if cat else None
+                })
+    except Exception as e:
+        print(f"Excel parse error: {e}")
+
+    return items
+
+
+async def parse_word_file(content: bytes) -> str:
+    """Parse Word file and extract text"""
+    import io
+    try:
+        from docx import Document
+    except ImportError:
+        return ""
+
+    try:
+        doc = Document(io.BytesIO(content))
+        text = []
+        for para in doc.paragraphs:
+            if para.text.strip():
+                text.append(para.text.strip())
+        return "\n\n".join(text)
+    except Exception as e:
+        print(f"Word parse error: {e}")
+        return ""
+
+
+async def parse_text_file(content: bytes) -> str:
+    """Parse plain text file"""
+    try:
+        return content.decode('utf-8')
+    except:
+        try:
+            return content.decode('latin-1')
+        except:
+            return ""
+
+
+async def fetch_url_content(url: str) -> str:
+    """Fetch and extract text content from a URL"""
+    try:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.get(url, headers={
+                'User-Agent': 'Mozilla/5.0 (compatible; BobotBot/1.0)'
+            })
+            response.raise_for_status()
+            html = response.text
+
+            # Simple HTML to text conversion
+            import re
+            # Remove script and style elements
+            html = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
+            html = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL | re.IGNORECASE)
+            html = re.sub(r'<nav[^>]*>.*?</nav>', '', html, flags=re.DOTALL | re.IGNORECASE)
+            html = re.sub(r'<footer[^>]*>.*?</footer>', '', html, flags=re.DOTALL | re.IGNORECASE)
+            html = re.sub(r'<header[^>]*>.*?</header>', '', html, flags=re.DOTALL | re.IGNORECASE)
+
+            # Convert common HTML elements
+            html = re.sub(r'<br\s*/?>', '\n', html)
+            html = re.sub(r'<p[^>]*>', '\n\n', html)
+            html = re.sub(r'</p>', '', html)
+            html = re.sub(r'<h[1-6][^>]*>', '\n\n## ', html)
+            html = re.sub(r'</h[1-6]>', '\n', html)
+            html = re.sub(r'<li[^>]*>', '\n- ', html)
+
+            # Remove remaining HTML tags
+            text = re.sub(r'<[^>]+>', '', html)
+
+            # Decode HTML entities
+            import html as html_module
+            text = html_module.unescape(text)
+
+            # Clean up whitespace
+            text = re.sub(r'\n\s*\n\s*\n', '\n\n', text)
+            text = text.strip()
+
+            return text
+    except Exception as e:
+        print(f"URL fetch error: {e}")
+        return ""
+
+
+async def ai_extract_qa_pairs(text: str, company_name: str = "") -> List[dict]:
+    """Use AI to extract Q&A pairs from unstructured text"""
+    if not text or len(text) < 20:
+        return []
+
+    prompt = f"""Analyze this document and extract question-answer pairs that would be useful for a customer service chatbot for a property management company.
+
+Document text:
+{text[:4000]}
+
+Extract relevant information as Q&A pairs. For each piece of information, create a natural question a tenant might ask, and provide the answer.
+
+Also assign each Q&A to one of these categories: hyra, felanmalan, kontrakt, tvattstuga, parkering, kontakt, allmant
+
+Return your response as a JSON array with objects containing "question", "answer", and "category" fields.
+Only return the JSON array, nothing else.
+
+Example format:
+[
+  {{"question": "När ska hyran betalas?", "answer": "Hyran ska betalas senast den sista dagen varje månad.", "category": "hyra"}},
+  {{"question": "Hur gör jag en felanmälan?", "answer": "Du kan göra en felanmälan via...", "category": "felanmalan"}}
+]"""
+
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            response = await client.post(
+                f"{OLLAMA_BASE_URL}/api/generate",
+                json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
+            )
+            response.raise_for_status()
+            result = response.json().get("response", "")
+
+            # Try to parse JSON from response
+            import re
+            json_match = re.search(r'\[[\s\S]*\]', result)
+            if json_match:
+                items = json.loads(json_match.group())
+                return [item for item in items if item.get("question") and item.get("answer")]
+    except Exception as e:
+        print(f"AI extraction error: {e}")
+
+    return []
+
+
+@app.post("/knowledge/upload", response_model=UploadResponse)
+async def upload_knowledge_file(
+    file: UploadFile = File(...),
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Upload Excel, Word, or text file to populate knowledge base"""
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Ingen fil vald")
+
+    filename = file.filename.lower()
+    content = await file.read()
+
+    if len(content) > 10 * 1024 * 1024:  # 10MB limit
+        raise HTTPException(status_code=400, detail="Filen är för stor (max 10MB)")
+
+    items_to_add = []
+
+    # Parse based on file type
+    if filename.endswith('.xlsx') or filename.endswith('.xls'):
+        items_to_add = await parse_excel_file(content)
+    elif filename.endswith('.docx'):
+        text = await parse_word_file(content)
+        if text:
+            # Use AI to extract Q&A from unstructured text
+            settings = get_or_create_settings(db, current["company_id"])
+            items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
+    elif filename.endswith('.txt') or filename.endswith('.csv'):
+        text = await parse_text_file(content)
+        if text:
+            # Check if it looks like CSV
+            if ',' in text or ';' in text:
+                # Simple CSV parsing
+                lines = text.strip().split('\n')
+                for line in lines[1:]:  # Skip header
+                    parts = line.split(',') if ',' in line else line.split(';')
+                    if len(parts) >= 2:
+                        items_to_add.append({
+                            "question": parts[0].strip().strip('"'),
+                            "answer": parts[1].strip().strip('"'),
+                            "category": parts[2].strip().strip('"') if len(parts) > 2 else None
+                        })
+            else:
+                # Use AI to extract Q&A
+                settings = get_or_create_settings(db, current["company_id"])
+                items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Filformat stöds inte. Använd .xlsx, .docx, .txt eller .csv"
+        )
+
+    if not items_to_add:
+        return UploadResponse(
+            success=False,
+            items_added=0,
+            message="Kunde inte hitta några frågor/svar i filen. Kontrollera formatet."
+        )
+
+    # Auto-categorize items without category
+    for item in items_to_add:
+        if not item.get("category"):
+            item["category"] = detect_category(item["question"] + " " + item["answer"])
+
+    # Add to database
+    added_items = []
+    for item in items_to_add:
+        new_item = KnowledgeItem(
+            company_id=current["company_id"],
+            question=item["question"],
+            answer=item["answer"],
+            category=item.get("category", "allmant")
+        )
+        db.add(new_item)
+        db.flush()
+        added_items.append(KnowledgeItemResponse(
+            id=new_item.id,
+            question=new_item.question,
+            answer=new_item.answer,
+            category=new_item.category or ""
+        ))
+
+    db.commit()
+
+    return UploadResponse(
+        success=True,
+        items_added=len(added_items),
+        message=f"{len(added_items)} frågor/svar har lagts till i kunskapsbasen",
+        items=added_items
+    )
+
+
+@app.post("/knowledge/import-url", response_model=UploadResponse)
+async def import_knowledge_from_url(
+    request: URLImportRequest,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Import knowledge base items from a URL"""
+    import re
+
+    # Validate URL
+    url = request.url.strip()
+    if not url.startswith(('http://', 'https://')):
+        url = 'https://' + url
+
+    if not re.match(r'https?://[^\s/$.?#].[^\s]*', url):
+        raise HTTPException(status_code=400, detail="Ogiltig URL")
+
+    # Fetch content
+    text = await fetch_url_content(url)
+
+    if not text or len(text) < 50:
+        return UploadResponse(
+            success=False,
+            items_added=0,
+            message="Kunde inte hämta innehåll från URL:en. Kontrollera att sidan är tillgänglig."
+        )
+
+    # Use AI to extract Q&A pairs
+    settings = get_or_create_settings(db, current["company_id"])
+    items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
+
+    if not items_to_add:
+        return UploadResponse(
+            success=False,
+            items_added=0,
+            message="Kunde inte hitta några frågor/svar på sidan. Försök med en annan sida."
+        )
+
+    # Auto-categorize items without category
+    for item in items_to_add:
+        if not item.get("category"):
+            item["category"] = detect_category(item["question"] + " " + item["answer"])
+
+    # Add to database
+    added_items = []
+    for item in items_to_add:
+        new_item = KnowledgeItem(
+            company_id=current["company_id"],
+            question=item["question"],
+            answer=item["answer"],
+            category=item.get("category", "allmant")
+        )
+        db.add(new_item)
+        db.flush()
+        added_items.append(KnowledgeItemResponse(
+            id=new_item.id,
+            question=new_item.question,
+            answer=new_item.answer,
+            category=new_item.category or ""
+        ))
+
+    db.commit()
+
+    return UploadResponse(
+        success=True,
+        items_added=len(added_items),
+        message=f"{len(added_items)} frågor/svar har importerats från {url}",
+        items=added_items
+    )
+
+
+@app.delete("/knowledge/bulk")
+async def delete_knowledge_bulk(
+    item_ids: List[int],
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Delete multiple knowledge items at once"""
+    deleted_count = 0
+
+    for item_id in item_ids:
+        db_item = db.query(KnowledgeItem).filter(
+            KnowledgeItem.id == item_id,
+            KnowledgeItem.company_id == current["company_id"]
+        ).first()
+
+        if db_item:
+            db.delete(db_item)
+            deleted_count += 1
+
+    db.commit()
+
+    return {"message": f"{deleted_count} poster har tagits bort", "deleted_count": deleted_count}
 
 
 # =============================================================================
@@ -1450,10 +2056,11 @@ async def export_statistics(
 
 @app.get("/export/knowledge")
 async def export_knowledge(
+    format: str = "csv",
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db)
 ):
-    """Export knowledge base as CSV"""
+    """Export knowledge base as CSV or JSON"""
     from fastapi.responses import StreamingResponse
     import io
     import csv
@@ -1464,26 +2071,43 @@ async def export_knowledge(
         KnowledgeItem.company_id == company_id
     ).all()
 
-    output = io.StringIO()
-    writer = csv.writer(output)
+    if format.lower() == "json":
+        # Export as JSON
+        data = [{
+            "question": item.question,
+            "answer": item.answer,
+            "category": item.category or "",
+            "created_at": item.created_at.isoformat()
+        } for item in items]
 
-    # Header
-    writer.writerow(["Question", "Answer", "Category", "Created At"])
+        output = json.dumps(data, ensure_ascii=False, indent=2)
+        return StreamingResponse(
+            iter([output]),
+            media_type="application/json",
+            headers={"Content-Disposition": "attachment; filename=knowledge_base.json"}
+        )
+    else:
+        # Export as CSV (default)
+        output = io.StringIO()
+        writer = csv.writer(output)
 
-    for item in items:
-        writer.writerow([
-            item.question,
-            item.answer,
-            item.category or "",
-            item.created_at.isoformat()
-        ])
+        # Header
+        writer.writerow(["Question", "Answer", "Category", "Created At"])
 
-    output.seek(0)
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=knowledge_base.csv"}
-    )
+        for item in items:
+            writer.writerow([
+                item.question,
+                item.answer,
+                item.category or "",
+                item.created_at.isoformat()
+            ])
+
+        output.seek(0)
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=knowledge_base.csv"}
+        )
 
 
 # =============================================================================
