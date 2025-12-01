@@ -459,7 +459,7 @@ function Settings() {
                       <input
                         type="range"
                         min="7"
-                        max="365"
+                        max="30"
                         value={settings.data_retention_days}
                         onChange={(e) => setSettings({ ...settings, data_retention_days: parseInt(e.target.value) })}
                         className="flex-1 h-2 bg-bg-secondary rounded-lg appearance-none cursor-pointer accent-accent"
@@ -467,7 +467,7 @@ function Settings() {
                       <input
                         type="number"
                         min="7"
-                        max="365"
+                        max="30"
                         value={settings.data_retention_days}
                         onChange={(e) => setSettings({ ...settings, data_retention_days: parseInt(e.target.value) || 30 })}
                         className="input w-20 text-center"

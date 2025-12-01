@@ -1070,8 +1070,8 @@ async def update_settings(
         if update.language in ["sv", "en", "ar"]:
             settings.language = update.language
     if update.data_retention_days is not None:
-        # Validera retention (7-365 dagar)
-        settings.data_retention_days = max(7, min(365, update.data_retention_days))
+        # Validera retention (7-30 dagar för GDPR)
+        settings.data_retention_days = max(7, min(30, update.data_retention_days))
     if update.notify_unanswered is not None:
         settings.notify_unanswered = update.notify_unanswered
     if update.notification_email is not None:
