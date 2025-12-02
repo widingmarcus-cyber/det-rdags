@@ -104,7 +104,7 @@ function Settings() {
   }
 
   const generateEmbedCode = () => {
-    return `<script src="https://cdn.bobot.se/widget.js"></script>
+    return `<script src="https://cdn.bobot.nu/widget.js"></script>
 <script>
   Bobot.init({
     companyId: '${auth.companyId}'

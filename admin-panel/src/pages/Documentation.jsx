@@ -1158,7 +1158,7 @@ CORS_ORIGINS=https://din-domän.se`}
                   </p>
                   <div className="mt-4 p-3 bg-accent-soft rounded-lg">
                     <p className="text-sm text-text-secondary">
-                      <strong>E-post:</strong> support@bobot.se
+                      <strong>E-post:</strong> support@bobot.nu
                     </p>
                   </div>
                 </div>

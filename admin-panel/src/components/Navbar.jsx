@@ -2,12 +2,13 @@ import { NavLink } from 'react-router-dom'
 
 function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode }) {
   const navItems = [
-    { to: '/', label: 'Dashboard', icon: 'chart' },
+    { to: '/dashboard', label: 'Dashboard', icon: 'chart' },
     { to: '/knowledge', label: 'Kunskapsbas', icon: 'book' },
     { to: '/conversations', label: 'Konversationer', icon: 'messages' },
     { to: '/analytics', label: 'Statistik', icon: 'analytics' },
     { to: '/settings', label: 'Inställningar', icon: 'settings' },
     { to: '/preview', label: 'Förhandsgranska', icon: 'eye' },
+    { to: '/documentation', label: 'Dokumentation', icon: 'docs' },
   ]
 
   const renderIcon = (icon) => {
@@ -54,6 +55,16 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode }) 
             <path d="M22 12A10 10 0 0 0 12 2v10z" />
           </svg>
         )
+      case 'docs':
+        return (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
+          </svg>
+        )
       default:
         return null
     }
@@ -82,7 +93,6 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode }) 
             className={({ isActive }) =>
               `sidebar-item ${isActive ? 'active' : ''}`
             }
-            end={item.to === '/'}
           >
             {renderIcon(item.icon)}
             {item.label}
