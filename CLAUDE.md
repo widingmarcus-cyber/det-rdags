@@ -320,6 +320,62 @@ When testing:
 ### Database Migrations
 Currently using auto-create via `Base.metadata.create_all()`. For production, consider adding Alembic for proper migrations.
 
+## WordPress Integration
+
+The Bobot chat widget can be easily integrated into any WordPress site. It's a simple JavaScript embed that requires no plugins.
+
+### Method 1: Theme Editor (functions.php)
+
+Add to your theme's `functions.php`:
+
+```php
+function add_bobot_chatbot() {
+    ?>
+    <script src="https://your-bobot-domain.com/widget.js"></script>
+    <script>
+        Bobot.init({
+            companyId: 'your-company-id',
+            apiUrl: 'https://your-bobot-domain.com'
+        });
+    </script>
+    <?php
+}
+add_action('wp_footer', 'add_bobot_chatbot');
+```
+
+### Method 2: Plugin (Insert Headers and Footers)
+
+1. Install "Insert Headers and Footers" plugin (or similar)
+2. Go to Settings → Insert Headers and Footers
+3. Paste in the "Scripts in Footer" section:
+
+```html
+<script src="https://your-bobot-domain.com/widget.js"></script>
+<script>
+    Bobot.init({
+        companyId: 'your-company-id',
+        apiUrl: 'https://your-bobot-domain.com'
+    });
+</script>
+```
+
+### Method 3: Page Builder (Elementor, etc.)
+
+1. Add an HTML widget to your footer template
+2. Paste the same script code as above
+
+### WordPress-Specific Notes
+
+- **Caching plugins**: Clear cache after adding the widget
+- **Security plugins**: May need to whitelist the widget domain
+- **CORS**: Backend already configured to allow cross-origin requests
+- **CDN**: The widget works behind CDNs like Cloudflare
+- **Mobile**: Fully responsive, works on all devices
+
+### Testing
+
+After installation, visit your WordPress site and the chat bubble should appear in the bottom-right corner (or left, depending on your settings).
+
 ## Environment Variables
 
 ```bash

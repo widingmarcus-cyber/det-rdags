@@ -4280,9 +4280,9 @@ PRICING_TIERS = {
     "starter": {
         "name": "Starter",
         "monthly_fee": 1500,
-        "startup_fee": 5000,
+        "startup_fee": 0,  # Free setup for starter
         "max_conversations": 500,
-        "features": ["Grundläggande AI-chatt", "500 konversationer/månad", "E-postsupport", "Standardanalytik"]
+        "features": ["Grundläggande AI-chatt", "500 konversationer/månad", "E-postsupport", "Standardanalytik", "Gratis uppstart"]
     },
     "professional": {
         "name": "Professional",
@@ -4294,16 +4294,16 @@ PRICING_TIERS = {
     "business": {
         "name": "Business",
         "monthly_fee": 6500,
-        "startup_fee": 15000,
+        "startup_fee": 25000,
         "max_conversations": 10000,
-        "features": ["Allt i Professional", "10000 konversationer/månad", "Dedikerad support", "API-åtkomst", "Anpassade integrationer"]
+        "features": ["Allt i Professional", "10000 konversationer/månad", "Dedikerad support", "API-åtkomst", "Anpassade integrationer", "Onboarding"]
     },
     "enterprise": {
         "name": "Enterprise",
         "monthly_fee": 10000,
-        "startup_fee": 25000,
+        "startup_fee": 50000,
         "max_conversations": 0,  # 0 = unlimited
-        "features": ["Allt i Business", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling", "Onboarding & utbildning"]
+        "features": ["Allt i Business", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling", "Dedikerad onboarding & utbildning"]
     }
 }
 

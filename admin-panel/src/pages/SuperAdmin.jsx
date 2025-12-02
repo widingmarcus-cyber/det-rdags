@@ -1991,32 +1991,32 @@ function SuperAdmin() {
               <p className="text-sm text-text-secondary mb-4">Funktioner som planeras för framtida versioner</p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="p-4 bg-white rounded-lg border border-border-subtle">
-                  <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">Q1 2025</span>
+                  <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">Q1 2026</span>
                   <h4 className="font-medium text-text-primary mt-2">Webhook-integrationer</h4>
                   <p className="text-sm text-text-secondary mt-1">Skicka data vid händelser till externa system</p>
                 </div>
                 <div className="p-4 bg-white rounded-lg border border-border-subtle">
-                  <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">Q1 2025</span>
+                  <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">Q1 2026</span>
                   <h4 className="font-medium text-text-primary mt-2">Publik API</h4>
                   <p className="text-sm text-text-secondary mt-1">API-nyckel för egna integrationer och automatisering</p>
                 </div>
                 <div className="p-4 bg-white rounded-lg border border-border-subtle">
-                  <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded">Q2 2025</span>
+                  <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded">Q2 2026</span>
                   <h4 className="font-medium text-text-primary mt-2">Momentum-integration</h4>
                   <p className="text-sm text-text-secondary mt-1">Skapa ärenden direkt i Momentum från chatten</p>
                 </div>
                 <div className="p-4 bg-white rounded-lg border border-border-subtle">
-                  <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded">Q2 2025</span>
+                  <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded">Q2 2026</span>
                   <h4 className="font-medium text-text-primary mt-2">Användarroller</h4>
                   <p className="text-sm text-text-secondary mt-1">Admin / Redaktör / Läsare per företag</p>
                 </div>
                 <div className="p-4 bg-white rounded-lg border border-border-subtle">
-                  <span className="text-xs font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded">Q3 2025</span>
+                  <span className="text-xs font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded">Q3 2026</span>
                   <h4 className="font-medium text-text-primary mt-2">SSO / SAML</h4>
                   <p className="text-sm text-text-secondary mt-1">Enterprise Single Sign-On för stora kunder</p>
                 </div>
                 <div className="p-4 bg-white rounded-lg border border-border-subtle">
-                  <span className="text-xs font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded">Q3 2025</span>
+                  <span className="text-xs font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded">Q3 2026</span>
                   <h4 className="font-medium text-text-primary mt-2">Versionshistorik</h4>
                   <p className="text-sm text-text-secondary mt-1">Se och återställ tidigare versioner av kunskapsbasen</p>
                 </div>
@@ -3669,10 +3669,10 @@ function SuperAdmin() {
                   onChange={(e) => setPricingForm({ ...pricingForm, pricing_tier: e.target.value })}
                   className="input w-full"
                 >
-                  <option value="starter">Starter (1 500 kr/mån + 5 000 kr uppstart)</option>
+                  <option value="starter">Starter (1 500 kr/mån, gratis uppstart)</option>
                   <option value="professional">Professional (3 500 kr/mån + 10 000 kr uppstart)</option>
-                  <option value="business">Business (6 500 kr/mån + 15 000 kr uppstart)</option>
-                  <option value="enterprise">Enterprise (10 000 kr/mån + 25 000 kr uppstart)</option>
+                  <option value="business">Business (6 500 kr/mån + 25 000 kr uppstart)</option>
+                  <option value="enterprise">Enterprise (10 000 kr/mån + 50 000 kr uppstart)</option>
                 </select>
               </div>
               <div>
