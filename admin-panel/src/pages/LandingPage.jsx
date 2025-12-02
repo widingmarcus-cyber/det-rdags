@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 
-// WALL-E inspired Bobot mascot with floating animation
+// WALL-E inspired Bobot mascot
 function BobotMascot({ className = "", size = 120, mousePos = { x: 0.5, y: 0.5 } }) {
   const pupilOffsetX = (mousePos.x - 0.5) * 6
   const pupilOffsetY = (mousePos.y - 0.5) * 4
@@ -79,62 +79,31 @@ function ThemeToggle({ isDark, onToggle }) {
   )
 }
 
-// Sparkle component for Disney magic effect
-function Sparkle({ className = "", delay = 0 }) {
+// Compact chat widget
+function MiniWidget({ messages, label, className = "" }) {
   return (
-    <svg className={className} width="12" height="12" viewBox="0 0 12 12" fill="none">
-      <path d="M6 0L7.5 4.5L12 6L7.5 7.5L6 12L4.5 7.5L0 6L4.5 4.5L6 0Z" fill="#D97757">
-        <animate attributeName="opacity" values="0;1;0" dur="2s" begin={`${delay}s`} repeatCount="indefinite" />
-        <animateTransform attributeName="transform" type="scale" values="0.5;1;0.5" dur="2s" begin={`${delay}s`} repeatCount="indefinite" />
-      </path>
-    </svg>
-  )
-}
-
-// Realistic chat widget preview
-function ChatWidgetPreview({ messages, className = "" }) {
-  return (
-    <div className={`w-72 bg-white dark:bg-stone-800 rounded-2xl shadow-xl border border-stone-200 dark:border-stone-700 overflow-hidden ${className}`}>
-      {/* Widget header */}
-      <div className="bg-[#D97757] px-4 py-3 flex items-center gap-3">
-        <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-          <BobotMini className="scale-75" />
+    <div className={`w-56 bg-white dark:bg-stone-800 rounded-xl shadow-lg border border-stone-200 dark:border-stone-700 overflow-hidden ${className}`}>
+      <div className="bg-[#D97757] px-3 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+            <BobotMini className="scale-50" />
+          </div>
+          <span className="text-white text-xs font-medium">Bobot</span>
         </div>
-        <div>
-          <div className="text-white font-medium text-sm">Bobot</div>
-          <div className="text-white/70 text-xs">Online</div>
-        </div>
+        {label && <span className="text-white/60 text-[10px]">{label}</span>}
       </div>
-
-      {/* Messages */}
-      <div className="p-3 space-y-3 bg-stone-50 dark:bg-stone-900 min-h-[180px]">
+      <div className="p-2 space-y-1.5 bg-stone-50 dark:bg-stone-900">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div
-              className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
-                msg.from === 'user'
-                  ? 'bg-[#D97757] text-white rounded-br-md'
-                  : 'bg-white dark:bg-stone-700 text-stone-800 dark:text-stone-100 rounded-bl-md shadow-sm'
-              }`}
-            >
+            <div className={`max-w-[90%] rounded-lg px-2 py-1 text-xs ${
+              msg.from === 'user'
+                ? 'bg-[#D97757] text-white'
+                : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm'
+            }`}>
               {msg.text}
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Input bar */}
-      <div className="px-3 py-2 border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 bg-stone-100 dark:bg-stone-700 rounded-full px-3 py-2 text-xs text-stone-400">
-            Skriv ett meddelande...
-          </div>
-          <div className="w-8 h-8 bg-[#D97757] rounded-full flex items-center justify-center">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-            </svg>
-          </div>
-        </div>
       </div>
     </div>
   )
@@ -176,23 +145,26 @@ function LandingPage() {
     }
   }
 
-  const conversation1 = [
-    { from: 'bot', text: 'Hej! Hur kan jag hjälpa dig?' },
-    { from: 'user', text: 'Får jag ha husdjur i lägenheten?' },
-    { from: 'bot', text: 'Ja, små husdjur som katt eller hund är tillåtna, så länge de inte stör grannarna.' },
+  const convo1 = [
+    { from: 'user', text: 'Får jag ha hund?' },
+    { from: 'bot', text: 'Ja, husdjur är tillåtna så länge de inte stör.' },
   ]
 
-  const conversation2 = [
-    { from: 'bot', text: 'Hej! Hur kan jag hjälpa dig?' },
-    { from: 'user', text: 'Hur bokar jag tvättstuga?' },
-    { from: 'bot', text: 'Du bokar via appen eller på tavlan i tvättstugan. Max 2 pass per vecka.' },
+  const convo2 = [
+    { from: 'user', text: 'När töms soporna?' },
+    { from: 'bot', text: 'Tisdag och fredag varje vecka.' },
+  ]
+
+  const convo3 = [
+    { from: 'user', text: 'Vad är policyn för semester?' },
+    { from: 'bot', text: 'Minst 25 dagar/år. Ansök via HR-portalen.' },
   ]
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-stone-50 dark:bg-stone-900 flex flex-col overflow-hidden">
+    <div ref={containerRef} className="h-screen bg-stone-50 dark:bg-stone-900 flex flex-col overflow-hidden">
       {/* Navigation */}
-      <nav className="px-6 py-4 relative z-10">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+      <nav className="px-6 py-3 shrink-0">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BobotMini />
             <span className="text-xl font-semibold text-stone-900 dark:text-stone-100 tracking-tight">Bobot</span>
@@ -206,98 +178,100 @@ function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero section with Disney-style mascot intro */}
-      <div className="relative flex flex-col items-center pt-8 pb-4">
-        {/* Sparkles around mascot */}
-        <div className="absolute inset-0 pointer-events-none">
-          <Sparkle className="absolute top-12 left-1/4" delay={0} />
-          <Sparkle className="absolute top-8 right-1/3" delay={0.5} />
-          <Sparkle className="absolute top-20 right-1/4" delay={1} />
-          <Sparkle className="absolute top-16 left-1/3" delay={1.5} />
-        </div>
+      {/* Main content - full height, no scroll */}
+      <main className="flex-1 px-6 flex items-center">
+        <div className="max-w-7xl mx-auto w-full">
+          <div className="grid lg:grid-cols-5 gap-8 items-center">
 
-        {/* Floating mascot with glow */}
-        <div className="relative animate-bounce-slow">
-          <div className="absolute inset-0 bg-[#D97757]/20 rounded-full blur-3xl scale-150" />
-          <BobotMascot size={140} mousePos={mousePos} className="relative z-10" />
-        </div>
+            {/* Left: Headline + mascot (2 cols) */}
+            <div className="lg:col-span-2 relative">
+              {/* Mascot floating in corner */}
+              <div className="absolute -top-16 -left-4 lg:-left-8 animate-float">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-[#D97757]/20 rounded-full blur-2xl scale-125" />
+                  <BobotMascot size={100} mousePos={mousePos} className="relative z-10" />
+                </div>
+              </div>
 
-        {/* Headline */}
-        <h1 className="text-4xl md:text-5xl font-semibold text-stone-900 dark:text-stone-100 tracking-tight leading-tight text-center mt-6 mb-3">
-          Din nya medarbetare,<br />som alltid är där
-        </h1>
-        <p className="text-xl text-stone-600 dark:text-stone-400 text-center max-w-2xl px-4">
-          Bobot svarar på frågor – från hyresgäster eller ditt eget team. Direkt, dygnet runt.
-        </p>
-      </div>
+              <div className="pt-20 lg:pt-16">
+                <h1 className="text-3xl lg:text-4xl font-semibold text-stone-900 dark:text-stone-100 tracking-tight leading-tight mb-4">
+                  Din nya medarbetare, som alltid är där
+                </h1>
+                <p className="text-stone-600 dark:text-stone-400 mb-6 leading-relaxed">
+                  Bobot svarar på frågor från hyresgäster och anställda. Direkt, dygnet runt.
+                </p>
 
-      {/* Main content */}
-      <main className="flex-1 px-6 py-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Two widget previews side by side */}
-          <div className="flex justify-center gap-8 flex-wrap mb-12">
-            <ChatWidgetPreview messages={conversation1} />
-            <ChatWidgetPreview messages={conversation2} />
+                {/* Selling points - compact */}
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500 dark:text-stone-400 mb-6">
+                  {['Avlastar kundtjänst', 'Alltid tillgänglig', 'Intern kunskapsbank', 'GDPR-säker'].map(point => (
+                    <span key={point} className="flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      {point}
+                    </span>
+                  ))}
+                </div>
+
+                <p className="text-sm text-stone-500 dark:text-stone-400">
+                  Vill du veta mer? Mejla{' '}
+                  <a href="mailto:hej@bobot.nu" className="text-[#D97757] hover:text-[#c4613d] font-medium">
+                    hej@bobot.nu
+                  </a>
+                </p>
+              </div>
+            </div>
+
+            {/* Right: Creative widget layout (3 cols) */}
+            <div className="lg:col-span-3 relative h-80 lg:h-96">
+              {/* Widget 1 - top left */}
+              <MiniWidget
+                messages={convo1}
+                label="Hyresgäst"
+                className="absolute top-0 left-0 lg:left-8 z-10 hover:z-30 hover:scale-105 transition-transform"
+              />
+
+              {/* Widget 2 - middle right */}
+              <MiniWidget
+                messages={convo2}
+                label="Hyresgäst"
+                className="absolute top-20 right-0 lg:right-4 z-20 hover:z-30 hover:scale-105 transition-transform"
+              />
+
+              {/* Widget 3 - bottom center, internal */}
+              <MiniWidget
+                messages={convo3}
+                label="Anställd"
+                className="absolute bottom-0 left-1/2 -translate-x-1/2 lg:left-1/4 lg:translate-x-0 z-10 hover:z-30 hover:scale-105 transition-transform"
+              />
+
+              {/* Decorative elements */}
+              <div className="absolute top-32 left-1/2 w-2 h-2 bg-[#D97757]/40 rounded-full animate-pulse" />
+              <div className="absolute top-48 right-20 w-1.5 h-1.5 bg-[#D97757]/30 rounded-full animate-pulse delay-500" />
+              <div className="absolute bottom-20 left-16 w-1 h-1 bg-[#D97757]/20 rounded-full animate-pulse delay-1000" />
+            </div>
           </div>
-
-          {/* Selling points */}
-          <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 mb-10 text-stone-600 dark:text-stone-400">
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-              Avlastar kundtjänst
-            </span>
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-              Alltid tillgänglig
-            </span>
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-              Intern kunskapsbank
-            </span>
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-              Statistik och insikter
-            </span>
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-              GDPR-säker
-            </span>
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-              Lokal AI
-            </span>
-          </div>
-
-          {/* Email CTA */}
-          <p className="text-center text-stone-600 dark:text-stone-400">
-            Vill du veta mer? Mejla{' '}
-            <a href="mailto:hej@bobot.nu" className="text-[#D97757] hover:text-[#c4613d] font-medium transition-colors">
-              hej@bobot.nu
-            </a>
-          </p>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="px-6 py-4 border-t border-stone-200 dark:border-stone-700">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 text-sm text-stone-500">
+      {/* Footer - minimal */}
+      <footer className="px-6 py-3 shrink-0">
+        <div className="max-w-7xl mx-auto flex justify-between items-center text-xs text-stone-400">
           <span>&copy; {new Date().getFullYear()} Bobot</span>
           <span>GDPR-kompatibel</span>
-          <a href="mailto:hej@bobot.nu" className="hover:text-stone-700 dark:hover:text-stone-300 transition-colors">
-            hej@bobot.nu
-          </a>
         </div>
       </footer>
 
-      {/* Custom animation styles */}
       <style>{`
-        @keyframes bounce-slow {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
+        @keyframes float {
+          0%, 100% { transform: translateY(0) rotate(-3deg); }
+          50% { transform: translateY(-8px) rotate(3deg); }
         }
-        .animate-bounce-slow {
-          animation: bounce-slow 3s ease-in-out infinite;
+        .animate-float {
+          animation: float 4s ease-in-out infinite;
         }
+        .delay-500 { animation-delay: 0.5s; }
+        .delay-1000 { animation-delay: 1s; }
       `}</style>
     </div>
   )
