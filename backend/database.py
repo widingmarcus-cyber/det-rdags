@@ -91,6 +91,15 @@ class CompanySettings(Base):
     primary_color = Column(String, default="#D97757")
     language = Column(String, default="sv")  # sv, en, ar
 
+    # Widget Typography & Style
+    widget_font_family = Column(String, default="Inter")  # Main font family
+    widget_font_size = Column(Integer, default=14)  # Base font size in pixels
+    widget_border_radius = Column(Integer, default=16)  # Border radius in pixels
+    widget_position = Column(String, default="bottom-right")  # bottom-right, bottom-left
+
+    # Quick Reply Suggestions (JSON array: ["Hur betalar jag hyran?", "Felanmälan", ...])
+    suggested_questions = Column(Text, default="")  # Up to 4 suggested questions
+
     # Custom categories (JSON array: [{"value": "hyra", "label": "Hyra & Betalning"}, ...])
     custom_categories = Column(Text, default="")
 

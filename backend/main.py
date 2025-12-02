@@ -608,6 +608,13 @@ class SettingsUpdate(BaseModel):
     notify_unanswered: Optional[bool] = None
     notification_email: Optional[str] = None
     custom_categories: Optional[str] = None  # JSON string
+    # Widget Typography & Style
+    widget_font_family: Optional[str] = None
+    widget_font_size: Optional[int] = None
+    widget_border_radius: Optional[int] = None
+    widget_position: Optional[str] = None
+    # Quick Reply Suggestions
+    suggested_questions: Optional[str] = None  # JSON array string
     # PuB/GDPR Compliance
     privacy_policy_url: Optional[str] = None
     require_consent: Optional[bool] = None
@@ -629,6 +636,13 @@ class SettingsResponse(BaseModel):
     notify_unanswered: bool
     notification_email: str
     custom_categories: str
+    # Widget Typography & Style
+    widget_font_family: str
+    widget_font_size: int
+    widget_border_radius: int
+    widget_position: str
+    # Quick Reply Suggestions
+    suggested_questions: str
     # PuB/GDPR Compliance
     privacy_policy_url: str
     require_consent: bool
@@ -1705,6 +1719,14 @@ async def get_widget_config(
 
     settings = get_or_create_settings(db, company_id)
 
+    # Parse suggested questions JSON
+    suggested_questions = []
+    if settings.suggested_questions:
+        try:
+            suggested_questions = json.loads(settings.suggested_questions)
+        except json.JSONDecodeError:
+            suggested_questions = []
+
     return {
         "company_name": settings.company_name or company.name,
         "welcome_message": settings.welcome_message or "",
@@ -1713,6 +1735,13 @@ async def get_widget_config(
         "primary_color": settings.primary_color or "#D97757",
         "contact_email": settings.contact_email or "",
         "contact_phone": settings.contact_phone or "",
+        # Widget Typography & Style
+        "font_family": settings.widget_font_family or "Inter",
+        "font_size": settings.widget_font_size or 14,
+        "border_radius": settings.widget_border_radius or 16,
+        "position": settings.widget_position or "bottom-right",
+        # Quick Reply Suggestions
+        "suggested_questions": suggested_questions,
         # PuB/GDPR Compliance
         "privacy_policy_url": settings.privacy_policy_url or "",
         "require_consent": settings.require_consent if settings.require_consent is not None else True,
@@ -1746,6 +1775,11 @@ async def get_settings(
         notify_unanswered=settings.notify_unanswered or False,
         notification_email=settings.notification_email or "",
         custom_categories=settings.custom_categories or "",
+        widget_font_family=settings.widget_font_family or "Inter",
+        widget_font_size=settings.widget_font_size or 14,
+        widget_border_radius=settings.widget_border_radius or 16,
+        widget_position=settings.widget_position or "bottom-right",
+        suggested_questions=settings.suggested_questions or "",
         privacy_policy_url=settings.privacy_policy_url or "",
         require_consent=settings.require_consent if settings.require_consent is not None else True,
         consent_text=settings.consent_text or "Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.",
@@ -1778,6 +1812,11 @@ async def update_settings(
         "notification_email": "Notifikations-e-post",
         "subtitle": "Underrubrik",
         "custom_categories": "Kategorier",
+        "widget_font_family": "Typsnitt",
+        "widget_font_size": "Textstorlek",
+        "widget_border_radius": "Hörnradie",
+        "widget_position": "Widgetposition",
+        "suggested_questions": "Föreslagna frågor",
         "privacy_policy_url": "Integritetspolicy-URL",
         "require_consent": "Kräv samtycke",
         "consent_text": "Samtyckestext",
@@ -1808,7 +1847,7 @@ async def update_settings(
         changes.append(field_labels["language"])
         settings.language = update.language
     if update.data_retention_days is not None:
-        new_val = max(7, min(365, update.data_retention_days))  # Allow 7-365 days
+        new_val = max(7, min(30, update.data_retention_days))  # Allow 7-30 days (GDPR max)
         if settings.data_retention_days != new_val:
             changes.append(field_labels["data_retention_days"])
             settings.data_retention_days = new_val
@@ -1824,6 +1863,28 @@ async def update_settings(
     if update.custom_categories is not None and settings.custom_categories != update.custom_categories:
         changes.append(field_labels["custom_categories"])
         settings.custom_categories = update.custom_categories
+    # Widget Typography & Style
+    if update.widget_font_family is not None and settings.widget_font_family != update.widget_font_family:
+        changes.append(field_labels["widget_font_family"])
+        settings.widget_font_family = update.widget_font_family
+    if update.widget_font_size is not None:
+        new_size = max(10, min(24, update.widget_font_size))  # Limit 10-24px
+        if settings.widget_font_size != new_size:
+            changes.append(field_labels["widget_font_size"])
+            settings.widget_font_size = new_size
+    if update.widget_border_radius is not None:
+        new_radius = max(0, min(32, update.widget_border_radius))  # Limit 0-32px
+        if settings.widget_border_radius != new_radius:
+            changes.append(field_labels["widget_border_radius"])
+            settings.widget_border_radius = new_radius
+    if update.widget_position is not None and update.widget_position in ["bottom-right", "bottom-left"]:
+        if settings.widget_position != update.widget_position:
+            changes.append(field_labels["widget_position"])
+            settings.widget_position = update.widget_position
+    # Quick Reply Suggestions
+    if update.suggested_questions is not None and settings.suggested_questions != update.suggested_questions:
+        changes.append(field_labels["suggested_questions"])
+        settings.suggested_questions = update.suggested_questions
     # PuB/GDPR Compliance fields
     if update.privacy_policy_url is not None and settings.privacy_policy_url != update.privacy_policy_url:
         changes.append(field_labels["privacy_policy_url"])
@@ -1870,6 +1931,11 @@ async def update_settings(
         notify_unanswered=settings.notify_unanswered or False,
         notification_email=settings.notification_email or "",
         custom_categories=settings.custom_categories or "",
+        widget_font_family=settings.widget_font_family or "Inter",
+        widget_font_size=settings.widget_font_size or 14,
+        widget_border_radius=settings.widget_border_radius or 16,
+        widget_position=settings.widget_position or "bottom-right",
+        suggested_questions=settings.suggested_questions or "",
         privacy_policy_url=settings.privacy_policy_url or "",
         require_consent=settings.require_consent if settings.require_consent is not None else True,
         consent_text=settings.consent_text or "Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.",
