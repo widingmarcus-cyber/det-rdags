@@ -25,8 +25,9 @@ from database import (
     CompanyNote, WidgetPerformance, EmailNotificationQueue
 )
 from auth import (
-    hash_password, verify_password, create_token,
-    get_current_company, get_super_admin
+    hash_password, verify_password, create_token, create_2fa_pending_token,
+    get_current_company, get_super_admin, get_2fa_pending_admin,
+    needs_rehash, is_bcrypt_hash
 )
 
 load_dotenv()
@@ -142,13 +143,48 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS
+# =============================================================================
+# CORS Configuration - Security Hardened
+# =============================================================================
+
+def get_cors_origins():
+    """Get CORS origins from environment or use defaults"""
+    cors_env = os.getenv("CORS_ORIGINS", "")
+
+    if cors_env:
+        # Parse comma-separated origins
+        origins = [o.strip() for o in cors_env.split(",") if o.strip()]
+        return origins
+
+    # Development defaults - restrict in production!
+    if os.getenv("ENVIRONMENT", "development") == "production":
+        # In production, require explicit CORS_ORIGINS
+        print("WARNING: CORS_ORIGINS not set in production. Using restrictive defaults.")
+        return ["https://app.bobot.se"]  # Production default
+
+    # Development: allow localhost and common dev ports
+    return [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+        "http://127.0.0.1:5173",
+    ]
+
+
+CORS_ORIGINS = get_cors_origins()
+
+# Log CORS configuration
+if os.getenv("ENVIRONMENT", "development") != "production":
+    print(f"[CORS] Allowed origins: {CORS_ORIGINS}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
 )
 
 # Ollama-konfiguration
@@ -421,77 +457,124 @@ class AnalyticsResponse(BaseModel):
 
 
 # =============================================================================
-# Init Functions
+# Init Functions - Security Hardened
 # =============================================================================
 
 def init_demo_data():
-    """Skapa demo-data vid start"""
+    """Initialize admin and optionally demo data
+
+    Environment variables:
+    - ADMIN_PASSWORD: Required in production, sets super admin password
+    - ENABLE_DEMO_DATA: Set to "true" to create demo company (disabled in production by default)
+    - ENVIRONMENT: "production" enables strict security checks
+    """
     from database import SessionLocal
+    import secrets
+
     db = SessionLocal()
+    is_production = os.getenv("ENVIRONMENT", "development") == "production"
 
     try:
-        # Skapa super admin om den inte finns
+        # =================================================================
+        # Super Admin Setup
+        # =================================================================
         admin = db.query(SuperAdmin).filter(SuperAdmin.username == "admin").first()
+
         if not admin:
+            # Get admin password from environment or generate one
+            admin_password = os.getenv("ADMIN_PASSWORD")
+
+            if not admin_password:
+                if is_production:
+                    # In production, require explicit password
+                    generated_password = secrets.token_urlsafe(16)
+                    print("=" * 60)
+                    print("SECURITY WARNING: No ADMIN_PASSWORD set!")
+                    print(f"Generated temporary password: {generated_password}")
+                    print("Set ADMIN_PASSWORD environment variable in production!")
+                    print("=" * 60)
+                    admin_password = generated_password
+                else:
+                    # Development: use default but warn
+                    admin_password = "admin123"
+                    print("[WARNING] Using default admin password - NOT for production!")
+
             admin = SuperAdmin(
                 username="admin",
-                password_hash=hash_password("admin123")
+                password_hash=hash_password(admin_password)
             )
             db.add(admin)
             db.commit()
-            print("Super admin skapad: admin / admin123")
 
-        # Skapa demo-företag om det inte finns
-        demo = db.query(Company).filter(Company.id == "demo").first()
-        if not demo:
-            demo = Company(
-                id="demo",
-                name="Demo Fastigheter AB",
-                password_hash=hash_password("demo123")
-            )
-            db.add(demo)
-            db.commit()
+            if not is_production:
+                print(f"Super admin skapad: admin / {admin_password}")
+            else:
+                print("Super admin skapad (password from ADMIN_PASSWORD env)")
 
-            # Skapa standardinställningar för demo
-            demo_settings = CompanySettings(
-                company_id="demo",
-                company_name="Demo Fastigheter AB",
-                contact_email="info@demo.se",
-                contact_phone="08-123 456 78"
-            )
-            db.add(demo_settings)
+        # =================================================================
+        # Demo Data (Optional)
+        # =================================================================
+        enable_demo = os.getenv("ENABLE_DEMO_DATA", "").lower() == "true"
 
-            # Lägg till demo-kunskapsbas med kategorier
-            demo_items = [
-                ("Hur säger jag upp min lägenhet?",
-                 "För att säga upp din lägenhet behöver du skicka en skriftlig uppsägning till oss. Uppsägningstiden är vanligtvis 3 månader.",
-                 "kontrakt"),
-                ("Vad ingår i hyran?",
-                 "I hyran ingår vanligtvis värme, vatten, sophämtning och tillgång till gemensamma utrymmen som tvättstuga.",
-                 "hyra"),
-                ("Hur anmäler jag ett fel i lägenheten?",
-                 "Felanmälan görs via vår hemsida under 'Felanmälan' eller genom att ringa kundtjänst på 08-123 456 78.",
-                 "felanmalan"),
-                ("När är tvättstugan öppen?",
-                 "Tvättstugan är öppen dygnet runt. Du bokar tvättid via bokningstavlan eller vår app.",
-                 "tvattstuga"),
-                ("Får jag ha husdjur?",
-                 "Ja, husdjur är tillåtna så länge de inte stör grannar eller orsakar skada.",
-                 "allmant"),
-                ("Hur betalar jag hyran?",
-                 "Hyran betalas via autogiro eller bankgiro. Du hittar betalningsinformation på din faktura.",
-                 "hyra"),
-                ("Var kan jag parkera?",
-                 "Parkering finns tillgänglig i vårt garage. Kontakta kundtjänst för att hyra en parkeringsplats.",
-                 "parkering"),
-            ]
+        # In development, enable demo by default unless explicitly disabled
+        if not is_production and os.getenv("ENABLE_DEMO_DATA") is None:
+            enable_demo = True
 
-            for q, a, cat in demo_items:
-                item = KnowledgeItem(company_id="demo", question=q, answer=a, category=cat)
-                db.add(item)
+        if enable_demo:
+            demo = db.query(Company).filter(Company.id == "demo").first()
+            if not demo:
+                demo_password = os.getenv("DEMO_PASSWORD", "demo123")
 
-            db.commit()
-            print("Demo-företag skapat: demo / demo123")
+                demo = Company(
+                    id="demo",
+                    name="Demo Fastigheter AB",
+                    password_hash=hash_password(demo_password)
+                )
+                db.add(demo)
+                db.commit()
+
+                # Create default settings for demo
+                demo_settings = CompanySettings(
+                    company_id="demo",
+                    company_name="Demo Fastigheter AB",
+                    contact_email="info@demo.se",
+                    contact_phone="08-123 456 78"
+                )
+                db.add(demo_settings)
+
+                # Add demo knowledge base with categories
+                demo_items = [
+                    ("Hur säger jag upp min lägenhet?",
+                     "För att säga upp din lägenhet behöver du skicka en skriftlig uppsägning till oss. Uppsägningstiden är vanligtvis 3 månader.",
+                     "kontrakt"),
+                    ("Vad ingår i hyran?",
+                     "I hyran ingår vanligtvis värme, vatten, sophämtning och tillgång till gemensamma utrymmen som tvättstuga.",
+                     "hyra"),
+                    ("Hur anmäler jag ett fel i lägenheten?",
+                     "Felanmälan görs via vår hemsida under 'Felanmälan' eller genom att ringa kundtjänst på 08-123 456 78.",
+                     "felanmalan"),
+                    ("När är tvättstugan öppen?",
+                     "Tvättstugan är öppen dygnet runt. Du bokar tvättid via bokningstavlan eller vår app.",
+                     "tvattstuga"),
+                    ("Får jag ha husdjur?",
+                     "Ja, husdjur är tillåtna så länge de inte stör grannar eller orsakar skada.",
+                     "allmant"),
+                    ("Hur betalar jag hyran?",
+                     "Hyran betalas via autogiro eller bankgiro. Du hittar betalningsinformation på din faktura.",
+                     "hyra"),
+                    ("Var kan jag parkera?",
+                     "Parkering finns tillgänglig i vårt garage. Kontakta kundtjänst för att hyra en parkeringsplats.",
+                     "parkering"),
+                ]
+
+                for q, a, cat in demo_items:
+                    item = KnowledgeItem(company_id="demo", question=q, answer=a, category=cat)
+                    db.add(item)
+
+                db.commit()
+                print(f"Demo-företag skapat: demo / {demo_password}")
+        elif is_production:
+            print("[Security] Demo data disabled in production")
     finally:
         db.close()
 
@@ -936,12 +1019,12 @@ async def health():
 
 
 # =============================================================================
-# Auth Endpoints
+# Auth Endpoints - Security Hardened
 # =============================================================================
 
 @app.post("/auth/login", response_model=LoginResponse)
 async def login(request: LoginRequest, db: Session = Depends(get_db)):
-    """Logga in som företag"""
+    """Login as company with automatic password migration"""
     company = db.query(Company).filter(Company.id == request.company_id).first()
 
     if not company or not verify_password(request.password, company.password_hash):
@@ -949,6 +1032,12 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
 
     if not company.is_active:
         raise HTTPException(status_code=403, detail="Kontot är inaktiverat")
+
+    # Automatic password migration: upgrade SHA256 to bcrypt on successful login
+    if needs_rehash(company.password_hash):
+        company.password_hash = hash_password(request.password)
+        db.commit()
+        print(f"[Security] Migrated password hash for company: {company.id}")
 
     token = create_token({
         "sub": company.id,
@@ -959,20 +1048,102 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
     return LoginResponse(token=token, company_id=company.id, name=company.name)
 
 
-@app.post("/auth/admin/login")
-async def admin_login(request: SuperAdminLogin, db: Session = Depends(get_db)):
-    """Logga in som super admin"""
+class AdminLoginRequest(BaseModel):
+    """Extended admin login request with optional 2FA code"""
+    username: str
+    password: str
+    totp_code: Optional[str] = None  # 2FA code (required if 2FA enabled)
+
+
+class AdminLoginResponse(BaseModel):
+    """Admin login response"""
+    token: str
+    username: str
+    requires_2fa: bool = False  # True if 2FA verification needed
+
+
+@app.post("/auth/admin/login", response_model=AdminLoginResponse)
+async def admin_login(request: AdminLoginRequest, db: Session = Depends(get_db)):
+    """Login as super admin with 2FA support and password migration"""
     admin = db.query(SuperAdmin).filter(SuperAdmin.username == request.username).first()
 
     if not admin or not verify_password(request.password, admin.password_hash):
         raise HTTPException(status_code=401, detail="Fel användarnamn eller lösenord")
 
+    # Automatic password migration: upgrade SHA256 to bcrypt on successful login
+    if needs_rehash(admin.password_hash):
+        admin.password_hash = hash_password(request.password)
+        db.commit()
+        print(f"[Security] Migrated password hash for admin: {admin.username}")
+
+    # Check if 2FA is enabled
+    if admin.totp_enabled:
+        if not request.totp_code:
+            # Return pending token - requires 2FA verification
+            pending_token = create_2fa_pending_token({
+                "sub": admin.username,
+                "type": "super_admin"
+            })
+            return AdminLoginResponse(
+                token=pending_token,
+                username=admin.username,
+                requires_2fa=True
+            )
+
+        # Verify 2FA code
+        import pyotp
+        totp = pyotp.TOTP(admin.totp_secret)
+        if not totp.verify(request.totp_code, valid_window=1):
+            raise HTTPException(status_code=401, detail="Felaktig 2FA-kod")
+
+    # Full login - issue complete token
     token = create_token({
         "sub": admin.username,
         "type": "super_admin"
     })
 
-    return {"token": token, "username": admin.username}
+    # Update last login info
+    admin.last_login = datetime.utcnow()
+    db.commit()
+
+    return AdminLoginResponse(token=token, username=admin.username, requires_2fa=False)
+
+
+@app.post("/auth/admin/verify-2fa")
+async def verify_2fa_login(
+    request: dict,
+    admin: dict = Depends(get_2fa_pending_admin),
+    db: Session = Depends(get_db)
+):
+    """Complete 2FA verification and get full access token"""
+    code = request.get("code")
+    if not code:
+        raise HTTPException(status_code=400, detail="2FA-kod krävs")
+
+    admin_user = db.query(SuperAdmin).filter(
+        SuperAdmin.username == admin['username']
+    ).first()
+
+    if not admin_user or not admin_user.totp_secret:
+        raise HTTPException(status_code=400, detail="2FA är inte konfigurerat")
+
+    # Verify the TOTP code
+    import pyotp
+    totp = pyotp.TOTP(admin_user.totp_secret)
+    if not totp.verify(code, valid_window=1):
+        raise HTTPException(status_code=401, detail="Felaktig 2FA-kod")
+
+    # Issue full access token
+    token = create_token({
+        "sub": admin_user.username,
+        "type": "super_admin"
+    })
+
+    # Update last login
+    admin_user.last_login = datetime.utcnow()
+    db.commit()
+
+    return {"token": token, "username": admin_user.username}
 
 
 # =============================================================================

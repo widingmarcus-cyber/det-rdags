@@ -102,13 +102,57 @@ function App() {
     }
   }
 
-  // Admin login
-  const handleAdminLogin = async (username, password) => {
+  // Admin login with 2FA support
+  const handleAdminLogin = async (username, password, totpCode = null) => {
     try {
+      const body = { username, password }
+      if (totpCode) {
+        body.totp_code = totpCode
+      }
+
       const response = await fetch(`${API_BASE}/auth/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify(body)
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+
+        // Check if 2FA verification is required
+        if (data.requires_2fa) {
+          return {
+            success: false,
+            requires2FA: true,
+            token: data.token  // Pending token for 2FA verification
+          }
+        }
+
+        // Full login successful
+        setAdminAuth({
+          token: data.token,
+          username: data.username
+        })
+        return { success: true }
+      } else {
+        const err = await response.json()
+        return { success: false, error: err.detail || 'Inloggning misslyckades' }
+      }
+    } catch (e) {
+      return { success: false, error: 'Kunde inte ansluta till servern' }
+    }
+  }
+
+  // Verify 2FA code
+  const handleVerify2FA = async (pendingToken, code) => {
+    try {
+      const response = await fetch(`${API_BASE}/auth/admin/verify-2fa`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${pendingToken}`
+        },
+        body: JSON.stringify({ code })
       })
 
       if (response.ok) {
@@ -120,7 +164,7 @@ function App() {
         return { success: true }
       } else {
         const err = await response.json()
-        return { success: false, error: err.detail || 'Inloggning misslyckades' }
+        return { success: false, error: err.detail || 'Verifiering misslyckades' }
       }
     } catch (e) {
       return { success: false, error: 'Kunde inte ansluta till servern' }
@@ -181,7 +225,7 @@ function App() {
   // Admin routes
   if (isAdminRoute) {
     if (!adminAuth) {
-      return <AdminLogin onLogin={handleAdminLogin} />
+      return <AdminLogin onLogin={handleAdminLogin} onVerify2FA={handleVerify2FA} />
     }
 
     return (
