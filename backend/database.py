@@ -1,19 +1,51 @@
 """
-Bobot Database - SQLite med SQLAlchemy
+Bobot Database - SQLite/PostgreSQL med SQLAlchemy
 GDPR-compliant med anonymiserad statistik
 """
 
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Float, Date
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.pool import QueuePool
 from datetime import datetime
 import os
 
+# =============================================================================
+# Database Configuration
+# =============================================================================
+
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./bobot.db")
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+def get_engine_config():
+    """Get database engine configuration based on database type"""
+    if DATABASE_URL.startswith("sqlite"):
+        # SQLite configuration
+        return {
+            "connect_args": {"check_same_thread": False},
+        }
+    elif DATABASE_URL.startswith("postgresql"):
+        # PostgreSQL configuration with connection pooling
+        return {
+            "poolclass": QueuePool,
+            "pool_size": int(os.getenv("DB_POOL_SIZE", "5")),
+            "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "10")),
+            "pool_timeout": int(os.getenv("DB_POOL_TIMEOUT", "30")),
+            "pool_recycle": int(os.getenv("DB_POOL_RECYCLE", "1800")),  # 30 minutes
+            "pool_pre_ping": True,  # Verify connections before using
+        }
+    else:
+        # Generic database
+        return {}
+
+
+engine = create_engine(DATABASE_URL, **get_engine_config())
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+# Log database type
+db_type = "PostgreSQL" if DATABASE_URL.startswith("postgresql") else "SQLite"
+if os.getenv("ENVIRONMENT", "development") != "production":
+    print(f"[Database] Using {db_type}")
 
 
 # =============================================================================

@@ -117,23 +117,58 @@ async def scheduled_cleanup_task():
         await cleanup_old_activity_logs()
 
 
+async def email_queue_task():
+    """Process email queue every 5 minutes"""
+    from email_service import process_email_queue
+    from database import SessionLocal
+
+    while True:
+        await asyncio.sleep(300)  # Wait 5 minutes
+        db = SessionLocal()
+        try:
+            processed = await process_email_queue(db)
+            if processed > 0:
+                print(f"[Email] Processed {processed} emails from queue")
+        except Exception as e:
+            print(f"[Email Queue Error] {e}")
+        finally:
+            db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup och shutdown events"""
+    # Initialize Sentry if configured
+    sentry_dsn = os.getenv("SENTRY_DSN")
+    if sentry_dsn:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            environment=os.getenv("ENVIRONMENT", "development"),
+            traces_sample_rate=0.1,  # 10% of transactions
+            profiles_sample_rate=0.1,
+        )
+        print("[Startup] Sentry error tracking initialized")
+
     # Startup
     create_tables()
     init_demo_data()
 
-    # Starta bakgrundsuppgift för cleanup
+    # Start background tasks
     cleanup_task = asyncio.create_task(scheduled_cleanup_task())
     print("[Startup] GDPR cleanup-task startad (körs varje timme)")
+
+    email_task = asyncio.create_task(email_queue_task())
+    print("[Startup] Email queue task started (runs every 5 minutes)")
 
     yield
 
     # Shutdown
     cleanup_task.cancel()
+    email_task.cancel()
     try:
         await cleanup_task
+        await email_task
     except asyncio.CancelledError:
         pass
 
