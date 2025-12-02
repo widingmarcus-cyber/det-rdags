@@ -3,7 +3,7 @@ Bobot Backend API
 En GDPR-säker AI-chatbot för fastighetsbolag
 """
 
-from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks, UploadFile, File, Response
+from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks, UploadFile, File, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, Field, field_validator
@@ -412,9 +412,9 @@ response_cache = {}
 CACHE_TTL = 300  # 5 minutes
 
 
-def get_cached_response(company_id: str, question: str):
+def get_cached_response(company_id: str, question: str, language: str = "sv"):
     """Get cached response if available and not expired"""
-    cache_key = f"{company_id}:{question.lower().strip()}"
+    cache_key = f"{company_id}:{language}:{question.lower().strip()}"
     if cache_key in response_cache:
         cached, timestamp = response_cache[cache_key]
         if datetime.utcnow().timestamp() - timestamp < CACHE_TTL:
@@ -424,9 +424,9 @@ def get_cached_response(company_id: str, question: str):
     return None
 
 
-def set_cached_response(company_id: str, question: str, response: dict):
+def set_cached_response(company_id: str, question: str, response: dict, language: str = "sv"):
     """Cache a response"""
-    cache_key = f"{company_id}:{question.lower().strip()}"
+    cache_key = f"{company_id}:{language}:{question.lower().strip()}"
     response_cache[cache_key] = (response, datetime.utcnow().timestamp())
     # Clean old entries if cache gets too large
     if len(response_cache) > 1000:
@@ -477,6 +477,70 @@ def check_rate_limit(session_id: str, ip_address: str) -> tuple:
         rate_limit_store.clear()  # Simple cleanup - clear all
 
     return True, current_count + 1, reset_time
+
+
+# =============================================================================
+# Admin Rate Limiting (stricter limits for administrative operations)
+# =============================================================================
+
+admin_rate_limit_store = {}  # {admin_username: [timestamps]}
+ADMIN_RATE_LIMIT_WINDOW = 60  # 1 minute window
+ADMIN_RATE_LIMIT_MAX_REQUESTS = 30  # Max 30 admin requests per minute
+
+
+def check_admin_rate_limit(admin_username: str) -> tuple:
+    """
+    Check if admin is rate limited.
+    Returns (allowed: bool, remaining: int, reset_time: int)
+    """
+    now = datetime.utcnow().timestamp()
+    window_start = now - ADMIN_RATE_LIMIT_WINDOW
+
+    if admin_username not in admin_rate_limit_store:
+        admin_rate_limit_store[admin_username] = []
+
+    # Remove old timestamps outside window
+    admin_rate_limit_store[admin_username] = [
+        ts for ts in admin_rate_limit_store[admin_username]
+        if ts > window_start
+    ]
+
+    current_count = len(admin_rate_limit_store[admin_username])
+
+    # Calculate reset time
+    if admin_rate_limit_store[admin_username]:
+        reset_time = int(min(admin_rate_limit_store[admin_username]) + ADMIN_RATE_LIMIT_WINDOW - now)
+    else:
+        reset_time = ADMIN_RATE_LIMIT_WINDOW
+
+    # Check if under limit
+    if current_count >= ADMIN_RATE_LIMIT_MAX_REQUESTS:
+        return False, 0, reset_time
+
+    # Add current request
+    admin_rate_limit_store[admin_username].append(now)
+
+    # Cleanup old entries periodically
+    if len(admin_rate_limit_store) > 1000:
+        admin_rate_limit_store.clear()
+
+    return True, ADMIN_RATE_LIMIT_MAX_REQUESTS - current_count - 1, reset_time
+
+
+def require_admin_rate_limit(admin: dict):
+    """Dependency to enforce admin rate limiting"""
+    allowed, remaining, reset_time = check_admin_rate_limit(admin["username"])
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="För många förfrågningar. Vänta en stund.",
+            headers={
+                "Retry-After": str(reset_time),
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": str(reset_time)
+            }
+        )
+    return admin
 
 
 class KnowledgeItemCreate(BaseModel):
@@ -1043,7 +1107,7 @@ async def save_conversation_stats(db: Session, conversation: Conversation):
     category = conversation.category or "allmant"
     try:
         cat_counts = json.loads(daily_stat.category_counts or "{}")
-    except:
+    except (json.JSONDecodeError, TypeError, ValueError):
         cat_counts = {}
     cat_counts[category] = cat_counts.get(category, 0) + 1
     daily_stat.category_counts = json.dumps(cat_counts)
@@ -1052,7 +1116,7 @@ async def save_conversation_stats(db: Session, conversation: Conversation):
     language = conversation.language or "sv"
     try:
         lang_counts = json.loads(daily_stat.language_counts or "{}")
-    except:
+    except (json.JSONDecodeError, TypeError, ValueError):
         lang_counts = {}
     lang_counts[language] = lang_counts.get(language, 0) + 1
     daily_stat.language_counts = json.dumps(lang_counts)
@@ -1061,7 +1125,7 @@ async def save_conversation_stats(db: Session, conversation: Conversation):
     hour = str(conversation.started_at.hour)
     try:
         hour_counts = json.loads(daily_stat.hourly_counts or "{}")
-    except:
+    except (json.JSONDecodeError, TypeError, ValueError):
         hour_counts = {}
     hour_counts[hour] = hour_counts.get(hour, 0) + 1
     daily_stat.hourly_counts = json.dumps(hour_counts)
@@ -1202,8 +1266,24 @@ async def root():
 
 
 @app.get("/health")
-async def health():
-    return {"status": "healthy"}
+async def health(db: Session = Depends(get_db)):
+    """Health check endpoint with database connectivity verification"""
+    health_status = {
+        "status": "healthy",
+        "database": "unknown",
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    # Check database connectivity
+    try:
+        db.execute("SELECT 1")
+        health_status["database"] = "connected"
+    except Exception as e:
+        health_status["status"] = "degraded"
+        health_status["database"] = "disconnected"
+        health_status["database_error"] = str(e)
+
+    return health_status
 
 
 # =============================================================================
@@ -1428,8 +1508,11 @@ async def chat(
     if not allowed:
         raise HTTPException(status_code=429, detail=limit_msg)
 
-    # Check cache first
-    cached = get_cached_response(company_id, request.question)
+    # Determine language early (needed for cache key)
+    language = request.language if request.language in ["sv", "en", "ar"] else detect_language(request.question)
+
+    # Check cache first (include language in cache key)
+    cached = get_cached_response(company_id, request.question, language)
     if cached:
         # Return cached response with new session handling
         session_id = request.session_id or str(uuid.uuid4())
@@ -1447,9 +1530,6 @@ async def chat(
 
     # Hantera session
     session_id = request.session_id or str(uuid.uuid4())
-
-    # Determine language (from request or detect from question)
-    language = request.language if request.language in ["sv", "en", "ar"] else detect_language(request.question)
 
     # Auto-detect category from question
     category = detect_category(request.question)
@@ -1579,7 +1659,7 @@ async def chat(
         "had_answer": had_answer,
         "confidence": confidence
     }
-    set_cached_response(company_id, request.question, cache_data)
+    set_cached_response(company_id, request.question, cache_data, language)
 
     return ChatResponse(
         answer=answer,
@@ -1728,7 +1808,7 @@ async def update_settings(
         changes.append(field_labels["language"])
         settings.language = update.language
     if update.data_retention_days is not None:
-        new_val = max(7, min(30, update.data_retention_days))
+        new_val = max(7, min(365, update.data_retention_days))  # Allow 7-365 days
         if settings.data_retention_days != new_val:
             changes.append(field_labels["data_retention_days"])
             settings.data_retention_days = new_val
@@ -1813,8 +1893,8 @@ class ActivityLogEntry(BaseModel):
 async def get_company_activity_log(
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db),
-    limit: int = 100,
-    offset: int = 0
+    limit: int = Query(100, ge=1, le=500, description="Max items to return"),
+    offset: int = Query(0, ge=0, description="Number of items to skip")
 ):
     """Hämta aktivitetslogg för företaget"""
     logs = db.query(CompanyActivityLog).filter(
@@ -1846,8 +1926,8 @@ async def get_company_activity_log(
 async def get_conversations(
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db),
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(50, ge=1, le=500, description="Max items to return"),
+    offset: int = Query(0, ge=0, description="Number of items to skip"),
     category: Optional[str] = None,
     language: Optional[str] = None
 ):
@@ -2285,10 +2365,10 @@ async def parse_text_file(content: bytes) -> str:
     """Parse plain text file"""
     try:
         return content.decode('utf-8')
-    except:
+    except UnicodeDecodeError:
         try:
             return content.decode('latin-1')
-        except:
+        except UnicodeDecodeError:
             return ""
 
 
@@ -2765,17 +2845,17 @@ async def apply_template(
     db.commit()
 
     # Log activity
-    log_activity(
+    log_company_activity(
         db=db,
         company_id=company_id,
-        action="template_applied",
+        action_type="template_applied",
         description=f"Template '{template.get('name', template_id)}' applied",
-        details=json.dumps({
+        details={
             "template_id": template_id,
             "items_added": items_added,
             "items_skipped": items_skipped,
             "replace_existing": request.replace_existing
-        })
+        }
     )
 
     return TemplateApplyResponse(
@@ -3065,7 +3145,7 @@ async def get_analytics(
                 cats = json.loads(s.category_counts)
                 for cat, count in cats.items():
                     category_stats[cat] = category_stats.get(cat, 0) + count
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError):
                 pass
 
         # Language counts from history
@@ -3074,7 +3154,7 @@ async def get_analytics(
                 langs = json.loads(s.language_counts)
                 for lang, count in langs.items():
                     language_stats[lang] = language_stats.get(lang, 0) + count
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError):
                 pass
 
         # Hourly counts from history
@@ -3083,7 +3163,7 @@ async def get_analytics(
                 hours = json.loads(s.hourly_counts)
                 for hour, count in hours.items():
                     hourly_stats[hour] = hourly_stats.get(hour, 0) + count
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError):
                 pass
 
         # Feedback from history
@@ -3513,6 +3593,9 @@ async def create_company(
     db: Session = Depends(get_db)
 ):
     """Skapa nytt företag"""
+    # Rate limit check for sensitive operation
+    require_admin_rate_limit(admin)
+
     existing = db.query(Company).filter(Company.id == company.id).first()
     if existing:
         raise HTTPException(status_code=400, detail="Företags-ID finns redan")
@@ -3557,6 +3640,9 @@ async def delete_company(
     db: Session = Depends(get_db)
 ):
     """Ta bort företag"""
+    # Rate limit check for sensitive operation
+    require_admin_rate_limit(admin)
+
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise HTTPException(status_code=404, detail="Företag finns inte")
@@ -3620,7 +3706,7 @@ async def system_health(
             response = await client.get(f"{OLLAMA_BASE_URL}/api/tags")
             if response.status_code == 200:
                 ollama_status = "online"
-    except:
+    except (httpx.RequestError, httpx.TimeoutException, Exception):
         ollama_status = "offline"
 
     # Get database size
@@ -3682,8 +3768,8 @@ async def manual_gdpr_cleanup(
 async def get_admin_audit_log(
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db),
-    limit: int = 100,
-    offset: int = 0
+    limit: int = Query(100, ge=1, le=500, description="Max items to return"),
+    offset: int = Query(0, ge=0, description="Number of items to skip")
 ):
     """Get admin audit log"""
     logs = db.query(AdminAuditLog).order_by(
@@ -3724,6 +3810,9 @@ async def impersonate_company(
     db: Session = Depends(get_db)
 ):
     """Generate a temporary token to login as a company (for support)"""
+    # Rate limit check for sensitive operation
+    require_admin_rate_limit(admin)
+
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise HTTPException(status_code=404, detail="Företag finns inte")
@@ -3896,7 +3985,7 @@ async def get_company_usage(
 @app.get("/admin/company-activity/{company_id}")
 async def get_company_activity(
     company_id: str,
-    limit: int = 20,
+    limit: int = Query(20, ge=1, le=200, description="Max items to return"),
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db)
 ):
@@ -4107,7 +4196,7 @@ async def create_or_update_subscription(
 async def get_all_invoices(
     company_id: Optional[str] = None,
     status: Optional[str] = None,
-    limit: int = 50,
+    limit: int = Query(50, ge=1, le=500, description="Max items to return"),
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db)
 ):
@@ -4412,7 +4501,7 @@ async def get_usage_trends(
 
 @app.get("/admin/analytics/companies")
 async def get_company_analytics_comparison(
-    limit: int = 10,
+    limit: int = Query(10, ge=1, le=100, description="Max companies to return"),
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db)
 ):
@@ -4455,8 +4544,8 @@ async def search_audit_logs(
     action_type: Optional[str] = None,
     company_id: Optional[str] = None,
     search_term: Optional[str] = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(50, ge=1, le=500, description="Max items to return"),
+    offset: int = Query(0, ge=0, description="Number of items to skip"),
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db)
 ):
@@ -4888,7 +4977,7 @@ async def check_and_queue_usage_notifications(db: Session):
 @app.get("/admin/notifications/queue")
 async def get_notification_queue(
     status: Optional[str] = None,
-    limit: int = 50,
+    limit: int = Query(50, ge=1, le=500, description="Max items to return"),
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db)
 ):

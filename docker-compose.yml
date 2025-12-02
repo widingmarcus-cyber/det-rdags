@@ -9,9 +9,19 @@ services:
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
       - OLLAMA_MODEL=llama3.1
+      - ENVIRONMENT=development
     depends_on:
-      - ollama
+      ollama:
+        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - backend_data:/app/data
 
   # Ollama (lokal AI)
   ollama:
@@ -21,7 +31,13 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     restart: unless-stopped
-    # Kör "docker exec -it <container> ollama pull llama3.1" efter uppstart
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # Run "docker exec -it <container> ollama pull llama3.1" after startup
 
   # Admin-panel
   admin:
@@ -29,8 +45,15 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
 
   # Chat-widget demo
   widget:
@@ -38,8 +61,16 @@ services:
     ports:
       - "3001:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
 
 volumes:
   ollama_data:
+  backend_data:
