@@ -79,23 +79,50 @@ function ThemeToggle({ isDark, onToggle }) {
   )
 }
 
-// Mini chat bubble component
-function MiniChat({ messages, className = "" }) {
+// Realistic chat widget preview
+function ChatWidgetPreview({ messages, className = "" }) {
   return (
-    <div className={`bg-white dark:bg-stone-800 rounded-xl shadow-md border border-stone-200 dark:border-stone-700 p-3 ${className}`}>
-      <div className="space-y-2">
+    <div className={`w-72 bg-white dark:bg-stone-800 rounded-2xl shadow-xl border border-stone-200 dark:border-stone-700 overflow-hidden ${className}`}>
+      {/* Widget header */}
+      <div className="bg-[#D97757] px-4 py-3 flex items-center gap-3">
+        <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+          <BobotMini className="scale-75" />
+        </div>
+        <div>
+          <div className="text-white font-medium text-sm">Bobot</div>
+          <div className="text-white/70 text-xs">Online</div>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div className="p-3 space-y-3 bg-stone-50 dark:bg-stone-900 min-h-[180px]">
         {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`rounded-lg px-2.5 py-1.5 text-xs ${
-              msg.from === 'user'
-                ? 'bg-[#D97757] text-white rounded-tr-none max-w-[85%] ml-auto'
-                : 'bg-stone-100 dark:bg-stone-700 text-stone-800 dark:text-stone-100 rounded-tl-none max-w-[90%]'
-            }`}
-          >
-            {msg.text}
+          <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div
+              className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
+                msg.from === 'user'
+                  ? 'bg-[#D97757] text-white rounded-br-md'
+                  : 'bg-white dark:bg-stone-700 text-stone-800 dark:text-stone-100 rounded-bl-md shadow-sm'
+              }`}
+            >
+              {msg.text}
+            </div>
           </div>
         ))}
+      </div>
+
+      {/* Input bar */}
+      <div className="px-3 py-2 border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 bg-stone-100 dark:bg-stone-700 rounded-full px-3 py-2 text-xs text-stone-400">
+            Skriv ett meddelande...
+          </div>
+          <div className="w-8 h-8 bg-[#D97757] rounded-full flex items-center justify-center">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+            </svg>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -137,26 +164,23 @@ function LandingPage() {
     }
   }
 
-  const conversations = [
-    [
-      { from: 'user', text: 'Får jag ha husdjur?' },
-      { from: 'bot', text: 'Ja, små husdjur är tillåtna så länge de inte stör grannar.' },
-    ],
-    [
-      { from: 'user', text: 'När töms soporna?' },
-      { from: 'bot', text: 'Tisdag och fredag. Grovsopor lämnas i miljörummet.' },
-    ],
-    [
-      { from: 'user', text: 'Hur bokar jag tvättstuga?' },
-      { from: 'bot', text: 'Via appen eller tavlan i tvättstugan. Max 2 pass/vecka.' },
-    ],
+  const conversation1 = [
+    { from: 'bot', text: 'Hej! Hur kan jag hjälpa dig?' },
+    { from: 'user', text: 'Får jag ha husdjur i lägenheten?' },
+    { from: 'bot', text: 'Ja, små husdjur som katt eller hund är tillåtna, så länge de inte stör grannarna.' },
+  ]
+
+  const conversation2 = [
+    { from: 'bot', text: 'Hej! Hur kan jag hjälpa dig?' },
+    { from: 'user', text: 'Hur bokar jag tvättstuga?' },
+    { from: 'bot', text: 'Du bokar via appen eller på tavlan i tvättstugan. Max 2 pass per vecka.' },
   ]
 
   return (
     <div ref={containerRef} className="min-h-screen bg-stone-50 dark:bg-stone-900 flex flex-col">
       {/* Navigation */}
       <nav className="px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BobotMini />
             <span className="text-xl font-semibold text-stone-900 dark:text-stone-100 tracking-tight">Bobot</span>
@@ -171,75 +195,59 @@ function LandingPage() {
       </nav>
 
       {/* Main content */}
-      <main className="flex-1 flex items-center px-6 py-6">
-        <div className="max-w-5xl mx-auto w-full">
-          <div className="grid md:grid-cols-2 gap-10 items-center">
+      <main className="flex-1 flex items-center px-6 py-8">
+        <div className="max-w-6xl mx-auto w-full">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
             {/* Left side - text */}
             <div>
-              <h1 className="text-4xl md:text-5xl font-semibold text-stone-900 dark:text-stone-100 tracking-tight leading-tight mb-4">
-                Din kundtjänst, <br />fast snabbare
-              </h1>
+              <div className="flex items-center gap-4 mb-6">
+                <BobotMascot size={80} mousePos={mousePos} />
+                <h1 className="text-4xl md:text-5xl font-semibold text-stone-900 dark:text-stone-100 tracking-tight leading-tight">
+                  Din kundtjänst,<br />fast snabbare
+                </h1>
+              </div>
 
-              <p className="text-lg text-stone-600 dark:text-stone-400 mb-6 leading-relaxed">
-                Bobot svarar på hyresgästernas vanligaste frågor – direkt, dygnet runt.
+              <p className="text-xl text-stone-600 dark:text-stone-400 mb-8 leading-relaxed">
+                Bobot svarar på hyresgästernas vanligaste frågor – direkt, dygnet runt. Så ditt team kan fokusera på det som verkligen kräver mänsklig kontakt.
               </p>
 
-              {/* Selling points - better light mode styling */}
-              <div className="space-y-2.5 mb-8">
-                <div className="flex items-start gap-3 p-3 bg-white dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-700 shadow-sm">
-                  <span className="text-lg">⚡</span>
-                  <div>
-                    <div className="text-sm font-medium text-stone-900 dark:text-stone-100">Avlasta kundtjänst</div>
-                    <div className="text-xs text-stone-500 dark:text-stone-400">Färre repetitiva frågor. Mer tid för det viktiga.</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 bg-white dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-700 shadow-sm">
-                  <span className="text-lg">🕐</span>
-                  <div>
-                    <div className="text-sm font-medium text-stone-900 dark:text-stone-100">Alltid tillgänglig</div>
-                    <div className="text-xs text-stone-500 dark:text-stone-400">Svarar direkt – kvällar, helger, röda dagar.</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 bg-white dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-700 shadow-sm">
-                  <span className="text-lg">📊</span>
-                  <div>
-                    <div className="text-sm font-medium text-stone-900 dark:text-stone-100">Se vad folk frågar om</div>
-                    <div className="text-xs text-stone-500 dark:text-stone-400">Upptäck mönster och förbättra kommunikationen.</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 bg-white dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-700 shadow-sm">
-                  <span className="text-lg">🔒</span>
-                  <div>
-                    <div className="text-sm font-medium text-stone-900 dark:text-stone-100">GDPR-säker & lokal</div>
-                    <div className="text-xs text-stone-500 dark:text-stone-400">All data stannar hos dig. Ingen molntjänst.</div>
-                  </div>
-                </div>
+              {/* Selling points - inline, subtle */}
+              <div className="flex flex-wrap gap-x-6 gap-y-2 mb-10 text-stone-600 dark:text-stone-400">
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                  Avlastar kundtjänst
+                </span>
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                  Alltid tillgänglig
+                </span>
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                  Statistik och insikter
+                </span>
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                  GDPR-säker
+                </span>
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                  Lokal AI
+                </span>
               </div>
 
-              {/* Email CTA - more prominent */}
-              <div className="bg-[#D97757]/10 dark:bg-[#D97757]/20 border border-[#D97757]/30 rounded-xl p-4 text-center">
-                <p className="text-stone-700 dark:text-stone-300 mb-1">Vill du veta mer?</p>
-                <a href="mailto:hej@bobot.nu" className="text-[#D97757] hover:text-[#c4613d] font-semibold text-lg transition-colors">
+              {/* Email CTA - simple, no box */}
+              <p className="text-stone-600 dark:text-stone-400">
+                Vill du veta mer? Mejla{' '}
+                <a href="mailto:hej@bobot.nu" className="text-[#D97757] hover:text-[#c4613d] font-medium transition-colors">
                   hej@bobot.nu
                 </a>
-              </div>
+              </p>
             </div>
 
-            {/* Right side - mascot and multiple chat previews */}
-            <div className="relative">
-              <div className="flex justify-center mb-6">
-                <BobotMascot size={130} mousePos={mousePos} />
-              </div>
-
-              {/* Multiple mini conversations displayed at once */}
-              <div className="space-y-3">
-                {conversations.map((msgs, i) => (
-                  <MiniChat key={i} messages={msgs} />
-                ))}
-              </div>
+            {/* Right side - two realistic widget previews */}
+            <div className="flex justify-center gap-6 flex-wrap">
+              <ChatWidgetPreview messages={conversation1} className="transform -rotate-2 hover:rotate-0 transition-transform" />
+              <ChatWidgetPreview messages={conversation2} className="transform rotate-2 hover:rotate-0 transition-transform mt-8" />
             </div>
           </div>
         </div>
@@ -247,7 +255,7 @@ function LandingPage() {
 
       {/* Footer */}
       <footer className="px-6 py-4 border-t border-stone-200 dark:border-stone-700">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 text-sm text-stone-500">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 text-sm text-stone-500">
           <span>&copy; {new Date().getFullYear()} Bobot</span>
           <span>GDPR-kompatibel</span>
           <a href="mailto:hej@bobot.nu" className="hover:text-stone-700 dark:hover:text-stone-300 transition-colors">
