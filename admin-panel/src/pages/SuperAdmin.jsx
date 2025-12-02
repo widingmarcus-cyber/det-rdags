@@ -2446,6 +2446,63 @@ function SuperAdmin() {
                 </div>
               </div>
 
+              {/* Security & Production */}
+              <div className="lg:col-span-3 card border-green-200 bg-green-50/30">
+                <h2 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                  Säkerhet & Produktion
+                  <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">Produktionsklar</span>
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="p-4 bg-white rounded-xl border border-green-200">
+                    <h3 className="font-medium text-text-primary mb-2 flex items-center gap-2">
+                      <span className="text-green-600">✓</span> Autentisering
+                    </h3>
+                    <ul className="text-sm text-text-secondary space-y-1">
+                      <li>• bcrypt lösenordshashning</li>
+                      <li>• 2FA för Super Admin</li>
+                      <li>• Brute force-skydd</li>
+                      <li>• JWT med 24h livstid</li>
+                    </ul>
+                  </div>
+                  <div className="p-4 bg-white rounded-xl border border-green-200">
+                    <h3 className="font-medium text-text-primary mb-2 flex items-center gap-2">
+                      <span className="text-green-600">✓</span> Rate Limiting
+                    </h3>
+                    <ul className="text-sm text-text-secondary space-y-1">
+                      <li>• Chat: 15 req/min</li>
+                      <li>• Admin API: 30 req/min</li>
+                      <li>• Login: 5 försök/15 min</li>
+                      <li>• Auto-lockout 15 min</li>
+                    </ul>
+                  </div>
+                  <div className="p-4 bg-white rounded-xl border border-green-200">
+                    <h3 className="font-medium text-text-primary mb-2 flex items-center gap-2">
+                      <span className="text-green-600">✓</span> Security Headers
+                    </h3>
+                    <ul className="text-sm text-text-secondary space-y-1">
+                      <li>• HSTS (produktion)</li>
+                      <li>• CSP konfigurerad</li>
+                      <li>• X-Frame-Options</li>
+                      <li>• XSS-Protection</li>
+                    </ul>
+                  </div>
+                  <div className="p-4 bg-white rounded-xl border border-green-200">
+                    <h3 className="font-medium text-text-primary mb-2 flex items-center gap-2">
+                      <span className="text-green-600">✓</span> Produktionskrav
+                    </h3>
+                    <ul className="text-sm text-text-secondary space-y-1">
+                      <li>• Sätt ENVIRONMENT=production</li>
+                      <li>• Generera SECRET_KEY</li>
+                      <li>• Konfigurera CORS_ORIGINS</li>
+                      <li>• Aktivera HTTPS</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
               {/* Create Announcement */}
               <div className="lg:col-span-3 card">
                 <div className="flex items-center justify-between mb-4">

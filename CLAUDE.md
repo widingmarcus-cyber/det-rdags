@@ -230,12 +230,17 @@ All data is isolated by `company_id`. Every query must filter by tenant.
 - JSON request/response bodies
 - Swedish error messages for user-facing errors
 
-### Security Considerations
-- Passwords hashed with SHA256 (upgrade to bcrypt for production)
-- JWT tokens with 24-hour expiry
-- IP addresses anonymized (last octet masked)
-- User agents stripped to browser name only
-- Automatic conversation cleanup based on retention settings
+### Security (Production-Ready)
+- **Password hashing:** bcrypt with cost factor 12 (with legacy SHA256 migration support)
+- **JWT tokens:** 24-hour expiry with secure secret key handling
+- **Rate limiting:** Per-session/IP for chat (15/min), per-admin for API (30/min)
+- **Brute force protection:** Login attempt tracking with 15-minute lockouts
+- **Security headers:** HSTS, CSP, X-Frame-Options, XSS protection
+- **CORS:** Environment-based, restricted in production
+- **IP anonymization:** Last octet masked for GDPR
+- **Request tracing:** Unique request IDs for debugging
+- **2FA:** TOTP support for Super Admin accounts (Google Authenticator)
+- **Error tracking:** Sentry integration (optional)
 
 ### GDPR Compliance
 - Configurable data retention (7-365 days)
@@ -243,6 +248,9 @@ All data is isolated by `company_id`. Every query must filter by tenant.
 - Statistics are anonymized before conversation deletion
 - Manual cleanup endpoint available for admins
 - No personal data in logs
+- Activity log cleanup after 12 months
+- Consent management in widget
+- Data controller information in settings
 
 ## Design System
 
@@ -315,20 +323,53 @@ Currently using auto-create via `Base.metadata.create_all()`. For production, co
 ## Environment Variables
 
 ```bash
-# Backend (.env)
-OLLAMA_BASE_URL=http://localhost:11434  # or http://ollama:11434 in Docker
+# =============================================================================
+# REQUIRED FOR PRODUCTION
+# =============================================================================
+ENVIRONMENT=production                    # Set to 'production' for production mode
+SECRET_KEY=<generate-with-secrets-module> # python -c "import secrets; print(secrets.token_urlsafe(64))"
+CORS_ORIGINS=https://app.bobot.se,https://admin.bobot.se  # Comma-separated allowed origins
+
+# =============================================================================
+# OPTIONAL CONFIGURATION
+# =============================================================================
+# AI Model
+OLLAMA_BASE_URL=http://localhost:11434    # or http://ollama:11434 in Docker
 OLLAMA_MODEL=llama3.1
-SECRET_KEY=your-secret-key-change-in-production
-DATABASE_URL=sqlite:///./bobot.db
+
+# Database (SQLite default, PostgreSQL supported)
+DATABASE_URL=sqlite:///./bobot.db         # or postgresql://user:pass@host/db
+
+# Error Tracking
+SENTRY_DSN=<your-sentry-dsn>              # Optional Sentry integration
+
+# Admin Credentials (auto-generated if not set)
+ADMIN_PASSWORD=<strong-password>          # Super admin password
+DEMO_PASSWORD=demo123                     # Demo company password
+
+# Email (for notifications)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=notifications@bobot.se
+SMTP_PASSWORD=<smtp-password>
 ```
+
+## Production Deployment Checklist
+
+- [ ] Set `ENVIRONMENT=production`
+- [ ] Generate and set secure `SECRET_KEY`
+- [ ] Configure `CORS_ORIGINS` with your domains
+- [ ] Set strong `ADMIN_PASSWORD`
+- [ ] Configure Sentry for error tracking (optional)
+- [ ] Enable HTTPS (required for HSTS)
+- [ ] Configure PostgreSQL for high-traffic (optional)
 
 ## Known Limitations
 
-1. **Password hashing:** Uses SHA256, should upgrade to bcrypt for production
-2. **Database:** SQLite (consider PostgreSQL for production)
-3. **CORS:** Wide open (restrict in production)
-4. **Rate limiting:** Not implemented (add for production)
-5. **File uploads:** 10MB limit, stored in memory during processing
+1. **Database:** SQLite by default (PostgreSQL supported via DATABASE_URL)
+2. **File uploads:** 10MB limit, stored in memory during processing
+3. **Database migrations:** Uses auto-create; consider Alembic for schema changes
+4. **Widget embedding:** CSP allows frame-ancestors from any origin for widget embedding
 
 ## Useful Commands
 
