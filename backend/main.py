@@ -924,13 +924,28 @@ def find_relevant_context(question: str, company_id: str, db: Session, top_k: in
     return [item for _, item in scored_items[:top_k]]
 
 
-async def query_ollama(prompt: str) -> str:
-    """Skicka fråga till Ollama"""
+async def query_ollama(prompt: str, temperature: float = 0.7) -> str:
+    """Skicka fråga till Ollama
+
+    Args:
+        prompt: The prompt to send to the model
+        temperature: Controls randomness (0.0 = deterministic, 1.0 = creative)
+                    Default 0.7 for natural but consistent responses
+    """
     async with httpx.AsyncClient(timeout=60.0) as client:
         try:
             response = await client.post(
                 f"{OLLAMA_BASE_URL}/api/generate",
-                json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
+                json={
+                    "model": OLLAMA_MODEL,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": temperature,  # 0.7 for natural but grounded responses
+                        "top_p": 0.9,  # Nucleus sampling for quality
+                        "repeat_penalty": 1.1,  # Slight penalty to avoid repetitive text
+                    }
+                }
             )
             response.raise_for_status()
             return response.json().get("response", "Kunde inte generera svar.")
@@ -1015,6 +1030,52 @@ def detect_category(text: str) -> str:
     return "allmant"
 
 
+def is_greeting(text: str) -> bool:
+    """Detect if a message is just a greeting (no actual question)"""
+    text_lower = text.lower().strip()
+
+    # Common greetings in Swedish, English, and Arabic
+    greetings = [
+        # Swedish
+        "hej", "hallå", "tjena", "hejsan", "god dag", "goddag", "hejhej",
+        "tja", "tjenare", "morsning", "god morgon", "god kväll",
+        # English
+        "hi", "hello", "hey", "good morning", "good evening", "good afternoon",
+        "howdy", "greetings", "yo", "sup", "what's up", "whats up",
+        # Arabic
+        "مرحبا", "السلام عليكم", "اهلا",
+        # Short variants
+        "hej!", "hi!", "hello!", "hey!"
+    ]
+
+    # Check if the message is ONLY a greeting (with optional punctuation)
+    clean_text = text_lower.rstrip("!?.,")
+    if clean_text in greetings:
+        return True
+
+    # Check for greeting + simple filler (e.g., "hej där", "hello there")
+    greeting_patterns = [
+        "hej där", "hej du", "hallå där", "hello there", "hi there",
+        "hey there", "hej hej", "hej på dig"
+    ]
+    if clean_text in greeting_patterns:
+        return True
+
+    return False
+
+
+def get_greeting_response(language: str, company_name: str = None) -> str:
+    """Generate a warm greeting response"""
+    name = company_name or "oss"
+
+    responses = {
+        "sv": f"Hej! Vad kul att du hör av dig. Hur kan jag hjälpa dig idag?",
+        "en": f"Hi there! Great to hear from you. How can I help you today?",
+        "ar": f"مرحباً! سعيد بتواصلك معنا. كيف يمكنني مساعدتك اليوم؟"
+    }
+    return responses.get(language, responses["sv"])
+
+
 def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None, category: str = None, has_knowledge_match: bool = False) -> str:
     """Bygg prompt med kontext - använder specificerat eller detekterat språk
 
@@ -1047,38 +1108,39 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
 
     company_info = ""
     if company_facts:
-        company_info = "Company information:\n" + "\n".join(f"- {fact}" for fact in company_facts)
+        company_info = "Contact info:\n" + "\n".join(f"- {fact}" for fact in company_facts)
 
     # Build knowledge base context
     knowledge = ""
     if context:
-        knowledge = "Knowledge base - ONLY use these answers:\n"
+        knowledge = "FACTS (answer based on these):\n"
         for item in context:
             knowledge += f"Q: {item.question}\nA: {item.answer}\n\n"
     else:
-        knowledge = "Knowledge base: NO MATCHING INFORMATION FOUND.\n"
+        knowledge = "FACTS: No matching information found.\n"
 
-    # CRITICAL: Strict anti-hallucination instructions
-    return f"""You are a customer service assistant for {company_name}.
+    # Build a warm, conversational prompt that still prevents hallucination
+    return f"""You are a friendly assistant for {company_name}, a property management company. You help tenants with their questions.
 
-=== AVAILABLE FACTS ===
+PERSONALITY: Warm and helpful, like a friendly neighbor. Professional but not robotic. You genuinely want to help.
+
 {company_info}
+
 {knowledge}
-=== END AVAILABLE FACTS ===
 
-CRITICAL RULES - YOU MUST FOLLOW THESE:
-1. ONLY answer using the EXACT information from the knowledge base above.
-2. If the knowledge base says "NO MATCHING INFORMATION FOUND" or is empty, you MUST respond with ONLY: "I don't have information about that. Please contact us directly."
-3. DO NOT invent, guess, assume, or make up ANY information - not even general advice.
-4. DO NOT say "typically", "usually", "generally", or similar hedging words to make up answers.
-5. If asked about something not in the knowledge base, say you don't have that information.
-6. For GDPR/privacy questions, use the GDPR-ansvarig contact info if available.
-7. Reply in {target_lang}. Be concise (1-2 sentences max).
-8. If contact info is available, include it when helpful.
+HOW TO RESPOND:
+- Use ONLY the facts above. Never make up information.
+- If you have relevant info: Answer warmly in 1-3 sentences. Include contact info if helpful.
+- If someone reports a problem: Briefly acknowledge ("Tråkigt att höra!" / "I understand") before answering.
+- Be concise but complete.
+- Reply in {target_lang}.
 
-Remember: It is BETTER to say "I don't know" than to give incorrect information.
+NEVER DO THIS:
+- Don't invent facts or give advice not in the knowledge base
+- Don't use "typically", "usually", "vanligtvis" to guess answers
+- Don't pretend to know things you weren't given
 
-Customer question: {question}"""
+Tenant message: {question}"""
 
 
 def anonymize_ip(ip: str) -> str:
@@ -1628,56 +1690,70 @@ async def chat(
     )
     db.add(user_message)
 
-    # Hitta kontext i kunskapsbasen
-    context = find_relevant_context(request.question, company_id, db)
-
-    # ANTI-HALLUCINATION: Only consider it "had_answer" if we ACTUALLY found knowledge base matches
-    # DO NOT trust category detection alone - it can lead to hallucinations
-    had_answer = len(context) > 0
-
     # Mät svarstid
     start_time = datetime.utcnow()
 
-    # Fallback messages for when we have NO knowledge base match
-    fallback_messages = {
-        "sv": settings.fallback_message or "Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt.",
-        "en": "I couldn't find an answer to your question. Please contact us directly.",
-        "ar": "لم أتمكن من العثور على إجابة لسؤالك. يرجى الاتصال بنا مباشرة."
-    }
-
-    # ANTI-HALLUCINATION: If NO knowledge base match found, use fallback immediately
-    # Do NOT let the AI generate an answer without factual grounding
-    if not context:
-        # No knowledge base match - use fallback to prevent hallucination
-        answer = fallback_messages.get(language, settings.fallback_message)
-        response_time = 0  # No AI call needed
+    # Check if this is just a greeting (no actual question)
+    if is_greeting(request.question):
+        # Respond warmly to greetings without hitting the knowledge base
+        answer = get_greeting_response(language, settings.company_name)
+        response_time = 0
+        had_answer = True
+        context = []
     else:
-        # We have knowledge base context - let AI formulate response based on FACTS
-        prompt = build_prompt(request.question, context, settings, language, category, has_knowledge_match=True)
-        answer = await query_ollama(prompt)
-        response_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+        # Hitta kontext i kunskapsbasen
+        context = find_relevant_context(request.question, company_id, db)
 
-        # ANTI-HALLUCINATION: Double-check AI didn't hallucinate despite having context
-        # If AI response doesn't seem to reference the knowledge base, use fallback
-        hallucination_indicators = [
-            "I don't have information",
-            "jag har ingen information",
-            "jag vet inte",
-            "I cannot find",
-            "cannot help with that",
-            "typically",  # Hedging words indicate making things up
-            "usually",
-            "generally",
-            "in most cases",
-            "vanligtvis",
-            "oftast",
-            "brukar",
-        ]
-        answer_lower = answer.lower()
-        if any(indicator.lower() in answer_lower for indicator in hallucination_indicators):
-            # AI admitted it doesn't know or is hedging - use clean fallback
-            answer = fallback_messages.get(language, settings.fallback_message)
-            had_answer = False
+        # ANTI-HALLUCINATION: Only consider it "had_answer" if we ACTUALLY found knowledge base matches
+        had_answer = len(context) > 0
+
+        # Soft fallback messages - encouraging the user to try other questions
+        # Build contact info string if available
+        contact_info = ""
+        if settings.contact_email or settings.contact_phone:
+            contact_parts = []
+            if settings.contact_phone:
+                contact_parts.append(settings.contact_phone)
+            if settings.contact_email:
+                contact_parts.append(settings.contact_email)
+            contact_info = " (" + ", ".join(contact_parts) + ")"
+
+        fallback_messages = {
+            "sv": settings.fallback_message or f"Den frågan har jag tyvärr inte information om. Men fråga gärna något annat – kanske kan jag hjälpa dig med det! Annars når du oss på{contact_info or ' kontaktuppgifterna på hemsidan'}.",
+            "en": f"I don't have information about that specific question. But feel free to ask me something else – maybe I can help with that! Otherwise, you can reach us at{contact_info or ' the contact details on our website'}.",
+            "ar": f"للأسف ليس لدي معلومات عن هذا السؤال. لكن لا تتردد في طرح سؤال آخر - ربما أستطيع المساعدة! أو يمكنك التواصل معنا{contact_info or ' عبر بيانات الاتصال على موقعنا'}."
+        }
+
+        # ANTI-HALLUCINATION: If NO knowledge base match found, use fallback immediately
+        if not context:
+            answer = fallback_messages.get(language, fallback_messages["sv"])
+            response_time = 0
+        else:
+            # We have knowledge base context - let AI formulate response based on FACTS
+            prompt = build_prompt(request.question, context, settings, language, category, has_knowledge_match=True)
+            answer = await query_ollama(prompt)
+            response_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+
+            # ANTI-HALLUCINATION: Double-check AI didn't hallucinate despite having context
+            hallucination_indicators = [
+                "I don't have information",
+                "jag har ingen information",
+                "jag vet inte",
+                "I cannot find",
+                "cannot help with that",
+                "typically",  # Hedging words indicate making things up
+                "usually",
+                "generally",
+                "in most cases",
+                "vanligtvis",
+                "oftast",
+                "brukar",
+            ]
+            answer_lower = answer.lower()
+            if any(indicator.lower() in answer_lower for indicator in hallucination_indicators):
+                # AI admitted it doesn't know or is hedging - use clean fallback
+                answer = fallback_messages.get(language, fallback_messages["sv"])
+                had_answer = False
 
     # Spara bot-svaret
     sources = [item.question for item in context]
