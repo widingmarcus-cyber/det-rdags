@@ -1,0 +1,396 @@
+{
+  "template_id": "fastighetsbolag_sv",
+  "name": "Fastighetsbolag - Svenska",
+  "description": "Komplett kunskapsbas för fastighetsbolag med vanliga hyresgästfrågor",
+  "version": "1.0.0",
+  "language": "sv",
+  "industry": "property_management",
+  "last_updated": "2025-01-01",
+  "sources": [
+    "Hyreslagen (12 kap. Jordabalken)",
+    "Hyresnämnden",
+    "Allmänna branschpraxis"
+  ],
+  "categories": [
+    "Hyra & Betalning",
+    "Felanmälan",
+    "Kontrakt & Uppsägning",
+    "Tvättstuga",
+    "Parkering",
+    "Flytt",
+    "Störningar & Ordning",
+    "Allmänt"
+  ],
+  "items": [
+    {
+      "category": "Hyra & Betalning",
+      "question": "När ska hyran betalas?",
+      "answer": "Hyran ska betalas i förskott, senast den sista vardagen före varje kalendermånads början. Det vanligaste är att hyran ska vara oss tillhanda senast den sista i månaden för nästkommande månad. Kontrollera ditt hyreskontrakt för exakt förfallodag."
+    },
+    {
+      "category": "Hyra & Betalning",
+      "question": "Hur betalar jag hyran?",
+      "answer": "Du kan betala hyran via autogiro, bankgiro eller genom din internetbank. Vi rekommenderar autogiro för att slippa komma ihåg betalningen varje månad. Kontakta oss om du vill ansluta till autogiro så skickar vi en blankett."
+    },
+    {
+      "category": "Hyra & Betalning",
+      "question": "Hur ansluter jag till autogiro?",
+      "answer": "För att ansluta till autogiro kan du antingen fylla i blanketten som finns på vår hemsida eller kontakta oss så skickar vi en blankett till dig. Du behöver ditt personnummer och bankkontonummer. Det tar vanligtvis 2-3 veckor innan autogirot är aktivt."
+    },
+    {
+      "category": "Hyra & Betalning",
+      "question": "Jag har inte fått någon hyresavi, vad gör jag?",
+      "answer": "Om du inte fått hyresavi kan du kontakta oss så skickar vi en ny. Du kan även se dina hyresavier i Mina Sidor om du har tillgång till det. Hyran ska betalas även om avin inte kommit fram - kontrollera ditt kontrakt för belopp och OCR-nummer."
+    },
+    {
+      "category": "Hyra & Betalning",
+      "question": "Varför har hyran höjts?",
+      "answer": "Hyreshöjningar beror vanligtvis på ökade kostnader för fastighetsunderhåll, drift, uppvärmning, vatten och sophantering. Hyran förhandlas årligen mellan fastighetsägaren och Hyresgästföreningen. Du ska ha fått skriftlig information om hyreshöjningen minst tre månader i förväg."
+    },
+    {
+      "category": "Hyra & Betalning",
+      "question": "Jag har svårt att betala hyran, vad kan jag göra?",
+      "answer": "Kontakta oss så snart som möjligt om du har betalningssvårigheter. Vi kan diskutera möjligheten till en avbetalningsplan. Du kan även kontakta socialtjänsten i din kommun för att undersöka om du har rätt till ekonomiskt bistånd. Det är viktigt att agera innan du får en betalningsanmärkning."
+    },
+    {
+      "category": "Hyra & Betalning",
+      "question": "Vad händer om jag inte betalar hyran i tid?",
+      "answer": "Om hyran inte betalas i tid skickas först en påminnelse med påminnelseavgift. Vid fortsatt utebliven betalning kan ärendet gå till inkasso. Efter 8 dagars försenad betalning har hyresvärden rätt att säga upp kontraktet. Kontakta oss omedelbart om du har problem att betala."
+    },
+    {
+      "category": "Hyra & Betalning",
+      "question": "Vad ingår i hyran?",
+      "answer": "I hyran ingår normalt värme, vatten (varm och kall) samt sophämtning. El betalas vanligtvis separat direkt till elbolaget. Bredband, TV och hemförsäkring ingår inte och ordnas av dig själv. Kontrollera ditt hyreskontrakt för exakt vad som ingår i din hyra."
+    },
+    {
+      "category": "Hyra & Betalning",
+      "question": "Hur fungerar hyresförhandlingar?",
+      "answer": "Hyran förhandlas årligen mellan fastighetsägaren och Hyresgästföreningen enligt det svenska bruksvärdessystemet. Förhandlingarna sker vanligtvis under hösten för nästa års hyra. Som hyresgäst representeras du av Hyresgästföreningen, oavsett om du är medlem eller ej."
+    },
+    {
+      "category": "Hyra & Betalning",
+      "question": "Kan jag bestrida en hyreshöjning?",
+      "answer": "Om du inte accepterar hyreshöjningen kan du kontakta Hyresgästföreningen för rådgivning. Du kan också ansöka om prövning hos Hyresnämnden. Fortsätt betala den gamla hyran under tvisten. Observera att de flesta hyreshöjningar är kollektivt förhandlade."
+    },
+    {
+      "category": "Felanmälan",
+      "question": "Hur gör jag en felanmälan?",
+      "answer": "Du kan anmäla fel via vår hemsida, genom att ringa vår felanmälan eller via appen. Beskriv felet så detaljerat som möjligt och ange var i lägenheten felet finns. Du får en bekräftelse och vi kontaktar dig för att boka tid om vi behöver komma in i lägenheten."
+    },
+    {
+      "category": "Felanmälan",
+      "question": "Vad räknas som ett akut fel?",
+      "answer": "Akuta fel är sådant som inte kan vänta till nästa vardag, exempelvis: vattenläcka, stopp i avlopp med översvämningsrisk, ingen värme vintertid, trasig ytterdörr som inte går att låsa, eller strömavbrott i hela lägenheten. Ring vår akutjour för dessa ärenden."
+    },
+    {
+      "category": "Felanmälan",
+      "question": "Vem ansvarar för reparationer i lägenheten?",
+      "answer": "Hyresvärden ansvarar för lägenhetens fasta inredning, installationer och underhåll av golv, väggar och tak. Du som hyresgäst ansvarar för att vårda lägenheten, byta lampor, proppar, batterier i brandvarnare samt rengöra ventiler och golvbrunnar. Skador du orsakat får du stå för själv."
+    },
+    {
+      "category": "Felanmälan",
+      "question": "Hur lång tid tar det innan felet åtgärdas?",
+      "answer": "Akuta fel åtgärdas inom 24 timmar. Brådskande fel (t.ex. trasig spis, läckande kran) åtgärdas normalt inom 1-5 arbetsdagar. Övriga fel åtgärdas inom 2-4 veckor beroende på ärendets art. Du får besked om beräknad åtgärdstid när vi bekräftar din felanmälan."
+    },
+    {
+      "category": "Felanmälan",
+      "question": "Vad gör jag vid vattenläcka?",
+      "answer": "Stäng av vattnet vid avstängningsventilen under diskbänken eller i badrummet. Torka upp vattnet för att minimera skador. Ring vår akutjour omedelbart. Om läckan kommer från grannens lägenhet, försök kontakta grannen och ring sedan oss."
+    },
+    {
+      "category": "Felanmälan",
+      "question": "Element/radiator fungerar inte, vad gör jag?",
+      "answer": "Kontrollera först att termostaten är öppen (vriden åt höger). Känns elementet kallt upptill men varmt nedtill kan det behöva luftas - detta gör vi åt dig vid en felanmälan. Är hela lägenheten kall, kontrollera att grannarna har värme. Anmäl felet via vår felanmälan."
+    },
+    {
+      "category": "Felanmälan",
+      "question": "Toaletten rinner, vad ska jag göra?",
+      "answer": "En rinnande toalett beror ofta på en trasig flottör eller packningar i cisternen. Detta är hyresvärdens ansvar att åtgärda. Gör en felanmälan så snart som möjligt då en rinnande toalett slösar mycket vatten. Som tillfällig lösning kan du stänga av vattenkranen till toaletten."
+    },
+    {
+      "category": "Felanmälan",
+      "question": "Det är stopp i avloppet, vad gör jag?",
+      "answer": "Mindre stopp kan du försöka lösa själv med en vaskrensare eller avloppsmedel. Häll inte fett i avloppet. Om problemet kvarstår, gör en felanmälan. Vid risk för översvämning - använd inte vatten och ring vår akutjour. Stopp orsakat av felaktig användning kan debiteras hyresgästen."
+    },
+    {
+      "category": "Felanmälan",
+      "question": "Kylskåpet eller frysen fungerar inte, vad gör jag?",
+      "answer": "Kontrollera att kylskåpet är inkopplat och att termostaten är rätt inställd. Rengör damm från kondensorns galler på baksidan. Om problemet kvarstår, gör en felanmälan. Vid längre driftstopp - flytta matvaror till granne eller använd balkong/utomhus (vintertid)."
+    },
+    {
+      "category": "Felanmälan",
+      "question": "Spisen eller ugnen fungerar inte, vad gör jag?",
+      "answer": "Kontrollera att säkringen inte har gått. På moderna spisar finns ofta barnspärr - kontrollera att den inte är aktiverad. Om problemet kvarstår, gör en felanmälan. Spis räknas som brådskande då matlagning är nödvändig - vi prioriterar dessa ärenden."
+    },
+    {
+      "category": "Kontrakt & Uppsägning",
+      "question": "Hur lång är uppsägningstiden?",
+      "answer": "För hyresrätt gäller normalt tre månaders uppsägningstid, räknat från månadsskiftet efter att uppsägningen lämnats. Exempel: Säger du upp den 15 januari, räknas uppsägningen från 1 februari och du har lägenheten till och med 30 april."
+    },
+    {
+      "category": "Kontrakt & Uppsägning",
+      "question": "Hur säger jag upp mitt hyreskontrakt?",
+      "answer": "Uppsägning ska göras skriftligt. Du kan använda blanketten på vår hemsida, skicka e-post eller brev. Uppsägningen ska innehålla: ditt namn, lägenhetsnummer, adress och önskat utflyttningsdatum. Vi bekräftar uppsägningen skriftligt inom några dagar."
+    },
+    {
+      "category": "Kontrakt & Uppsägning",
+      "question": "Kan jag ångra min uppsägning?",
+      "answer": "En uppsägning kan inte ångras, men du kan kontakta oss och fråga om det finns möjlighet att återta den. Om lägenheten ännu inte har utannonserats eller erbjudits till en ny hyresgäst finns det större chans att vi kan hjälpa dig. Vi kan dock inte garantera detta."
+    },
+    {
+      "category": "Kontrakt & Uppsägning",
+      "question": "Kan jag byta lägenhet?",
+      "answer": "Ja, du kan ansöka om lägenhetsbyte. Vi förmedlar byten mellan våra egna hyresgäster. Du kan också byta med hyresgäster hos andra hyresvärdar om båda hyresvärdar godkänner bytet. Kontakta oss för att registrera ditt bytesintresse. Byten kräver godkännande från hyresvärden."
+    },
+    {
+      "category": "Kontrakt & Uppsägning",
+      "question": "Kan jag hyra ut min lägenhet i andra hand?",
+      "answer": "Andrahandsuthyrning kräver skriftligt tillstånd från oss. Godtagbara skäl är exempelvis: tillfälligt arbete på annan ort, studier, provsamboende eller sjukdom. Ansök skriftligt med motivering och uppgifter om tilltänkt andrahandshyresgäst. Utan tillstånd riskerar du uppsägning."
+    },
+    {
+      "category": "Kontrakt & Uppsägning",
+      "question": "Hur länge får jag hyra ut i andra hand?",
+      "answer": "Andrahandsuthyrning beviljas normalt för ett år i taget. Maximal tid är oftast 2-3 år totalt, beroende på skäl. Du måste ansöka om förlängning i god tid innan tillståndsperioden går ut. Permanent andrahandsuthyrning godkänns inte."
+    },
+    {
+      "category": "Kontrakt & Uppsägning",
+      "question": "Kan jag överlåta mitt kontrakt till någon annan?",
+      "answer": "Kontraktsöverlåtelse kan godkännas till: make/maka/sambo som du bott med i minst 3 år, eller närstående (barn, föräldrar, syskon) som du varaktigt bott tillsammans med. Den som övertar kontraktet måste godkännas av oss. Kontakta oss för ansökan."
+    },
+    {
+      "category": "Kontrakt & Uppsägning",
+      "question": "Vad händer om min sambo flyttar ut?",
+      "answer": "Om ni båda står på kontraktet kan den som flyttar ut skriftligt begära att avträda från kontraktet. Den kvarboende måste då godkännas som ensam kontraktsinnehavare. Om endast en person står på kontraktet påverkas inte kontraktet av att sambon flyttar."
+    },
+    {
+      "category": "Kontrakt & Uppsägning",
+      "question": "Vad händer med kontraktet om kontraktsinnehavaren avlider?",
+      "answer": "Make/maka/sambo eller hemmavarande barn har rätt att överta kontraktet om de varaktigt sammanbott med den avlidne. Kontakta oss så snart som möjligt så hjälper vi till med överlåtelsen. Dödsboet ansvarar för hyran tills kontraktet överlåtits eller sagts upp."
+    },
+    {
+      "category": "Tvättstuga",
+      "question": "Hur bokar jag tvättid?",
+      "answer": "Tvättider bokas i bokningstavlan i tvättstugan eller via vår app/hemsida om digital bokning finns. Du kan vanligtvis boka upp till 2 veckor framåt. Avboka tider du inte kan använda så att andra kan tvätta. Regler för bokning finns anslagna i tvättstugan."
+    },
+    {
+      "category": "Tvättstuga",
+      "question": "Vilka regler gäller i tvättstugan?",
+      "answer": "Följ din bokade tid och lämna tvättstugan senast när tiden är slut. Rengör maskiner, filter och golv efter användning. Lämna inte tvätt obevakad under torkning. Husdjur får inte vistas i tvättstugan. Rapportera trasiga maskiner via felanmälan. Visa hänsyn till andra."
+    },
+    {
+      "category": "Tvättstuga",
+      "question": "Tvättmaskinen är trasig, vad gör jag?",
+      "answer": "Gör en felanmälan så snabbt som möjligt. Beskriv vilket fel maskinen har och vilken maskin det gäller (nummer/placering). Använd inte en trasig maskin då det kan orsaka ytterligare skador. Vi prioriterar tvättstugefel då de påverkar många hyresgäster."
+    },
+    {
+      "category": "Tvättstuga",
+      "question": "Någon har tagit min tvättid, vad gör jag?",
+      "answer": "Om någon använder tvättstugan på din bokade tid har du rätt att be personen avsluta. Kvarstår problemet, kontakta oss så noterar vi ärendet. Vid upprepade överträdelser kan vi kontakta den felande hyresgästen. Undvik konfrontation - kontakta oss istället."
+    },
+    {
+      "category": "Tvättstuga",
+      "question": "Kan jag tvätta utanför mina bokade tider?",
+      "answer": "Du får endast tvätta på dina bokade tider. Obokad tid får användas om ingen annan har bokat, men du måste avsluta omedelbart om någon kommer med bokning. Respektera systemet så att det fungerar rättvist för alla."
+    },
+    {
+      "category": "Parkering",
+      "question": "Hur ansöker jag om parkeringsplats?",
+      "answer": "Kontakta oss för att ställa dig i kö till parkeringsplats. Ange vilken typ av plats du önskar (utomhus, garage, carport, motorvärmare). Kötiden varierar beroende på efterfrågan i området. Du får besked när en plats blir ledig."
+    },
+    {
+      "category": "Parkering",
+      "question": "Vad kostar en parkeringsplats?",
+      "answer": "Priset varierar beroende på typ av plats och område. Utomhusplatser är billigast, garage dyrast. Kontakta oss för aktuella priser i ditt område. Parkeringshyran faktureras separat eller tillsammans med bostadshyran."
+    },
+    {
+      "category": "Parkering",
+      "question": "Hur säger jag upp min parkeringsplats?",
+      "answer": "Parkeringsplatser har normalt en månads uppsägningstid. Säg upp skriftligt via e-post, brev eller vår hemsida. Ange vilket datum du vill avsluta och lämna tillbaka eventuell fjärrkontroll, nyckel eller parkeringsbricka."
+    },
+    {
+      "category": "Parkering",
+      "question": "Finns det laddplats för elbil?",
+      "answer": "Vi arbetar med att installera laddplatser i våra fastigheter. Kontakta oss för att höra om det finns laddplatser i ditt område eller om det finns planer på installation. Du kan också anmäla intresse för laddplats så registrerar vi det."
+    },
+    {
+      "category": "Parkering",
+      "question": "Var får besökare parkera?",
+      "answer": "Besökare kan parkera på besöksparkering om sådan finns. Vanligtvis krävs parkeringsbiljett eller registrering via app. Kontrollera skyltar i området. Besökare får inte parkera på din hyresgästplats. Långtidsparkering av besökare är inte tillåtet."
+    },
+    {
+      "category": "Parkering",
+      "question": "Jag har fått en parkeringsanmärkning, vad gör jag?",
+      "answer": "Parkeringsövervakning sköts av parkeringsbolag. Vill du bestrida anmärkningen ska du vända dig direkt till det parkeringsbolag som utfärdat den - kontaktuppgifter finns på anmärkningen. Vi kan inte hjälpa till med bestridanden."
+    },
+    {
+      "category": "Flytt",
+      "question": "Hur går inflyttning till?",
+      "answer": "Du får kallelse till inflyttningsbesiktning cirka en vecka innan tillträde. Vid besiktningen går vi igenom lägenheten tillsammans och noterar eventuella anmärkningar. Du får nycklar och information om lägenheten. Läs noga igenom informationen du får."
+    },
+    {
+      "category": "Flytt",
+      "question": "Hur går utflyttning till?",
+      "answer": "Boka tid för utflyttningsbesiktning med oss. Lägenheten ska vara städad och tömd. Vid besiktningen går vi igenom lägenheten och noterar eventuella skador utöver normalt slitage. Lämna tillbaka alla nycklar. Efterdebiteringar skickas om skador behöver åtgärdas."
+    },
+    {
+      "category": "Flytt",
+      "question": "Hur ska lägenheten städas vid utflytt?",
+      "answer": "Lägenheten ska vara noggrant städad: rengör ugn, spis, kyl och frys invändigt. Badrum och toalett ska vara grundligt rengjorda. Golv ska vara dammtorkade och våttorkade. Fönster putsade invändigt. Radera alla hål i väggarna. Anlita städfirma om du är osäker."
+    },
+    {
+      "category": "Flytt",
+      "question": "Vad räknas som normalt slitage?",
+      "answer": "Normalt slitage är förslitning som uppstår vid vanligt användande: lätt nötning av golv, små märken på väggar, lätt missfärgning av tapeter vid fönster. Onormalt slitage är skador som beror på vårdslöshet: hål i väggar, repor i golv, cigarettbrännskador, trasiga dörrar. Du debiteras för onormalt slitage."
+    },
+    {
+      "category": "Flytt",
+      "question": "Hur återlämnar jag nycklar?",
+      "answer": "Alla nycklar ska lämnas vid utflyttningsbesiktningen eller enligt överenskommelse. Kontrollera hur många nycklar du fått - det ska stämma med antalet du lämnar tillbaka. Förlorade nycklar kan innebära kostnad för låsbyte."
+    },
+    {
+      "category": "Flytt",
+      "question": "Kan jag flytta ut tidigare än uppsägningstiden?",
+      "answer": "Du är betalningsskyldig under hela uppsägningstiden även om du flyttar tidigare. Du kan dock försöka hitta en ny hyresgäst som kan ta över kontraktet - kontakta oss om du hittar någon. Vi kan inte garantera att godkänna en övertagare."
+    },
+    {
+      "category": "Flytt",
+      "question": "Hur fungerar det med hemleveranser vid inflytt?",
+      "answer": "Hemleveranser och flyttbil ska kunna nå din uppgång. Kontakta oss i förväg om du behöver parkera flyttbil på innergård eller liknande. Porten eller dörrar får inte spärras upp. Du ansvarar för att inga skador uppstår i trapphus och hiss vid flytt."
+    },
+    {
+      "category": "Flytt",
+      "question": "Vad ska jag tänka på vid inflytt?",
+      "answer": "Teckna hemförsäkring innan inflytt - det är obligatoriskt. Anmäl flytt till Skatteverket. Teckna elavtal. Anmäl adressändring hos Postnord. Läs igenom husregler och trivselregler. Notera eventuella fel direkt och meddela oss."
+    },
+    {
+      "category": "Störningar & Ordning",
+      "question": "Min granne stör, vad gör jag?",
+      "answer": "Försök först tala med grannen - ofta är störningen oavsiktlig. Om det inte hjälper, dokumentera störningarna (datum, tid, typ) och kontakta oss. Vi skickar en påminnelse till grannen. Vid upprepade störningar kan vi vidta åtgärder enligt hyreslagen."
+    },
+    {
+      "category": "Störningar & Ordning",
+      "question": "Vilka tider gäller för störande ljud?",
+      "answer": "Visa hänsyn dygnet runt, men särskild hänsyn ska tas mellan kl 22:00 och 07:00 vardagar, samt 23:00-09:00 helger. Undvik borrning, hög musik och fest under dessa tider. Informera grannar i förväg vid tillfälliga störningar som renovering eller fest."
+    },
+    {
+      "category": "Störningar & Ordning",
+      "question": "Får jag renovera min lägenhet?",
+      "answer": "Mindre förändringar som ommålning och tapetsering får du göra utan tillstånd, men du ansvarar för att återställa vid utflytt om så krävs. Större renoveringar (flytta väggar, ändra VVS eller el) kräver skriftligt tillstånd från oss. Kontakta oss innan du påbörjar arbete."
+    },
+    {
+      "category": "Störningar & Ordning",
+      "question": "Får jag ha grill på balkongen?",
+      "answer": "Regler varierar mellan fastigheter. Generellt är elgrill tillåtet, gasolgrill ofta förbjudet av säkerhetsskäl. Kolgrill är vanligtvis inte tillåtet på balkong på grund av brandrisken. Kontrollera ordningsreglerna för din fastighet. Ta hänsyn till grannar - rök kan störa."
+    },
+    {
+      "category": "Störningar & Ordning",
+      "question": "Får jag ha husdjur?",
+      "answer": "De flesta hyresvärdar tillåter husdjur, men du måste ha kontroll över djuret. Djuret får inte störa grannar genom skall, ljud eller lukt. Du ansvarar för eventuella skador djuret orsakar. Vissa lägenheter kan ha djurförbud - kontrollera ditt kontrakt."
+    },
+    {
+      "category": "Störningar & Ordning",
+      "question": "Vad är tillåtet på balkongen?",
+      "answer": "Du får möblera och ha växter på balkongen. Inga tunga föremål på räcket. Piskställ för mattor vanligtvis tillåtet. Parabolantenner kräver oftast tillstånd. Inglasning kräver tillstånd. Förvara inte brandfarliga varor. Skaka inte mattor och sängkläder från balkongen."
+    },
+    {
+      "category": "Störningar & Ordning",
+      "question": "Vad gäller för rökning?",
+      "answer": "Rökning inomhus kan orsaka skador och kostnader vid utflytt. Rökning på balkong är vanligtvis tillåtet men ta hänsyn till grannar. Rökning i gemensamma utrymmen som trapphus, tvättstuga och källare är förbjudet. Fimpar ska slängas i askkopp, inte på marken."
+    },
+    {
+      "category": "Störningar & Ordning",
+      "question": "Var får jag ställa barnvagn och cykel?",
+      "answer": "Barnvagnar och cyklar ska ställas i avsedda förråd, inte i trapphus. Trapphuset ska vara fritt av säkerhetsskäl vid utrymning. Om det saknas barnvagnsrum, kontakta oss. Cyklar i trapphuset kan flyttas av fastighetsskötaren."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Hur kontaktar jag hyresvärden?",
+      "answer": "Du kan kontakta oss via telefon, e-post eller besök på kontoret under öppettider. För felanmälan använd vår hemsida eller app. Vid akuta ärenden utanför kontorstid - ring vår akutjour. Kontaktuppgifter finns på vår hemsida och i din portuppgång."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Var hittar jag husreglerna?",
+      "answer": "Husregler finns anslagna i trapphuset, på vår hemsida och i den information du fick vid inflytt. Reglerna kan också finnas i appen. Kontakta oss om du behöver ett nytt exemplar."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Hur fungerar sopsortering?",
+      "answer": "Sopsortering sker i miljörummet/soprummet. Källsortera i rätt kärl: restavfall, matavfall, plast, papper, glas, metall. Grovsopor lämnas på återvinningscentral. Elektronik och farligt avfall får inte slängas i soprummet. Följ anvisningarna i miljörummet."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Var lämnar jag grovsopor?",
+      "answer": "Grovsopor som möbler, vitvaror och byggavfall lämnas på kommunens återvinningscentral. Vi har vanligtvis grovsoprum för mindre mängder - kontrollera om ditt hus har det. Ställ aldrig grovsopor i trapphus, källare eller på gården utan tillåtelse."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Vem sköter trappstädning?",
+      "answer": "Trapphuset städas av städfirma enligt schema, vanligtvis 1-2 gånger per vecka. Du ansvarar för att hålla rent utanför din dörr. Rapportera om städningen brister. Lämna inte skräp eller saker i trapphuset."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Hur fungerar ventilationen?",
+      "answer": "De flesta lägenheter har mekanisk frånluftsventilation. Håll ventiler öppna och rena - rengör regelbundet. Täck inte för ventiler med möbler. Vid dålig luft eller kondens, kontrollera att ventiler inte är igensatta. Gör felanmälan om problemet kvarstår."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Vad gör jag vid strömavbrott?",
+      "answer": "Kontrollera först om det är ett allmänt strömavbrott eller bara din lägenhet. Kontrollera säkringarna - återställ om de har löst ut. Om bara din lägenhet är utan ström och säkringarna inte löst ut, gör en felanmälan. Vid allmänt strömavbrott - kontakta elnätsbolaget."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Jag har tappat bort nyckeln, vad gör jag?",
+      "answer": "Kontakta oss för att beställa ny nyckel. Kostnaden för nya nycklar debiteras dig. Om du tror nyckeln är stulen eller om det finns risk att någon obehörig har den, kontakta oss omedelbart så diskuterar vi eventuellt låsbyte. Akut låssmedshjälp kan du beställa själv men kostar mer."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Jag har låst mig ute, vad gör jag?",
+      "answer": "Kontakta vår akutjour om det sker utanför kontorstid. Dagtid kan du kontakta kontoret. Du kan också kontakta en låssmed på egen hand. Kostnaden för upplåsning står du för själv. Tips: lämna en reservnyckel hos någon du litar på."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Hur anmäler jag skadedjur?",
+      "answer": "Kontakta oss omedelbart vid skadedjur som kackerlackor, vägglöss, silverfiskar eller möss. Beskriv var du sett skadedjuren och hur många. Vi kontaktar skadedjursbekämpare. Du kan behöva förbereda lägenheten enligt instruktioner. Kostnaden beror på orsaken till angreppet."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Finns det förråd att hyra?",
+      "answer": "De flesta lägenheter har ett tillhörande förråd i källaren. Extra förrådsutrymme kan finnas att hyra i mån av plats - kontakta oss för att höra vad som finns ledigt. Förvara inte brandfarliga eller stöldbegärliga saker i förrådet."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Hur fungerar brandskyddet?",
+      "answer": "Du ansvarar för fungerande brandvarnare i din lägenhet - testa regelbundet och byt batteri vid behov. Brandsläckare finns i trapphuset. Håll trapphus fritt från brännbart material. Läs på om utrymningsvägar. Vid brand - rädda, varna, larma, släck (om möjligt)."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Vad är hemförsäkring och behöver jag det?",
+      "answer": "Hemförsäkring är obligatoriskt för hyresgäster hos oss. Den täcker dina ägodelar vid brand, stöld och vattenskada. Den inkluderar även ansvarsskydd om du orsakar skada samt reseskydd. Teckna hemförsäkring innan du flyttar in - det är ditt ansvar."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Hur uppdaterar jag mina kontaktuppgifter?",
+      "answer": "Kontakta oss via telefon, e-post eller besök kontoret för att uppdatera telefonnummer och e-post. Du kan ofta även uppdatera via Mina Sidor om sådant finns. Det är viktigt att vi har aktuella uppgifter så att vi kan nå dig vid behov."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Var ser jag mina ärenden och fakturor?",
+      "answer": "Om vi har Mina Sidor kan du logga in där för att se felanmälningar, fakturor och annan information. Annars kan du kontakta oss så skickar vi information. Spara alltid betalningsbevis och viktig korrespondens."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Hur fungerar det om jag har en funktionsnedsättning?",
+      "answer": "Kontakta oss om du har behov av anpassningar. Vi kan hjälpa till med kontakt till kommunen för bostadsanpassning. Vissa fastigheter har tillgänglighetsanpassade lägenheter. Vid svårigheter att ta sig till tvättstuga eller soprum, diskutera lösningar med oss."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Hur lång kötid är det för lägenhet?",
+      "answer": "Kötiden varierar kraftigt beroende på område, lägenhetsstorlek och hur flexibel du är. I storstäder kan kötiden vara flera år. Registrera dig i vår bostadskö och var aktiv med att söka lägenheter. Ju fler områden och storlekar du är öppen för, desto kortare kötid."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Hur fungerar bostadskön?",
+      "answer": "Du registrerar dig i bostadskön och samlar kötid. När en lägenhet blir ledig erbjuds den till sökande i turordning baserat på kötid. Du måste aktivt söka lägenheter som läggs ut. Var beredd att svara snabbt på erbjudanden. Regler kan variera - läs på om vårt kösystem."
+    }
+  ]
+}

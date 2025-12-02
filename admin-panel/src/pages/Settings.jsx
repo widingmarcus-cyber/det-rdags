@@ -36,6 +36,7 @@ function Settings() {
     { id: 'appearance', label: 'Utseende', icon: 'palette' },
     { id: 'notifications', label: 'Notiser', icon: 'bell' },
     { id: 'privacy', label: 'Integritet', icon: 'shield' },
+    { id: 'compliance', label: 'Compliance', icon: 'badge' },
     { id: 'activity', label: 'Aktivitet', icon: 'clock' },
     { id: 'install', label: 'Installation', icon: 'code' },
   ]
@@ -167,6 +168,12 @@ function Settings() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />
+          </svg>
+        )
+      case 'badge':
+        return (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
           </svg>
         )
       default:
@@ -654,6 +661,176 @@ function Settings() {
                       Alla åtgärder loggas i GDPR-revisionsloggen.
                     </p>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Compliance Tab */}
+          {activeTab === 'compliance' && (
+            <div className="space-y-6 animate-fade-in">
+              {/* EU Hosting Badge */}
+              <div className="card">
+                <div className="flex items-start gap-4">
+                  <div className="w-16 h-16 bg-accent-soft rounded-xl flex items-center justify-center flex-shrink-0">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                      <path d="M2 12h20" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h2 className="text-lg font-medium text-text-primary">EU-hostning</h2>
+                      <span className="px-2 py-0.5 bg-success/20 text-success text-xs font-medium rounded-full">Aktivt</span>
+                    </div>
+                    <p className="text-sm text-text-secondary mb-4">
+                      All data lagras och bearbetas inom EU/EES i enlighet med GDPR.
+                    </p>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="bg-bg-secondary rounded-lg p-3">
+                        <p className="text-text-tertiary text-xs uppercase tracking-wide mb-1">Datacenter</p>
+                        <p className="text-text-primary font-medium">EU Region</p>
+                      </div>
+                      <div className="bg-bg-secondary rounded-lg p-3">
+                        <p className="text-text-tertiary text-xs uppercase tracking-wide mb-1">AI-behandling</p>
+                        <p className="text-text-primary font-medium">Lokal (Ollama)</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Compliance Badges */}
+              <div className="card">
+                <h3 className="font-medium text-text-primary mb-4">Certifieringar & Compliance</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="border border-success/30 bg-success/5 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 bg-success/20 rounded-lg flex items-center justify-center">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success">
+                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                          <polyline points="9 12 11 14 15 10" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-medium text-text-primary">GDPR</p>
+                        <p className="text-xs text-success">Kompatibel</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-text-secondary">
+                      Full efterlevnad av EU:s dataskyddsförordning (2016/679)
+                    </p>
+                  </div>
+
+                  <div className="border border-success/30 bg-success/5 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 bg-success/20 rounded-lg flex items-center justify-center">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M12 8v4l2 2" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-medium text-text-primary">WCAG 2.2 AA</p>
+                        <p className="text-xs text-success">Uppfyllt</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-text-secondary">
+                      Tillgänglighetskraven enligt DOS-lagen och WCAG 2.2
+                    </p>
+                  </div>
+
+                  <div className="border border-success/30 bg-success/5 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 bg-success/20 rounded-lg flex items-center justify-center">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success">
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-medium text-text-primary">PuB</p>
+                        <p className="text-xs text-success">Kompatibel</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-text-secondary">
+                      Svensk personuppgiftsbehandling enligt offentlighetsprincipen
+                    </p>
+                  </div>
+
+                  <div className="border border-success/30 bg-success/5 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 bg-success/20 rounded-lg flex items-center justify-center">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success">
+                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-medium text-text-primary">Lokal AI</p>
+                        <p className="text-xs text-success">Ingen extern data</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-text-secondary">
+                      AI-behandling sker lokalt - data skickas aldrig till tredje part
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Data Processing Summary */}
+              <div className="card">
+                <h3 className="font-medium text-text-primary mb-4">Databehandlingsöversikt</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-bg-secondary rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-success rounded-full"></div>
+                      <span className="text-sm text-text-primary">Chattmeddelanden</span>
+                    </div>
+                    <span className="text-xs text-text-tertiary">Raderas efter {settings.data_retention_days} dagar</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-bg-secondary rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-success rounded-full"></div>
+                      <span className="text-sm text-text-primary">IP-adresser</span>
+                    </div>
+                    <span className="text-xs text-text-tertiary">Anonymiseras omedelbart</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-bg-secondary rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-success rounded-full"></div>
+                      <span className="text-sm text-text-primary">Statistik</span>
+                    </div>
+                    <span className="text-xs text-text-tertiary">Aggregerad & anonymiserad</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-bg-secondary rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-success rounded-full"></div>
+                      <span className="text-sm text-text-primary">AI-förfrågningar</span>
+                    </div>
+                    <span className="text-xs text-text-tertiary">Behandlas lokalt (Ollama)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Documentation Link */}
+              <div className="bg-accent-soft border border-accent/20 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                    </svg>
+                    <div>
+                      <p className="font-medium text-text-primary">Fullständig dokumentation</p>
+                      <p className="text-xs text-text-secondary">Tekniska detaljer om GDPR, säkerhet och tillgänglighet</p>
+                    </div>
+                  </div>
+                  <a href="/documentation" className="btn btn-secondary text-sm">
+                    Visa dokumentation
+                  </a>
                 </div>
               </div>
             </div>

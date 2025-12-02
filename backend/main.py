@@ -2186,6 +2186,228 @@ async def delete_knowledge_bulk(
 
 
 # =============================================================================
+# Knowledge Templates Endpoints
+# =============================================================================
+
+TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
+
+
+class TemplateInfo(BaseModel):
+    template_id: str
+    name: str
+    description: str
+    version: str
+    language: str
+    industry: str
+    item_count: int
+    categories: List[str]
+
+
+class TemplateApplyRequest(BaseModel):
+    replace_existing: bool = False
+    categories_to_import: Optional[List[str]] = None
+
+
+class TemplateApplyResponse(BaseModel):
+    success: bool
+    items_added: int
+    items_skipped: int
+    message: str
+
+
+def load_template(template_id: str) -> Optional[dict]:
+    """Load a template file from the templates directory"""
+    template_path = os.path.join(TEMPLATES_DIR, f"{template_id}.json")
+    if not os.path.exists(template_path):
+        return None
+
+    with open(template_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+@app.get("/templates", response_model=List[TemplateInfo])
+async def list_templates():
+    """List all available knowledge templates"""
+    templates = []
+
+    if not os.path.exists(TEMPLATES_DIR):
+        return templates
+
+    for filename in os.listdir(TEMPLATES_DIR):
+        if filename.endswith(".json"):
+            template_id = filename.replace(".json", "")
+            template = load_template(template_id)
+            if template:
+                templates.append(TemplateInfo(
+                    template_id=template.get("template_id", template_id),
+                    name=template.get("name", template_id),
+                    description=template.get("description", ""),
+                    version=template.get("version", "1.0.0"),
+                    language=template.get("language", "sv"),
+                    industry=template.get("industry", "general"),
+                    item_count=len(template.get("items", [])),
+                    categories=template.get("categories", [])
+                ))
+
+    return templates
+
+
+@app.get("/templates/{template_id}", response_model=TemplateInfo)
+async def get_template(template_id: str):
+    """Get details about a specific template"""
+    # Handle filename with or without extension
+    clean_id = template_id.replace(".json", "").replace("_template", "")
+
+    # Try different naming patterns
+    for tid in [template_id, f"{template_id}_template", clean_id, f"{clean_id}_template"]:
+        template = load_template(tid)
+        if template:
+            return TemplateInfo(
+                template_id=template.get("template_id", tid),
+                name=template.get("name", tid),
+                description=template.get("description", ""),
+                version=template.get("version", "1.0.0"),
+                language=template.get("language", "sv"),
+                industry=template.get("industry", "general"),
+                item_count=len(template.get("items", [])),
+                categories=template.get("categories", [])
+            )
+
+    raise HTTPException(status_code=404, detail=f"Template '{template_id}' not found")
+
+
+@app.post("/templates/{template_id}/apply", response_model=TemplateApplyResponse)
+async def apply_template(
+    template_id: str,
+    request: TemplateApplyRequest,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Apply a knowledge template to the company's knowledge base"""
+    # Handle filename with or without extension
+    clean_id = template_id.replace(".json", "").replace("_template", "")
+    template = None
+
+    # Try different naming patterns
+    for tid in [template_id, f"{template_id}_template", clean_id, f"{clean_id}_template"]:
+        template = load_template(tid)
+        if template:
+            break
+
+    if not template:
+        raise HTTPException(status_code=404, detail=f"Template '{template_id}' not found")
+
+    company_id = current["company_id"]
+    items_added = 0
+    items_skipped = 0
+
+    # Optionally clear existing knowledge
+    if request.replace_existing:
+        db.query(KnowledgeItem).filter(
+            KnowledgeItem.company_id == company_id
+        ).delete()
+        db.commit()
+
+    # Get existing questions to avoid duplicates
+    existing_questions = set()
+    if not request.replace_existing:
+        existing = db.query(KnowledgeItem.question).filter(
+            KnowledgeItem.company_id == company_id
+        ).all()
+        existing_questions = {q[0].lower().strip() for q in existing}
+
+    # Import template items
+    for item in template.get("items", []):
+        category = item.get("category", "")
+
+        # Filter by categories if specified
+        if request.categories_to_import and category not in request.categories_to_import:
+            continue
+
+        question = item.get("question", "").strip()
+        answer = item.get("answer", "").strip()
+
+        if not question or not answer:
+            continue
+
+        # Skip duplicates
+        if question.lower() in existing_questions:
+            items_skipped += 1
+            continue
+
+        # Create knowledge item
+        db_item = KnowledgeItem(
+            company_id=company_id,
+            question=question,
+            answer=answer,
+            category=category
+        )
+        db.add(db_item)
+        existing_questions.add(question.lower())
+        items_added += 1
+
+    db.commit()
+
+    # Log activity
+    log_activity(
+        db=db,
+        company_id=company_id,
+        action="template_applied",
+        description=f"Template '{template.get('name', template_id)}' applied",
+        details=json.dumps({
+            "template_id": template_id,
+            "items_added": items_added,
+            "items_skipped": items_skipped,
+            "replace_existing": request.replace_existing
+        })
+    )
+
+    return TemplateApplyResponse(
+        success=True,
+        items_added=items_added,
+        items_skipped=items_skipped,
+        message=f"{items_added} frågor/svar har lagts till från mallen. {items_skipped} duplicerade poster hoppades över."
+    )
+
+
+@app.get("/templates/{template_id}/preview")
+async def preview_template(
+    template_id: str,
+    category: Optional[str] = None,
+    limit: int = 10
+):
+    """Preview items from a template without applying it"""
+    # Handle filename with or without extension
+    clean_id = template_id.replace(".json", "").replace("_template", "")
+    template = None
+
+    for tid in [template_id, f"{template_id}_template", clean_id, f"{clean_id}_template"]:
+        template = load_template(tid)
+        if template:
+            break
+
+    if not template:
+        raise HTTPException(status_code=404, detail=f"Template '{template_id}' not found")
+
+    items = template.get("items", [])
+
+    # Filter by category if specified
+    if category:
+        items = [i for i in items if i.get("category") == category]
+
+    # Limit results
+    items = items[:limit]
+
+    return {
+        "template_id": template.get("template_id", template_id),
+        "name": template.get("name", template_id),
+        "total_items": len(template.get("items", [])),
+        "preview_items": items,
+        "categories": template.get("categories", [])
+    }
+
+
+# =============================================================================
 # Stats & Analytics Endpoints
 # =============================================================================
 

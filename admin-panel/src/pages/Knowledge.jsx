@@ -39,6 +39,15 @@ function Knowledge() {
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [editingCategory, setEditingCategory] = useState(null)
+  // Template states
+  const [showTemplateModal, setShowTemplateModal] = useState(false)
+  const [templates, setTemplates] = useState([])
+  const [loadingTemplates, setLoadingTemplates] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState(null)
+  const [templatePreview, setTemplatePreview] = useState(null)
+  const [applyingTemplate, setApplyingTemplate] = useState(false)
+  const [replaceExisting, setReplaceExisting] = useState(false)
+  const [selectedCategories, setSelectedCategories] = useState([])
 
   useEffect(() => {
     fetchKnowledge()
@@ -350,6 +359,103 @@ function Knowledge() {
     }
   }
 
+  // Template functions
+  const fetchTemplates = async () => {
+    setLoadingTemplates(true)
+    try {
+      const response = await authFetch(`${API_BASE}/templates`)
+      if (response.ok) {
+        const data = await response.json()
+        setTemplates(data)
+      }
+    } catch (error) {
+      console.error('Kunde inte hämta mallar:', error)
+    } finally {
+      setLoadingTemplates(false)
+    }
+  }
+
+  const fetchTemplatePreview = async (templateId) => {
+    try {
+      const response = await authFetch(`${API_BASE}/templates/${templateId}/preview?limit=5`)
+      if (response.ok) {
+        const data = await response.json()
+        setTemplatePreview(data)
+        setSelectedCategories(data.categories || [])
+      }
+    } catch (error) {
+      console.error('Kunde inte hämta förhandsgranskning:', error)
+    }
+  }
+
+  const handleTemplateSelect = (template) => {
+    setSelectedTemplate(template)
+    fetchTemplatePreview(template.template_id)
+  }
+
+  const handleApplyTemplate = async () => {
+    if (!selectedTemplate) return
+
+    const confirmMessage = replaceExisting
+      ? 'VARNING: Detta kommer att ta bort all befintlig kunskapsbas och ersätta med mallen. Är du säker?'
+      : 'Lägga till mallens innehåll till din kunskapsbas?'
+
+    if (!window.confirm(confirmMessage)) return
+
+    setApplyingTemplate(true)
+    try {
+      const response = await authFetch(`${API_BASE}/templates/${selectedTemplate.template_id}/apply`, {
+        method: 'POST',
+        body: JSON.stringify({
+          replace_existing: replaceExisting,
+          categories_to_import: selectedCategories.length > 0 && selectedCategories.length < (templatePreview?.categories?.length || 0)
+            ? selectedCategories
+            : null
+        })
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        setUploadResult({
+          success: true,
+          message: result.message
+        })
+        setShowTemplateModal(false)
+        setSelectedTemplate(null)
+        setTemplatePreview(null)
+        setReplaceExisting(false)
+        setSelectedCategories([])
+        fetchKnowledge()
+      } else {
+        setUploadResult({
+          success: false,
+          message: result.detail || 'Kunde inte applicera mall'
+        })
+      }
+    } catch (error) {
+      setUploadResult({
+        success: false,
+        message: 'Ett fel uppstod: ' + error.message
+      })
+    } finally {
+      setApplyingTemplate(false)
+    }
+  }
+
+  const openTemplateModal = () => {
+    setShowTemplateModal(true)
+    fetchTemplates()
+  }
+
+  const toggleCategorySelection = (category) => {
+    setSelectedCategories(prev =>
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    )
+  }
+
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -471,6 +577,20 @@ function Knowledge() {
                   </div>
                 </>
               )}
+              <button
+                onClick={openTemplateModal}
+                className="btn btn-ghost"
+                title="Använd färdig mall för fastighetsbolag"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+                Mallar
+              </button>
               <button
                 onClick={() => setShowUrlModal(true)}
                 className="btn btn-ghost"
@@ -973,6 +1093,201 @@ function Knowledge() {
               <p className="text-xs text-text-tertiary">
                 Klicka på pennan för att redigera, eller papperskorgen för att ta bort.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template Import Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 bg-text-primary/50 flex items-center justify-center p-4 z-50 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="template-modal-title">
+          <div className="bg-bg-tertiary rounded-xl shadow-lg border border-border-subtle w-full max-w-2xl max-h-[90vh] overflow-hidden animate-scale-in">
+            <div className="p-6 border-b border-border-subtle">
+              <h2 id="template-modal-title" className="text-lg font-semibold text-text-primary">
+                Kunskapsmallar
+              </h2>
+              <p className="text-sm text-text-secondary mt-1">
+                Kom igång snabbt med färdiga frågor och svar för fastighetsbolag
+              </p>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {loadingTemplates ? (
+                <div className="text-center py-8">
+                  <p className="text-text-secondary">Laddar mallar...</p>
+                </div>
+              ) : templates.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-text-secondary">Inga mallar tillgängliga</p>
+                </div>
+              ) : !selectedTemplate ? (
+                <div className="space-y-3">
+                  {templates.map(template => (
+                    <button
+                      key={template.template_id}
+                      onClick={() => handleTemplateSelect(template)}
+                      className="w-full text-left p-4 bg-bg-secondary hover:bg-bg-primary border border-border-subtle rounded-lg transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="font-medium text-text-primary">{template.name}</h3>
+                          <p className="text-sm text-text-secondary mt-1">{template.description}</p>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-text-tertiary">
+                            <span className="flex items-center gap-1">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                              </svg>
+                              {template.item_count} frågor/svar
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7m0-18H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7m0-18v18" />
+                              </svg>
+                              {template.categories.length} kategorier
+                            </span>
+                            <span>v{template.version}</span>
+                          </div>
+                        </div>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
+                          <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Back button */}
+                  <button
+                    onClick={() => { setSelectedTemplate(null); setTemplatePreview(null); }}
+                    className="flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                    Tillbaka till mallar
+                  </button>
+
+                  {/* Template info */}
+                  <div className="bg-accent-soft border border-accent/20 rounded-lg p-4">
+                    <h3 className="font-medium text-text-primary">{selectedTemplate.name}</h3>
+                    <p className="text-sm text-text-secondary mt-1">{selectedTemplate.description}</p>
+                    <p className="text-sm text-accent mt-2 font-medium">
+                      {selectedTemplate.item_count} frågor/svar i {selectedTemplate.categories.length} kategorier
+                    </p>
+                  </div>
+
+                  {/* Category selection */}
+                  {templatePreview?.categories && templatePreview.categories.length > 0 && (
+                    <div>
+                      <label className="input-label">Välj kategorier att importera</label>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {templatePreview.categories.map(cat => (
+                          <button
+                            key={cat}
+                            onClick={() => toggleCategorySelection(cat)}
+                            className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+                              selectedCategories.includes(cat)
+                                ? 'bg-accent text-white border-accent'
+                                : 'bg-bg-secondary text-text-secondary border-border-subtle hover:border-accent'
+                            }`}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-text-tertiary mt-2">
+                        {selectedCategories.length === templatePreview.categories.length
+                          ? 'Alla kategorier valda'
+                          : `${selectedCategories.length} av ${templatePreview.categories.length} valda`
+                        }
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Preview */}
+                  {templatePreview?.preview_items && templatePreview.preview_items.length > 0 && (
+                    <div>
+                      <label className="input-label">Förhandsgranskning (5 av {templatePreview.total_items})</label>
+                      <div className="space-y-2 mt-2 max-h-48 overflow-y-auto">
+                        {templatePreview.preview_items.map((item, idx) => (
+                          <div key={idx} className="bg-bg-secondary rounded-lg p-3 text-sm">
+                            <div className="flex items-start gap-2">
+                              <span className="text-accent font-medium">F:</span>
+                              <span className="text-text-primary">{item.question}</span>
+                            </div>
+                            <div className="flex items-start gap-2 mt-1">
+                              <span className="text-text-tertiary font-medium">S:</span>
+                              <span className="text-text-secondary line-clamp-2">{item.answer}</span>
+                            </div>
+                            {item.category && (
+                              <span className="inline-block mt-2 px-2 py-0.5 bg-bg-tertiary text-xs text-text-tertiary rounded">
+                                {item.category}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Replace option */}
+                  <div className="bg-warning/10 border border-warning/20 rounded-lg p-4">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={replaceExisting}
+                        onChange={(e) => setReplaceExisting(e.target.checked)}
+                        className="mt-1 w-4 h-4 rounded border-border accent-warning"
+                      />
+                      <div>
+                        <span className="font-medium text-text-primary">Ersätt befintlig kunskapsbas</span>
+                        <p className="text-xs text-warning mt-1">
+                          Varning: Detta tar bort alla befintliga frågor/svar och ersätter med mallen
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-border-subtle flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowTemplateModal(false)
+                  setSelectedTemplate(null)
+                  setTemplatePreview(null)
+                  setReplaceExisting(false)
+                  setSelectedCategories([])
+                }}
+                className="btn btn-ghost"
+                disabled={applyingTemplate}
+              >
+                Avbryt
+              </button>
+              {selectedTemplate && (
+                <button
+                  onClick={handleApplyTemplate}
+                  disabled={applyingTemplate || selectedCategories.length === 0}
+                  className="btn btn-primary"
+                >
+                  {applyingTemplate ? (
+                    <>
+                      <span className="animate-spin mr-2">⏳</span>
+                      Applicerar...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      Applicera mall
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
