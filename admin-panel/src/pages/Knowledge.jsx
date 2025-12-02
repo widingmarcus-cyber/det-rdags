@@ -500,6 +500,24 @@ function Knowledge() {
 
   return (
     <div className="animate-fade-in">
+      {/* Responsibility Disclaimer */}
+      <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 mb-6 flex items-start gap-3">
+        <div className="flex-shrink-0 w-10 h-10 bg-warning/20 rounded-lg flex items-center justify-center text-warning">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        </div>
+        <div>
+          <h3 className="font-medium text-text-primary mb-1">Viktigt: Du ansvarar för innehållet</h3>
+          <p className="text-sm text-text-secondary">
+            All information du lägger till i kunskapsbasen kommer att användas av AI:n för att svara dina kunder.
+            <strong className="text-text-primary"> Du ansvarar för att informationen är korrekt och uppdaterad.</strong> Felaktig information kan leda till att dina hyresgäster får fel svar.
+          </p>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>

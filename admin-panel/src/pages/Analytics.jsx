@@ -68,6 +68,117 @@ function Analytics() {
     }
   }
 
+  const handleExportKPIReport = () => {
+    if (!analytics) return
+    setExporting('kpi')
+
+    try {
+      // Generate comprehensive KPI report as CSV
+      const today = new Date().toLocaleDateString('sv-SE')
+      const satisfactionRate = analytics.feedback_stats
+        ? ((analytics.feedback_stats.helpful || 0) /
+            Math.max((analytics.feedback_stats.helpful || 0) + (analytics.feedback_stats.not_helpful || 0), 1) * 100).toFixed(1)
+        : 0
+
+      const reportData = [
+        ['KPI-RAPPORT - BOBOT CHATTSTATISTIK'],
+        ['Genererad:', today],
+        [''],
+        ['=== ÖVERSIKT ==='],
+        ['Nyckeltal', 'Värde', 'Beskrivning'],
+        ['Totalt konversationer', analytics.total_conversations, 'Antal unika chattsamtal sedan start'],
+        ['Totalt meddelanden', analytics.total_messages, 'Alla meddelanden (frågor + svar)'],
+        ['Svarsfrekvens', `${analytics.answer_rate?.toFixed(1) || 0}%`, 'Andel frågor som AI kunde besvara'],
+        ['Svarstid (snitt)', `${(analytics.avg_response_time_ms / 1000).toFixed(1)}s`, 'Genomsnittlig tid för AI-svar'],
+        ['Nöjdhetsgrad', `${satisfactionRate}%`, 'Andel positiv feedback (👍)'],
+        [''],
+        ['=== AKTIVITET ==='],
+        ['Period', 'Konversationer', 'Meddelanden'],
+        ['Idag', analytics.conversations_today, analytics.messages_today],
+        ['Senaste 7 dagarna', analytics.conversations_week, analytics.messages_week],
+        [''],
+        ['=== FRÅGEANALYS ==='],
+        ['Typ', 'Antal', 'Andel'],
+        ['Besvarade frågor', analytics.total_answered, `${((analytics.total_answered / Math.max(analytics.total_answered + analytics.total_unanswered, 1)) * 100).toFixed(1)}%`],
+        ['Obesvarade frågor', analytics.total_unanswered, `${((analytics.total_unanswered / Math.max(analytics.total_answered + analytics.total_unanswered, 1)) * 100).toFixed(1)}%`],
+        [''],
+        ['=== ANVÄNDARFEEDBACK ==='],
+        ['Typ', 'Antal'],
+        ['Positiv (👍)', analytics.feedback_stats?.helpful || 0],
+        ['Negativ (👎)', analytics.feedback_stats?.not_helpful || 0],
+        ['Ingen feedback', analytics.feedback_stats?.no_feedback || 0],
+        [''],
+        ['=== SPRÅKFÖRDELNING ==='],
+        ['Språk', 'Antal', 'Andel'],
+      ]
+
+      // Add language stats
+      const langNames = { sv: 'Svenska', en: 'English', ar: 'العربية' }
+      const langTotal = Object.values(analytics.language_stats || {}).reduce((a, b) => a + b, 0) || 1
+      Object.entries(analytics.language_stats || {}).forEach(([lang, count]) => {
+        reportData.push([langNames[lang] || lang, count, `${((count / langTotal) * 100).toFixed(1)}%`])
+      })
+
+      reportData.push([''])
+      reportData.push(['=== KATEGORIER ==='])
+      reportData.push(['Kategori', 'Antal frågor'])
+      Object.entries(analytics.category_stats || {})
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([cat, count]) => {
+          reportData.push([cat, count])
+        })
+
+      // Add peak hours
+      reportData.push([''])
+      reportData.push(['=== AKTIVITET PER TIMME ==='])
+      reportData.push(['Timme', 'Antal konversationer'])
+      Object.entries(analytics.hourly_stats || {})
+        .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+        .forEach(([hour, count]) => {
+          reportData.push([`${hour}:00`, count])
+        })
+
+      // Add top unanswered questions
+      if (analytics.top_unanswered && analytics.top_unanswered.length > 0) {
+        reportData.push([''])
+        reportData.push(['=== VANLIGASTE OBESVARADE FRÅGOR ==='])
+        reportData.push(['Dessa frågor saknas i kunskapsbasen:'])
+        analytics.top_unanswered.forEach((q, i) => {
+          reportData.push([`${i + 1}. ${q}`])
+        })
+      }
+
+      // Convert to CSV
+      const csv = reportData.map(row =>
+        row.map(cell => {
+          const str = String(cell ?? '')
+          // Escape quotes and wrap in quotes if contains comma or quote
+          if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`
+          }
+          return str
+        }).join(',')
+      ).join('\n')
+
+      // Add BOM for Excel compatibility with Swedish characters
+      const BOM = '\uFEFF'
+      const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `KPI-rapport-${today}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      a.remove()
+    } catch (error) {
+      console.error('KPI export failed:', error)
+      alert('Export misslyckades: ' + error.message)
+    } finally {
+      setExporting(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -101,6 +212,24 @@ function Analytics() {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={() => handleExportKPIReport()}
+            disabled={exporting !== null}
+            className="btn btn-primary text-sm disabled:opacity-50"
+          >
+            {exporting === 'kpi' ? (
+              <span className="animate-spin">⏳</span>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
+              </svg>
+            )}
+            KPI-rapport
+          </button>
+          <button
             onClick={() => handleExport('statistics')}
             disabled={exporting !== null}
             className="btn btn-ghost text-sm disabled:opacity-50"
@@ -114,23 +243,7 @@ function Analytics() {
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
             )}
-            Exportera statistik
-          </button>
-          <button
-            onClick={() => handleExport('conversations')}
-            disabled={exporting !== null}
-            className="btn btn-ghost text-sm disabled:opacity-50"
-          >
-            {exporting === 'conversations' ? (
-              <span className="animate-spin">⏳</span>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-            )}
-            Exportera konversationer
+            Exportera CSV
           </button>
         </div>
       </div>
