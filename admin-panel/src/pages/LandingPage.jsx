@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 
-// WALL-E inspired Bobot mascot
+// WALL-E inspired Bobot mascot with floating animation
 function BobotMascot({ className = "", size = 120, mousePos = { x: 0.5, y: 0.5 } }) {
   const pupilOffsetX = (mousePos.x - 0.5) * 6
   const pupilOffsetY = (mousePos.y - 0.5) * 4
@@ -76,6 +76,18 @@ function ThemeToggle({ isDark, onToggle }) {
         </svg>
       )}
     </button>
+  )
+}
+
+// Sparkle component for Disney magic effect
+function Sparkle({ className = "", delay = 0 }) {
+  return (
+    <svg className={className} width="12" height="12" viewBox="0 0 12 12" fill="none">
+      <path d="M6 0L7.5 4.5L12 6L7.5 7.5L6 12L4.5 7.5L0 6L4.5 4.5L6 0Z" fill="#D97757">
+        <animate attributeName="opacity" values="0;1;0" dur="2s" begin={`${delay}s`} repeatCount="indefinite" />
+        <animateTransform attributeName="transform" type="scale" values="0.5;1;0.5" dur="2s" begin={`${delay}s`} repeatCount="indefinite" />
+      </path>
+    </svg>
   )
 }
 
@@ -177,9 +189,9 @@ function LandingPage() {
   ]
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-stone-50 dark:bg-stone-900 flex flex-col">
+    <div ref={containerRef} className="min-h-screen bg-stone-50 dark:bg-stone-900 flex flex-col overflow-hidden">
       {/* Navigation */}
-      <nav className="px-6 py-4">
+      <nav className="px-6 py-4 relative z-10">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BobotMini />
@@ -194,62 +206,75 @@ function LandingPage() {
         </div>
       </nav>
 
+      {/* Hero section with Disney-style mascot intro */}
+      <div className="relative flex flex-col items-center pt-8 pb-4">
+        {/* Sparkles around mascot */}
+        <div className="absolute inset-0 pointer-events-none">
+          <Sparkle className="absolute top-12 left-1/4" delay={0} />
+          <Sparkle className="absolute top-8 right-1/3" delay={0.5} />
+          <Sparkle className="absolute top-20 right-1/4" delay={1} />
+          <Sparkle className="absolute top-16 left-1/3" delay={1.5} />
+        </div>
+
+        {/* Floating mascot with glow */}
+        <div className="relative animate-bounce-slow">
+          <div className="absolute inset-0 bg-[#D97757]/20 rounded-full blur-3xl scale-150" />
+          <BobotMascot size={140} mousePos={mousePos} className="relative z-10" />
+        </div>
+
+        {/* Headline */}
+        <h1 className="text-4xl md:text-5xl font-semibold text-stone-900 dark:text-stone-100 tracking-tight leading-tight text-center mt-6 mb-3">
+          Din nya medarbetare,<br />som alltid är där
+        </h1>
+        <p className="text-xl text-stone-600 dark:text-stone-400 text-center max-w-2xl px-4">
+          Bobot svarar på frågor – från hyresgäster eller ditt eget team. Direkt, dygnet runt.
+        </p>
+      </div>
+
       {/* Main content */}
-      <main className="flex-1 flex items-center px-6 py-8">
-        <div className="max-w-6xl mx-auto w-full">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            {/* Left side - text */}
-            <div>
-              <div className="flex items-center gap-4 mb-6">
-                <BobotMascot size={80} mousePos={mousePos} />
-                <h1 className="text-4xl md:text-5xl font-semibold text-stone-900 dark:text-stone-100 tracking-tight leading-tight">
-                  Din kundtjänst,<br />fast snabbare
-                </h1>
-              </div>
-
-              <p className="text-xl text-stone-600 dark:text-stone-400 mb-8 leading-relaxed">
-                Bobot svarar på hyresgästernas vanligaste frågor – direkt, dygnet runt. Så ditt team kan fokusera på det som verkligen kräver mänsklig kontakt.
-              </p>
-
-              {/* Selling points - inline, subtle */}
-              <div className="flex flex-wrap gap-x-6 gap-y-2 mb-10 text-stone-600 dark:text-stone-400">
-                <span className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                  Avlastar kundtjänst
-                </span>
-                <span className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                  Alltid tillgänglig
-                </span>
-                <span className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                  Statistik och insikter
-                </span>
-                <span className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                  GDPR-säker
-                </span>
-                <span className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                  Lokal AI
-                </span>
-              </div>
-
-              {/* Email CTA - simple, no box */}
-              <p className="text-stone-600 dark:text-stone-400">
-                Vill du veta mer? Mejla{' '}
-                <a href="mailto:hej@bobot.nu" className="text-[#D97757] hover:text-[#c4613d] font-medium transition-colors">
-                  hej@bobot.nu
-                </a>
-              </p>
-            </div>
-
-            {/* Right side - two realistic widget previews */}
-            <div className="flex justify-center gap-6 flex-wrap">
-              <ChatWidgetPreview messages={conversation1} className="transform -rotate-2 hover:rotate-0 transition-transform" />
-              <ChatWidgetPreview messages={conversation2} className="transform rotate-2 hover:rotate-0 transition-transform mt-8" />
-            </div>
+      <main className="flex-1 px-6 py-8">
+        <div className="max-w-6xl mx-auto">
+          {/* Two widget previews side by side */}
+          <div className="flex justify-center gap-8 flex-wrap mb-12">
+            <ChatWidgetPreview messages={conversation1} />
+            <ChatWidgetPreview messages={conversation2} />
           </div>
+
+          {/* Selling points */}
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 mb-10 text-stone-600 dark:text-stone-400">
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+              Avlastar kundtjänst
+            </span>
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+              Alltid tillgänglig
+            </span>
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+              Intern kunskapsbank
+            </span>
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+              Statistik och insikter
+            </span>
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+              GDPR-säker
+            </span>
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+              Lokal AI
+            </span>
+          </div>
+
+          {/* Email CTA */}
+          <p className="text-center text-stone-600 dark:text-stone-400">
+            Vill du veta mer? Mejla{' '}
+            <a href="mailto:hej@bobot.nu" className="text-[#D97757] hover:text-[#c4613d] font-medium transition-colors">
+              hej@bobot.nu
+            </a>
+          </p>
         </div>
       </main>
 
@@ -263,6 +288,17 @@ function LandingPage() {
           </a>
         </div>
       </footer>
+
+      {/* Custom animation styles */}
+      <style>{`
+        @keyframes bounce-slow {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        .animate-bounce-slow {
+          animation: bounce-slow 3s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   )
 }
