@@ -11,14 +11,19 @@ function Dashboard() {
     totalKnowledge: 0,
     questionsToday: 0,
     questionsWeek: 0,
+    questionsMonth: 0,
     answerRate: 0
   })
   const [dailyStats, setDailyStats] = useState([])
+  const [allDailyStats, setAllDailyStats] = useState([])
   const [loading, setLoading] = useState(true)
+  const [chartPeriod, setChartPeriod] = useState(7) // 7 or 30 days
+  const [usage, setUsage] = useState(null)
 
   useEffect(() => {
     fetchStats()
     fetchAnalytics()
+    fetchUsage()
   }, [])
 
   const fetchStats = async () => {
@@ -31,6 +36,7 @@ function Dashboard() {
           totalQuestions: data.total_questions || 0,
           questionsToday: data.questions_today || 0,
           questionsWeek: data.questions_this_week || 0,
+          questionsMonth: data.questions_this_month || 0,
           answerRate: data.answer_rate || 0
         })
       }
@@ -46,12 +52,30 @@ function Dashboard() {
       const response = await authFetch(`${API_BASE}/analytics`)
       if (response.ok) {
         const data = await response.json()
-        setDailyStats(data.daily_stats?.slice(-7) || [])
+        const allStats = data.daily_stats || []
+        setAllDailyStats(allStats)
+        setDailyStats(allStats.slice(-7))
       }
     } catch (error) {
       console.error('Kunde inte hämta analytics:', error)
     }
   }
+
+  const fetchUsage = async () => {
+    try {
+      const response = await authFetch(`${API_BASE}/my-usage`)
+      if (response.ok) {
+        const data = await response.json()
+        setUsage(data)
+      }
+    } catch (error) {
+      console.error('Kunde inte hämta användning:', error)
+    }
+  }
+
+  useEffect(() => {
+    setDailyStats(allDailyStats.slice(-chartPeriod))
+  }, [chartPeriod, allDailyStats])
 
   const StatCard = ({ title, value, icon, trend }) => (
     <div className="card group hover:shadow-md">
@@ -76,6 +100,49 @@ function Dashboard() {
     </div>
   )
 
+  const getUsageColor = (percent) => {
+    if (percent >= 90) return { bar: 'bg-red-500', text: 'text-red-500', bg: 'bg-red-500/10' }
+    if (percent >= 75) return { bar: 'bg-amber-500', text: 'text-amber-500', bg: 'bg-amber-500/10' }
+    return { bar: 'bg-accent', text: 'text-accent', bg: 'bg-accent-soft' }
+  }
+
+  const UsageMeter = ({ label, current, limit, percent, icon, hasLimit }) => {
+    if (!hasLimit) return null
+    const colors = getUsageColor(percent)
+    const isNearLimit = percent >= 75
+    const isAtLimit = percent >= 100
+
+    return (
+      <div className={`p-4 rounded-xl border ${isAtLimit ? 'border-red-500/30 bg-red-500/10' : isNearLimit ? 'border-amber-500/30 bg-amber-500/10' : 'border-border-default bg-bg-primary'}`}>
+        <div className="flex items-center gap-3 mb-3">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colors.bg} ${colors.text}`}>
+            {icon}
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-text-primary">{label}</p>
+            <p className={`text-xs ${isAtLimit ? 'text-red-500' : isNearLimit ? 'text-amber-500' : 'text-text-secondary'}`}>
+              {isAtLimit ? 'Gränsen nådd' : isNearLimit ? 'Närmar dig gränsen' : 'Inom gränsen'}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className={`text-lg font-semibold ${colors.text}`}>{current}</p>
+            <p className="text-xs text-text-tertiary">av {limit}</p>
+          </div>
+        </div>
+        <div className="h-2 bg-bg-secondary rounded-full overflow-hidden">
+          <div
+            className={`h-full ${colors.bar} rounded-full transition-all duration-500`}
+            style={{ width: `${Math.min(100, percent)}%` }}
+          />
+        </div>
+        <div className="flex justify-between mt-1">
+          <span className="text-xs text-text-tertiary">{percent.toFixed(0)}% använt</span>
+          <span className="text-xs text-text-tertiary">{Math.max(0, limit - current)} kvar</span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="animate-fade-in">
       {/* Header */}
@@ -85,7 +152,7 @@ function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         <StatCard
           title="Kunskapsposter"
           value={stats.totalKnowledge}
@@ -130,20 +197,95 @@ function Dashboard() {
           }
           trend="frågor"
         />
+        <StatCard
+          title="Senaste 30 dagar"
+          value={stats.questionsMonth}
+          icon={
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+              <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
+            </svg>
+          }
+          trend="frågor"
+        />
       </div>
 
-      {/* Weekly Chart */}
+      {/* Usage Limits */}
+      {usage && (usage.conversations.has_limit || usage.knowledge.has_limit) && (
+        <div className="card mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-text-secondary">
+              <path d="M12 20V10" />
+              <path d="M18 20V4" />
+              <path d="M6 20v-4" />
+            </svg>
+            <h2 className="text-lg font-medium text-text-primary">Användningsgränser</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <UsageMeter
+              label="Konversationer denna månad"
+              current={usage.conversations.current}
+              limit={usage.conversations.limit}
+              percent={usage.conversations.percent}
+              hasLimit={usage.conversations.has_limit}
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              }
+            />
+            <UsageMeter
+              label="Kunskapsposter totalt"
+              current={usage.knowledge.current}
+              limit={usage.knowledge.limit}
+              percent={usage.knowledge.percent}
+              hasLimit={usage.knowledge.has_limit}
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg>
+              }
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Activity Chart */}
       {dailyStats.length > 0 && (
         <div className="card mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-text-primary">Aktivitet senaste 7 dagarna</h2>
-            <div className="flex items-center gap-4 text-xs text-text-tertiary">
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-accent"></span> Frågor
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-success"></span> Besvarade
-              </span>
+            <h2 className="text-lg font-medium text-text-primary">
+              Aktivitet senaste {chartPeriod} dagarna
+            </h2>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 text-xs text-text-tertiary">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-accent"></span> Frågor
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-success"></span> Besvarade
+                </span>
+              </div>
+              <div className="flex rounded-lg bg-bg-secondary p-1">
+                <button
+                  onClick={() => setChartPeriod(7)}
+                  className={`px-3 py-1 text-xs rounded-md transition-colors ${chartPeriod === 7 ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary'}`}
+                  aria-pressed={chartPeriod === 7}
+                >
+                  7 dagar
+                </button>
+                <button
+                  onClick={() => setChartPeriod(30)}
+                  className={`px-3 py-1 text-xs rounded-md transition-colors ${chartPeriod === 30 ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary'}`}
+                  aria-pressed={chartPeriod === 30}
+                >
+                  30 dagar
+                </button>
+              </div>
             </div>
           </div>
           <div className="h-40 flex items-end gap-2">

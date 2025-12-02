@@ -89,11 +89,7 @@ function Login({ onLogin }) {
           </button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-border-subtle text-center">
-          <a href="/admin" className="text-sm text-text-tertiary hover:text-accent transition-colors">
-            Super Admin-inloggning
-          </a>
-        </div>
+        {/* Admin login hidden - access via /admin URL directly */}
       </div>
     </div>
   )

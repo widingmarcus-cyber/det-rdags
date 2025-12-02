@@ -26,3 +26,4 @@ dist/
 *.log
 .coverage
 htmlcov/
+*.db

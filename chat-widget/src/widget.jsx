@@ -18,6 +18,25 @@ const translations = {
     emailConversation: 'Skicka till support',
     newConversation: 'Ny konversation',
     clearHistory: 'Rensa historik',
+    lightMode: 'Ljust läge',
+    darkMode: 'Mörkt läge',
+    // PuB/GDPR
+    consentRequired: 'Samtycke krävs',
+    privacyPolicy: 'Integritetspolicy',
+    viewMyData: 'Visa min data',
+    deleteMyData: 'Radera min data',
+    gdprMenu: 'Mina rättigheter',
+    consentGiven: 'Du har gett samtycke',
+    dataDeleted: 'Din data har raderats',
+    confirmDelete: 'Är du säker? Detta kan inte ångras.',
+    // Accessibility
+    openChat: 'Öppna chatt',
+    closeChat: 'Stäng chatt',
+    sendMessage: 'Skicka meddelande',
+    menu: 'Meny',
+    botMessage: 'Botmeddelande',
+    userMessage: 'Ditt meddelande',
+    typing: 'Skriver...',
   },
   en: {
     welcomeMessage: 'Hi! How can I help you today?',
@@ -34,6 +53,25 @@ const translations = {
     emailConversation: 'Email to support',
     newConversation: 'New conversation',
     clearHistory: 'Clear history',
+    lightMode: 'Light mode',
+    darkMode: 'Dark mode',
+    // PuB/GDPR
+    consentRequired: 'Consent required',
+    privacyPolicy: 'Privacy policy',
+    viewMyData: 'View my data',
+    deleteMyData: 'Delete my data',
+    gdprMenu: 'My rights',
+    consentGiven: 'You have given consent',
+    dataDeleted: 'Your data has been deleted',
+    confirmDelete: 'Are you sure? This cannot be undone.',
+    // Accessibility
+    openChat: 'Open chat',
+    closeChat: 'Close chat',
+    sendMessage: 'Send message',
+    menu: 'Menu',
+    botMessage: 'Bot message',
+    userMessage: 'Your message',
+    typing: 'Typing...',
   },
   ar: {
     welcomeMessage: 'مرحباً! كيف يمكنني مساعدتك اليوم؟',
@@ -50,6 +88,25 @@ const translations = {
     emailConversation: 'أرسل إلى الدعم',
     newConversation: 'محادثة جديدة',
     clearHistory: 'مسح المحفوظات',
+    lightMode: 'الوضع الفاتح',
+    darkMode: 'الوضع الداكن',
+    // PuB/GDPR
+    consentRequired: 'الموافقة مطلوبة',
+    privacyPolicy: 'سياسة الخصوصية',
+    viewMyData: 'عرض بياناتي',
+    deleteMyData: 'حذف بياناتي',
+    gdprMenu: 'حقوقي',
+    consentGiven: 'لقد وافقت',
+    dataDeleted: 'تم حذف بياناتك',
+    confirmDelete: 'هل أنت متأكد؟ لا يمكن التراجع عن هذا.',
+    // Accessibility
+    openChat: 'افتح الدردشة',
+    closeChat: 'أغلق الدردشة',
+    sendMessage: 'إرسال رسالة',
+    menu: 'القائمة',
+    botMessage: 'رسالة الروبوت',
+    userMessage: 'رسالتك',
+    typing: 'يكتب...',
   }
 }
 
@@ -169,7 +226,7 @@ function adjustColor(hex, amount) {
   return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`
 }
 
-// CSS animations
+// CSS animations and WCAG 2.2 AA accessibility styles
 const injectStyles = () => {
   if (document.getElementById('bobot-styles')) return
   const styleSheet = document.createElement('style')
@@ -204,6 +261,64 @@ const injectStyles = () => {
       }
     }
     [dir="rtl"] .bobot-input { text-align: right; }
+
+    /* WCAG 2.2 AA Focus Indicators - visible outline for keyboard navigation */
+    .bobot-focusable:focus {
+      outline: 3px solid #D97757 !important;
+      outline-offset: 2px !important;
+    }
+    .bobot-focusable:focus:not(:focus-visible) {
+      outline: none !important;
+    }
+    .bobot-focusable:focus-visible {
+      outline: 3px solid #D97757 !important;
+      outline-offset: 2px !important;
+    }
+
+    /* Skip link for keyboard users */
+    .bobot-skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: #D97757;
+      color: white;
+      padding: 8px 16px;
+      z-index: 100;
+      border-radius: 0 0 8px 0;
+      transition: top 0.3s;
+    }
+    .bobot-skip-link:focus {
+      top: 0;
+    }
+
+    /* Screen reader only text */
+    .bobot-sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Minimum touch target size 24x24 (WCAG 2.2 AA) */
+    .bobot-touch-target {
+      min-width: 24px;
+      min-height: 24px;
+    }
+
+    /* Reduce motion for users who prefer it */
+    @media (prefers-reduced-motion: reduce) {
+      .bobot-widget-window,
+      .bobot-typing-dot,
+      .bobot-pulse {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
   `
   document.head.appendChild(styleSheet)
 }
@@ -231,7 +346,15 @@ function ChatWidget({ config }) {
   const [conversationId, setConversationId] = useState(null)
   const [showMenu, setShowMenu] = useState(false)
   const [darkMode, setDarkMode] = useState(() => detectDarkMode())
+  // PuB/GDPR Compliance
+  const [consentGiven, setConsentGiven] = useState(false)
+  const [showGdprMenu, setShowGdprMenu] = useState(false)
+  const [gdprStatus, setGdprStatus] = useState(null) // 'loading', 'success', 'error'
+  // Accessibility - live region announcements
+  const [announcement, setAnnouncement] = useState('')
   const messagesEndRef = useRef(null)
+  const inputRef = useRef(null)
+  const chatWindowRef = useRef(null)
 
   // Get colors based on dark mode
   const colors = darkMode ? darkColors : lightColors
@@ -315,6 +438,119 @@ function ChatWidget({ config }) {
     window.location.href = `mailto:${email}?subject=${subject}&body=${body}`
     setShowMenu(false)
   }
+
+  // PuB/GDPR Consent handling
+  const recordConsent = async (consent) => {
+    try {
+      await fetch(`${config.apiUrl}/gdpr/${config.companyId}/consent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, consent_given: consent })
+      })
+      setConsentGiven(consent)
+      if (consent) {
+        // Save to localStorage
+        localStorage.setItem(`bobot_consent_${config.companyId}`, 'true')
+        setAnnouncement(t.consentGiven)
+      }
+    } catch (e) {
+      console.log('Could not record consent')
+    }
+  }
+
+  // Check if consent is required
+  const needsConsent = () => {
+    if (!companyConfig?.require_consent) return false
+    if (consentGiven) return false
+    // Check localStorage for previous consent
+    const stored = localStorage.getItem(`bobot_consent_${config.companyId}`)
+    if (stored === 'true') {
+      setConsentGiven(true)
+      return false
+    }
+    return true
+  }
+
+  // GDPR - View my data
+  const viewMyData = async () => {
+    setGdprStatus('loading')
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/gdpr/${config.companyId}/my-data?session_id=${sessionId}`
+      )
+      if (response.ok) {
+        const data = await response.json()
+        // Open in new window or show modal
+        const dataWindow = window.open('', '_blank')
+        if (dataWindow) {
+          dataWindow.document.write(`
+            <html>
+              <head><title>${t.viewMyData}</title>
+              <style>body{font-family:system-ui;padding:20px;max-width:800px;margin:0 auto;}</style></head>
+              <body>
+                <h1>${t.viewMyData}</h1>
+                <pre style="background:#f5f5f5;padding:16px;border-radius:8px;overflow:auto;">
+${JSON.stringify(data.data, null, 2)}
+                </pre>
+              </body>
+            </html>
+          `)
+        }
+        setGdprStatus('success')
+        setAnnouncement(t.viewMyData + ' - OK')
+      }
+    } catch (e) {
+      setGdprStatus('error')
+    }
+    setShowGdprMenu(false)
+  }
+
+  // GDPR - Delete my data
+  const deleteMyData = async () => {
+    if (!window.confirm(t.confirmDelete)) return
+    setGdprStatus('loading')
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/gdpr/${config.companyId}/my-data?session_id=${sessionId}`,
+        { method: 'DELETE' }
+      )
+      if (response.ok) {
+        setGdprStatus('success')
+        setAnnouncement(t.dataDeleted)
+        // Clear local data
+        clearConversationStorage(config.companyId)
+        startNewConversation()
+      }
+    } catch (e) {
+      setGdprStatus('error')
+    }
+    setShowGdprMenu(false)
+  }
+
+  // Keyboard navigation - Escape to close
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (showMenu) {
+          setShowMenu(false)
+        } else if (showGdprMenu) {
+          setShowGdprMenu(false)
+        } else if (isOpen) {
+          setIsOpen(false)
+          setAnnouncement(t.closeChat)
+        }
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, showMenu, showGdprMenu])
+
+  // Focus management - focus input when chat opens
+  useEffect(() => {
+    if (isOpen && inputRef.current && !needsConsent()) {
+      setTimeout(() => inputRef.current?.focus(), 100)
+    }
+  }, [isOpen, consentGiven])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -414,6 +650,7 @@ function ChatWidget({ config }) {
   // Dynamic colors from company config
   const primaryColor = companyConfig?.primary_color || defaultColors.accent
   const companyName = companyConfig?.company_name || config.title || 'Bobot'
+  const companySubtitle = companyConfig?.subtitle || t.subtitle
   const hasContact = companyConfig?.contact_email || companyConfig?.contact_phone
 
   // Styles - using dynamic colors based on dark mode
@@ -605,9 +842,35 @@ function ChatWidget({ config }) {
   }
 
   return (
-    <div style={styles.container}>
+    <div style={styles.container} role="region" aria-label="Chat widget">
+      {/* ARIA Live Region for screen reader announcements */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="bobot-sr-only"
+      >
+        {announcement}
+      </div>
+
       {isOpen && (
-        <div style={styles.chatWindow} className="bobot-widget-window">
+        <div
+          id="bobot-chat-window"
+          style={styles.chatWindow}
+          className="bobot-widget-window"
+          ref={chatWindowRef}
+          role="dialog"
+          aria-label={companyName + ' chat'}
+          aria-modal="true"
+        >
+          {/* Skip link for keyboard users */}
+          <a
+            href="#bobot-input"
+            className="bobot-skip-link bobot-focusable"
+            onClick={(e) => { e.preventDefault(); inputRef.current?.focus(); }}
+          >
+            Hoppa till inmatning
+          </a>
           {/* Header */}
           <div style={styles.header}>
             <div style={styles.headerIcon}>
@@ -618,37 +881,46 @@ function ChatWidget({ config }) {
             <div style={{ flex: 1 }}>
               <p style={styles.headerTitle}>{companyName}</p>
               <p style={styles.headerSubtitle}>
-                {conversationId ? `${t.subtitle} • ${conversationId}` : t.subtitle}
+                {conversationId ? `${companySubtitle} • ${conversationId}` : companySubtitle}
               </p>
             </div>
             <div style={{ position: 'relative' }}>
               <button
                 style={styles.closeButton}
                 onClick={() => setShowMenu(!showMenu)}
-                title="Menu"
+                aria-label={t.menu}
+                aria-expanded={showMenu}
+                aria-haspopup="menu"
+                className="bobot-focusable bobot-touch-target"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                   <circle cx="12" cy="12" r="1" />
                   <circle cx="12" cy="5" r="1" />
                   <circle cx="12" cy="19" r="1" />
                 </svg>
               </button>
               {showMenu && (
-                <div style={{
-                  position: 'absolute',
-                  top: '40px',
-                  right: isRTL ? 'auto' : '0',
-                  left: isRTL ? '0' : 'auto',
-                  backgroundColor: colors.bgTertiary,
-                  borderRadius: '8px',
-                  boxShadow: colors.shadowLg,
-                  border: `1px solid ${colors.borderSubtle}`,
-                  minWidth: '160px',
-                  zIndex: 10,
-                  overflow: 'hidden'
-                }}>
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '40px',
+                    right: isRTL ? 'auto' : '0',
+                    left: isRTL ? '0' : 'auto',
+                    backgroundColor: colors.bgTertiary,
+                    borderRadius: '8px',
+                    boxShadow: colors.shadowLg,
+                    border: `1px solid ${colors.borderSubtle}`,
+                    minWidth: '180px',
+                    zIndex: 10,
+                    overflow: 'hidden'
+                  }}
+                  role="menu"
+                  aria-label={t.menu}
+                >
                   <button
                     onClick={startNewConversation}
+                    role="menuitem"
+                    className="bobot-focusable"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -665,7 +937,7 @@ function ChatWidget({ config }) {
                     onMouseOver={(e) => e.target.style.backgroundColor = colors.bgSecondary}
                     onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                       <line x1="12" y1="5" x2="12" y2="19" />
                       <line x1="5" y1="12" x2="19" y2="12" />
                     </svg>
@@ -674,6 +946,8 @@ function ChatWidget({ config }) {
                   {companyConfig?.contact_email && messages.length > 1 && (
                     <button
                       onClick={emailConversation}
+                      role="menuitem"
+                      className="bobot-focusable"
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -690,7 +964,7 @@ function ChatWidget({ config }) {
                       onMouseOver={(e) => e.target.style.backgroundColor = colors.bgSecondary}
                       onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                         <polyline points="22,6 12,13 2,6" />
                       </svg>
@@ -699,6 +973,8 @@ function ChatWidget({ config }) {
                   )}
                   <button
                     onClick={() => { setDarkMode(!darkMode); setShowMenu(false) }}
+                    role="menuitem"
+                    className="bobot-focusable"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -716,7 +992,7 @@ function ChatWidget({ config }) {
                     onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
                   >
                     {darkMode ? (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                         <circle cx="12" cy="12" r="5" />
                         <line x1="12" y1="1" x2="12" y2="3" />
                         <line x1="12" y1="21" x2="12" y2="23" />
@@ -728,25 +1004,229 @@ function ChatWidget({ config }) {
                         <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
                       </svg>
                     ) : (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                       </svg>
                     )}
-                    {darkMode ? 'Ljust läge' : 'Mörkt läge'}
+                    {darkMode ? t.lightMode : t.darkMode}
+                  </button>
+                  {/* GDPR Menu Separator */}
+                  <div style={{ borderTop: `1px solid ${colors.borderSubtle}`, margin: '4px 0' }} role="separator" />
+                  {/* Privacy Policy Link */}
+                  {companyConfig?.privacy_policy_url && (
+                    <a
+                      href={companyConfig.privacy_policy_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      role="menuitem"
+                      className="bobot-focusable"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: 'none',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        color: colors.textPrimary,
+                        fontSize: '13px',
+                        textAlign: isRTL ? 'right' : 'left',
+                        textDecoration: 'none'
+                      }}
+                      onMouseOver={(e) => e.target.style.backgroundColor = colors.bgSecondary}
+                      onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      </svg>
+                      {t.privacyPolicy}
+                    </a>
+                  )}
+                  {/* View My Data */}
+                  <button
+                    onClick={viewMyData}
+                    role="menuitem"
+                    className="bobot-focusable"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      color: colors.textPrimary,
+                      fontSize: '13px',
+                      textAlign: isRTL ? 'right' : 'left'
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = colors.bgSecondary}
+                    onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    {t.viewMyData}
+                  </button>
+                  {/* Delete My Data */}
+                  <button
+                    onClick={deleteMyData}
+                    role="menuitem"
+                    className="bobot-focusable"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      color: '#C75D5D',
+                      fontSize: '13px',
+                      textAlign: isRTL ? 'right' : 'left'
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = colors.bgSecondary}
+                    onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                    {t.deleteMyData}
                   </button>
                 </div>
               )}
             </div>
-            <button style={styles.closeButton} onClick={() => setIsOpen(false)}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <button
+              style={styles.closeButton}
+              onClick={() => setIsOpen(false)}
+              aria-label={t.closeChat}
+              className="bobot-focusable bobot-touch-target"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
           </div>
 
+          {/* Consent Dialog (PuB Compliance) */}
+          {needsConsent() && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 20,
+              borderRadius: '16px'
+            }}>
+              <div
+                style={{
+                  backgroundColor: colors.bgTertiary,
+                  borderRadius: '12px',
+                  padding: '24px',
+                  margin: '16px',
+                  maxWidth: '320px',
+                  boxShadow: colors.shadowLg
+                }}
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="consent-title"
+                aria-describedby="consent-desc"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    backgroundColor: colors.accentSoft,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2" aria-hidden="true">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                  </div>
+                  <h3 id="consent-title" style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: colors.textPrimary }}>
+                    {t.consentRequired}
+                  </h3>
+                </div>
+                <p id="consent-desc" style={{ fontSize: '14px', color: colors.textSecondary, marginBottom: '16px', lineHeight: '1.5' }}>
+                  {companyConfig?.consent_text || t.consentRequired}
+                </p>
+                {companyConfig?.privacy_policy_url && (
+                  <a
+                    href={companyConfig.privacy_policy_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bobot-focusable"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '13px',
+                      color: primaryColor,
+                      marginBottom: '16px'
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                    {t.privacyPolicy}
+                  </a>
+                )}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => recordConsent(true)}
+                    className="bobot-focusable"
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      backgroundColor: primaryColor,
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {t.yes}
+                  </button>
+                  <button
+                    onClick={() => setIsOpen(false)}
+                    className="bobot-focusable"
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      backgroundColor: 'transparent',
+                      color: colors.textSecondary,
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {t.no}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Messages */}
-          <div style={styles.messages}>
+          <div style={styles.messages} role="log" aria-label="Chat messages" aria-live="polite">
             {messages.map((msg) => (
               <div key={msg.id}>
                 <div style={{
@@ -831,8 +1311,11 @@ function ChatWidget({ config }) {
 
           {/* Input */}
           <div style={styles.inputArea}>
-            <form style={styles.inputForm} onSubmit={handleSend}>
+            <form style={styles.inputForm} onSubmit={handleSend} role="form" aria-label="Send message">
+              <label htmlFor="bobot-input" className="bobot-sr-only">{t.placeholder}</label>
               <input
+                id="bobot-input"
+                ref={inputRef}
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -840,22 +1323,51 @@ function ChatWidget({ config }) {
                 onBlur={() => setInputFocused(false)}
                 placeholder={t.placeholder}
                 style={styles.input}
-                disabled={loading}
-                className="bobot-input"
+                disabled={loading || needsConsent()}
+                className="bobot-input bobot-focusable"
+                aria-describedby="bobot-input-hint"
+                autoComplete="off"
               />
+              <span id="bobot-input-hint" className="bobot-sr-only">
+                {loading ? t.typing : t.sendMessage}
+              </span>
               <button
                 type="submit"
                 style={styles.sendButton}
-                disabled={loading || !input.trim()}
+                disabled={loading || !input.trim() || needsConsent()}
                 onMouseEnter={() => setSendHover(true)}
                 onMouseLeave={() => setSendHover(false)}
+                aria-label={t.sendMessage}
+                className="bobot-focusable bobot-touch-target"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                   <line x1="22" y1="2" x2="11" y2="13" />
                   <polygon points="22 2 15 22 11 13 2 9 22 2" />
                 </svg>
               </button>
             </form>
+            {/* Powered by */}
+            <div style={{
+              textAlign: 'center',
+              marginTop: '8px',
+              fontSize: '10px',
+              color: colors.textTertiary,
+              opacity: 0.7
+            }}>
+              Powered by{' '}
+              <a
+                href="https://bobot.nu"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: colors.textTertiary,
+                  textDecoration: 'none',
+                  borderBottom: `1px dotted ${colors.textTertiary}`
+                }}
+              >
+                bobot.nu
+              </a>
+            </div>
           </div>
         </div>
       )}
@@ -863,13 +1375,18 @@ function ChatWidget({ config }) {
       {/* Trigger Button */}
       <button
         style={styles.button}
-        className={!isOpen ? 'bobot-pulse' : ''}
-        onClick={() => setIsOpen(!isOpen)}
+        className={`bobot-focusable bobot-touch-target ${!isOpen ? 'bobot-pulse' : ''}`}
+        onClick={() => {
+          setIsOpen(!isOpen)
+          setAnnouncement(isOpen ? t.closeChat : t.openChat)
+        }}
         onMouseEnter={() => setButtonHover(true)}
         onMouseLeave={() => setButtonHover(false)}
-        aria-label={isOpen ? 'Close chat' : 'Open chat'}
+        aria-label={isOpen ? t.closeChat : t.openChat}
+        aria-expanded={isOpen}
+        aria-controls="bobot-chat-window"
       >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" aria-hidden="true">
           {isOpen ? (
             <>
               <line x1="18" y1="6" x2="6" y2="18" />

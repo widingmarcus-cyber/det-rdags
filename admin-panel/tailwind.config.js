@@ -27,21 +27,21 @@ export default {
         accent: {
           DEFAULT: '#D97757',
           hover: '#C4613D',
-          soft: '#FEF2EE',
+          soft: 'var(--accent-soft)',
           glow: 'rgba(217, 119, 87, 0.15)',
         },
         // Feedback
         success: {
           DEFAULT: '#4A9D7C',
-          soft: '#EDF7F3',
+          soft: 'var(--success-soft)',
         },
         warning: {
           DEFAULT: '#D4A054',
-          soft: '#FEF9EE',
+          soft: 'var(--warning-soft)',
         },
         error: {
           DEFAULT: '#C75D5D',
-          soft: '#FDF2F2',
+          soft: 'var(--error-soft)',
         },
         // Borders
         border: {

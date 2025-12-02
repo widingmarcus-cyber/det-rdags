@@ -4,17 +4,83 @@ import { AuthContext } from '../App'
 const API_BASE = '/api'
 
 function SuperAdmin() {
-  const { adminAuth, adminFetch } = useContext(AuthContext)
+  const { adminAuth, adminFetch, handleAdminLogout, handleLogin } = useContext(AuthContext)
   const [companies, setCompanies] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [formData, setFormData] = useState({ id: '', name: '', password: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [activeTab, setActiveTab] = useState('overview')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState('created_at')
+  const [sortOrder, setSortOrder] = useState('desc')
+  const [systemHealth, setSystemHealth] = useState(null)
+  const [selectedCompanies, setSelectedCompanies] = useState(new Set())
+  const [notification, setNotification] = useState(null)
+
+  // New state for added features
+  const [auditLogs, setAuditLogs] = useState([])
+  const [auditLoading, setAuditLoading] = useState(false)
+  const [maintenanceMode, setMaintenanceMode] = useState({ enabled: false, message: '' })
+  const [showUsageLimitModal, setShowUsageLimitModal] = useState(null)
+  const [usageLimitValue, setUsageLimitValue] = useState({ conversations: 0, knowledge: 0 })
+  const [showCompanyDashboard, setShowCompanyDashboard] = useState(null)
+  const [companyUsage, setCompanyUsage] = useState(null)
+  const [companyActivity, setCompanyActivity] = useState([])
+  const [companyLoading, setCompanyLoading] = useState(false)
+
+  // Analytics state
+  const [analyticsData, setAnalyticsData] = useState(null)
+  const [peakHours, setPeakHours] = useState(null)
+  const [trends, setTrends] = useState(null)
+  const [topCompanies, setTopCompanies] = useState([])
+
+  // Billing state
+  const [subscriptions, setSubscriptions] = useState([])
+  const [invoices, setInvoices] = useState([])
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(null)
+
+  // Company notes
+  const [companyNotes, setCompanyNotes] = useState([])
+  const [newNote, setNewNote] = useState('')
+
+  // Admin preferences
+  const [adminPrefs, setAdminPrefs] = useState({ dark_mode: false, totp_enabled: false })
+  const [show2FASetup, setShow2FASetup] = useState(false)
+  const [twoFAData, setTwoFAData] = useState(null)
+  const [verifyCode, setVerifyCode] = useState('')
+  const [verifying2FA, setVerifying2FA] = useState(false)
+  const [twoFAError, setTwoFAError] = useState('')
+
+  // Rate limiting & performance
+  const [rateLimitStats, setRateLimitStats] = useState(null)
+  const [performanceStats, setPerformanceStats] = useState(null)
+
+  // Audit log search
+  const [auditSearchTerm, setAuditSearchTerm] = useState('')
+  const [auditActionType, setAuditActionType] = useState('')
+  const [auditDateRange, setAuditDateRange] = useState({ start: '', end: '' })
+  const [auditActionTypes, setAuditActionTypes] = useState([])
 
   useEffect(() => {
     fetchCompanies()
+    fetchSystemHealth()
+    fetchMaintenanceMode()
   }, [])
+
+  useEffect(() => {
+    if (activeTab === 'audit') {
+      fetchAuditLogs()
+      fetchAuditActionTypes()
+    } else if (activeTab === 'analytics') {
+      fetchAnalytics()
+    } else if (activeTab === 'billing') {
+      fetchBilling()
+    } else if (activeTab === 'preferences') {
+      fetchAdminPrefs()
+    }
+  }, [activeTab])
 
   const fetchCompanies = async () => {
     try {
@@ -28,6 +94,284 @@ function SuperAdmin() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchSystemHealth = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/system-health`)
+      if (response.ok) {
+        const data = await response.json()
+        setSystemHealth(data)
+      }
+    } catch (error) {
+      // System health endpoint might not exist yet
+      setSystemHealth({
+        ollama_status: 'unknown',
+        database_size: 'N/A',
+        total_conversations: companies.reduce((sum, c) => sum + (c.chat_count || 0), 0),
+        uptime: 'N/A'
+      })
+    }
+  }
+
+  const fetchAuditLogs = async () => {
+    setAuditLoading(true)
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/audit-log?limit=100`)
+      if (response.ok) {
+        const data = await response.json()
+        setAuditLogs(data.logs || [])
+      }
+    } catch (error) {
+      console.error('Kunde inte hämta audit logs:', error)
+    } finally {
+      setAuditLoading(false)
+    }
+  }
+
+  const fetchMaintenanceMode = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/maintenance-mode`)
+      if (response.ok) {
+        const data = await response.json()
+        setMaintenanceMode(data)
+      }
+    } catch (error) {
+      // Endpoint might not exist yet
+      setMaintenanceMode({ enabled: false, message: '' })
+    }
+  }
+
+  const fetchAnalytics = async () => {
+    try {
+      const [overviewRes, peakRes, trendsRes, companiesRes, rateRes, perfRes] = await Promise.all([
+        adminFetch(`${API_BASE}/admin/analytics/overview?days=30`),
+        adminFetch(`${API_BASE}/admin/analytics/peak-hours`),
+        adminFetch(`${API_BASE}/admin/analytics/trends`),
+        adminFetch(`${API_BASE}/admin/analytics/companies`),
+        adminFetch(`${API_BASE}/admin/rate-limits`),
+        adminFetch(`${API_BASE}/admin/performance/overview`)
+      ])
+
+      if (overviewRes.ok) setAnalyticsData(await overviewRes.json())
+      if (peakRes.ok) setPeakHours(await peakRes.json())
+      if (trendsRes.ok) setTrends(await trendsRes.json())
+      if (companiesRes.ok) {
+        const data = await companiesRes.json()
+        setTopCompanies(data.companies || [])
+      }
+      if (rateRes.ok) setRateLimitStats(await rateRes.json())
+      if (perfRes.ok) setPerformanceStats(await perfRes.json())
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error)
+    }
+  }
+
+  const fetchBilling = async () => {
+    try {
+      const [subsRes, invRes] = await Promise.all([
+        adminFetch(`${API_BASE}/admin/subscriptions`),
+        adminFetch(`${API_BASE}/admin/invoices?limit=20`)
+      ])
+
+      if (subsRes.ok) {
+        const data = await subsRes.json()
+        setSubscriptions(data.subscriptions || [])
+      }
+      if (invRes.ok) {
+        const data = await invRes.json()
+        setInvoices(data.invoices || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch billing:', error)
+    }
+  }
+
+  const fetchAdminPrefs = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/preferences`)
+      if (response.ok) {
+        const data = await response.json()
+        setAdminPrefs(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch preferences:', error)
+    }
+  }
+
+  const fetchAuditActionTypes = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/audit-logs/action-types`)
+      if (response.ok) {
+        const data = await response.json()
+        setAuditActionTypes(data.action_types || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch action types:', error)
+    }
+  }
+
+  const fetchCompanyNotes = async (companyId) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/companies/${companyId}/notes`)
+      if (response.ok) {
+        const data = await response.json()
+        setCompanyNotes(data.notes || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch notes:', error)
+    }
+  }
+
+  const searchAuditLogs = async () => {
+    setAuditLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (auditSearchTerm) params.append('search_term', auditSearchTerm)
+      if (auditActionType) params.append('action_type', auditActionType)
+      if (auditDateRange.start) params.append('start_date', auditDateRange.start)
+      if (auditDateRange.end) params.append('end_date', auditDateRange.end)
+
+      const response = await adminFetch(`${API_BASE}/admin/audit-logs/search?${params}`)
+      if (response.ok) {
+        const data = await response.json()
+        setAuditLogs(data.logs || [])
+      }
+    } catch (error) {
+      console.error('Failed to search audit logs:', error)
+    } finally {
+      setAuditLoading(false)
+    }
+  }
+
+  const handleAddNote = async (companyId) => {
+    if (!newNote.trim()) return
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/companies/${companyId}/notes`, {
+        method: 'POST',
+        body: JSON.stringify({ content: newNote, is_pinned: false })
+      })
+      if (response.ok) {
+        setNewNote('')
+        fetchCompanyNotes(companyId)
+        showNotification('Anteckning sparad')
+      }
+    } catch (error) {
+      console.error('Failed to add note:', error)
+    }
+  }
+
+  const handleToggleDarkMode = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/preferences`, {
+        method: 'PUT',
+        body: JSON.stringify({ dark_mode: !adminPrefs.dark_mode })
+      })
+      if (response.ok) {
+        setAdminPrefs(prev => ({ ...prev, dark_mode: !prev.dark_mode }))
+        // Apply dark mode to document
+        document.documentElement.classList.toggle('dark', !adminPrefs.dark_mode)
+        showNotification('Inställningar uppdaterade')
+      }
+    } catch (error) {
+      console.error('Failed to toggle dark mode:', error)
+    }
+  }
+
+  const handleSetup2FA = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/2fa/setup`, { method: 'POST' })
+      if (response.ok) {
+        const data = await response.json()
+        setTwoFAData(data)
+        setShow2FASetup(true)
+        setVerifyCode('')
+        setTwoFAError('')
+      }
+    } catch (error) {
+      console.error('Failed to setup 2FA:', error)
+    }
+  }
+
+  const handleVerify2FA = async () => {
+    if (!verifyCode || verifyCode.length !== 6) {
+      setTwoFAError('Ange en 6-siffrig kod')
+      return
+    }
+
+    setVerifying2FA(true)
+    setTwoFAError('')
+
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/2fa/verify`, {
+        method: 'POST',
+        body: JSON.stringify({ code: verifyCode })
+      })
+
+      if (response.ok) {
+        setShow2FASetup(false)
+        setTwoFAData(null)
+        setVerifyCode('')
+        setAdminPrefs(prev => ({ ...prev, totp_enabled: true }))
+        showNotification('2FA aktiverat!')
+      } else {
+        const data = await response.json().catch(() => ({}))
+        setTwoFAError(data.detail || 'Ogiltig kod. Försök igen.')
+      }
+    } catch (error) {
+      console.error('Failed to verify 2FA:', error)
+      setTwoFAError('Ett fel uppstod. Försök igen.')
+    } finally {
+      setVerifying2FA(false)
+    }
+  }
+
+  const handleCancel2FA = () => {
+    setShow2FASetup(false)
+    setTwoFAData(null)
+    setVerifyCode('')
+    setTwoFAError('')
+  }
+
+  const handleBulkSetLimits = async (limits) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/bulk/set-limits`, {
+        method: 'POST',
+        body: JSON.stringify({
+          company_ids: Array.from(selectedCompanies),
+          ...limits
+        })
+      })
+      if (response.ok) {
+        showNotification(`Gränser uppdaterade för ${selectedCompanies.size} företag`)
+        setSelectedCompanies(new Set())
+        fetchCompanies()
+      }
+    } catch (error) {
+      console.error('Failed to bulk set limits:', error)
+    }
+  }
+
+  const handleExportCompanies = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/bulk/export-companies`)
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `companies_${new Date().toISOString().split('T')[0]}.csv`
+        a.click()
+        showNotification('Export nedladdad')
+      }
+    } catch (error) {
+      console.error('Failed to export:', error)
+    }
+  }
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type })
+    setTimeout(() => setNotification(null), 3000)
   }
 
   const handleAdd = () => {
@@ -50,6 +394,7 @@ function SuperAdmin() {
       if (response.ok) {
         setShowModal(false)
         fetchCompanies()
+        showNotification(`Företag "${formData.name}" skapat`)
       } else {
         const err = await response.json()
         setError(err.detail || 'Kunde inte skapa företag')
@@ -68,6 +413,8 @@ function SuperAdmin() {
       })
       if (response.ok) {
         fetchCompanies()
+        const company = companies.find(c => c.id === companyId)
+        showNotification(`${company?.name} ${company?.is_active ? 'inaktiverad' : 'aktiverad'}`)
       }
     } catch (error) {
       console.error('Kunde inte ändra status:', error)
@@ -75,7 +422,7 @@ function SuperAdmin() {
   }
 
   const handleDelete = async (companyId) => {
-    if (!confirm(`Är du säker på att du vill ta bort företag "${companyId}"? All data kommer att raderas.`)) {
+    if (!window.confirm(`Är du säker på att du vill ta bort företag "${companyId}"? All data kommer att raderas permanent.`)) {
       return
     }
 
@@ -85,10 +432,169 @@ function SuperAdmin() {
       })
       if (response.ok) {
         fetchCompanies()
+        showNotification('Företag raderat')
       }
     } catch (error) {
       console.error('Kunde inte ta bort:', error)
     }
+  }
+
+  const handleBulkToggle = async (activate) => {
+    if (selectedCompanies.size === 0) return
+
+    for (const companyId of selectedCompanies) {
+      const company = companies.find(c => c.id === companyId)
+      if ((activate && !company?.is_active) || (!activate && company?.is_active)) {
+        await adminFetch(`${API_BASE}/admin/companies/${companyId}/toggle`, { method: 'PUT' })
+      }
+    }
+    fetchCompanies()
+    setSelectedCompanies(new Set())
+    showNotification(`${selectedCompanies.size} företag ${activate ? 'aktiverade' : 'inaktiverade'}`)
+  }
+
+  const handleGdprCleanup = async () => {
+    if (!window.confirm('Kör GDPR-cleanup nu? Detta raderar gamla konversationer enligt retention-inställningar.')) return
+
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/gdpr-cleanup`, { method: 'POST' })
+      if (response.ok) {
+        showNotification('GDPR-cleanup slutförd')
+      }
+    } catch (error) {
+      console.error('GDPR cleanup failed:', error)
+    }
+  }
+
+  const handleImpersonate = async (companyId) => {
+    if (!window.confirm(`Logga in som företag "${companyId}"? Du kommer att lämna super admin-panelen.`)) return
+
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/impersonate/${companyId}`, { method: 'POST' })
+      if (response.ok) {
+        const data = await response.json()
+        // Store the impersonation token and redirect to company admin
+        localStorage.setItem('auth', JSON.stringify({
+          token: data.token,
+          companyId: data.company_id,
+          companyName: data.company_name,
+          isImpersonated: true
+        }))
+        window.location.href = '/'
+      } else {
+        showNotification('Kunde inte impersonera företag', 'error')
+      }
+    } catch (error) {
+      console.error('Impersonation failed:', error)
+      showNotification('Kunde inte impersonera företag', 'error')
+    }
+  }
+
+  const handleExport = async (companyId) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/export/${companyId}`)
+      if (response.ok) {
+        const data = await response.json()
+        // Download as JSON file
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${companyId}-export-${new Date().toISOString().split('T')[0]}.json`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        showNotification('Data exporterad')
+      } else {
+        showNotification('Kunde inte exportera data', 'error')
+      }
+    } catch (error) {
+      console.error('Export failed:', error)
+      showNotification('Kunde inte exportera data', 'error')
+    }
+  }
+
+  const handleToggleMaintenance = async () => {
+    const newEnabled = !maintenanceMode.enabled
+    const message = newEnabled ? (prompt('Ange underhållsmeddelande:', 'Systemet är under underhåll. Försök igen senare.') || '') : ''
+
+    if (newEnabled && !message) return
+
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/maintenance-mode`, {
+        method: 'PUT',
+        body: JSON.stringify({ enabled: newEnabled, message })
+      })
+      if (response.ok) {
+        setMaintenanceMode({ enabled: newEnabled, message })
+        showNotification(newEnabled ? 'Underhållsläge aktiverat' : 'Underhållsläge avaktiverat')
+      }
+    } catch (error) {
+      console.error('Failed to toggle maintenance mode:', error)
+      showNotification('Kunde inte ändra underhållsläge', 'error')
+    }
+  }
+
+  const handleSetUsageLimit = async (companyId) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/companies/${companyId}/usage-limit`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          max_conversations_month: usageLimitValue.conversations,
+          max_knowledge_items: usageLimitValue.knowledge
+        })
+      })
+      if (response.ok) {
+        showNotification('Användningsgränser uppdaterade')
+        setShowUsageLimitModal(null)
+        fetchCompanies()
+      }
+    } catch (error) {
+      console.error('Failed to set usage limit:', error)
+      showNotification('Kunde inte uppdatera gränser', 'error')
+    }
+  }
+
+  const openUsageLimitModal = (company) => {
+    setShowUsageLimitModal(company)
+    setUsageLimitValue({
+      conversations: company.max_conversations_month || 0,
+      knowledge: company.max_knowledge_items || 0
+    })
+  }
+
+  const openCompanyDashboard = async (company) => {
+    setShowCompanyDashboard(company)
+    setCompanyLoading(true)
+    setCompanyUsage(null)
+    setCompanyActivity([])
+
+    try {
+      // Fetch usage data
+      const usageRes = await adminFetch(`${API_BASE}/admin/companies/${company.id}/usage`)
+      if (usageRes.ok) {
+        const usageData = await usageRes.json()
+        setCompanyUsage(usageData)
+      }
+
+      // Fetch activity logs for this company
+      const activityRes = await adminFetch(`${API_BASE}/admin/company-activity/${company.id}?limit=10`)
+      if (activityRes.ok) {
+        const activityData = await activityRes.json()
+        setCompanyActivity(activityData.logs || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch company details:', error)
+    } finally {
+      setCompanyLoading(false)
+    }
+  }
+
+  const getUsageColor = (percent) => {
+    if (percent >= 90) return { bar: 'bg-red-500', text: 'text-red-500', bg: 'bg-red-500/15' }
+    if (percent >= 75) return { bar: 'bg-amber-500', text: 'text-amber-500', bg: 'bg-amber-500/15' }
+    return { bar: 'bg-green-500', text: 'text-green-500', bg: 'bg-green-500/15' }
   }
 
   const formatDate = (dateString) => {
@@ -99,209 +605,1097 @@ function SuperAdmin() {
     })
   }
 
+  // Filter and sort companies
+  const filteredCompanies = companies
+    .filter(c =>
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.id.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      let aVal = a[sortBy]
+      let bVal = b[sortBy]
+      if (sortBy === 'created_at') {
+        aVal = new Date(aVal)
+        bVal = new Date(bVal)
+      }
+      if (sortOrder === 'asc') return aVal > bVal ? 1 : -1
+      return aVal < bVal ? 1 : -1
+    })
+
+  const toggleSelectCompany = (id) => {
+    const newSelected = new Set(selectedCompanies)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedCompanies(newSelected)
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedCompanies.size === filteredCompanies.length) {
+      setSelectedCompanies(new Set())
+    } else {
+      setSelectedCompanies(new Set(filteredCompanies.map(c => c.id)))
+    }
+  }
+
+  // Stats
+  const totalCompanies = companies.length
+  const activeCompanies = companies.filter(c => c.is_active).length
+  const totalKnowledge = companies.reduce((sum, c) => sum + (c.knowledge_count || 0), 0)
+  const totalChats = companies.reduce((sum, c) => sum + (c.chat_count || 0), 0)
+
+  const StatCard = ({ title, value, subtitle, icon, color = 'accent' }) => (
+    <div className="card group">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm text-text-secondary">{title}</p>
+          <p className="text-3xl font-semibold text-text-primary mt-2 tracking-tight">{value}</p>
+          {subtitle && <p className="text-xs text-text-tertiary mt-1">{subtitle}</p>}
+        </div>
+        <div className={`w-10 h-10 bg-${color}-soft rounded-lg flex items-center justify-center text-${color} group-hover:scale-110 transition-transform`}>
+          {icon}
+        </div>
+      </div>
+    </div>
+  )
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-bg-primary">
+      {/* Notification */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg animate-slide-up ${
+          notification.type === 'success' ? 'bg-success text-white' : 'bg-error text-white'
+        }`}>
+          {notification.message}
+        </div>
+      )}
+
       {/* Header */}
-      <nav className="bg-gray-900 shadow-sm">
-        <div className="container mx-auto px-4">
+      <nav className="bg-bg-tertiary border-b border-border-subtle sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center">
-                <span className="text-gray-900 font-bold text-sm">A</span>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-gradient-to-br from-warning to-warning-hover rounded-lg flex items-center justify-center shadow-sm">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-bg-primary">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
               </div>
-              <span className="font-semibold text-white">Bobot Super Admin</span>
+              <div>
+                <span className="font-semibold text-text-primary">Bobot</span>
+                <span className="text-xs text-text-tertiary ml-2">Systemöversikt</span>
+              </div>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-gray-300 text-sm">{adminAuth.username}</span>
+              <span className="text-sm text-text-secondary px-2 py-1 bg-warning-soft text-warning rounded-full text-xs font-medium">
+                {adminAuth.username}
+              </span>
+              <button
+                onClick={handleAdminLogout}
+                className="btn btn-ghost text-sm"
+              >
+                Logga ut
+              </button>
             </div>
           </div>
         </div>
       </nav>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Företagshantering</h1>
-            <p className="text-gray-500 mt-1">Hantera alla företag i systemet</p>
-          </div>
-          <button
-            onClick={handleAdd}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2"
-          >
-            <span>+</span>
-            Nytt företag
-          </button>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <p className="text-sm text-gray-500">Totalt antal företag</p>
-            <p className="text-3xl font-bold text-gray-800 mt-1">{companies.length}</p>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <p className="text-sm text-gray-500">Aktiva företag</p>
-            <p className="text-3xl font-bold text-green-600 mt-1">
-              {companies.filter(c => c.is_active).length}
-            </p>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <p className="text-sm text-gray-500">Totalt kunskapsposter</p>
-            <p className="text-3xl font-bold text-blue-600 mt-1">
-              {companies.reduce((sum, c) => sum + c.knowledge_count, 0)}
-            </p>
+      {/* Tabs */}
+      <div className="bg-bg-tertiary border-b border-border-subtle">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex gap-1">
+            {[
+              { id: 'overview', label: 'Översikt', icon: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /> },
+              { id: 'companies', label: 'Företag', icon: <><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></> },
+              { id: 'analytics', label: 'Analys', icon: <><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></> },
+              { id: 'billing', label: 'Fakturering', icon: <><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></> },
+              { id: 'audit', label: 'Logg', icon: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></> },
+              { id: 'system', label: 'System', icon: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></> },
+              { id: 'preferences', label: 'Konto', icon: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></> }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-accent text-accent'
+                    : 'border-transparent text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  {tab.icon}
+                </svg>
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
+      </div>
 
-        {/* Companies table */}
-        {loading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">Laddar...</p>
-          </div>
-        ) : companies.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
-            <div className="text-4xl mb-4">🏢</div>
-            <h3 className="text-lg font-medium text-gray-800">Inga företag ännu</h3>
-            <p className="text-gray-500 mt-2">Skapa ditt första företag för att komma igång</p>
-            <button
-              onClick={handleAdd}
-              className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-            >
-              Skapa första företaget
-            </button>
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Företag
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Kunskapsbas
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Chattmeddelanden
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Skapad
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Åtgärder
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {companies.map((company) => (
-                  <tr key={company.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <p className="font-medium text-gray-900">{company.name}</p>
-                        <p className="text-sm text-gray-500">{company.id}</p>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Overview Tab */}
+        {activeTab === 'overview' && (
+          <div className="animate-fade-in">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <StatCard
+                title="Totalt företag"
+                value={totalCompanies}
+                subtitle={`${activeCompanies} aktiva`}
+                icon={
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                  </svg>
+                }
+              />
+              <StatCard
+                title="Kunskapsposter"
+                value={totalKnowledge}
+                subtitle="totalt i systemet"
+                icon={
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                  </svg>
+                }
+              />
+              <StatCard
+                title="Chattmeddelanden"
+                value={totalChats}
+                subtitle="totalt i systemet"
+                icon={
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                }
+              />
+              <StatCard
+                title="Systemstatus"
+                value={systemHealth?.ollama_status === 'online' ? 'Online' : 'Okänd'}
+                subtitle={systemHealth?.database_size || 'Kontrollerar...'}
+                icon={
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                  </svg>
+                }
+              />
+            </div>
+
+            {/* Quick Actions & Top Companies */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Quick Actions */}
+              <div className="card">
+                <h2 className="text-lg font-medium text-text-primary mb-4">Snabbåtgärder</h2>
+                <div className="space-y-2">
+                  <button
+                    onClick={handleAdd}
+                    className="w-full flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all group"
+                  >
+                    <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-text-primary">Skapa nytt företag</p>
+                      <p className="text-sm text-text-secondary">Lägg till en ny kund</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={handleGdprCleanup}
+                    className="w-full flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all group"
+                  >
+                    <div className="w-10 h-10 bg-warning-soft rounded-lg flex items-center justify-center text-warning group-hover:scale-110 transition-transform">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-text-primary">Kör GDPR-cleanup</p>
+                      <p className="text-sm text-text-secondary">Rensa gamla konversationer</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('companies')}
+                    className="w-full flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all group"
+                  >
+                    <div className="w-10 h-10 bg-success-soft rounded-lg flex items-center justify-center text-success group-hover:scale-110 transition-transform">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-text-primary">Hantera företag</p>
+                      <p className="text-sm text-text-secondary">Visa och redigera alla kunder</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Top Companies */}
+              <div className="card">
+                <h2 className="text-lg font-medium text-text-primary mb-4">Mest aktiva företag</h2>
+                <div className="space-y-3">
+                  {companies
+                    .sort((a, b) => (b.chat_count || 0) - (a.chat_count || 0))
+                    .slice(0, 5)
+                    .map((company, i) => (
+                      <div key={company.id} className="flex items-center justify-between p-3 rounded-lg bg-bg-secondary">
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 rounded-full bg-accent-soft text-accent text-xs font-medium flex items-center justify-center">
+                            {i + 1}
+                          </span>
+                          <div>
+                            <p className="font-medium text-text-primary text-sm">{company.name}</p>
+                            <p className="text-xs text-text-tertiary">{company.id}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-text-primary">{company.chat_count || 0}</p>
+                          <p className="text-xs text-text-tertiary">meddelanden</p>
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          company.is_active
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {company.is_active ? 'Aktiv' : 'Inaktiv'}
+                    ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Companies Tab */}
+        {activeTab === 'companies' && (
+          <div className="animate-fade-in">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Företag</h1>
+                <p className="text-text-secondary mt-1">Hantera alla kunder i systemet</p>
+              </div>
+              <button onClick={handleAdd} className="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Nytt företag
+              </button>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="card mb-6">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 relative">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Sök företag..."
+                    className="input pl-10"
+                  />
+                </div>
+                <select
+                  value={`${sortBy}-${sortOrder}`}
+                  onChange={(e) => {
+                    const [by, order] = e.target.value.split('-')
+                    setSortBy(by)
+                    setSortOrder(order)
+                  }}
+                  className="input w-auto"
+                >
+                  <option value="created_at-desc">Nyast först</option>
+                  <option value="created_at-asc">Äldst först</option>
+                  <option value="name-asc">Namn A-Ö</option>
+                  <option value="name-desc">Namn Ö-A</option>
+                  <option value="chat_count-desc">Mest aktiva</option>
+                </select>
+              </div>
+
+              {/* Bulk Actions */}
+              {selectedCompanies.size > 0 && (
+                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-border-subtle">
+                  <span className="text-sm text-text-secondary">{selectedCompanies.size} valda</span>
+                  <button onClick={() => handleBulkToggle(true)} className="btn btn-ghost text-success text-sm py-1">
+                    Aktivera alla
+                  </button>
+                  <button onClick={() => handleBulkToggle(false)} className="btn btn-ghost text-warning text-sm py-1">
+                    Inaktivera alla
+                  </button>
+                  <button onClick={() => setSelectedCompanies(new Set())} className="btn btn-ghost text-sm py-1">
+                    Avmarkera
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Companies List */}
+            {loading ? (
+              <div className="card text-center py-12">
+                <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full mx-auto mb-4" />
+                <p className="text-text-secondary">Laddar företag...</p>
+              </div>
+            ) : filteredCompanies.length === 0 ? (
+              <div className="card text-center py-12">
+                <div className="w-16 h-16 bg-bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-text-primary">Inga företag hittades</h3>
+                <p className="text-text-secondary mt-2">
+                  {searchQuery ? 'Prova en annan sökning' : 'Skapa ditt första företag'}
+                </p>
+              </div>
+            ) : (
+              <div className="card overflow-hidden p-0">
+                <table className="w-full">
+                  <thead className="bg-bg-secondary border-b border-border-subtle">
+                    <tr>
+                      <th className="px-4 py-3 text-left">
+                        <input
+                          type="checkbox"
+                          checked={selectedCompanies.size === filteredCompanies.length && filteredCompanies.length > 0}
+                          onChange={toggleSelectAll}
+                          className="rounded border-border"
+                        />
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Företag</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Kunskapsbas</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Konversationer</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Användning</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Skapad</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-subtle">
+                    {filteredCompanies.map((company) => {
+                      // Calculate usage percentages
+                      const convLimit = company.max_conversations_month || 0
+                      const convCurrent = company.current_month_conversations || 0
+                      const convPercent = convLimit > 0 ? Math.min(100, (convCurrent / convLimit) * 100) : 0
+                      const hasConvLimit = convLimit > 0
+
+                      const knowledgeLimit = company.max_knowledge_items || 0
+                      const knowledgeCurrent = company.knowledge_count || 0
+                      const knowledgePercent = knowledgeLimit > 0 ? Math.min(100, (knowledgeCurrent / knowledgeLimit) * 100) : 0
+                      const hasKnowledgeLimit = knowledgeLimit > 0
+
+                      const hasAnyLimit = hasConvLimit || hasKnowledgeLimit
+                      const maxPercent = Math.max(hasConvLimit ? convPercent : 0, hasKnowledgeLimit ? knowledgePercent : 0)
+                      const usageColors = getUsageColor(maxPercent)
+
+                      return (
+                        <tr key={company.id} className="hover:bg-bg-secondary transition-colors">
+                          <td className="px-4 py-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedCompanies.has(company.id)}
+                              onChange={() => toggleSelectCompany(company.id)}
+                              className="rounded border-border"
+                            />
+                          </td>
+                          <td className="px-4 py-4">
+                            <button
+                              onClick={() => openCompanyDashboard(company)}
+                              className="text-left hover:bg-bg-primary p-1 -m-1 rounded-lg transition-colors"
+                            >
+                              <p className="font-medium text-text-primary hover:text-accent transition-colors">{company.name}</p>
+                              <p className="text-sm text-text-tertiary">{company.id}</p>
+                            </button>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                              company.is_active
+                                ? 'bg-success-soft text-success'
+                                : 'bg-error-soft text-error'
+                            }`}>
+                              {company.is_active ? 'Aktiv' : 'Inaktiv'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="text-sm">
+                              <span className="text-text-primary font-medium">{knowledgeCurrent}</span>
+                              {hasKnowledgeLimit && (
+                                <span className="text-text-tertiary"> / {knowledgeLimit}</span>
+                              )}
+                              {!hasKnowledgeLimit && (
+                                <span className="text-text-tertiary"> poster</span>
+                              )}
+                            </div>
+                            {hasKnowledgeLimit && (
+                              <div className="w-16 h-1.5 bg-bg-secondary rounded-full mt-1 overflow-hidden">
+                                <div className={`h-full ${getUsageColor(knowledgePercent).bar} rounded-full`} style={{ width: `${knowledgePercent}%` }} />
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="text-sm">
+                              <span className="text-text-primary font-medium">{convCurrent}</span>
+                              {hasConvLimit && (
+                                <span className="text-text-tertiary"> / {convLimit}</span>
+                              )}
+                              {!hasConvLimit && (
+                                <span className="text-text-tertiary"> denna mån</span>
+                              )}
+                            </div>
+                            {hasConvLimit && (
+                              <div className="w-16 h-1.5 bg-bg-secondary rounded-full mt-1 overflow-hidden">
+                                <div className={`h-full ${getUsageColor(convPercent).bar} rounded-full`} style={{ width: `${convPercent}%` }} />
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-4">
+                            {hasAnyLimit ? (
+                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${usageColors.bg} ${usageColors.text}`}>
+                                {maxPercent >= 100 ? 'Gräns nådd' : maxPercent >= 75 ? 'Nära gräns' : 'OK'}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-text-tertiary">Obegränsat</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-text-secondary">
+                            {formatDate(company.created_at)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Audit Log Tab */}
+        {activeTab === 'audit' && (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Aktivitetslogg</h1>
+              <p className="text-text-secondary mt-1">Spåra alla admin-åtgärder i systemet</p>
+            </div>
+
+            {/* Search Filters */}
+            <div className="card mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input
+                  type="text"
+                  value={auditSearchTerm}
+                  onChange={(e) => setAuditSearchTerm(e.target.value)}
+                  placeholder="Sök i beskrivning..."
+                  className="input"
+                />
+                <select
+                  value={auditActionType}
+                  onChange={(e) => setAuditActionType(e.target.value)}
+                  className="input"
+                >
+                  <option value="">Alla åtgärder</option>
+                  {auditActionTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+                <input
+                  type="date"
+                  value={auditDateRange.start}
+                  onChange={(e) => setAuditDateRange(prev => ({ ...prev, start: e.target.value }))}
+                  className="input"
+                  placeholder="Från datum"
+                />
+                <button
+                  onClick={searchAuditLogs}
+                  className="btn btn-primary"
+                >
+                  Sök
+                </button>
+              </div>
+            </div>
+
+            {auditLoading ? (
+              <div className="card text-center py-12">
+                <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full mx-auto mb-4" />
+                <p className="text-text-secondary">Laddar aktivitetslogg...</p>
+              </div>
+            ) : auditLogs.length === 0 ? (
+              <div className="card text-center py-12">
+                <div className="w-16 h-16 bg-bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-text-primary">Ingen aktivitet ännu</h3>
+                <p className="text-text-secondary mt-2">Åtgärder kommer att loggas här</p>
+              </div>
+            ) : (
+              <div className="card overflow-hidden p-0">
+                <table className="w-full">
+                  <thead className="bg-bg-secondary border-b border-border-subtle">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Tidpunkt</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Admin</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Åtgärd</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Företag</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Beskrivning</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-subtle">
+                    {auditLogs.map((log) => (
+                      <tr key={log.id} className="hover:bg-bg-secondary transition-colors">
+                        <td className="px-4 py-3 text-sm text-text-secondary whitespace-nowrap">
+                          {new Date(log.timestamp).toLocaleString('sv-SE')}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-text-primary font-medium">
+                          {log.admin_username}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                            log.action_type === 'create_company' ? 'bg-success-soft text-success' :
+                            log.action_type === 'delete_company' ? 'bg-error-soft text-error' :
+                            log.action_type === 'toggle_company' ? 'bg-warning-soft text-warning' :
+                            log.action_type === 'impersonate' ? 'bg-accent-soft text-accent' :
+                            'bg-bg-secondary text-text-secondary'
+                          }`}>
+                            {log.action_type === 'create_company' ? 'Skapat' :
+                             log.action_type === 'delete_company' ? 'Raderat' :
+                             log.action_type === 'toggle_company' ? 'Växlat status' :
+                             log.action_type === 'impersonate' ? 'Impersonerat' :
+                             log.action_type === 'export' ? 'Exporterat' :
+                             log.action_type === 'maintenance_mode' ? 'Underhållsläge' :
+                             log.action_type === 'usage_limit' ? 'Användningsgräns' :
+                             log.action_type}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-text-secondary">
+                          {log.target_company_id || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-text-secondary">
+                          {log.description || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* System Tab */}
+        {activeTab === 'system' && (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Systeminställningar</h1>
+              <p className="text-text-secondary mt-1">Övervaka och konfigurera systemet</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* System Health */}
+              <div className="card">
+                <h2 className="text-lg font-medium text-text-primary mb-4">Systemhälsa</h2>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-bg-secondary">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${systemHealth?.ollama_status === 'online' ? 'bg-success' : 'bg-warning'}`} />
+                      <span className="text-text-primary">Ollama AI</span>
+                    </div>
+                    <span className="text-sm text-text-secondary">{systemHealth?.ollama_status || 'Kontrollerar...'}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-bg-secondary">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full bg-success" />
+                      <span className="text-text-primary">Databas</span>
+                    </div>
+                    <span className="text-sm text-text-secondary">{systemHealth?.database_size || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-bg-secondary">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full bg-success" />
+                      <span className="text-text-primary">API</span>
+                    </div>
+                    <span className="text-sm text-text-secondary">Online</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Configuration */}
+              <div className="card">
+                <h2 className="text-lg font-medium text-text-primary mb-4">Konfiguration</h2>
+                <div className="space-y-4">
+                  <div className="p-3 rounded-lg bg-bg-secondary">
+                    <p className="text-sm text-text-secondary">AI-modell</p>
+                    <p className="text-text-primary font-medium">Llama 3.1</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-bg-secondary">
+                    <p className="text-sm text-text-secondary">Max retention</p>
+                    <p className="text-text-primary font-medium">30 dagar</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-bg-secondary">
+                    <p className="text-sm text-text-secondary">GDPR-cleanup</p>
+                    <p className="text-text-primary font-medium">Varje timme</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Maintenance Mode */}
+              <div className="card lg:col-span-2">
+                <h2 className="text-lg font-medium text-text-primary mb-4">Underhållsläge</h2>
+                <div className="flex items-center justify-between p-4 rounded-lg bg-bg-secondary">
+                  <div>
+                    <p className="font-medium text-text-primary">
+                      {maintenanceMode.enabled ? 'Underhållsläge är aktivt' : 'Systemet är online'}
+                    </p>
+                    <p className="text-sm text-text-secondary mt-1">
+                      {maintenanceMode.enabled
+                        ? maintenanceMode.message || 'Alla chattwidgets är inaktiverade'
+                        : 'Alla chattwidgets fungerar normalt'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleToggleMaintenance}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      maintenanceMode.enabled
+                        ? 'bg-success text-white hover:bg-success-hover'
+                        : 'bg-warning text-white hover:bg-warning-hover'
+                    }`}
+                  >
+                    {maintenanceMode.enabled ? 'Avaktivera' : 'Aktivera underhåll'}
+                  </button>
+                </div>
+                {maintenanceMode.enabled && (
+                  <div className="mt-4 p-4 rounded-lg bg-warning-soft border border-warning/20">
+                    <div className="flex items-start gap-3">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-warning flex-shrink-0 mt-0.5">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                      </svg>
+                      <div>
+                        <p className="font-medium text-warning">Varning: Underhållsläge aktivt</p>
+                        <p className="text-sm text-text-secondary mt-1">
+                          Inga chattwidgets kan användas medan underhållsläget är aktivt. Användare ser meddelandet ovan.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* GDPR Tab */}
+        {activeTab === 'gdpr' && (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">GDPR & Dataskydd</h1>
+              <p className="text-text-secondary mt-1">Hantera dataskydd och compliance</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* GDPR Actions */}
+              <div className="card">
+                <h2 className="text-lg font-medium text-text-primary mb-4">GDPR-åtgärder</h2>
+                <div className="space-y-3">
+                  <button
+                    onClick={handleGdprCleanup}
+                    className="w-full flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all group"
+                  >
+                    <div className="w-10 h-10 bg-warning-soft rounded-lg flex items-center justify-center text-warning group-hover:scale-110 transition-transform">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-text-primary">Manuell cleanup</p>
+                      <p className="text-sm text-text-secondary">Rensa utgångna konversationer nu</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* GDPR Stats */}
+              <div className="card">
+                <h2 className="text-lg font-medium text-text-primary mb-4">Dataskyddsstatus</h2>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-bg-secondary">
+                    <span className="text-text-primary">Automatisk cleanup</span>
+                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-success-soft text-success">Aktiv</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-bg-secondary">
+                    <span className="text-text-primary">IP-anonymisering</span>
+                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-success-soft text-success">Aktiv</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-bg-secondary">
+                    <span className="text-text-primary">Samtyckesspårning</span>
+                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-success-soft text-success">Aktiv</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Analytics Tab */}
+        {activeTab === 'analytics' && (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Analys & Prestanda</h1>
+              <p className="text-text-secondary mt-1">Detaljerad statistik och trender</p>
+            </div>
+
+            {/* Trends Overview */}
+            {trends && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div className="card">
+                  <h3 className="text-sm font-medium text-text-secondary mb-2">Vecka-över-vecka</h3>
+                  <div className="flex items-end gap-4">
+                    <span className="text-3xl font-semibold text-text-primary">{trends.week_over_week.current}</span>
+                    <span className={`text-sm font-medium ${trends.week_over_week.change_percent >= 0 ? 'text-success' : 'text-error'}`}>
+                      {trends.week_over_week.change_percent >= 0 ? '+' : ''}{trends.week_over_week.change_percent}%
+                    </span>
+                  </div>
+                  <p className="text-xs text-text-tertiary mt-1">vs förra veckan ({trends.week_over_week.previous})</p>
+                </div>
+                <div className="card">
+                  <h3 className="text-sm font-medium text-text-secondary mb-2">Månad-över-månad</h3>
+                  <div className="flex items-end gap-4">
+                    <span className="text-3xl font-semibold text-text-primary">{trends.month_over_month.current}</span>
+                    <span className={`text-sm font-medium ${trends.month_over_month.change_percent >= 0 ? 'text-success' : 'text-error'}`}>
+                      {trends.month_over_month.change_percent >= 0 ? '+' : ''}{trends.month_over_month.change_percent}%
+                    </span>
+                  </div>
+                  <p className="text-xs text-text-tertiary mt-1">vs förra månaden ({trends.month_over_month.previous})</p>
+                </div>
+              </div>
+            )}
+
+            {/* Performance Stats */}
+            {performanceStats && (
+              <div className="card mb-8">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Widgetprestanda (24h)</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-4 bg-bg-secondary rounded-lg">
+                    <p className="text-2xl font-semibold text-text-primary">{performanceStats.total_requests}</p>
+                    <p className="text-xs text-text-secondary">Totala förfrågningar</p>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-lg">
+                    <p className="text-2xl font-semibold text-success">{performanceStats.success_rate}%</p>
+                    <p className="text-xs text-text-secondary">Lyckandefrekvens</p>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-lg">
+                    <p className="text-2xl font-semibold text-text-primary">{performanceStats.avg_response_time}ms</p>
+                    <p className="text-xs text-text-secondary">Snitt svarstid</p>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-lg">
+                    <p className="text-2xl font-semibold text-warning">{performanceStats.rate_limited_requests}</p>
+                    <p className="text-xs text-text-secondary">Rate limited</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Rate Limit Stats */}
+            {rateLimitStats && (
+              <div className="card mb-8">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Rate Limiting</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 bg-bg-secondary rounded-lg">
+                    <p className="text-2xl font-semibold text-text-primary">{rateLimitStats.active_sessions}</p>
+                    <p className="text-xs text-text-secondary">Aktiva sessioner</p>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-lg">
+                    <p className="text-2xl font-semibold text-error">{rateLimitStats.rate_limited_sessions}</p>
+                    <p className="text-xs text-text-secondary">Begränsade sessioner</p>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-lg">
+                    <p className="text-sm text-text-primary">{rateLimitStats.rate_limit_max_requests} förfrågningar / {rateLimitStats.rate_limit_window_seconds}s</p>
+                    <p className="text-xs text-text-secondary">Begränsningsgräns</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Peak Hours */}
+            {peakHours && peakHours.hourly_distribution.length > 0 && (
+              <div className="card mb-8">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Aktivitet per timme</h3>
+                <div className="flex items-end gap-1 h-32">
+                  {peakHours.hourly_distribution.map(({ hour, count }) => {
+                    const max = Math.max(...peakHours.hourly_distribution.map(h => h.count))
+                    const height = max > 0 ? (count / max) * 100 : 0
+                    return (
+                      <div key={hour} className="flex-1 flex flex-col items-center">
+                        <div
+                          className={`w-full rounded-t ${hour === parseInt(peakHours.peak_hour) ? 'bg-accent' : 'bg-accent/30'}`}
+                          style={{ height: `${height}%` }}
+                        />
+                        <span className="text-xs text-text-tertiary mt-1">{hour}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+                {peakHours.peak_hour && (
+                  <p className="text-sm text-text-secondary mt-2">
+                    Mest aktiv timme: <span className="font-medium text-accent">{peakHours.peak_hour}:00</span>
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Top Companies */}
+            {topCompanies.length > 0 && (
+              <div className="card">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Mest aktiva företag (30 dagar)</h3>
+                <div className="space-y-3">
+                  {topCompanies.map((company, index) => (
+                    <div key={company.company_id} className="flex items-center gap-4 p-3 bg-bg-secondary rounded-lg">
+                      <span className="w-6 h-6 flex items-center justify-center bg-accent-soft rounded text-accent text-sm font-medium">
+                        {index + 1}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {company.knowledge_count} poster
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {company.chat_count} meddelanden
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(company.created_at)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                      <div className="flex-1">
+                        <p className="font-medium text-text-primary">{company.company_name}</p>
+                        <p className="text-xs text-text-secondary">{company.company_id}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-text-primary">{company.conversations}</p>
+                        <p className="text-xs text-text-tertiary">konversationer</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Billing Tab */}
+        {activeTab === 'billing' && (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Fakturering</h1>
+              <p className="text-text-secondary mt-1">Hantera prenumerationer och fakturor</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Subscriptions */}
+              <div className="card">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Prenumerationer</h3>
+                {subscriptions.length === 0 ? (
+                  <p className="text-text-secondary text-center py-8">Inga prenumerationer ännu</p>
+                ) : (
+                  <div className="space-y-3">
+                    {subscriptions.map(sub => (
+                      <div key={sub.id} className="p-4 bg-bg-secondary rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-text-primary">{sub.company_name}</p>
+                            <p className="text-xs text-text-secondary">{sub.company_id}</p>
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            sub.plan_name === 'enterprise' ? 'bg-accent-soft text-accent' :
+                            sub.plan_name === 'professional' ? 'bg-success-soft text-success' :
+                            sub.plan_name === 'starter' ? 'bg-warning-soft text-warning' :
+                            'bg-bg-primary text-text-secondary'
+                          }`}>
+                            {sub.plan_name}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-sm text-text-secondary">{sub.plan_price} SEK/{sub.billing_cycle === 'monthly' ? 'mån' : 'år'}</span>
+                          <span className={`text-xs ${sub.status === 'active' ? 'text-success' : 'text-warning'}`}>
+                            {sub.status === 'active' ? 'Aktiv' : sub.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Invoices */}
+              <div className="card">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Senaste fakturor</h3>
+                {invoices.length === 0 ? (
+                  <p className="text-text-secondary text-center py-8">Inga fakturor ännu</p>
+                ) : (
+                  <div className="space-y-3">
+                    {invoices.map(inv => (
+                      <div key={inv.id} className="p-4 bg-bg-secondary rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-text-primary">{inv.invoice_number}</p>
+                            <p className="text-xs text-text-secondary">{inv.company_name}</p>
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            inv.status === 'paid' ? 'bg-success-soft text-success' :
+                            inv.status === 'pending' ? 'bg-warning-soft text-warning' :
+                            'bg-error-soft text-error'
+                          }`}>
+                            {inv.status === 'paid' ? 'Betald' : inv.status === 'pending' ? 'Väntar' : inv.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-lg font-medium text-text-primary">{inv.amount} {inv.currency}</span>
+                          <span className="text-xs text-text-tertiary">{new Date(inv.created_at).toLocaleDateString('sv-SE')}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Preferences Tab */}
+        {activeTab === 'preferences' && (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Kontoinställningar</h1>
+              <p className="text-text-secondary mt-1">Hantera ditt adminkonto</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Appearance */}
+              <div className="card">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Utseende</h3>
+                <div className="flex items-center justify-between p-4 bg-bg-secondary rounded-lg">
+                  <div>
+                    <p className="font-medium text-text-primary">Mörkt läge</p>
+                    <p className="text-sm text-text-secondary">Använd mörkt tema i admingränssnittet</p>
+                  </div>
+                  <button
+                    onClick={handleToggleDarkMode}
+                    className={`w-12 h-6 rounded-full transition-colors ${adminPrefs.dark_mode ? 'bg-accent' : 'bg-bg-primary'}`}
+                  >
+                    <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${adminPrefs.dark_mode ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Security */}
+              <div className="card">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Säkerhet</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-bg-secondary rounded-lg">
+                    <div>
+                      <p className="font-medium text-text-primary">Tvåfaktorsautentisering</p>
+                      <p className="text-sm text-text-secondary">Extra säkerhet för ditt konto</p>
+                    </div>
+                    {adminPrefs.totp_enabled ? (
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-success-soft text-success">Aktiverad</span>
+                    ) : (
                       <button
-                        onClick={() => handleToggle(company.id)}
-                        className={`mr-3 ${
-                          company.is_active
-                            ? 'text-yellow-600 hover:text-yellow-800'
-                            : 'text-green-600 hover:text-green-800'
-                        }`}
+                        onClick={handleSetup2FA}
+                        className="btn btn-secondary text-sm"
                       >
-                        {company.is_active ? 'Inaktivera' : 'Aktivera'}
+                        Aktivera
                       </button>
+                    )}
+                  </div>
+
+                  <div className="p-4 bg-bg-secondary rounded-lg">
+                    <p className="font-medium text-text-primary mb-2">Inloggad som</p>
+                    <p className="text-sm text-text-secondary">{adminAuth.username}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bulk Operations */}
+              <div className="card lg:col-span-2">
+                <h3 className="text-lg font-medium text-text-primary mb-4">Massoperationer</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button
+                    onClick={handleExportCompanies}
+                    className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary transition-all"
+                  >
+                    <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center text-accent">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-text-primary">Exportera företag</p>
+                      <p className="text-sm text-text-secondary">Ladda ner CSV med alla företag</p>
+                    </div>
+                  </button>
+
+                  {selectedCompanies.size > 0 && (
+                    <div className="p-4 bg-accent-soft rounded-lg">
+                      <p className="font-medium text-accent mb-2">{selectedCompanies.size} företag valda</p>
                       <button
-                        onClick={() => handleDelete(company.id)}
-                        className="text-red-600 hover:text-red-800"
+                        onClick={() => handleBulkSetLimits({ max_conversations_month: 500 })}
+                        className="btn btn-primary text-sm"
                       >
-                        Ta bort
+                        Sätt gränser för alla
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>
 
-      {/* Modal */}
+      {/* Create Company Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="p-6 border-b">
-              <h2 className="text-lg font-semibold text-gray-800">Skapa nytt företag</h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle">
+              <h2 className="text-lg font-semibold text-text-primary">Skapa nytt företag</h2>
+              <p className="text-sm text-text-secondary mt-1">Lägg till en ny kund i systemet</p>
             </div>
             <form onSubmit={handleCreate} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Företags-ID
-                </label>
+                <label className="input-label">Företags-ID</label>
                 <input
                   type="text"
                   value={formData.id}
                   onChange={(e) => setFormData({ ...formData, id: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
                   placeholder="t.ex. bostadsbolaget"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  className="input"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">Endast små bokstäver, siffror och bindestreck</p>
+                <p className="text-xs text-text-tertiary mt-1">Endast små bokstäver, siffror och bindestreck</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Företagsnamn
-                </label>
+                <label className="input-label">Företagsnamn</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="t.ex. Bostadsbolaget AB"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  className="input"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Lösenord
-                </label>
+                <label className="input-label">Lösenord</label>
                 <input
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Välj ett starkt lösenord"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  className="input"
                   required
                   minLength={6}
                 />
               </div>
 
               {error && (
-                <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
+                <div className="bg-error-soft text-error px-4 py-3 rounded-lg text-sm">
                   {error}
                 </div>
               )}
@@ -310,19 +1704,385 @@ function SuperAdmin() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="btn btn-ghost"
                 >
                   Avbryt
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+                  className="btn btn-primary"
                 >
                   {saving ? 'Skapar...' : 'Skapa företag'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Usage Limit Modal */}
+      {showUsageLimitModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle">
+              <h2 className="text-lg font-semibold text-text-primary">Användningsgränser</h2>
+              <p className="text-sm text-text-secondary mt-1">
+                Ange gränser för {showUsageLimitModal.name}
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="input-label">Max konversationer/månad</label>
+                <input
+                  type="number"
+                  value={usageLimitValue.conversations}
+                  onChange={(e) => setUsageLimitValue({ ...usageLimitValue, conversations: parseInt(e.target.value) || 0 })}
+                  placeholder="0 = obegränsat"
+                  className="input"
+                  min="0"
+                />
+                <p className="text-xs text-text-tertiary mt-1">Sätt till 0 för obegränsat</p>
+              </div>
+
+              <div>
+                <label className="input-label">Max kunskapsposter</label>
+                <input
+                  type="number"
+                  value={usageLimitValue.knowledge}
+                  onChange={(e) => setUsageLimitValue({ ...usageLimitValue, knowledge: parseInt(e.target.value) || 0 })}
+                  placeholder="0 = obegränsat"
+                  className="input"
+                  min="0"
+                />
+                <p className="text-xs text-text-tertiary mt-1">Sätt till 0 för obegränsat</p>
+              </div>
+
+              <div className="p-3 rounded-lg bg-bg-secondary space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-text-secondary">Konversationer denna månad</span>
+                  <span className="text-sm font-medium text-text-primary">
+                    {showUsageLimitModal.current_month_conversations || 0}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-text-secondary">Kunskapsposter</span>
+                  <span className="text-sm font-medium text-text-primary">
+                    {showUsageLimitModal.knowledge_count || 0}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowUsageLimitModal(null)}
+                  className="btn btn-ghost"
+                >
+                  Avbryt
+                </button>
+                <button
+                  onClick={() => handleSetUsageLimit(showUsageLimitModal.id)}
+                  className="btn btn-primary"
+                >
+                  Spara
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Company Dashboard Modal */}
+      {showCompanyDashboard && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-4xl animate-scale-in my-8">
+            {/* Header */}
+            <div className="p-6 border-b border-border-subtle flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center text-accent">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-text-primary">{showCompanyDashboard.name}</h2>
+                  <p className="text-sm text-text-secondary">{showCompanyDashboard.id}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCompanyDashboard(null)}
+                className="p-2 rounded-lg text-text-tertiary hover:bg-bg-secondary hover:text-text-primary transition-colors"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {companyLoading ? (
+              <div className="p-12 text-center">
+                <div className="animate-spin w-10 h-10 border-3 border-accent border-t-transparent rounded-full mx-auto mb-4" />
+                <p className="text-text-secondary">Laddar företagsdata...</p>
+              </div>
+            ) : (
+              <div className="p-6">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-bg-secondary rounded-xl p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 bg-accent-soft rounded-lg flex items-center justify-center text-accent">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                        </svg>
+                      </div>
+                      <span className="text-xs text-text-tertiary">Kunskapsposter</span>
+                    </div>
+                    <p className="text-2xl font-semibold text-text-primary">{showCompanyDashboard.knowledge_count || 0}</p>
+                  </div>
+                  <div className="bg-bg-secondary rounded-xl p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 bg-success-soft rounded-lg flex items-center justify-center text-success">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                      </div>
+                      <span className="text-xs text-text-tertiary">Konversationer</span>
+                    </div>
+                    <p className="text-2xl font-semibold text-text-primary">{showCompanyDashboard.chat_count || 0}</p>
+                  </div>
+                  <div className="bg-bg-secondary rounded-xl p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 bg-warning-soft rounded-lg flex items-center justify-center text-warning">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                          <line x1="16" y1="2" x2="16" y2="6" />
+                          <line x1="8" y1="2" x2="8" y2="6" />
+                          <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg>
+                      </div>
+                      <span className="text-xs text-text-tertiary">Skapad</span>
+                    </div>
+                    <p className="text-sm font-medium text-text-primary">{formatDate(showCompanyDashboard.created_at)}</p>
+                  </div>
+                  <div className="bg-bg-secondary rounded-xl p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${showCompanyDashboard.is_active ? 'bg-success-soft text-success' : 'bg-error-soft text-error'}`}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10" />
+                          {showCompanyDashboard.is_active && <polyline points="9 12 11 14 15 10" />}
+                          {!showCompanyDashboard.is_active && <path d="M15 9l-6 6M9 9l6 6" />}
+                        </svg>
+                      </div>
+                      <span className="text-xs text-text-tertiary">Status</span>
+                    </div>
+                    <p className={`text-sm font-medium ${showCompanyDashboard.is_active ? 'text-success' : 'text-error'}`}>
+                      {showCompanyDashboard.is_active ? 'Aktiv' : 'Inaktiv'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Usage Meters */}
+                {companyUsage && (companyUsage.max_conversations_month > 0 || (showCompanyDashboard.max_knowledge_items || 0) > 0) && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-medium text-text-primary mb-3">Användningsgränser</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {companyUsage.max_conversations_month > 0 && (
+                        <div className={`p-4 rounded-xl border ${companyUsage.usage_percent >= 90 ? 'border-red-200 bg-red-50' : companyUsage.usage_percent >= 75 ? 'border-amber-200 bg-amber-50' : 'border-border-default bg-bg-primary'}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm text-text-secondary">Konversationer denna månad</span>
+                            <span className={`text-sm font-medium ${getUsageColor(companyUsage.usage_percent).text}`}>
+                              {companyUsage.current_month_conversations} / {companyUsage.max_conversations_month}
+                            </span>
+                          </div>
+                          <div className="h-2 bg-bg-secondary rounded-full overflow-hidden">
+                            <div
+                              className={`h-full ${getUsageColor(companyUsage.usage_percent).bar} rounded-full transition-all`}
+                              style={{ width: `${Math.min(100, companyUsage.usage_percent)}%` }}
+                            />
+                          </div>
+                          <p className="text-xs text-text-tertiary mt-1">{Math.round(companyUsage.usage_percent)}% använt</p>
+                        </div>
+                      )}
+                      {(showCompanyDashboard.max_knowledge_items || 0) > 0 && (() => {
+                        const knowledgePercent = (showCompanyDashboard.knowledge_count / showCompanyDashboard.max_knowledge_items) * 100
+                        return (
+                          <div className={`p-4 rounded-xl border ${knowledgePercent >= 90 ? 'border-red-200 bg-red-50' : knowledgePercent >= 75 ? 'border-amber-200 bg-amber-50' : 'border-border-default bg-bg-primary'}`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm text-text-secondary">Kunskapsposter</span>
+                              <span className={`text-sm font-medium ${getUsageColor(knowledgePercent).text}`}>
+                                {showCompanyDashboard.knowledge_count} / {showCompanyDashboard.max_knowledge_items}
+                              </span>
+                            </div>
+                            <div className="h-2 bg-bg-secondary rounded-full overflow-hidden">
+                              <div
+                                className={`h-full ${getUsageColor(knowledgePercent).bar} rounded-full transition-all`}
+                                style={{ width: `${Math.min(100, knowledgePercent)}%` }}
+                              />
+                            </div>
+                            <p className="text-xs text-text-tertiary mt-1">{Math.round(knowledgePercent)}% använt</p>
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Activity */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-text-primary mb-3">Senaste aktivitet</h3>
+                  {companyActivity.length === 0 ? (
+                    <div className="bg-bg-secondary rounded-xl p-6 text-center">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-2 text-text-tertiary">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                      <p className="text-sm text-text-secondary">Ingen aktivitet registrerad</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {companyActivity.map((log) => (
+                        <div key={log.id} className="flex items-center gap-3 p-3 rounded-lg bg-bg-secondary">
+                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                            log.action_type.includes('create') ? 'bg-green-500' :
+                            log.action_type.includes('delete') ? 'bg-red-500' :
+                            log.action_type.includes('update') ? 'bg-amber-500' :
+                            'bg-accent'
+                          }`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-text-primary truncate">{log.description}</p>
+                          </div>
+                          <span className="text-xs text-text-tertiary flex-shrink-0">
+                            {new Date(log.timestamp).toLocaleDateString('sv-SE')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => { setShowCompanyDashboard(null); handleImpersonate(showCompanyDashboard.id) }}
+                    className="btn btn-primary"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    Logga in som
+                  </button>
+                  <button
+                    onClick={() => { setShowCompanyDashboard(null); openUsageLimitModal(showCompanyDashboard) }}
+                    className="btn btn-secondary"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 20V10" />
+                      <path d="M18 20V4" />
+                      <path d="M6 20v-4" />
+                    </svg>
+                    Ändra gränser
+                  </button>
+                  <button
+                    onClick={() => handleExport(showCompanyDashboard.id)}
+                    className="btn btn-secondary"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Exportera
+                  </button>
+                  <button
+                    onClick={() => { setShowCompanyDashboard(null); handleToggle(showCompanyDashboard.id) }}
+                    className={`btn ${showCompanyDashboard.is_active ? 'btn-ghost text-warning' : 'btn-ghost text-success'}`}
+                  >
+                    {showCompanyDashboard.is_active ? 'Inaktivera' : 'Aktivera'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 2FA Setup Modal */}
+      {show2FASetup && twoFAData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle">
+              <h2 className="text-lg font-semibold text-text-primary">Aktivera tvåfaktorsautentisering</h2>
+              <p className="text-sm text-text-secondary mt-1">Skanna QR-koden med Google Authenticator</p>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* QR Code */}
+              <div className="flex flex-col items-center">
+                <div className="bg-white p-4 rounded-lg mb-4">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(twoFAData.totp_uri)}`}
+                    alt="QR Code"
+                    className="w-48 h-48"
+                  />
+                </div>
+                <p className="text-xs text-text-tertiary text-center">
+                  Eller ange denna kod manuellt:
+                </p>
+                <code className="mt-2 px-3 py-2 bg-bg-secondary rounded-lg text-sm font-mono text-text-primary select-all">
+                  {twoFAData.secret}
+                </code>
+              </div>
+
+              {/* Verification Code Input */}
+              <div>
+                <label className="input-label">Verifiera med kod från appen</label>
+                <input
+                  type="text"
+                  value={verifyCode}
+                  onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  className="input text-center text-2xl tracking-widest font-mono"
+                  maxLength={6}
+                  autoComplete="one-time-code"
+                />
+                {twoFAError && (
+                  <p className="text-sm text-error mt-2">{twoFAError}</p>
+                )}
+              </div>
+
+              {/* Backup Codes */}
+              <div className="p-4 bg-warning/10 border border-warning/20 rounded-lg">
+                <p className="text-sm font-medium text-warning mb-2">Spara dessa reservkoder säkert:</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {twoFAData.backup_codes?.map((code, i) => (
+                    <code key={i} className="text-xs font-mono text-text-secondary bg-bg-secondary px-2 py-1 rounded">
+                      {code}
+                    </code>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-border-subtle flex justify-end gap-3">
+              <button
+                onClick={handleCancel2FA}
+                className="btn btn-ghost"
+                disabled={verifying2FA}
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleVerify2FA}
+                className="btn btn-primary"
+                disabled={verifying2FA || verifyCode.length !== 6}
+              >
+                {verifying2FA ? 'Verifierar...' : 'Verifiera och aktivera'}
+              </button>
+            </div>
           </div>
         </div>
       )}

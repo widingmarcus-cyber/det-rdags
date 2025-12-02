@@ -10,12 +10,20 @@ function Settings() {
     company_name: '',
     welcome_message: 'Hej! Hur kan jag hjälpa dig idag?',
     fallback_message: 'Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt.',
+    subtitle: 'Alltid redo att hjälpa',
     primary_color: '#D97757',
     contact_email: '',
     contact_phone: '',
     data_retention_days: 30,
     notify_unanswered: false,
     notification_email: '',
+    custom_categories: '',
+    // PuB/GDPR Compliance
+    privacy_policy_url: '',
+    require_consent: true,
+    consent_text: 'Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.',
+    data_controller_name: '',
+    data_controller_email: '',
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -28,12 +36,37 @@ function Settings() {
     { id: 'appearance', label: 'Utseende', icon: 'palette' },
     { id: 'notifications', label: 'Notiser', icon: 'bell' },
     { id: 'privacy', label: 'Integritet', icon: 'shield' },
+    { id: 'activity', label: 'Aktivitet', icon: 'clock' },
     { id: 'install', label: 'Installation', icon: 'code' },
   ]
+
+  const [activityLogs, setActivityLogs] = useState([])
+  const [activityLoading, setActivityLoading] = useState(false)
 
   useEffect(() => {
     fetchSettings()
   }, [])
+
+  useEffect(() => {
+    if (activeTab === 'activity') {
+      fetchActivityLogs()
+    }
+  }, [activeTab])
+
+  const fetchActivityLogs = async () => {
+    setActivityLoading(true)
+    try {
+      const response = await authFetch(`${API_BASE}/activity-log?limit=50`)
+      if (response.ok) {
+        const data = await response.json()
+        setActivityLogs(data.logs || [])
+      }
+    } catch (error) {
+      console.error('Kunde inte hämta aktivitetslogg:', error)
+    } finally {
+      setActivityLoading(false)
+    }
+  }
 
   const fetchSettings = async () => {
     try {
@@ -127,6 +160,13 @@ function Settings() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <polyline points="16 18 22 12 16 6" />
             <polyline points="8 6 2 12 8 18" />
+          </svg>
+        )
+      case 'clock':
+        return (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
           </svg>
         )
       default:
@@ -253,6 +293,17 @@ function Settings() {
                     className="input resize-none"
                   />
                   <p className="text-xs text-text-tertiary mt-1">Första meddelandet användaren ser när chatten öppnas</p>
+                </div>
+                <div>
+                  <label className="input-label">Slogan/Underrubrik</label>
+                  <input
+                    type="text"
+                    value={settings.subtitle}
+                    onChange={(e) => setSettings({ ...settings, subtitle: e.target.value })}
+                    placeholder="Alltid redo att hjälpa"
+                    className="input"
+                  />
+                  <p className="text-xs text-text-tertiary mt-1">Visas under företagsnamnet i widgetens header</p>
                 </div>
                 <div>
                   <label className="input-label">Fallback-meddelande</label>
@@ -418,62 +469,348 @@ function Settings() {
 
           {/* Privacy Tab */}
           {activeTab === 'privacy' && (
-            <div className="card animate-fade-in">
-              <div className="flex items-start gap-3 mb-6">
-                <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center flex-shrink-0">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  </svg>
+            <div className="space-y-6 animate-fade-in">
+              {/* Data Retention Section */}
+              <div className="card">
+                <div className="flex items-start gap-3 mb-6">
+                  <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-medium text-text-primary">GDPR & Datalagring</h2>
+                    <p className="text-sm text-text-secondary">Hantera hur länge användardata sparas</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-lg font-medium text-text-primary">GDPR & Integritet</h2>
-                  <p className="text-sm text-text-secondary">Hantera hur länge användardata sparas</p>
+
+                <div className="space-y-6">
+                  <div>
+                    <label className="input-label">Datalagring (dagar)</label>
+                    <div className="flex items-center gap-4 mt-2">
+                      <input
+                        type="range"
+                        min="7"
+                        max="30"
+                        value={settings.data_retention_days}
+                        onChange={(e) => setSettings({ ...settings, data_retention_days: parseInt(e.target.value) })}
+                        className="flex-1 h-2 bg-bg-secondary rounded-lg appearance-none cursor-pointer accent-accent"
+                      />
+                      <input
+                        type="number"
+                        min="7"
+                        max="30"
+                        value={settings.data_retention_days}
+                        onChange={(e) => setSettings({ ...settings, data_retention_days: parseInt(e.target.value) || 30 })}
+                        className="input w-20 text-center"
+                      />
+                    </div>
+                    <p className="text-xs text-text-tertiary mt-2">
+                      Konversationer raderas automatiskt efter {settings.data_retention_days} dagar
+                    </p>
+                  </div>
+
+                  <div className="bg-bg-secondary rounded-lg p-4 border border-border-subtle">
+                    <h4 className="text-sm font-medium text-text-primary mb-3">Vad sparas?</h4>
+                    <ul className="space-y-2">
+                      <li className="flex items-center gap-3 text-sm">
+                        <span className="w-2 h-2 bg-success rounded-full flex-shrink-0"></span>
+                        <span className="text-text-secondary">Anonymiserad statistik (antal frågor, svarstider) - sparas permanent</span>
+                      </li>
+                      <li className="flex items-center gap-3 text-sm">
+                        <span className="w-2 h-2 bg-warning rounded-full flex-shrink-0"></span>
+                        <span className="text-text-secondary">Konversationshistorik - raderas efter {settings.data_retention_days} dagar</span>
+                      </li>
+                      <li className="flex items-center gap-3 text-sm">
+                        <span className="w-2 h-2 bg-accent rounded-full flex-shrink-0"></span>
+                        <span className="text-text-secondary">IP-adresser anonymiseras direkt (xxx.xxx.xxx.xxx)</span>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-6">
-                <div>
-                  <label className="input-label">Datalagring (dagar)</label>
-                  <div className="flex items-center gap-4 mt-2">
-                    <input
-                      type="range"
-                      min="7"
-                      max="365"
-                      value={settings.data_retention_days}
-                      onChange={(e) => setSettings({ ...settings, data_retention_days: parseInt(e.target.value) })}
-                      className="flex-1 h-2 bg-bg-secondary rounded-lg appearance-none cursor-pointer accent-accent"
-                    />
-                    <input
-                      type="number"
-                      min="7"
-                      max="365"
-                      value={settings.data_retention_days}
-                      onChange={(e) => setSettings({ ...settings, data_retention_days: parseInt(e.target.value) || 30 })}
-                      className="input w-20 text-center"
-                    />
+              {/* PuB Compliance Section */}
+              <div className="card">
+                <div className="flex items-start gap-3 mb-6">
+                  <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-success">
+                      <path d="M9 11l3 3L22 4" />
+                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                    </svg>
                   </div>
-                  <p className="text-xs text-text-tertiary mt-2">
-                    Konversationer raderas automatiskt efter {settings.data_retention_days} dagar
-                  </p>
+                  <div>
+                    <h2 className="text-lg font-medium text-text-primary">PuB-avtal & Samtycke</h2>
+                    <p className="text-sm text-text-secondary">Personuppgiftsbiträdesavtal (PuB) och samtyckeshantering</p>
+                  </div>
                 </div>
 
-                <div className="bg-bg-secondary rounded-lg p-4 border border-border-subtle">
-                  <h4 className="text-sm font-medium text-text-primary mb-3">Vad sparas?</h4>
-                  <ul className="space-y-2">
-                    <li className="flex items-center gap-3 text-sm">
-                      <span className="w-2 h-2 bg-success rounded-full flex-shrink-0"></span>
-                      <span className="text-text-secondary">Anonymiserad statistik (antal frågor, svarstider) - sparas permanent</span>
-                    </li>
-                    <li className="flex items-center gap-3 text-sm">
-                      <span className="w-2 h-2 bg-warning rounded-full flex-shrink-0"></span>
-                      <span className="text-text-secondary">Konversationshistorik - raderas efter {settings.data_retention_days} dagar</span>
-                    </li>
-                    <li className="flex items-center gap-3 text-sm">
-                      <span className="w-2 h-2 bg-accent rounded-full flex-shrink-0"></span>
-                      <span className="text-text-secondary">IP-adresser anonymiseras direkt (xxx.xxx.xxx.xxx)</span>
-                    </li>
-                  </ul>
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between p-4 bg-bg-secondary rounded-lg border border-border-subtle">
+                    <div>
+                      <p className="font-medium text-text-primary">Kräv samtycke innan chatt</p>
+                      <p className="text-sm text-text-secondary mt-1">
+                        Användare måste godkänna innan de kan chatta
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={settings.require_consent}
+                        onChange={(e) => setSettings({ ...settings, require_consent: e.target.checked })}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-bg-tertiary border border-border rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text-tertiary after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent peer-checked:after:bg-white"></div>
+                    </label>
+                  </div>
+
+                  {settings.require_consent && (
+                    <div className="animate-fade-in">
+                      <label className="input-label">Samtyckestext</label>
+                      <textarea
+                        value={settings.consent_text}
+                        onChange={(e) => setSettings({ ...settings, consent_text: e.target.value })}
+                        placeholder="Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn."
+                        rows={2}
+                        className="input resize-none"
+                      />
+                      <p className="text-xs text-text-tertiary mt-1">Texten som visas bredvid checkboxen för samtycke</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="input-label">Länk till integritetspolicy</label>
+                    <input
+                      type="url"
+                      value={settings.privacy_policy_url}
+                      onChange={(e) => setSettings({ ...settings, privacy_policy_url: e.target.value })}
+                      placeholder="https://dittforetag.se/integritetspolicy"
+                      className="input"
+                    />
+                    <p className="text-xs text-text-tertiary mt-1">Visas i widgeten så användare kan läsa policyn</p>
+                  </div>
                 </div>
+              </div>
+
+              {/* Data Controller Section */}
+              <div className="card">
+                <div className="flex items-start gap-3 mb-6">
+                  <div className="w-10 h-10 bg-warning/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-warning">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-medium text-text-primary">Personuppgiftsansvarig</h2>
+                    <p className="text-sm text-text-secondary">Information om vem som ansvarar för personuppgifter</p>
+                  </div>
+                </div>
+
+                <div className="space-y-5">
+                  <div>
+                    <label className="input-label">Namn på personuppgiftsansvarig</label>
+                    <input
+                      type="text"
+                      value={settings.data_controller_name}
+                      onChange={(e) => setSettings({ ...settings, data_controller_name: e.target.value })}
+                      placeholder="T.ex. Bostadsbolaget AB"
+                      className="input"
+                    />
+                  </div>
+                  <div>
+                    <label className="input-label">E-post för dataskyddsfrågor</label>
+                    <input
+                      type="email"
+                      value={settings.data_controller_email}
+                      onChange={(e) => setSettings({ ...settings, data_controller_email: e.target.value })}
+                      placeholder="gdpr@dittforetag.se"
+                      className="input"
+                    />
+                    <p className="text-xs text-text-tertiary mt-1">Dit användare kan vända sig för GDPR-förfrågningar (registerutdrag, radering)</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* GDPR Rights Info */}
+              <div className="card bg-accent/5 border-accent/20">
+                <div className="flex items-start gap-3">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent flex-shrink-0 mt-0.5">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                  <div className="text-sm">
+                    <p className="font-medium text-text-primary">Automatiska GDPR-rättigheter</p>
+                    <p className="text-text-secondary mt-1">
+                      Widgeten ger automatiskt användare möjlighet att:
+                    </p>
+                    <ul className="mt-2 space-y-1 text-text-secondary">
+                      <li>• Se sin data (registerutdrag)</li>
+                      <li>• Radera sin konversationshistorik</li>
+                      <li>• Dra tillbaka samtycke</li>
+                    </ul>
+                    <p className="text-text-secondary mt-2">
+                      Alla åtgärder loggas i GDPR-revisionsloggen.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Activity Tab */}
+          {activeTab === 'activity' && (
+            <div className="space-y-6 animate-fade-in">
+              {/* Header Card */}
+              <div className="card">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-medium text-text-primary">Aktivitetslogg</h2>
+                    <p className="text-sm text-text-secondary">Historik över ändringar i ditt konto</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-bg-secondary rounded-lg p-3 text-center">
+                    <p className="text-2xl font-semibold text-text-primary">
+                      {activityLogs.filter(l => l.action_type.includes('create')).length}
+                    </p>
+                    <p className="text-xs text-text-secondary mt-1">Skapade</p>
+                  </div>
+                  <div className="bg-bg-secondary rounded-lg p-3 text-center">
+                    <p className="text-2xl font-semibold text-text-primary">
+                      {activityLogs.filter(l => l.action_type.includes('update')).length}
+                    </p>
+                    <p className="text-xs text-text-secondary mt-1">Uppdaterade</p>
+                  </div>
+                  <div className="bg-bg-secondary rounded-lg p-3 text-center">
+                    <p className="text-2xl font-semibold text-text-primary">
+                      {activityLogs.filter(l => l.action_type.includes('delete')).length}
+                    </p>
+                    <p className="text-xs text-text-secondary mt-1">Borttagna</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Activity List */}
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-medium text-text-primary">Senaste händelser</h3>
+                  <span className="text-xs text-text-tertiary bg-bg-secondary px-2 py-1 rounded">
+                    Sparas i 12 månader
+                  </span>
+                </div>
+
+                {activityLoading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full mx-auto mb-3" />
+                    <p className="text-text-secondary text-sm">Laddar aktivitetslogg...</p>
+                  </div>
+                ) : activityLogs.length === 0 ? (
+                  <div className="text-center py-12 text-text-secondary">
+                    <div className="w-16 h-16 bg-bg-secondary rounded-full flex items-center justify-center mx-auto mb-3">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                    </div>
+                    <p className="font-medium">Ingen aktivitet ännu</p>
+                    <p className="text-sm text-text-tertiary mt-1">Händelser visas här när du gör ändringar</p>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    {/* Timeline line */}
+                    <div className="absolute left-4 top-0 bottom-0 w-px bg-border-subtle" />
+
+                    <div className="space-y-4">
+                      {activityLogs.map((log, index) => {
+                        const isCreate = log.action_type.includes('create')
+                        const isDelete = log.action_type.includes('delete')
+                        const isUpdate = log.action_type.includes('update')
+                        const isKnowledge = log.action_type.includes('knowledge')
+                        const isSettings = log.action_type.includes('settings')
+                        const isConversation = log.action_type.includes('conversation')
+
+                        const bgColor = isCreate ? 'bg-green-50 dark:bg-green-900/20' :
+                                       isDelete ? 'bg-red-50 dark:bg-red-900/20' :
+                                       isUpdate ? 'bg-amber-50 dark:bg-amber-900/20' :
+                                       'bg-accent-soft'
+                        const iconBg = isCreate ? 'bg-green-500' :
+                                      isDelete ? 'bg-red-500' :
+                                      isUpdate ? 'bg-amber-500' :
+                                      'bg-accent'
+                        const actionLabel = isCreate ? 'Skapad' :
+                                           isDelete ? 'Borttagen' :
+                                           isUpdate ? 'Uppdaterad' :
+                                           'Händelse'
+                        const categoryLabel = isKnowledge ? 'Kunskapsbas' :
+                                             isSettings ? 'Inställningar' :
+                                             isConversation ? 'Konversation' :
+                                             'System'
+
+                        return (
+                          <div key={log.id} className="relative pl-10">
+                            {/* Timeline dot */}
+                            <div className={`absolute left-2 top-3 w-5 h-5 rounded-full ${iconBg} flex items-center justify-center ring-4 ring-bg-primary`}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                                {isCreate ? (
+                                  <path d="M12 5v14M5 12h14" />
+                                ) : isDelete ? (
+                                  <path d="M18 6L6 18M6 6l12 12" />
+                                ) : isUpdate ? (
+                                  <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                                ) : (
+                                  <circle cx="12" cy="12" r="4" />
+                                )}
+                              </svg>
+                            </div>
+
+                            <div className={`${bgColor} rounded-lg p-4 border border-border-subtle`}>
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                                      isCreate ? 'bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200' :
+                                      isDelete ? 'bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200' :
+                                      isUpdate ? 'bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-200' :
+                                      'bg-accent-soft text-accent'
+                                    }`}>
+                                      {actionLabel}
+                                    </span>
+                                    <span className="text-xs text-text-tertiary bg-bg-secondary px-2 py-0.5 rounded">
+                                      {categoryLabel}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-text-primary font-medium">{log.description}</p>
+                                  {log.details && (
+                                    <p className="text-xs text-text-secondary mt-1 line-clamp-2">
+                                      {typeof log.details === 'string' ? log.details : JSON.stringify(log.details)}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="text-right flex-shrink-0">
+                                  <p className="text-xs text-text-tertiary">
+                                    {new Date(log.timestamp).toLocaleDateString('sv-SE')}
+                                  </p>
+                                  <p className="text-xs text-text-tertiary">
+                                    {new Date(log.timestamp).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

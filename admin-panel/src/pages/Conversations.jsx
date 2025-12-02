@@ -30,6 +30,8 @@ function Conversations() {
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [languageFilter, setLanguageFilter] = useState('')
+  const [error, setError] = useState('')
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     fetchConversations()
@@ -76,9 +78,12 @@ function Conversations() {
   }
 
   const handleDelete = async (conversationId) => {
-    if (!confirm('Är du säker på att du vill radera denna konversation? Anonymiserad statistik bevaras.')) {
+    if (!window.confirm('Är du säker på att du vill radera denna konversation? Anonymiserad statistik bevaras.')) {
       return
     }
+
+    setDeleteLoading(true)
+    setError('')
 
     try {
       const response = await authFetch(`${API_BASE}/conversations/${conversationId}`, {
@@ -89,16 +94,25 @@ function Conversations() {
         if (selectedConversation?.id === conversationId) {
           setSelectedConversation(null)
         }
+      } else {
+        const data = await response.json().catch(() => ({}))
+        setError(data.detail || `Kunde inte radera konversationen (fel ${response.status})`)
       }
     } catch (error) {
       console.error('Kunde inte radera:', error)
+      setError('Ett fel uppstod vid radering. Försök igen.')
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
   const handleDeleteAll = async () => {
-    if (!confirm('Är du HELT säker på att du vill radera ALLA konversationer? Anonymiserad statistik bevaras.')) {
+    if (!window.confirm('Är du HELT säker på att du vill radera ALLA konversationer? Anonymiserad statistik bevaras.')) {
       return
     }
+
+    setDeleteLoading(true)
+    setError('')
 
     try {
       const response = await authFetch(`${API_BASE}/conversations`, {
@@ -107,9 +121,15 @@ function Conversations() {
       if (response.ok) {
         setConversations([])
         setSelectedConversation(null)
+      } else {
+        const data = await response.json().catch(() => ({}))
+        setError(data.detail || `Kunde inte radera konversationerna (fel ${response.status})`)
       }
     } catch (error) {
       console.error('Kunde inte radera:', error)
+      setError('Ett fel uppstod vid radering. Försök igen.')
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -140,13 +160,20 @@ function Conversations() {
         {conversations.length > 0 && (
           <button
             onClick={handleDeleteAll}
-            className="btn btn-ghost text-error hover:bg-error-soft"
+            disabled={deleteLoading}
+            className="btn btn-ghost text-error hover:bg-error-soft disabled:opacity-50"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            </svg>
-            Radera alla
+            {deleteLoading ? (
+              <svg className="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            )}
+            {deleteLoading ? 'Raderar...' : 'Radera alla'}
           </button>
         )}
       </div>
@@ -166,6 +193,28 @@ function Conversations() {
           </div>
         </div>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-error/10 border border-error/20 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-3">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-error flex-shrink-0">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm text-error">{error}</p>
+            </div>
+            <button onClick={() => setError('')} className="text-error hover:text-error/70">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Search & Filters */}
       <div className="mb-6 flex flex-wrap gap-4">
@@ -315,13 +364,20 @@ function Conversations() {
                   </div>
                   <button
                     onClick={() => handleDelete(selectedConversation.id)}
-                    className="btn btn-ghost text-error hover:bg-error-soft text-sm py-2"
+                    disabled={deleteLoading}
+                    className="btn btn-ghost text-error hover:bg-error-soft text-sm py-2 disabled:opacity-50"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    </svg>
-                    Radera
+                    {deleteLoading ? (
+                      <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    )}
+                    {deleteLoading ? 'Raderar...' : 'Radera'}
                   </button>
                 </div>
 
