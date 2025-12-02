@@ -243,7 +243,7 @@ All data is isolated by `company_id`. Every query must filter by tenant.
 - **Error tracking:** Sentry integration (optional)
 
 ### GDPR Compliance
-- Configurable data retention (7-365 days)
+- Configurable data retention (7-30 days, GDPR max)
 - Automatic cleanup task runs hourly
 - Statistics are anonymized before conversation deletion
 - Manual cleanup endpoint available for admins

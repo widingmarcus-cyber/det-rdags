@@ -12,8 +12,8 @@
 
 | Funktion | Beskrivning | Status |
 |----------|-------------|--------|
-| Inloggning | E-post + lösenord | ✅ Klar |
-| Glömt lösenord | Återställning via e-post | ✅ Klar |
+| Inloggning | Företags-ID + lösenord | ✅ Klar |
+| Glömt lösenord | Kontakta administratör | ✅ Klar |
 | Tvåfaktorsautentisering | TOTP (Google Authenticator) | ✅ Klar |
 | Användarnivåer | Admin / Redaktör / Läsare | 🔜 Planerad |
 | SSO | SAML/OAuth för stora kunder | 🔜 Planerad |
@@ -1067,7 +1067,7 @@ En mjuk, avrundad pratbubbla med en subtil gradient och två prickar som ögon �
 | Kryptering i transit | TLS/HTTPS obligatoriskt | ✅ Klar |
 | Loggar | Inga personuppgifter i loggar | ✅ Klar |
 | Radering | Endpoint för komplett radering | ✅ Klar |
-| Retention | Auto-radering (7-365 dagar konfigurerbart) | ✅ Klar |
+| Retention | Auto-radering (7-30 dagar konfigurerbart) | ✅ Klar |
 | Aktivitetsloggar | Auto-radering efter 12 månader | ✅ Klar |
 | Samtycke | Konfigurerbar samtyckesbanner | ✅ Klar |
 | Personuppgiftsansvarig | Konfigurerbar i inställningar | ✅ Klar |
