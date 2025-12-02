@@ -62,6 +62,41 @@ function BobotMini({ className = "" }) {
   )
 }
 
+// Blinking mascot for login button hover
+function BlinkingMascot({ className = "" }) {
+  return (
+    <svg width="40" height="40" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      {/* Body */}
+      <rect x="30" y="55" width="60" height="42" rx="4" fill="#D97757" />
+      <rect x="33" y="58" width="54" height="36" rx="2" fill="#C4613D" />
+      {/* Head */}
+      <rect x="35" y="20" width="50" height="28" rx="4" fill="#D97757" />
+      {/* Eye sockets */}
+      <ellipse cx="48" cy="34" rx="10" ry="9" fill="#1C1917" />
+      <ellipse cx="72" cy="34" rx="10" ry="9" fill="#1C1917" />
+      {/* Pupils with blink animation */}
+      <ellipse cx="48" cy="35" rx="5" ry="5" fill="#D97757">
+        <animate attributeName="ry" values="5;0.5;5" dur="3s" repeatCount="indefinite" keyTimes="0;0.1;0.2" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
+      </ellipse>
+      <ellipse cx="72" cy="35" rx="5" ry="5" fill="#D97757">
+        <animate attributeName="ry" values="5;0.5;5" dur="3s" repeatCount="indefinite" keyTimes="0;0.1;0.2" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
+      </ellipse>
+      {/* Eye highlights */}
+      <circle cx="50" cy="32" r="2" fill="#FEF2EE">
+        <animate attributeName="opacity" values="1;0;1" dur="3s" repeatCount="indefinite" keyTimes="0;0.1;0.2" />
+      </circle>
+      <circle cx="74" cy="32" r="2" fill="#FEF2EE">
+        <animate attributeName="opacity" values="1;0;1" dur="3s" repeatCount="indefinite" keyTimes="0;0.1;0.2" />
+      </circle>
+      {/* Antenna */}
+      <rect x="58" y="12" width="4" height="10" rx="2" fill="#78716C" />
+      <circle cx="60" cy="10" r="4" fill="#4A9D7C">
+        <animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite" />
+      </circle>
+    </svg>
+  )
+}
+
 function ThemeToggle({ isDark, onToggle }) {
   return (
     <button onClick={onToggle} className="p-2 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors" aria-label={isDark ? 'Byt till ljust läge' : 'Byt till mörkt läge'}>
@@ -79,23 +114,26 @@ function ThemeToggle({ isDark, onToggle }) {
   )
 }
 
-// Compact chat widget
-function MiniWidget({ messages, label, className = "" }) {
+// Full-sized chat widget
+function ChatWidget({ messages, label, className = "" }) {
   return (
-    <div className={`w-56 bg-white dark:bg-stone-800 rounded-xl shadow-lg border border-stone-200 dark:border-stone-700 overflow-hidden ${className}`}>
-      <div className="bg-[#D97757] px-3 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-            <BobotMini className="scale-50" />
+    <div className={`w-72 bg-white dark:bg-stone-800 rounded-xl shadow-xl border border-stone-200 dark:border-stone-700 overflow-hidden ${className}`}>
+      <div className="bg-[#D97757] px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+            <BobotMini className="scale-75" />
           </div>
-          <span className="text-white text-xs font-medium">Bobot</span>
+          <div>
+            <span className="text-white text-sm font-medium block">Bobot</span>
+            <span className="text-white/70 text-xs">Online</span>
+          </div>
         </div>
-        {label && <span className="text-white/60 text-[10px]">{label}</span>}
+        {label && <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">{label}</span>}
       </div>
-      <div className="p-2 space-y-1.5 bg-stone-50 dark:bg-stone-900">
+      <div className="p-3 space-y-2.5 bg-stone-50 dark:bg-stone-900 min-h-[100px]">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[90%] rounded-lg px-2 py-1 text-xs ${
+            <div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${
               msg.from === 'user'
                 ? 'bg-[#D97757] text-white'
                 : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm'
@@ -105,6 +143,14 @@ function MiniWidget({ messages, label, className = "" }) {
           </div>
         ))}
       </div>
+      <div className="px-3 py-2 border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800">
+        <div className="flex items-center gap-2 text-stone-400 text-xs">
+          <span className="flex-1 bg-stone-100 dark:bg-stone-700 rounded-full px-3 py-1.5">Skriv ett meddelande...</span>
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+          </svg>
+        </div>
+      </div>
     </div>
   )
 }
@@ -112,6 +158,7 @@ function MiniWidget({ messages, label, className = "" }) {
 function LandingPage() {
   const navigate = useNavigate()
   const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 })
+  const [loginHover, setLoginHover] = useState(false)
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
       return document.documentElement.classList.contains('dark')
@@ -171,9 +218,19 @@ function LandingPage() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle isDark={isDark} onToggle={toggleTheme} />
-            <button onClick={() => navigate('/login')} className="bg-[#D97757] hover:bg-[#c4613d] text-white text-sm px-5 py-2 rounded-lg font-medium transition-colors">
-              Logga in
-            </button>
+            <div
+              className="relative"
+              onMouseEnter={() => setLoginHover(true)}
+              onMouseLeave={() => setLoginHover(false)}
+            >
+              {/* Mascot popup on hover */}
+              <div className={`absolute -left-12 top-1/2 -translate-y-1/2 transition-all duration-300 ${loginHover ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
+                <BlinkingMascot className="drop-shadow-lg" />
+              </div>
+              <button onClick={() => navigate('/login')} className="bg-[#D97757] hover:bg-[#c4613d] text-white text-sm px-5 py-2 rounded-lg font-medium transition-colors">
+                Logga in
+              </button>
+            </div>
           </div>
         </div>
       </nav>
@@ -213,33 +270,65 @@ function LandingPage() {
                   ))}
                 </div>
 
-                <p className="text-sm text-stone-500 dark:text-stone-400">
-                  Vill du veta mer? Mejla{' '}
-                  <a href="mailto:hej@bobot.nu" className="text-[#D97757] hover:text-[#c4613d] font-medium">
-                    hej@bobot.nu
+                {/* CTA Section */}
+                <div className="mt-8 p-6 bg-gradient-to-br from-[#D97757]/10 to-[#D97757]/5 dark:from-[#D97757]/20 dark:to-[#D97757]/10 rounded-2xl border border-[#D97757]/20">
+                  <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100 mb-3">
+                    Vill du veta mer?
+                  </h3>
+                  <ul className="space-y-2 mb-4 text-sm text-stone-600 dark:text-stone-400">
+                    <li className="flex items-start gap-2">
+                      <svg className="w-5 h-5 text-[#D97757] mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span>Gratis demo och uppsättning</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <svg className="w-5 h-5 text-[#D97757] mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span>Anpassad träning på era dokument</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <svg className="w-5 h-5 text-[#D97757] mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span>Snabb integration – igång på en dag</span>
+                    </li>
+                  </ul>
+                  <a
+                    href="mailto:hej@bobot.nu"
+                    className="inline-flex items-center gap-2 bg-[#D97757] hover:bg-[#c4613d] text-white px-5 py-2.5 rounded-lg font-medium transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Kontakta oss
                   </a>
-                </p>
+                  <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+                    hej@bobot.nu
+                  </p>
+                </div>
               </div>
             </div>
 
             {/* Right: Creative widget layout (3 cols) */}
-            <div className="lg:col-span-3 relative h-80 lg:h-96">
+            <div className="lg:col-span-3 relative h-96 lg:h-[28rem]">
               {/* Widget 1 - top left */}
-              <MiniWidget
+              <ChatWidget
                 messages={convo1}
                 label="Hyresgäst"
-                className="absolute top-0 left-0 lg:left-8 z-10 hover:z-30 hover:scale-105 transition-transform"
+                className="absolute top-0 left-0 lg:left-4 z-10 hover:z-30 hover:scale-105 transition-transform"
               />
 
               {/* Widget 2 - middle right */}
-              <MiniWidget
+              <ChatWidget
                 messages={convo2}
                 label="Hyresgäst"
-                className="absolute top-20 right-0 lg:right-4 z-20 hover:z-30 hover:scale-105 transition-transform"
+                className="absolute top-24 right-0 lg:right-0 z-20 hover:z-30 hover:scale-105 transition-transform"
               />
 
               {/* Widget 3 - bottom center, internal */}
-              <MiniWidget
+              <ChatWidget
                 messages={convo3}
                 label="Anställd"
                 className="absolute bottom-0 left-1/2 -translate-x-1/2 lg:left-1/4 lg:translate-x-0 z-10 hover:z-30 hover:scale-105 transition-transform"
