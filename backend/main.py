@@ -580,6 +580,18 @@ class CompanyResponse(BaseModel):
     max_conversations_month: int = 0
     current_month_conversations: int = 0
     max_knowledge_items: int = 0
+    # Pricing fields
+    pricing_tier: str = "starter"
+    startup_fee_paid: bool = False
+    contract_start_date: Optional[date] = None
+    billing_email: str = ""
+
+
+class PricingTierUpdate(BaseModel):
+    pricing_tier: str  # starter, professional, business, enterprise
+    startup_fee_paid: Optional[bool] = None
+    contract_start_date: Optional[date] = None
+    billing_email: Optional[str] = None
 
 
 class SuperAdminLogin(BaseModel):
@@ -3811,7 +3823,11 @@ async def list_companies(
             chat_count=chat_count,
             max_conversations_month=settings.max_conversations_month if settings else 0,
             current_month_conversations=settings.current_month_conversations if settings else 0,
-            max_knowledge_items=settings.max_knowledge_items if settings else 0
+            max_knowledge_items=settings.max_knowledge_items if settings else 0,
+            pricing_tier=c.pricing_tier or "starter",
+            startup_fee_paid=c.startup_fee_paid or False,
+            contract_start_date=c.contract_start_date,
+            billing_email=c.billing_email or ""
         ))
 
     return result
@@ -4210,6 +4226,137 @@ async def get_company_usage(
         "current_month_conversations": settings.current_month_conversations,
         "usage_percent": round(usage_percent, 1),
         "usage_reset_date": settings.usage_reset_date.isoformat() if settings.usage_reset_date else None
+    }
+
+
+@app.put("/admin/companies/{company_id}/pricing")
+async def update_company_pricing(
+    company_id: str,
+    update: PricingTierUpdate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Update pricing tier for a company"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    valid_tiers = ["starter", "professional", "business", "enterprise"]
+    if update.pricing_tier not in valid_tiers:
+        raise HTTPException(status_code=400, detail=f"Ogiltig prisnivå. Giltiga: {', '.join(valid_tiers)}")
+
+    old_tier = company.pricing_tier
+    company.pricing_tier = update.pricing_tier
+
+    if update.startup_fee_paid is not None:
+        company.startup_fee_paid = update.startup_fee_paid
+
+    if update.contract_start_date is not None:
+        company.contract_start_date = update.contract_start_date
+
+    if update.billing_email is not None:
+        company.billing_email = update.billing_email
+
+    db.commit()
+
+    # Log admin action
+    log_admin_action(
+        db, admin["username"], "update_pricing",
+        target_company_id=company_id,
+        description=f"Ändrade prisnivå: {old_tier} → {update.pricing_tier}"
+    )
+
+    return {
+        "message": "Prisnivå uppdaterad",
+        "company_id": company_id,
+        "pricing_tier": company.pricing_tier,
+        "startup_fee_paid": company.startup_fee_paid,
+        "contract_start_date": company.contract_start_date.isoformat() if company.contract_start_date else None
+    }
+
+
+# Pricing tier configuration (SEK)
+PRICING_TIERS = {
+    "starter": {
+        "name": "Starter",
+        "monthly_fee": 1500,
+        "startup_fee": 5000,
+        "max_conversations": 500,
+        "features": ["Grundläggande AI-chatt", "500 konversationer/månad", "E-postsupport", "Standardanalytik"]
+    },
+    "professional": {
+        "name": "Professional",
+        "monthly_fee": 3500,
+        "startup_fee": 10000,
+        "max_conversations": 2000,
+        "features": ["Allt i Starter", "2000 konversationer/månad", "Prioriterad support", "Avancerad analytik", "Anpassad widget"]
+    },
+    "business": {
+        "name": "Business",
+        "monthly_fee": 6500,
+        "startup_fee": 15000,
+        "max_conversations": 10000,
+        "features": ["Allt i Professional", "10000 konversationer/månad", "Dedikerad support", "API-åtkomst", "Anpassade integrationer"]
+    },
+    "enterprise": {
+        "name": "Enterprise",
+        "monthly_fee": 10000,
+        "startup_fee": 25000,
+        "max_conversations": 0,  # 0 = unlimited
+        "features": ["Allt i Business", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling", "Onboarding & utbildning"]
+    }
+}
+
+
+@app.get("/admin/pricing-tiers")
+async def get_pricing_tiers(
+    admin: dict = Depends(get_super_admin)
+):
+    """Get all pricing tier configurations"""
+    return PRICING_TIERS
+
+
+@app.get("/admin/revenue-dashboard")
+async def get_revenue_dashboard(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get revenue dashboard statistics"""
+    companies = db.query(Company).filter(Company.is_active == True).all()
+
+    # Calculate revenue by tier
+    tier_stats = {tier: {"count": 0, "mrr": 0, "startup_collected": 0, "startup_pending": 0}
+                  for tier in PRICING_TIERS.keys()}
+
+    total_mrr = 0
+    total_startup_collected = 0
+    total_startup_pending = 0
+
+    for company in companies:
+        tier = company.pricing_tier or "starter"
+        if tier in PRICING_TIERS:
+            tier_stats[tier]["count"] += 1
+            tier_stats[tier]["mrr"] += PRICING_TIERS[tier]["monthly_fee"]
+            total_mrr += PRICING_TIERS[tier]["monthly_fee"]
+
+            if company.startup_fee_paid:
+                tier_stats[tier]["startup_collected"] += PRICING_TIERS[tier]["startup_fee"]
+                total_startup_collected += PRICING_TIERS[tier]["startup_fee"]
+            else:
+                tier_stats[tier]["startup_pending"] += PRICING_TIERS[tier]["startup_fee"]
+                total_startup_pending += PRICING_TIERS[tier]["startup_fee"]
+
+    # Annual revenue projection
+    arr = total_mrr * 12
+
+    return {
+        "total_active_companies": len(companies),
+        "mrr": total_mrr,  # Monthly Recurring Revenue
+        "arr": arr,  # Annual Recurring Revenue
+        "startup_fees_collected": total_startup_collected,
+        "startup_fees_pending": total_startup_pending,
+        "tier_breakdown": tier_stats,
+        "pricing_tiers": PRICING_TIERS
     }
 
 

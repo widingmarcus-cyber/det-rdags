@@ -77,6 +77,17 @@ function SuperAdmin() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [commandSearch, setCommandSearch] = useState('')
 
+  // Pricing & Revenue
+  const [pricingTiers, setPricingTiers] = useState({})
+  const [revenueDashboard, setRevenueDashboard] = useState(null)
+  const [showPricingModal, setShowPricingModal] = useState(null)
+  const [pricingForm, setPricingForm] = useState({
+    pricing_tier: 'starter',
+    startup_fee_paid: false,
+    contract_start_date: '',
+    billing_email: ''
+  })
+
   useEffect(() => {
     fetchCompanies()
     fetchSystemHealth()
@@ -96,6 +107,9 @@ function SuperAdmin() {
       fetchBilling()
     } else if (activeTab === 'preferences') {
       fetchAdminPrefs()
+    } else if (activeTab === 'pricing') {
+      fetchPricingTiers()
+      fetchRevenueDashboard()
     }
   }, [activeTab])
 
@@ -202,6 +216,62 @@ function SuperAdmin() {
     } catch (error) {
       console.error('Failed to fetch billing:', error)
     }
+  }
+
+  const fetchPricingTiers = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/pricing-tiers`)
+      if (response.ok) {
+        const data = await response.json()
+        setPricingTiers(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch pricing tiers:', error)
+    }
+  }
+
+  const fetchRevenueDashboard = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/revenue-dashboard`)
+      if (response.ok) {
+        const data = await response.json()
+        setRevenueDashboard(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch revenue dashboard:', error)
+    }
+  }
+
+  const handleUpdatePricing = async (companyId) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/companies/${companyId}/pricing`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pricingForm)
+      })
+
+      if (response.ok) {
+        showNotification('Prisnivå uppdaterad', 'success')
+        setShowPricingModal(null)
+        fetchCompanies()
+        fetchRevenueDashboard()
+      } else {
+        const error = await response.json()
+        showNotification(error.detail || 'Kunde inte uppdatera', 'error')
+      }
+    } catch (error) {
+      showNotification('Fel vid uppdatering', 'error')
+    }
+  }
+
+  const openPricingModal = (company) => {
+    setPricingForm({
+      pricing_tier: company.pricing_tier || 'starter',
+      startup_fee_paid: company.startup_fee_paid || false,
+      contract_start_date: company.contract_start_date || '',
+      billing_email: company.billing_email || ''
+    })
+    setShowPricingModal(company)
   }
 
   const fetchAdminPrefs = async () => {
@@ -884,6 +954,7 @@ function SuperAdmin() {
             {[
               { id: 'overview', label: 'Översikt', icon: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /> },
               { id: 'companies', label: 'Företag', icon: <><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></> },
+              { id: 'pricing', label: 'Prissättning', icon: <><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></> },
               { id: 'analytics', label: 'Analys', icon: <><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></> },
               { id: 'billing', label: 'Fakturering', icon: <><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></> },
               { id: 'audit', label: 'Logg', icon: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></> },
@@ -1736,6 +1807,236 @@ function SuperAdmin() {
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Pricing & Revenue Tab */}
+        {activeTab === 'pricing' && (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Prissättning & Intäkter</h1>
+              <p className="text-text-secondary mt-1">Hantera prisnivåer och se intäktsöversikt</p>
+            </div>
+
+            {/* Revenue Dashboard */}
+            {revenueDashboard && (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div className="card bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                  <p className="text-sm text-green-700 font-medium">MRR (Månadlig)</p>
+                  <p className="text-3xl font-bold text-green-800 mt-1">
+                    {revenueDashboard.mrr?.toLocaleString('sv-SE')} kr
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">{revenueDashboard.total_active_companies} aktiva företag</p>
+                </div>
+                <div className="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                  <p className="text-sm text-blue-700 font-medium">ARR (Årlig)</p>
+                  <p className="text-3xl font-bold text-blue-800 mt-1">
+                    {revenueDashboard.arr?.toLocaleString('sv-SE')} kr
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">Prognostiserad årsintäkt</p>
+                </div>
+                <div className="card bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+                  <p className="text-sm text-amber-700 font-medium">Uppstartsavgifter (inbetalda)</p>
+                  <p className="text-3xl font-bold text-amber-800 mt-1">
+                    {revenueDashboard.startup_fees_collected?.toLocaleString('sv-SE')} kr
+                  </p>
+                  <p className="text-xs text-amber-600 mt-1">Engångsintäkter</p>
+                </div>
+                <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                  <p className="text-sm text-purple-700 font-medium">Ej fakturerade uppstarter</p>
+                  <p className="text-3xl font-bold text-purple-800 mt-1">
+                    {revenueDashboard.startup_fees_pending?.toLocaleString('sv-SE')} kr
+                  </p>
+                  <p className="text-xs text-purple-600 mt-1">Att fakturera</p>
+                </div>
+              </div>
+            )}
+
+            {/* Pricing Tiers */}
+            <div className="card mb-8">
+              <h2 className="text-lg font-semibold text-text-primary mb-4">Prisnivåer</h2>
+              <p className="text-sm text-text-secondary mb-6">
+                Jämför med konkurrenten Kundo: 95 000 kr/år (med 25% rabatt) + 35 000 kr uppstartsavgift
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {Object.entries(pricingTiers).map(([key, tier]) => (
+                  <div
+                    key={key}
+                    className={`p-5 rounded-xl border-2 ${
+                      key === 'professional' ? 'border-accent bg-accent/5' : 'border-border-subtle bg-bg-secondary'
+                    }`}
+                  >
+                    {key === 'professional' && (
+                      <span className="text-xs font-semibold text-accent bg-accent/10 px-2 py-1 rounded-full mb-3 inline-block">
+                        Populärast
+                      </span>
+                    )}
+                    <h3 className="text-lg font-bold text-text-primary">{tier.name}</h3>
+                    <div className="mt-2">
+                      <span className="text-3xl font-bold text-text-primary">{tier.monthly_fee?.toLocaleString('sv-SE')}</span>
+                      <span className="text-text-secondary"> kr/mån</span>
+                    </div>
+                    <p className="text-sm text-text-tertiary mt-1">
+                      + {tier.startup_fee?.toLocaleString('sv-SE')} kr uppstart
+                    </p>
+                    <div className="mt-4 pt-4 border-t border-border-subtle">
+                      <ul className="space-y-2">
+                        {tier.features?.map((feature, idx) => (
+                          <li key={idx} className="text-sm text-text-secondary flex items-start gap-2">
+                            <svg className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    {/* Tier stats */}
+                    {revenueDashboard?.tier_breakdown?.[key] && (
+                      <div className="mt-4 pt-4 border-t border-border-subtle">
+                        <p className="text-xs text-text-tertiary">
+                          {revenueDashboard.tier_breakdown[key].count} företag på denna nivå
+                        </p>
+                        <p className="text-sm font-medium text-text-primary">
+                          {revenueDashboard.tier_breakdown[key].mrr?.toLocaleString('sv-SE')} kr/mån
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Companies by Tier */}
+            <div className="card mb-8">
+              <h2 className="text-lg font-semibold text-text-primary mb-4">Företag per prisnivå</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border-subtle">
+                      <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Företag</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Prisnivå</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Månadskostnad</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Uppstart betald</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Startdatum</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Åtgärd</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {companies.map(company => {
+                      const tier = pricingTiers[company.pricing_tier || 'starter'] || pricingTiers.starter
+                      return (
+                        <tr key={company.id} className="border-b border-border-subtle hover:bg-bg-secondary/50">
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-text-primary">{company.name}</div>
+                            <div className="text-xs text-text-tertiary">{company.id}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              company.pricing_tier === 'enterprise' ? 'bg-purple-100 text-purple-800' :
+                              company.pricing_tier === 'business' ? 'bg-blue-100 text-blue-800' :
+                              company.pricing_tier === 'professional' ? 'bg-green-100 text-green-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {tier?.name || 'Starter'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-text-primary font-medium">
+                            {tier?.monthly_fee?.toLocaleString('sv-SE')} kr
+                          </td>
+                          <td className="px-4 py-3">
+                            {company.startup_fee_paid ? (
+                              <span className="text-green-600 flex items-center gap-1">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Ja
+                              </span>
+                            ) : (
+                              <span className="text-amber-600 flex items-center gap-1">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Nej ({tier?.startup_fee?.toLocaleString('sv-SE')} kr)
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-text-secondary">
+                            {company.contract_start_date || '—'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => openPricingModal(company)}
+                              className="btn btn-ghost text-sm"
+                            >
+                              Ändra
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Upcoming Features Roadmap */}
+            <div className="card border-dashed border-2 border-accent/30 bg-accent/5">
+              <h2 className="text-lg font-semibold text-text-primary mb-2 flex items-center gap-2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+                Kommande funktioner (Roadmap)
+              </h2>
+              <p className="text-sm text-text-secondary mb-4">Funktioner som planeras för framtida versioner</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="p-4 bg-white rounded-lg border border-border-subtle">
+                  <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">Q1 2025</span>
+                  <h4 className="font-medium text-text-primary mt-2">Webhook-integrationer</h4>
+                  <p className="text-sm text-text-secondary mt-1">Skicka data vid händelser till externa system</p>
+                </div>
+                <div className="p-4 bg-white rounded-lg border border-border-subtle">
+                  <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">Q1 2025</span>
+                  <h4 className="font-medium text-text-primary mt-2">Publik API</h4>
+                  <p className="text-sm text-text-secondary mt-1">API-nyckel för egna integrationer och automatisering</p>
+                </div>
+                <div className="p-4 bg-white rounded-lg border border-border-subtle">
+                  <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded">Q2 2025</span>
+                  <h4 className="font-medium text-text-primary mt-2">Momentum-integration</h4>
+                  <p className="text-sm text-text-secondary mt-1">Skapa ärenden direkt i Momentum från chatten</p>
+                </div>
+                <div className="p-4 bg-white rounded-lg border border-border-subtle">
+                  <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded">Q2 2025</span>
+                  <h4 className="font-medium text-text-primary mt-2">Användarroller</h4>
+                  <p className="text-sm text-text-secondary mt-1">Admin / Redaktör / Läsare per företag</p>
+                </div>
+                <div className="p-4 bg-white rounded-lg border border-border-subtle">
+                  <span className="text-xs font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded">Q3 2025</span>
+                  <h4 className="font-medium text-text-primary mt-2">SSO / SAML</h4>
+                  <p className="text-sm text-text-secondary mt-1">Enterprise Single Sign-On för stora kunder</p>
+                </div>
+                <div className="p-4 bg-white rounded-lg border border-border-subtle">
+                  <span className="text-xs font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded">Q3 2025</span>
+                  <h4 className="font-medium text-text-primary mt-2">Versionshistorik</h4>
+                  <p className="text-sm text-text-secondary mt-1">Se och återställ tidigare versioner av kunskapsbasen</p>
+                </div>
+                <div className="p-4 bg-white rounded-lg border border-border-subtle">
+                  <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-2 py-1 rounded">Backlog</span>
+                  <h4 className="font-medium text-text-primary mt-2">Widget-triggers</h4>
+                  <p className="text-sm text-text-secondary mt-1">Visa widget efter X sekunder eller på specifika sidor</p>
+                </div>
+                <div className="p-4 bg-white rounded-lg border border-border-subtle">
+                  <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-2 py-1 rounded">Backlog</span>
+                  <h4 className="font-medium text-text-primary mt-2">Bulk-redigering</h4>
+                  <p className="text-sm text-text-secondary mt-1">Ändra flera kunskapsbasartiklar samtidigt</p>
+                </div>
+                <div className="p-4 bg-white rounded-lg border border-border-subtle">
+                  <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-2 py-1 rounded">Backlog</span>
+                  <h4 className="font-medium text-text-primary mt-2">White-label</h4>
+                  <p className="text-sm text-text-secondary mt-1">Helt anpassningsbar branding för Enterprise</p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -3346,6 +3647,77 @@ function SuperAdmin() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                 </svg>
                 Skicka meddelande
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pricing Modal */}
+      {showPricingModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle">
+              <h2 className="text-lg font-semibold text-text-primary">Ändra prisnivå</h2>
+              <p className="text-sm text-text-secondary mt-1">{showPricingModal.name} ({showPricingModal.id})</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="input-label">Prisnivå</label>
+                <select
+                  value={pricingForm.pricing_tier}
+                  onChange={(e) => setPricingForm({ ...pricingForm, pricing_tier: e.target.value })}
+                  className="input w-full"
+                >
+                  <option value="starter">Starter (1 500 kr/mån + 5 000 kr uppstart)</option>
+                  <option value="professional">Professional (3 500 kr/mån + 10 000 kr uppstart)</option>
+                  <option value="business">Business (6 500 kr/mån + 15 000 kr uppstart)</option>
+                  <option value="enterprise">Enterprise (10 000 kr/mån + 25 000 kr uppstart)</option>
+                </select>
+              </div>
+              <div>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={pricingForm.startup_fee_paid}
+                    onChange={(e) => setPricingForm({ ...pricingForm, startup_fee_paid: e.target.checked })}
+                    className="rounded border-border text-accent focus:ring-accent"
+                  />
+                  <span className="text-sm text-text-primary">Uppstartsavgift betald</span>
+                </label>
+              </div>
+              <div>
+                <label className="input-label">Kontraktsstartdatum</label>
+                <input
+                  type="date"
+                  value={pricingForm.contract_start_date}
+                  onChange={(e) => setPricingForm({ ...pricingForm, contract_start_date: e.target.value })}
+                  className="input w-full"
+                />
+              </div>
+              <div>
+                <label className="input-label">Faktureringsmejl</label>
+                <input
+                  type="email"
+                  value={pricingForm.billing_email}
+                  onChange={(e) => setPricingForm({ ...pricingForm, billing_email: e.target.value })}
+                  className="input w-full"
+                  placeholder="faktura@foretag.se"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-border-subtle flex justify-end gap-3">
+              <button
+                onClick={() => setShowPricingModal(null)}
+                className="btn btn-ghost"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={() => handleUpdatePricing(showPricingModal.id)}
+                className="btn btn-primary"
+              >
+                Spara ändringar
               </button>
             </div>
           </div>

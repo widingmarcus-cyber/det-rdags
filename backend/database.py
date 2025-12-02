@@ -62,6 +62,12 @@ class Company(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
 
+    # Pricing & Billing
+    pricing_tier = Column(String, default="starter")  # starter, professional, business, enterprise
+    startup_fee_paid = Column(Boolean, default=False)
+    contract_start_date = Column(Date)  # When subscription started
+    billing_email = Column(String, default="")  # Separate billing contact
+
     # Relations
     knowledge_items = relationship("KnowledgeItem", back_populates="company", cascade="all, delete-orphan")
     chat_logs = relationship("ChatLog", back_populates="company", cascade="all, delete-orphan")
