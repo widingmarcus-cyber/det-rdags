@@ -10,81 +10,110 @@
 
 ### 1.1 Autentisering
 
-| Funktion | Beskrivning | Prioritet |
-|----------|-------------|-----------|
-| Inloggning | E-post + lösenord | MVP |
-| Glömt lösenord | Återställning via e-post | MVP |
-| Tvåfaktorsautentisering | TOTP (Google Authenticator) | Senare |
-| Användarnivåer | Admin / Redaktör / Läsare | Senare |
-| SSO | SAML/OAuth för stora kunder | Senare |
+| Funktion | Beskrivning | Status |
+|----------|-------------|--------|
+| Inloggning | Företags-ID + lösenord | ✅ Klar |
+| Glömt lösenord | Kontakta administratör | ✅ Klar |
+| Tvåfaktorsautentisering | TOTP (Google Authenticator) | ✅ Klar |
+| Användarnivåer | Admin / Redaktör / Läsare | 🔜 Planerad |
+| SSO | SAML/OAuth för stora kunder | 🔜 Planerad |
+| Brute force-skydd | Lås efter 5 misslyckade försök | ✅ Klar |
+| Rate limiting | Max requests per minut | ✅ Klar |
 
 ### 1.2 Kunskapshantering
 
-| Funktion | Beskrivning | Prioritet |
-|----------|-------------|-----------|
-| Lägg till fråga/svar | Manuell inmatning | MVP |
-| Redigera fråga/svar | Uppdatera befintliga | MVP |
-| Ta bort fråga/svar | Med bekräftelse | MVP |
-| Kategorisering | Tagga frågor (t.ex. "Felanmälan", "Hyra") | MVP |
-| Importera FAQ | Ladda upp CSV/Excel | Bra att ha |
-| Ladda upp dokument | PDF/Word som AI läser | Senare |
-| Versionshistorik | Se tidigare versioner | Senare |
-| Bulk-redigering | Ändra flera samtidigt | Senare |
+| Funktion | Beskrivning | Status |
+|----------|-------------|--------|
+| Lägg till fråga/svar | Manuell inmatning | ✅ Klar |
+| Redigera fråga/svar | Uppdatera befintliga | ✅ Klar |
+| Ta bort fråga/svar | Med bekräftelse | ✅ Klar |
+| Kategorisering | Tagga frågor (t.ex. "Felanmälan", "Hyra") | ✅ Klar |
+| Importera FAQ | Ladda upp CSV/Excel/Word/TXT | ✅ Klar |
+| Ladda upp dokument | PDF/Word som AI läser | ✅ Klar |
+| URL-import | Extrahera Q&A från webbsidor | ✅ Klar |
+| Versionshistorik | Se tidigare versioner | 🔜 Planerad |
+| Bulk-redigering | Ändra flera samtidigt | 🔜 Planerad |
 
 ### 1.3 Inställningar
 
-| Funktion | Beskrivning | Prioritet |
-|----------|-------------|-----------|
-| Företagsnamn | Visas i widgeten | MVP |
-| Logotyp | Ladda upp för branding | MVP |
-| Primärfärg | Anpassa widget-tema | MVP |
-| Välkomstmeddelande | Första meddelandet användaren ser | MVP |
-| Fallback-meddelande | När AI inte vet svaret | MVP |
-| Kontaktinfo | Visas vid eskalering | MVP |
-| Öppettider | För "kontakta oss" | Bra att ha |
-| Språk | Svenska/Engelska | Senare |
+| Funktion | Beskrivning | Status |
+|----------|-------------|--------|
+| Företagsnamn | Visas i widgeten | ✅ Klar |
+| Logotyp | Ladda upp för branding | ✅ Klar |
+| Primärfärg | Anpassa widget-tema | ✅ Klar |
+| Välkomstmeddelande | Första meddelandet användaren ser | ✅ Klar |
+| Fallback-meddelande | När AI inte vet svaret | ✅ Klar |
+| Kontaktinfo | Visas vid eskalering | ✅ Klar |
+| Widget-typografi | Typsnitt, storlek, rundning | ✅ Klar |
+| Widget-position | Höger/vänster hörn | ✅ Klar |
+| Föreslagna frågor | Snabbknappar för vanliga frågor | ✅ Klar |
+| Språk | Svenska/Engelska/Arabiska | ✅ Klar |
+| GDPR-inställningar | Datalagring, samtycke | ✅ Klar |
 
 ### 1.4 Widget-konfiguration
 
-| Funktion | Beskrivning | Prioritet |
-|----------|-------------|-----------|
-| Embed-kod | Kopiera script-tag | MVP |
-| Förhandsgranska | Se hur widgeten ser ut | MVP |
-| Position | Höger/vänster hörn | Bra att ha |
-| Triggertext | Texten på knappen | Bra att ha |
-| Fördröjning | Visa efter X sekunder | Senare |
-| Sidfilter | Visa bara på vissa sidor | Senare |
+| Funktion | Beskrivning | Status |
+|----------|-------------|--------|
+| Embed-kod | Kopiera script-tag | ✅ Klar |
+| Förhandsgranska | Se hur widgeten ser ut | ✅ Klar |
+| Position | Höger/vänster hörn | ✅ Klar |
+| Triggertext | Texten på knappen | ✅ Klar |
+| Live-förhandsgranskning | Realtidsuppdatering i inställningar | ✅ Klar |
+| Fördröjning | Visa efter X sekunder | 🔜 Planerad |
+| Sidfilter | Visa bara på vissa sidor | 🔜 Planerad |
 
 ### 1.5 Statistik och analys
 
-| Funktion | Beskrivning | Prioritet |
-|----------|-------------|-----------|
-| Antal konversationer | Per dag/vecka/månad | MVP |
-| Vanligaste frågorna | Topp 10 lista | MVP |
-| Obesvarade frågor | Frågor AI inte kunde svara på | MVP |
-| Exportera data | CSV-export | Bra att ha |
-| Nöjdhetsbetyg | Tumme upp/ner per svar | Bra att ha |
-| Tidsanalys | När användare frågar mest | Senare |
-| Konverteringar | Klick på "kontakta oss" | Senare |
+| Funktion | Beskrivning | Status |
+|----------|-------------|--------|
+| Antal konversationer | Per dag/vecka/månad | ✅ Klar |
+| Vanligaste frågorna | Topp 10 lista | ✅ Klar |
+| Obesvarade frågor | Frågor AI inte kunde svara på | ✅ Klar |
+| Exportera data | CSV-export | ✅ Klar |
+| KPI-rapport | Komplett rapport med alla nyckeltal | ✅ Klar |
+| Nöjdhetsbetyg | Tumme upp/ner per svar | ✅ Klar |
+| Tidsanalys | När användare frågar mest | ✅ Klar |
+| Språkstatistik | Fördelning per språk | ✅ Klar |
+| Kategoristatistik | Frågor per kategori | ✅ Klar |
+| Svarstidsanalys | Genomsnittlig AI-svarstid | ✅ Klar |
 
 ### 1.6 Konversationshistorik
 
-| Funktion | Beskrivning | Prioritet |
-|----------|-------------|-----------|
-| Se konversationer | Lista alla chattar | MVP |
-| Sök i konversationer | Fritextsök | Bra att ha |
-| Filtrera | Per datum, kategori | Bra att ha |
-| Radera konversation | GDPR-krav | MVP |
-| Radera all data | Komplett radering | MVP |
+| Funktion | Beskrivning | Status |
+|----------|-------------|--------|
+| Se konversationer | Lista alla chattar | ✅ Klar |
+| Sök i konversationer | Fritextsök | ✅ Klar |
+| Filtrera | Per datum, kategori | ✅ Klar |
+| Radera konversation | GDPR-krav | ✅ Klar |
+| Radera all data | Komplett radering | ✅ Klar |
+| Automatisk rensning | GDPR-baserad datalagring | ✅ Klar |
 
-### 1.7 Integrationer (senare)
+### 1.7 Super Admin (Plattformshantering)
 
-| Funktion | Beskrivning | Prioritet |
-|----------|-------------|-----------|
-| Webhook | Skicka data vid händelser | Senare |
-| API-nyckel | För egen integration | Senare |
-| Momentum | Skapa ärende direkt | Senare |
-| E-post | Skicka konversation som mail | Senare |
+| Funktion | Beskrivning | Status |
+|----------|-------------|--------|
+| Företagsöversikt | Lista alla kunder | ✅ Klar |
+| Skapa företag | Lägg till nya kunder | ✅ Klar |
+| Aktivera/Inaktivera | Pausa kunders tjänst | ✅ Klar |
+| Analytics per företag | Detaljerad statistik | ✅ Klar |
+| Audit-logg | Spåra admin-åtgärder | ✅ Klar |
+| System-hälsa | Övervaka AI och databas | ✅ Klar |
+| GDPR-rensning | Manuell datarensning | ✅ Klar |
+| Anteckningar | Notera per företag | ✅ Klar |
+| Dokumentuppladdning | Avtal, kontrakt per företag | ✅ Klar |
+| Command Palette | Snabbsökning och åtgärder | ✅ Klar |
+| Live Activity Stream | Realtidsövervakning | ✅ Klar |
+| AI Insights | Automatisk anomalidetektering | ✅ Klar |
+| Broadcast | Meddelanden till alla admins | ✅ Klar |
+
+### 1.8 Integrationer (planerade)
+
+| Funktion | Beskrivning | Status |
+|----------|-------------|--------|
+| Webhook | Skicka data vid händelser | 🔜 Planerad |
+| API-nyckel | För egen integration | 🔜 Planerad |
+| Momentum | Skapa ärende direkt | 🔜 Planerad |
+| E-post | Skicka konversation som mail | ✅ Klar |
 
 ---
 
@@ -1004,71 +1033,72 @@ En mjuk, avrundad pratbubbla med en subtil gradient och två prickar som ögon �
 
 ---
 
-## 4. Säkerhet — Backend
+## 4. Säkerhet — Backend (Implementerat)
 
-### 4.1 Autentisering
+### 4.1 Autentisering ✅
 
-| Åtgärd | Implementation |
-|--------|----------------|
-| Lösenord | Hasha med bcrypt (minst 12 rounds) |
-| Sessions | JWT med kort livstid (15 min access, 7 dagar refresh) |
-| Logout | Invalidera refresh token i databas |
-| Rate limiting | Max 5 inloggningsförsök per 15 min |
-| Brute force | Lås konto efter 10 misslyckade försök |
+| Åtgärd | Implementation | Status |
+|--------|----------------|--------|
+| Lösenord | bcrypt med cost factor 12 | ✅ Klar |
+| Sessions | JWT med 24h livstid | ✅ Klar |
+| 2FA | TOTP (Google Authenticator) för Super Admin | ✅ Klar |
+| Rate limiting | Max 5 inloggningsförsök per 15 min | ✅ Klar |
+| Brute force | Lås efter 5 misslyckade försök, 15 min lockout | ✅ Klar |
+| Legacy migration | SHA256 → bcrypt automatisk uppgradering | ✅ Klar |
 
-### 4.2 API-säkerhet
+### 4.2 API-säkerhet ✅
 
-| Åtgärd | Implementation |
-|--------|----------------|
-| HTTPS | Obligatoriskt, ingen HTTP |
-| CORS | Strikt, bara tillåtna domäner |
-| API-nycklar | Per kund, hashas i databas |
-| Rate limiting | 100 requests/min för chat, 1000/min för admin |
-| Input validation | Validera all input, max längd på meddelanden |
-| SQL injection | Använd ORM (SQLAlchemy), aldrig raw queries |
-| XSS | Sanitize all output |
+| Åtgärd | Implementation | Status |
+|--------|----------------|--------|
+| HTTPS | Obligatoriskt i produktion (HSTS) | ✅ Klar |
+| CORS | Miljöbaserad, strikt i produktion | ✅ Klar |
+| Rate limiting | 15/min chat, 30/min admin | ✅ Klar |
+| Input validation | Pydantic-validering på alla endpoints | ✅ Klar |
+| SQL injection | SQLAlchemy ORM, inga raw queries | ✅ Klar |
+| Security headers | CSP, X-Frame-Options, XSS-Protection | ✅ Klar |
+| Request tracing | Unika request-IDs för spårning | ✅ Klar |
 
-### 4.3 Data och GDPR
+### 4.3 Data och GDPR ✅
 
-| Åtgärd | Implementation |
-|--------|----------------|
-| Dataminimering | Spara bara det nödvändiga |
-| Kryptering i vila | Kryptera databas (AES-256) |
-| Kryptering i transit | TLS 1.3 |
-| Loggar | Inga personuppgifter i loggar |
-| Radering | Endpoint för komplett radering per användare |
-| Retention | Auto-radera konversationer efter 30 dagar (konfigurerbart) |
-| Backup | Krypterade backups, samma retention |
-| DPA | Personuppgiftsbiträdesavtal med varje kund |
+| Åtgärd | Implementation | Status |
+|--------|----------------|--------|
+| Dataminimering | Spara bara det nödvändiga | ✅ Klar |
+| IP-anonymisering | Sista oktetten maskeras | ✅ Klar |
+| Kryptering i transit | TLS/HTTPS obligatoriskt | ✅ Klar |
+| Loggar | Inga personuppgifter i loggar | ✅ Klar |
+| Radering | Endpoint för komplett radering | ✅ Klar |
+| Retention | Auto-radering (7-30 dagar konfigurerbart) | ✅ Klar |
+| Aktivitetsloggar | Auto-radering efter 12 månader | ✅ Klar |
+| Samtycke | Konfigurerbar samtyckesbanner | ✅ Klar |
+| Personuppgiftsansvarig | Konfigurerbar i inställningar | ✅ Klar |
 
-### 4.4 Multi-tenant isolation
+### 4.4 Multi-tenant isolation ✅
 
-| Åtgärd | Implementation |
-|--------|----------------|
-| Databasschema | Varje kund har tenant_id på all data |
-| Queries | Alla queries filtrerar på tenant_id |
-| Middleware | Extrahera tenant från JWT/API-nyckel |
-| Validation | Dubbelkolla tenant-tillhörighet vid varje request |
-| Tester | Automatiska tester för tenant-läckage |
+| Åtgärd | Implementation | Status |
+|--------|----------------|--------|
+| Databasschema | Varje kund har company_id på all data | ✅ Klar |
+| Queries | Alla queries filtrerar på company_id | ✅ Klar |
+| Middleware | Extrahera tenant från JWT | ✅ Klar |
+| Validation | Dubbelkolla tenant-tillhörighet vid varje request | ✅ Klar |
 
-### 4.5 Widget-säkerhet
+### 4.5 Widget-säkerhet ✅
 
-| Åtgärd | Implementation |
-|--------|----------------|
-| Domänvalidering | Widget funkar bara på godkända domäner |
-| API-nyckel | Publik nyckel i widget, begränsade rättigheter |
-| Rate limiting | Per IP: 30 meddelanden/minut |
-| Content length | Max 1000 tecken per meddelande |
-| Sanitization | Rensa HTML/script från input |
+| Åtgärd | Implementation | Status |
+|--------|----------------|--------|
+| Rate limiting | Per IP/session: 15 meddelanden/minut | ✅ Klar |
+| Content length | Max längd på meddelanden | ✅ Klar |
+| Sanitization | Rensa HTML/script från input | ✅ Klar |
+| Session-baserad | Unika session-IDs per besökare | ✅ Klar |
 
-### 4.6 AI-specifika risker
+### 4.6 AI-specifika risker ✅
 
-| Risk | Åtgärd |
-|------|--------|
-| Prompt injection | Systemprompt separerad, validera input |
-| Data läckage | AI har bara tillgång till kundens data |
-| Olämpligt innehåll | Moderation-lager eller filter |
-| Hallucinationer | Tydlig fallback: "Jag är osäker, kontakta..." |
+| Risk | Åtgärd | Status |
+|------|--------|--------|
+| Prompt injection | Systemprompt separerad, validera input | ✅ Klar |
+| Data läckage | AI har bara tillgång till kundens kunskapsbas | ✅ Klar |
+| Hallucinationer | Anti-hallucination prompting, källhänvisning | ✅ Klar |
+| Fallback | Tydligt meddelande när AI inte kan svara | ✅ Klar |
+| Konversationsstil | Mänsklig, vänlig ton utan robotspråk | ✅ Klar |
 
 ### 4.7 Infrastruktur
 
@@ -1081,20 +1111,22 @@ En mjuk, avrundad pratbubbla med en subtil gradient och två prickar som ögon �
 | DDoS-skydd | Cloudflare eller liknande framför |
 | Backups | Dagliga, testade, offsite |
 
-### 4.8 Loggning och audit
+### 4.8 Loggning och audit ✅
 
-| Vad loggas | Syfte |
-|------------|-------|
-| Inloggningar | Säkerhet |
-| Misslyckade försök | Intrångsdetektering |
-| Admin-ändringar | Audit trail |
-| API-anrop (metadata) | Felsökning |
-| Fel och exceptions | Debugging |
+| Vad loggas | Syfte | Status |
+|------------|-------|--------|
+| Inloggningar | Säkerhet | ✅ Klar |
+| Misslyckade försök | Intrångsdetektering | ✅ Klar |
+| Admin-ändringar | Audit trail (AdminAuditLog) | ✅ Klar |
+| Företagsaktivitet | Spårning (CompanyActivityLog) | ✅ Klar |
+| Request-IDs | Felsökning och spårning | ✅ Klar |
+| Fel och exceptions | Sentry-integration (valfritt) | ✅ Klar |
 
 **Loggas INTE:**
 - Lösenord
 - Konversationsinnehåll i klartext
 - Personuppgifter
+- Känsliga tokens
 
 ---
 

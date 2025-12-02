@@ -63,10 +63,55 @@ function SuperAdmin() {
   const [auditDateRange, setAuditDateRange] = useState({ start: '', end: '' })
   const [auditActionTypes, setAuditActionTypes] = useState([])
 
+  // New JARVIS features
+  const [activityStream, setActivityStream] = useState([])
+  const [activityLoading, setActivityLoading] = useState(false)
+  const [aiInsights, setAiInsights] = useState({ insights: [], trending_topics: [] })
+  const [insightsLoading, setInsightsLoading] = useState(false)
+  const [announcement, setAnnouncement] = useState(null)
+  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false)
+  const [announcementForm, setAnnouncementForm] = useState({ title: '', message: '', type: 'info' })
+  const [companyDocuments, setCompanyDocuments] = useState([])
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false)
+  const [documentForm, setDocumentForm] = useState({ document_type: 'agreement', description: '' })
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [commandSearch, setCommandSearch] = useState('')
+
+  // Pricing & Revenue
+  const [pricingTiers, setPricingTiers] = useState({})
+  const [revenueDashboard, setRevenueDashboard] = useState(null)
+  const [showPricingModal, setShowPricingModal] = useState(null)
+  const [pricingForm, setPricingForm] = useState({
+    pricing_tier: 'starter',
+    startup_fee_paid: false,
+    contract_start_date: '',
+    billing_email: ''
+  })
+
+  // Editable Roadmap
+  const [roadmapItems, setRoadmapItems] = useState([])
+  const [showRoadmapModal, setShowRoadmapModal] = useState(false)
+  const [roadmapForm, setRoadmapForm] = useState({ title: '', description: '', quarter: 'Q1 2026', status: 'planned' })
+  const [editingRoadmapItem, setEditingRoadmapItem] = useState(null)
+
+  // Editable Pricing Tiers
+  const [dbPricingTiers, setDbPricingTiers] = useState([])
+  const [showPricingTierModal, setShowPricingTierModal] = useState(false)
+  const [pricingTierForm, setPricingTierForm] = useState({ tier_key: '', name: '', monthly_fee: 0, startup_fee: 0, max_conversations: 0, features: [] })
+  const [editingPricingTier, setEditingPricingTier] = useState(null)
+  const [newFeature, setNewFeature] = useState('')
+
+  // Company Discounts
+  const [showDiscountModal, setShowDiscountModal] = useState(null)
+  const [discountForm, setDiscountForm] = useState({ discount_percent: 0, discount_end_date: '', discount_note: '' })
+
   useEffect(() => {
     fetchCompanies()
     fetchSystemHealth()
     fetchMaintenanceMode()
+    fetchActivityStream()
+    fetchAiInsights()
+    fetchAnnouncement()
   }, [])
 
   useEffect(() => {
@@ -79,6 +124,11 @@ function SuperAdmin() {
       fetchBilling()
     } else if (activeTab === 'preferences') {
       fetchAdminPrefs()
+    } else if (activeTab === 'pricing') {
+      fetchPricingTiers()
+      fetchRevenueDashboard()
+      fetchRoadmapItems()
+      fetchDbPricingTiers()
     }
   }, [activeTab])
 
@@ -187,6 +237,249 @@ function SuperAdmin() {
     }
   }
 
+  const fetchPricingTiers = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/pricing-tiers`)
+      if (response.ok) {
+        const data = await response.json()
+        setPricingTiers(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch pricing tiers:', error)
+    }
+  }
+
+  const fetchRevenueDashboard = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/revenue-dashboard`)
+      if (response.ok) {
+        const data = await response.json()
+        setRevenueDashboard(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch revenue dashboard:', error)
+    }
+  }
+
+  const handleUpdatePricing = async (companyId) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/companies/${companyId}/pricing`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pricingForm)
+      })
+
+      if (response.ok) {
+        showNotification('Prisnivå uppdaterad', 'success')
+        setShowPricingModal(null)
+        fetchCompanies()
+        fetchRevenueDashboard()
+      } else {
+        const error = await response.json()
+        showNotification(error.detail || 'Kunde inte uppdatera', 'error')
+      }
+    } catch (error) {
+      showNotification('Fel vid uppdatering', 'error')
+    }
+  }
+
+  const openPricingModal = (company) => {
+    setPricingForm({
+      pricing_tier: company.pricing_tier || 'starter',
+      startup_fee_paid: company.startup_fee_paid || false,
+      contract_start_date: company.contract_start_date || '',
+      billing_email: company.billing_email || ''
+    })
+    setShowPricingModal(company)
+  }
+
+  // Roadmap CRUD Functions
+  const fetchRoadmapItems = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/roadmap`)
+      if (response.ok) {
+        const data = await response.json()
+        setRoadmapItems(data.items || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch roadmap:', error)
+    }
+  }
+
+  const handleSaveRoadmapItem = async () => {
+    try {
+      const url = editingRoadmapItem
+        ? `${API_BASE}/admin/roadmap/${editingRoadmapItem.id}`
+        : `${API_BASE}/admin/roadmap`
+      const method = editingRoadmapItem ? 'PUT' : 'POST'
+
+      const response = await adminFetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(roadmapForm)
+      })
+
+      if (response.ok) {
+        showNotification(editingRoadmapItem ? 'Roadmap-punkt uppdaterad' : 'Roadmap-punkt skapad', 'success')
+        setShowRoadmapModal(false)
+        setEditingRoadmapItem(null)
+        setRoadmapForm({ title: '', description: '', quarter: 'Q1 2026', status: 'planned' })
+        fetchRoadmapItems()
+      } else {
+        const error = await response.json()
+        showNotification(error.detail || 'Kunde inte spara', 'error')
+      }
+    } catch (error) {
+      showNotification('Fel vid sparning', 'error')
+    }
+  }
+
+  const handleDeleteRoadmapItem = async (itemId) => {
+    if (!confirm('Vill du radera denna roadmap-punkt?')) return
+
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/roadmap/${itemId}`, { method: 'DELETE' })
+      if (response.ok) {
+        showNotification('Roadmap-punkt raderad', 'success')
+        fetchRoadmapItems()
+      }
+    } catch (error) {
+      showNotification('Kunde inte radera', 'error')
+    }
+  }
+
+  const openEditRoadmapModal = (item) => {
+    setRoadmapForm({
+      title: item.title,
+      description: item.description,
+      quarter: item.quarter,
+      status: item.status
+    })
+    setEditingRoadmapItem(item)
+    setShowRoadmapModal(true)
+  }
+
+  // Pricing Tier CRUD Functions
+  const fetchDbPricingTiers = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/pricing-tiers/db`)
+      if (response.ok) {
+        const data = await response.json()
+        setDbPricingTiers(data.tiers || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch db pricing tiers:', error)
+    }
+  }
+
+  const handleInitPricingTiers = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/pricing-tiers/init`, { method: 'POST' })
+      if (response.ok) {
+        showNotification('Prisnivåer initierade', 'success')
+        fetchDbPricingTiers()
+        fetchPricingTiers()
+      } else {
+        const error = await response.json()
+        showNotification(error.detail || 'Kunde inte initiera', 'error')
+      }
+    } catch (error) {
+      showNotification('Fel vid initiering', 'error')
+    }
+  }
+
+  const handleSavePricingTier = async () => {
+    try {
+      const url = editingPricingTier
+        ? `${API_BASE}/admin/pricing-tiers/db/${editingPricingTier.tier_key}`
+        : `${API_BASE}/admin/pricing-tiers/db`
+      const method = editingPricingTier ? 'PUT' : 'POST'
+
+      const response = await adminFetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pricingTierForm)
+      })
+
+      if (response.ok) {
+        showNotification(editingPricingTier ? 'Prisnivå uppdaterad' : 'Prisnivå skapad', 'success')
+        setShowPricingTierModal(false)
+        setEditingPricingTier(null)
+        setPricingTierForm({ tier_key: '', name: '', monthly_fee: 0, startup_fee: 0, max_conversations: 0, features: [] })
+        fetchDbPricingTiers()
+        fetchPricingTiers()
+        fetchRevenueDashboard()
+      } else {
+        const error = await response.json()
+        showNotification(error.detail || 'Kunde inte spara', 'error')
+      }
+    } catch (error) {
+      showNotification('Fel vid sparning', 'error')
+    }
+  }
+
+  const openEditPricingTierModal = (tier) => {
+    setPricingTierForm({
+      tier_key: tier.tier_key,
+      name: tier.name,
+      monthly_fee: tier.monthly_fee,
+      startup_fee: tier.startup_fee,
+      max_conversations: tier.max_conversations,
+      features: tier.features || []
+    })
+    setEditingPricingTier(tier)
+    setShowPricingTierModal(true)
+  }
+
+  const addFeatureToTier = () => {
+    if (newFeature.trim()) {
+      setPricingTierForm(prev => ({
+        ...prev,
+        features: [...prev.features, newFeature.trim()]
+      }))
+      setNewFeature('')
+    }
+  }
+
+  const removeFeatureFromTier = (index) => {
+    setPricingTierForm(prev => ({
+      ...prev,
+      features: prev.features.filter((_, i) => i !== index)
+    }))
+  }
+
+  // Discount Functions
+  const openDiscountModal = (company) => {
+    setDiscountForm({
+      discount_percent: company.discount_percent || 0,
+      discount_end_date: company.discount_end_date || '',
+      discount_note: company.discount_note || ''
+    })
+    setShowDiscountModal(company)
+  }
+
+  const handleSaveDiscount = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/companies/${showDiscountModal.id}/discount`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(discountForm)
+      })
+
+      if (response.ok) {
+        showNotification('Rabatt uppdaterad', 'success')
+        setShowDiscountModal(null)
+        fetchCompanies()
+        fetchRevenueDashboard()
+      } else {
+        const error = await response.json()
+        showNotification(error.detail || 'Kunde inte uppdatera', 'error')
+      }
+    } catch (error) {
+      showNotification('Fel vid uppdatering', 'error')
+    }
+  }
+
   const fetchAdminPrefs = async () => {
     try {
       const response = await adminFetch(`${API_BASE}/admin/preferences`)
@@ -220,6 +513,148 @@ function SuperAdmin() {
       }
     } catch (error) {
       console.error('Failed to fetch notes:', error)
+    }
+  }
+
+  const fetchCompanyDocuments = async (companyId) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/companies/${companyId}/documents`)
+      if (response.ok) {
+        const data = await response.json()
+        setCompanyDocuments(data.documents || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch documents:', error)
+    }
+  }
+
+  const fetchActivityStream = async () => {
+    setActivityLoading(true)
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/activity-stream?limit=15`)
+      if (response.ok) {
+        const data = await response.json()
+        setActivityStream(data.activities || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch activity stream:', error)
+    } finally {
+      setActivityLoading(false)
+    }
+  }
+
+  const fetchAiInsights = async () => {
+    setInsightsLoading(true)
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/ai-insights`)
+      if (response.ok) {
+        const data = await response.json()
+        setAiInsights(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch AI insights:', error)
+    } finally {
+      setInsightsLoading(false)
+    }
+  }
+
+  const fetchAnnouncement = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/announcements`)
+      if (response.ok) {
+        const data = await response.json()
+        setAnnouncement(data.announcement)
+      }
+    } catch (error) {
+      console.error('Failed to fetch announcement:', error)
+    }
+  }
+
+  const handleCreateAnnouncement = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/announcements`, {
+        method: 'POST',
+        body: JSON.stringify(announcementForm)
+      })
+      if (response.ok) {
+        showNotification('Meddelande publicerat')
+        setShowAnnouncementModal(false)
+        setAnnouncementForm({ title: '', message: '', type: 'info' })
+        fetchAnnouncement()
+      }
+    } catch (error) {
+      console.error('Failed to create announcement:', error)
+    }
+  }
+
+  const handleDeleteAnnouncement = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/announcements`, { method: 'DELETE' })
+      if (response.ok) {
+        showNotification('Meddelande borttaget')
+        setAnnouncement(null)
+      }
+    } catch (error) {
+      console.error('Failed to delete announcement:', error)
+    }
+  }
+
+  const handleUploadDocument = async (file) => {
+    if (!showCompanyDashboard) return
+
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      const base64 = e.target.result.split(',')[1]
+      try {
+        const response = await adminFetch(`${API_BASE}/admin/companies/${showCompanyDashboard.id}/documents`, {
+          method: 'POST',
+          body: JSON.stringify({
+            filename: file.name,
+            file_type: file.type,
+            file_size: file.size,
+            file_data: base64,
+            document_type: documentForm.document_type,
+            description: documentForm.description
+          })
+        })
+        if (response.ok) {
+          showNotification('Dokument uppladdat')
+          setShowDocumentUpload(false)
+          setDocumentForm({ document_type: 'agreement', description: '' })
+          fetchCompanyDocuments(showCompanyDashboard.id)
+        }
+      } catch (error) {
+        console.error('Failed to upload document:', error)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleDownloadDocument = async (docId, filename) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/documents/${docId}/download`)
+      if (response.ok) {
+        const data = await response.json()
+        const link = document.createElement('a')
+        link.href = `data:${data.file_type};base64,${data.file_data}`
+        link.download = filename
+        link.click()
+      }
+    } catch (error) {
+      console.error('Failed to download document:', error)
+    }
+  }
+
+  const handleDeleteDocument = async (docId) => {
+    if (!confirm('Vill du radera detta dokument?')) return
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/documents/${docId}`, { method: 'DELETE' })
+      if (response.ok) {
+        showNotification('Dokument borttaget')
+        fetchCompanyDocuments(showCompanyDashboard.id)
+      }
+    } catch (error) {
+      console.error('Failed to delete document:', error)
     }
   }
 
@@ -569,20 +1004,36 @@ function SuperAdmin() {
     setCompanyLoading(true)
     setCompanyUsage(null)
     setCompanyActivity([])
+    setCompanyNotes([])
+    setCompanyDocuments([])
 
     try {
-      // Fetch usage data
-      const usageRes = await adminFetch(`${API_BASE}/admin/companies/${company.id}/usage`)
+      // Fetch all data in parallel
+      const [usageRes, activityRes, notesRes, docsRes] = await Promise.all([
+        adminFetch(`${API_BASE}/admin/companies/${company.id}/usage`),
+        adminFetch(`${API_BASE}/admin/company-activity/${company.id}?limit=10`),
+        adminFetch(`${API_BASE}/admin/companies/${company.id}/notes`),
+        adminFetch(`${API_BASE}/admin/companies/${company.id}/documents`)
+      ])
+
       if (usageRes.ok) {
         const usageData = await usageRes.json()
         setCompanyUsage(usageData)
       }
 
-      // Fetch activity logs for this company
-      const activityRes = await adminFetch(`${API_BASE}/admin/company-activity/${company.id}?limit=10`)
       if (activityRes.ok) {
         const activityData = await activityRes.json()
         setCompanyActivity(activityData.logs || [])
+      }
+
+      if (notesRes.ok) {
+        const notesData = await notesRes.json()
+        setCompanyNotes(notesData.notes || [])
+      }
+
+      if (docsRes.ok) {
+        const docsData = await docsRes.json()
+        setCompanyDocuments(docsData.documents || [])
       }
     } catch (error) {
       console.error('Failed to fetch company details:', error)
@@ -709,10 +1160,12 @@ function SuperAdmin() {
             {[
               { id: 'overview', label: 'Översikt', icon: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /> },
               { id: 'companies', label: 'Företag', icon: <><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></> },
+              { id: 'pricing', label: 'Prissättning', icon: <><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></> },
               { id: 'analytics', label: 'Analys', icon: <><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></> },
               { id: 'billing', label: 'Fakturering', icon: <><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></> },
               { id: 'audit', label: 'Logg', icon: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></> },
               { id: 'system', label: 'System', icon: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></> },
+              { id: 'docs', label: 'Docs', icon: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></> },
               { id: 'preferences', label: 'Konto', icon: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></> }
             ].map(tab => (
               <button
@@ -735,132 +1188,621 @@ function SuperAdmin() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Overview Tab */}
+        {/* Overview Tab - COMMAND CENTER */}
         {activeTab === 'overview' && (
           <div className="animate-fade-in">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <StatCard
-                title="Totalt företag"
-                value={totalCompanies}
-                subtitle={`${activeCompanies} aktiva`}
-                icon={
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-                  </svg>
-                }
-              />
-              <StatCard
-                title="Kunskapsposter"
-                value={totalKnowledge}
-                subtitle="totalt i systemet"
-                icon={
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-                  </svg>
-                }
-              />
-              <StatCard
-                title="Chattmeddelanden"
-                value={totalChats}
-                subtitle="totalt i systemet"
-                icon={
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                }
-              />
-              <StatCard
-                title="Systemstatus"
-                value={systemHealth?.ollama_status === 'online' ? 'Online' : 'Okänd'}
-                subtitle={systemHealth?.database_size || 'Kontrollerar...'}
-                icon={
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-                  </svg>
-                }
-              />
+            {/* COMMAND CENTER HEADER */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-2">
+                <h1 className="text-2xl font-bold text-text-primary tracking-tight">Kontrollcenter</h1>
+                <div className="flex items-center gap-4">
+                  {/* Command Palette Trigger */}
+                  <button
+                    onClick={() => setCommandPaletteOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-bg-secondary hover:bg-bg-tertiary border border-border-subtle rounded-lg text-text-secondary hover:text-text-primary transition-colors"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="11" cy="11" r="8" />
+                      <path d="m21 21-4.35-4.35" />
+                    </svg>
+                    <span className="text-sm">Sök kund, fråga, eller åtgärd...</span>
+                  </button>
+                  <div className="flex items-center gap-2 text-sm text-text-tertiary">
+                    <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
+                    Senast uppdaterad: {new Date().toLocaleTimeString('sv-SE')}
+                  </div>
+                </div>
+              </div>
+              <p className="text-text-secondary">Allt du behöver se för att förstå hur din verksamhet går</p>
             </div>
 
-            {/* Quick Actions & Top Companies */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Quick Actions */}
-              <div className="card">
-                <h2 className="text-lg font-medium text-text-primary mb-4">Snabbåtgärder</h2>
-                <div className="space-y-2">
-                  <button
-                    onClick={handleAdd}
-                    className="w-full flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all group"
-                  >
-                    <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            {/* Active Announcement Banner */}
+            {announcement && (
+              <div className={`rounded-xl p-4 mb-6 flex items-center justify-between ${
+                announcement.type === 'warning' ? 'bg-warning/10 border border-warning/30' :
+                announcement.type === 'maintenance' ? 'bg-info/10 border border-info/30' :
+                'bg-accent/10 border border-accent/30'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    announcement.type === 'warning' ? 'bg-warning text-white' :
+                    announcement.type === 'maintenance' ? 'bg-info text-white' :
+                    'bg-accent text-white'
+                  }`}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-medium text-text-primary">{announcement.title}</p>
+                    <p className="text-sm text-text-secondary">{announcement.message}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleDeleteAnnouncement}
+                  className="p-2 rounded-lg hover:bg-bg-secondary text-text-tertiary hover:text-text-primary transition-colors"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {/* SYSTEM STATUS BANNER */}
+            <div className={`rounded-xl p-6 mb-8 border-2 ${
+              systemHealth?.ollama_status === 'online'
+                ? 'bg-success/10 border-success/30'
+                : maintenanceMode?.enabled
+                  ? 'bg-warning/10 border-warning/30'
+                  : 'bg-error/10 border-error/30'
+            }`}>
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-4">
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                    systemHealth?.ollama_status === 'online'
+                      ? 'bg-success text-white'
+                      : maintenanceMode?.enabled
+                        ? 'bg-warning text-white'
+                        : 'bg-error text-white'
+                  }`}>
+                    {systemHealth?.ollama_status === 'online' ? (
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    ) : maintenanceMode?.enabled ? (
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                    ) : (
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    )}
+                  </div>
+                  <div>
+                    <h2 className={`text-xl font-bold ${
+                      systemHealth?.ollama_status === 'online'
+                        ? 'text-success'
+                        : maintenanceMode?.enabled
+                          ? 'text-warning'
+                          : 'text-error'
+                    }`}>
+                      {systemHealth?.ollama_status === 'online'
+                        ? 'SYSTEMET ÄR ONLINE'
+                        : maintenanceMode?.enabled
+                          ? 'UNDERHÅLLSLÄGE'
+                          : 'SYSTEMET ÄR OFFLINE'}
+                    </h2>
+                    <p className="text-text-secondary">
+                      {systemHealth?.ollama_status === 'online'
+                        ? 'AI-chattbotten fungerar och besvarar kundfrågor'
+                        : maintenanceMode?.enabled
+                          ? maintenanceMode.message || 'Systemet är under underhåll'
+                          : 'AI-tjänsten är inte tillgänglig just nu'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6 text-sm">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-text-primary">{systemHealth?.database_size || '?'}</p>
+                    <p className="text-text-tertiary">Databasstorlek</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-text-primary">{systemHealth?.uptime || 'N/A'}</p>
+                    <p className="text-text-tertiary">Upptid</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* BIG KPI SCOREBOARD */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <div className="bg-gradient-to-br from-accent/20 to-accent/5 border border-accent/30 rounded-xl p-6 text-center">
+                <p className="text-5xl font-bold text-accent mb-2">{totalCompanies}</p>
+                <p className="text-lg font-medium text-text-primary">Kunder</p>
+                <p className="text-sm text-text-secondary mt-1">{activeCompanies} aktiva just nu</p>
+              </div>
+              <div className="bg-gradient-to-br from-success/20 to-success/5 border border-success/30 rounded-xl p-6 text-center">
+                <p className="text-5xl font-bold text-success mb-2">{totalChats.toLocaleString()}</p>
+                <p className="text-lg font-medium text-text-primary">Chattsamtal</p>
+                <p className="text-sm text-text-secondary mt-1">Totalt besvarade frågor</p>
+              </div>
+              <div className="bg-gradient-to-br from-info/20 to-info/5 border border-info/30 rounded-xl p-6 text-center">
+                <p className="text-5xl font-bold text-info mb-2">{totalKnowledge.toLocaleString()}</p>
+                <p className="text-lg font-medium text-text-primary">Kunskapsposter</p>
+                <p className="text-sm text-text-secondary mt-1">AI:ns databas</p>
+              </div>
+              <div className="bg-gradient-to-br from-warning/20 to-warning/5 border border-warning/30 rounded-xl p-6 text-center">
+                <p className="text-5xl font-bold text-warning mb-2">
+                  {companies.filter(c => !c.is_active).length}
+                </p>
+                <p className="text-lg font-medium text-text-primary">Inaktiva</p>
+                <p className="text-sm text-text-secondary mt-1">Kunder som pausat</p>
+              </div>
+            </div>
+
+            {/* NEEDS ATTENTION SECTION */}
+            {(companies.filter(c => !c.is_active).length > 0 ||
+              companies.filter(c => (c.knowledge_count || 0) < 5).length > 0) && (
+              <div className="bg-warning/10 border-2 border-warning/30 rounded-xl p-6 mb-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-warning rounded-lg flex items-center justify-center text-white">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                      <line x1="12" y1="9" x2="12" y2="13" />
+                      <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-warning">KRÄVER DIN UPPMÄRKSAMHET</h3>
+                    <p className="text-sm text-text-secondary">Saker som kan behöva åtgärdas</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {companies.filter(c => !c.is_active).length > 0 && (
+                    <div className="flex items-center justify-between p-4 bg-bg-primary rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-warning/20 rounded-full flex items-center justify-center text-warning">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-medium text-text-primary">
+                            {companies.filter(c => !c.is_active).length} inaktiva kunder
+                          </p>
+                          <p className="text-sm text-text-secondary">Kan betyda avslutade eller pausade prenumerationer</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab('companies')}
+                        className="btn btn-ghost text-sm"
+                      >
+                        Visa →
+                      </button>
+                    </div>
+                  )}
+                  {companies.filter(c => (c.knowledge_count || 0) < 5).length > 0 && (
+                    <div className="flex items-center justify-between p-4 bg-bg-primary rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-warning/20 rounded-full flex items-center justify-center text-warning">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-medium text-text-primary">
+                            {companies.filter(c => (c.knowledge_count || 0) < 5).length} kunder med lite innehåll
+                          </p>
+                          <p className="text-sm text-text-secondary">Mindre än 5 kunskapsposter - AI:n kan inte svara bra</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab('companies')}
+                        className="btn btn-ghost text-sm"
+                      >
+                        Visa →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* MAIN GRID - Actions & Activity */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              {/* QUICK ACTIONS */}
+              <div className="lg:col-span-1">
+                <div className="card h-full">
+                  <h2 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                    </svg>
+                    Snabbåtgärder
+                  </h2>
+                  <div className="space-y-3">
+                    <button
+                      onClick={handleAdd}
+                      className="w-full flex items-center gap-3 p-4 rounded-lg bg-accent text-white hover:bg-accent-hover transition-all group"
+                    >
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <line x1="12" y1="5" x2="12" y2="19" />
                         <line x1="5" y1="12" x2="19" y2="12" />
                       </svg>
-                    </div>
-                    <div className="text-left">
-                      <p className="font-medium text-text-primary">Skapa nytt företag</p>
-                      <p className="text-sm text-text-secondary">Lägg till en ny kund</p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={handleGdprCleanup}
-                    className="w-full flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all group"
-                  >
-                    <div className="w-10 h-10 bg-warning-soft rounded-lg flex items-center justify-center text-warning group-hover:scale-110 transition-transform">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                      </svg>
-                    </div>
-                    <div className="text-left">
-                      <p className="font-medium text-text-primary">Kör GDPR-cleanup</p>
-                      <p className="text-sm text-text-secondary">Rensa gamla konversationer</p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('companies')}
-                    className="w-full flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all group"
-                  >
-                    <div className="w-10 h-10 bg-success-soft rounded-lg flex items-center justify-center text-success group-hover:scale-110 transition-transform">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-                      </svg>
-                    </div>
-                    <div className="text-left">
-                      <p className="font-medium text-text-primary">Hantera företag</p>
-                      <p className="text-sm text-text-secondary">Visa och redigera alla kunder</p>
-                    </div>
-                  </button>
+                      <div className="text-left">
+                        <p className="font-medium">Lägg till ny kund</p>
+                        <p className="text-xs opacity-80">Skapa ett nytt företagskonto</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={handleGdprCleanup}
+                      className="w-full flex items-center gap-3 p-4 rounded-lg bg-bg-secondary hover:bg-bg-tertiary border border-border-subtle transition-all"
+                    >
+                      <div className="w-10 h-10 bg-success/20 rounded-lg flex items-center justify-center text-success">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium text-text-primary">GDPR-rensning</p>
+                        <p className="text-xs text-text-secondary">Radera gamla konversationer</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('analytics')}
+                      className="w-full flex items-center gap-3 p-4 rounded-lg bg-bg-secondary hover:bg-bg-tertiary border border-border-subtle transition-all"
+                    >
+                      <div className="w-10 h-10 bg-info/20 rounded-lg flex items-center justify-center text-info">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="18" y1="20" x2="18" y2="10" />
+                          <line x1="12" y1="20" x2="12" y2="4" />
+                          <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium text-text-primary">Se detaljerad analys</p>
+                        <p className="text-xs text-text-secondary">Statistik och trender</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('billing')}
+                      className="w-full flex items-center gap-3 p-4 rounded-lg bg-bg-secondary hover:bg-bg-tertiary border border-border-subtle transition-all"
+                    >
+                      <div className="w-10 h-10 bg-accent/20 rounded-lg flex items-center justify-center text-accent">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                          <line x1="1" y1="10" x2="23" y2="10" />
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium text-text-primary">Fakturering</p>
+                        <p className="text-xs text-text-secondary">Se betalningar och prenumerationer</p>
+                      </div>
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* Top Companies */}
+              {/* CUSTOMER LEADERBOARD */}
+              <div className="lg:col-span-2">
+                <div className="card h-full">
+                  <h2 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                    Kundöversikt - Topp 10
+                  </h2>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="text-left text-sm text-text-tertiary border-b border-border-subtle">
+                          <th className="pb-3 font-medium">#</th>
+                          <th className="pb-3 font-medium">Kund</th>
+                          <th className="pb-3 font-medium text-center">Status</th>
+                          <th className="pb-3 font-medium text-right">Chattsamtal</th>
+                          <th className="pb-3 font-medium text-right">Kunskapsposter</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {companies
+                          .sort((a, b) => (b.chat_count || 0) - (a.chat_count || 0))
+                          .slice(0, 10)
+                          .map((company, i) => (
+                            <tr key={company.id} className="border-b border-border-subtle/50 hover:bg-bg-secondary/50">
+                              <td className="py-3">
+                                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                                  i === 0 ? 'bg-warning text-white' :
+                                  i === 1 ? 'bg-text-tertiary text-white' :
+                                  i === 2 ? 'bg-accent text-white' :
+                                  'bg-bg-secondary text-text-secondary'
+                                }`}>
+                                  {i + 1}
+                                </span>
+                              </td>
+                              <td className="py-3">
+                                <div>
+                                  <p className="font-medium text-text-primary">{company.name}</p>
+                                  <p className="text-xs text-text-tertiary">{company.id}</p>
+                                </div>
+                              </td>
+                              <td className="py-3 text-center">
+                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                  company.is_active
+                                    ? 'bg-success/20 text-success'
+                                    : 'bg-error/20 text-error'
+                                }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${
+                                    company.is_active ? 'bg-success' : 'bg-error'
+                                  }`}></span>
+                                  {company.is_active ? 'Aktiv' : 'Inaktiv'}
+                                </span>
+                              </td>
+                              <td className="py-3 text-right font-medium text-text-primary">
+                                {(company.chat_count || 0).toLocaleString()}
+                              </td>
+                              <td className="py-3 text-right">
+                                <span className={`font-medium ${
+                                  (company.knowledge_count || 0) < 5
+                                    ? 'text-warning'
+                                    : 'text-text-primary'
+                                }`}>
+                                  {(company.knowledge_count || 0).toLocaleString()}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('companies')}
+                    className="w-full mt-4 py-2 text-sm text-accent hover:text-accent-hover font-medium"
+                  >
+                    Visa alla {companies.length} kunder →
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* AI INSIGHTS & LIVE ACTIVITY STREAM */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              {/* AI INSIGHTS PANEL */}
               <div className="card">
-                <h2 className="text-lg font-medium text-text-primary mb-4">Mest aktiva företag</h2>
-                <div className="space-y-3">
-                  {companies
-                    .sort((a, b) => (b.chat_count || 0) - (a.chat_count || 0))
-                    .slice(0, 5)
-                    .map((company, i) => (
-                      <div key={company.id} className="flex items-center justify-between p-3 rounded-lg bg-bg-secondary">
-                        <div className="flex items-center gap-3">
-                          <span className="w-6 h-6 rounded-full bg-accent-soft text-accent text-xs font-medium flex items-center justify-center">
-                            {i + 1}
-                          </span>
-                          <div>
-                            <p className="font-medium text-text-primary text-sm">{company.name}</p>
-                            <p className="text-xs text-text-tertiary">{company.id}</p>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-white">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a2 2 0 0 1 0 4h-1v1a2 2 0 0 1-2 2h-1v1a2 2 0 0 1-4 0v-1h-2v1a2 2 0 0 1-4 0v-1H6a2 2 0 0 1-2-2v-1H3a2 2 0 0 1 0-4h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2" />
+                        <circle cx="12" cy="14" r="3" />
+                      </svg>
+                    </div>
+                    AI Insikter
+                  </h2>
+                  <button onClick={fetchAiInsights} className="text-sm text-accent hover:text-accent-hover">
+                    Uppdatera
+                  </button>
+                </div>
+
+                {insightsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin w-6 h-6 border-2 border-accent border-t-transparent rounded-full" />
+                  </div>
+                ) : aiInsights.insights.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="w-12 h-12 mx-auto mb-3 bg-success/20 rounded-full flex items-center justify-center text-success">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+                    <p className="text-text-secondary">Allt ser bra ut! Inga problem upptäckta.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {aiInsights.insights.slice(0, 5).map((insight, i) => (
+                      <div key={i} className={`p-3 rounded-lg border ${
+                        insight.severity === 'high' ? 'bg-error/10 border-error/30' :
+                        insight.severity === 'medium' ? 'bg-warning/10 border-warning/30' :
+                        'bg-info/10 border-info/30'
+                      }`}>
+                        <div className="flex items-start gap-3">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            insight.severity === 'high' ? 'bg-error text-white' :
+                            insight.severity === 'medium' ? 'bg-warning text-white' :
+                            'bg-info text-white'
+                          }`}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                            </svg>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-text-primary">{company.chat_count || 0}</p>
-                          <p className="text-xs text-text-tertiary">meddelanden</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-text-primary text-sm">{insight.company_name}</p>
+                            <p className="text-xs text-text-secondary">{insight.description}</p>
+                          </div>
+                          <span className="text-xs font-medium text-text-tertiary">{insight.metric}</span>
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {aiInsights.trending_topics.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-border-subtle">
+                    <p className="text-xs text-text-tertiary mb-2">Trendande ämnen denna vecka:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {aiInsights.trending_topics.map((topic, i) => (
+                        <span key={i} className="px-2 py-1 bg-bg-secondary rounded-full text-xs text-text-secondary">
+                          {topic.topic} <span className="text-text-tertiary">({topic.count})</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* LIVE ACTIVITY STREAM */}
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-teal-500 rounded-lg flex items-center justify-center text-white">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                      </svg>
+                    </div>
+                    Live Aktivitet
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-success rounded-full animate-pulse" />
+                    <button onClick={fetchActivityStream} className="text-sm text-accent hover:text-accent-hover">
+                      Uppdatera
+                    </button>
+                  </div>
+                </div>
+
+                {activityLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin w-6 h-6 border-2 border-accent border-t-transparent rounded-full" />
+                  </div>
+                ) : activityStream.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-text-secondary">Ingen aktivitet ännu</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {activityStream.map((activity, i) => (
+                      <div key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-secondary transition-colors">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          activity.type === 'conversation' ? 'bg-accent/20 text-accent' : 'bg-info/20 text-info'
+                        }`}>
+                          {activity.type === 'conversation' ? (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                            </svg>
+                          ) : (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <circle cx="12" cy="12" r="3" />
+                              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          {activity.type === 'conversation' ? (
+                            <>
+                              <p className="text-sm text-text-primary truncate">
+                                <span className="font-medium">{activity.company_name}</span>
+                                <span className="text-text-tertiary"> fick </span>
+                                <span className="font-medium">{activity.message_count}</span>
+                                <span className="text-text-tertiary"> {activity.message_count === 1 ? 'fråga' : 'frågor'}</span>
+                              </p>
+                              <p className="text-xs text-text-tertiary">{activity.category} • {activity.language}</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-sm text-text-primary truncate">{activity.description}</p>
+                              <p className="text-xs text-text-tertiary">av {activity.admin}</p>
+                            </>
+                          )}
+                        </div>
+                        <span className="text-xs text-text-tertiary flex-shrink-0">
+                          {new Date(activity.timestamp).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* BUSINESS HEALTH INDICATORS */}
+            <div className="card">
+              <h2 className="text-lg font-bold text-text-primary mb-6 flex items-center gap-2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                </svg>
+                Verksamhetshälsa
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-4 rounded-lg bg-bg-secondary">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-text-secondary">Kundaktivitet</span>
+                    <span className={`text-xs font-medium px-2 py-1 rounded ${
+                      (activeCompanies / totalCompanies) > 0.8
+                        ? 'bg-success/20 text-success'
+                        : (activeCompanies / totalCompanies) > 0.5
+                          ? 'bg-warning/20 text-warning'
+                          : 'bg-error/20 text-error'
+                    }`}>
+                      {Math.round((activeCompanies / totalCompanies) * 100) || 0}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-bg-tertiary rounded-full h-3">
+                    <div
+                      className={`h-3 rounded-full transition-all ${
+                        (activeCompanies / totalCompanies) > 0.8
+                          ? 'bg-success'
+                          : (activeCompanies / totalCompanies) > 0.5
+                            ? 'bg-warning'
+                            : 'bg-error'
+                      }`}
+                      style={{ width: `${(activeCompanies / totalCompanies) * 100 || 0}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-text-tertiary mt-2">{activeCompanies} av {totalCompanies} kunder är aktiva</p>
+                </div>
+                <div className="p-4 rounded-lg bg-bg-secondary">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-text-secondary">Kunskapstäckning</span>
+                    <span className={`text-xs font-medium px-2 py-1 rounded ${
+                      companies.filter(c => (c.knowledge_count || 0) >= 10).length / totalCompanies > 0.7
+                        ? 'bg-success/20 text-success'
+                        : 'bg-warning/20 text-warning'
+                    }`}>
+                      {Math.round((companies.filter(c => (c.knowledge_count || 0) >= 10).length / totalCompanies) * 100) || 0}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-bg-tertiary rounded-full h-3">
+                    <div
+                      className={`h-3 rounded-full transition-all ${
+                        companies.filter(c => (c.knowledge_count || 0) >= 10).length / totalCompanies > 0.7
+                          ? 'bg-success'
+                          : 'bg-warning'
+                      }`}
+                      style={{ width: `${(companies.filter(c => (c.knowledge_count || 0) >= 10).length / totalCompanies) * 100 || 0}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-text-tertiary mt-2">
+                    {companies.filter(c => (c.knowledge_count || 0) >= 10).length} kunder har 10+ kunskapsposter
+                  </p>
+                </div>
+                <div className="p-4 rounded-lg bg-bg-secondary">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-text-secondary">Genomsnitt frågor/kund</span>
+                    <span className="text-xs font-medium px-2 py-1 rounded bg-info/20 text-info">
+                      {totalCompanies > 0 ? Math.round(totalChats / totalCompanies) : 0}
+                    </span>
+                  </div>
+                  <div className="flex items-end gap-1 h-8">
+                    {companies
+                      .sort((a, b) => (a.chat_count || 0) - (b.chat_count || 0))
+                      .slice(0, 20)
+                      .map((c, i) => {
+                        const maxChats = Math.max(...companies.map(x => x.chat_count || 0)) || 1
+                        const height = ((c.chat_count || 0) / maxChats) * 100
+                        return (
+                          <div
+                            key={i}
+                            className="flex-1 bg-info/30 rounded-t"
+                            style={{ height: `${Math.max(height, 10)}%` }}
+                          ></div>
+                        )
+                      })}
+                  </div>
+                  <p className="text-xs text-text-tertiary mt-2">Fördelning av chattsamtal</p>
                 </div>
               </div>
             </div>
@@ -1071,6 +2013,347 @@ function SuperAdmin() {
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Pricing & Revenue Tab */}
+        {activeTab === 'pricing' && (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Prissättning & Intäkter</h1>
+              <p className="text-text-secondary mt-1">Hantera prisnivåer och se intäktsöversikt</p>
+            </div>
+
+            {/* Revenue Dashboard */}
+            {revenueDashboard && (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div className="card bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                  <p className="text-sm text-green-700 font-medium">MRR (Månadlig)</p>
+                  <p className="text-3xl font-bold text-green-800 mt-1">
+                    {revenueDashboard.mrr?.toLocaleString('sv-SE')} kr
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">{revenueDashboard.total_active_companies} aktiva företag</p>
+                </div>
+                <div className="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                  <p className="text-sm text-blue-700 font-medium">ARR (Årlig)</p>
+                  <p className="text-3xl font-bold text-blue-800 mt-1">
+                    {revenueDashboard.arr?.toLocaleString('sv-SE')} kr
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">Prognostiserad årsintäkt</p>
+                </div>
+                <div className="card bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+                  <p className="text-sm text-amber-700 font-medium">Uppstartsavgifter (inbetalda)</p>
+                  <p className="text-3xl font-bold text-amber-800 mt-1">
+                    {revenueDashboard.startup_fees_collected?.toLocaleString('sv-SE')} kr
+                  </p>
+                  <p className="text-xs text-amber-600 mt-1">Engångsintäkter</p>
+                </div>
+                <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                  <p className="text-sm text-purple-700 font-medium">Ej fakturerade uppstarter</p>
+                  <p className="text-3xl font-bold text-purple-800 mt-1">
+                    {revenueDashboard.startup_fees_pending?.toLocaleString('sv-SE')} kr
+                  </p>
+                  <p className="text-xs text-purple-600 mt-1">Att fakturera</p>
+                </div>
+              </div>
+            )}
+
+            {/* Pricing Tiers */}
+            <div className="card mb-8">
+              <h2 className="text-lg font-semibold text-text-primary mb-4">Prisnivåer</h2>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {Object.entries(pricingTiers).map(([key, tier]) => (
+                  <div
+                    key={key}
+                    className="p-5 rounded-xl border-2 border-border-subtle bg-bg-secondary"
+                  >
+                    <h3 className="text-lg font-bold text-text-primary">{tier.name}</h3>
+                    <div className="mt-2">
+                      <span className="text-3xl font-bold text-text-primary">{tier.monthly_fee?.toLocaleString('sv-SE')}</span>
+                      <span className="text-text-secondary"> kr/mån</span>
+                    </div>
+                    <p className="text-sm text-text-tertiary mt-1">
+                      + {tier.startup_fee?.toLocaleString('sv-SE')} kr uppstart
+                    </p>
+                    <div className="mt-4 pt-4 border-t border-border-subtle">
+                      <ul className="space-y-2">
+                        {tier.features?.map((feature, idx) => (
+                          <li key={idx} className="text-sm text-text-secondary flex items-start gap-2">
+                            <svg className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    {/* Tier stats */}
+                    {revenueDashboard?.tier_breakdown?.[key] && (
+                      <div className="mt-4 pt-4 border-t border-border-subtle">
+                        <p className="text-xs text-text-tertiary">
+                          {revenueDashboard.tier_breakdown[key].count} företag på denna nivå
+                        </p>
+                        <p className="text-sm font-medium text-text-primary">
+                          {revenueDashboard.tier_breakdown[key].mrr?.toLocaleString('sv-SE')} kr/mån
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Companies by Tier */}
+            <div className="card mb-8">
+              <h2 className="text-lg font-semibold text-text-primary mb-4">Företag per prisnivå</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border-subtle">
+                      <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Företag</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Prisnivå</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Månadskostnad</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Rabatt</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Uppstart betald</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Startdatum</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Åtgärder</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {companies.map(company => {
+                      const tier = pricingTiers[company.pricing_tier || 'starter'] || pricingTiers.starter
+                      return (
+                        <tr key={company.id} className="border-b border-border-subtle hover:bg-bg-secondary/50">
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-text-primary">{company.name}</div>
+                            <div className="text-xs text-text-tertiary">{company.id}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              company.pricing_tier === 'enterprise' ? 'bg-purple-100 text-purple-800' :
+                              company.pricing_tier === 'business' ? 'bg-blue-100 text-blue-800' :
+                              company.pricing_tier === 'professional' ? 'bg-green-100 text-green-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {tier?.name || 'Starter'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-text-primary font-medium">
+                            {tier?.monthly_fee?.toLocaleString('sv-SE')} kr
+                          </td>
+                          <td className="px-4 py-3">
+                            {company.discount_percent > 0 ? (
+                              <span className="text-green-600 font-medium">
+                                {company.discount_percent}%
+                                {company.discount_end_date && (
+                                  <span className="text-xs text-text-tertiary ml-1">
+                                    (t.o.m. {company.discount_end_date})
+                                  </span>
+                                )}
+                              </span>
+                            ) : (
+                              <span className="text-text-tertiary">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {company.startup_fee_paid ? (
+                              <span className="text-green-600 flex items-center gap-1">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Ja
+                              </span>
+                            ) : (
+                              <span className="text-amber-600 flex items-center gap-1">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Nej ({tier?.startup_fee?.toLocaleString('sv-SE')} kr)
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-text-secondary">
+                            {company.contract_start_date || '—'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => openPricingModal(company)}
+                                className="btn btn-ghost text-sm"
+                              >
+                                Ändra nivå
+                              </button>
+                              <button
+                                onClick={() => openDiscountModal(company)}
+                                className="btn btn-ghost text-sm"
+                              >
+                                Rabatt
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Editable Pricing Tiers */}
+            <div className="card mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-text-primary">Redigera prisnivåer</h2>
+                <div className="flex gap-2">
+                  {dbPricingTiers.length === 0 && (
+                    <button
+                      onClick={handleInitPricingTiers}
+                      className="btn btn-secondary text-sm"
+                    >
+                      Initiera standardpriser
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setPricingTierForm({ tier_key: '', name: '', monthly_fee: 0, startup_fee: 0, max_conversations: 0, features: [] })
+                      setEditingPricingTier(null)
+                      setShowPricingTierModal(true)
+                    }}
+                    className="btn btn-primary text-sm"
+                  >
+                    + Ny prisnivå
+                  </button>
+                </div>
+              </div>
+              {dbPricingTiers.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border-subtle">
+                        <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Nyckel</th>
+                        <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Namn</th>
+                        <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Månadsavgift</th>
+                        <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Uppstartsavgift</th>
+                        <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Max konv.</th>
+                        <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Status</th>
+                        <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Åtgärd</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dbPricingTiers.map(tier => (
+                        <tr key={tier.tier_key} className="border-b border-border-subtle hover:bg-bg-secondary/50">
+                          <td className="px-4 py-3 text-sm font-mono text-text-secondary">{tier.tier_key}</td>
+                          <td className="px-4 py-3 text-sm font-medium text-text-primary">{tier.name}</td>
+                          <td className="px-4 py-3 text-sm text-text-primary">{tier.monthly_fee?.toLocaleString('sv-SE')} kr</td>
+                          <td className="px-4 py-3 text-sm text-text-primary">{tier.startup_fee?.toLocaleString('sv-SE')} kr</td>
+                          <td className="px-4 py-3 text-sm text-text-secondary">{tier.max_conversations === 0 ? 'Obegränsat' : tier.max_conversations}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex px-2 py-1 text-xs rounded-full ${tier.is_active ? 'bg-success-soft text-success' : 'bg-error-soft text-error'}`}>
+                              {tier.is_active ? 'Aktiv' : 'Inaktiv'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => openEditPricingTierModal(tier)}
+                              className="btn btn-ghost text-sm"
+                            >
+                              Redigera
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-text-secondary text-center py-8">Inga prisnivåer i databasen. Klicka "Initiera standardpriser" för att komma igång.</p>
+              )}
+            </div>
+
+            {/* Upcoming Features Roadmap */}
+            <div className="card border-dashed border-2 border-accent/30 bg-accent/5">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                  Kommande funktioner (Roadmap)
+                </h2>
+                <button
+                  onClick={() => {
+                    setRoadmapForm({ title: '', description: '', quarter: 'Q1 2026', status: 'planned' })
+                    setEditingRoadmapItem(null)
+                    setShowRoadmapModal(true)
+                  }}
+                  className="btn btn-primary text-sm"
+                >
+                  + Ny punkt
+                </button>
+              </div>
+              <p className="text-sm text-text-secondary mb-4">Funktioner som planeras för framtida versioner</p>
+              {roadmapItems.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {roadmapItems.map(item => {
+                    const quarterColor = item.quarter?.includes('Q1') ? 'blue' :
+                                          item.quarter?.includes('Q2') ? 'green' :
+                                          item.quarter?.includes('Q3') ? 'purple' :
+                                          item.quarter?.includes('Backlog') ? 'amber' : 'gray'
+                    const statusBadge = item.status === 'completed' ? 'bg-success-soft text-success' :
+                                        item.status === 'in_progress' ? 'bg-accent-soft text-accent' :
+                                        item.status === 'cancelled' ? 'bg-error-soft text-error' : ''
+                    return (
+                      <div key={item.id} className="p-4 bg-white rounded-lg border border-border-subtle group relative">
+                        <div className="flex items-start justify-between">
+                          <span className={`text-xs font-semibold text-${quarterColor}-600 bg-${quarterColor}-100 px-2 py-1 rounded`}>
+                            {item.quarter}
+                          </span>
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                            <button
+                              onClick={() => openEditRoadmapModal(item)}
+                              className="p-1 hover:bg-bg-secondary rounded"
+                              title="Redigera"
+                            >
+                              <svg className="w-4 h-4 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteRoadmapItem(item.id)}
+                              className="p-1 hover:bg-error-soft rounded"
+                              title="Radera"
+                            >
+                              <svg className="w-4 h-4 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                        <h4 className="font-medium text-text-primary mt-2">{item.title}</h4>
+                        <p className="text-sm text-text-secondary mt-1">{item.description}</p>
+                        {item.status !== 'planned' && (
+                          <span className={`mt-2 inline-flex px-2 py-0.5 text-xs rounded-full ${statusBadge}`}>
+                            {item.status === 'completed' ? 'Klar' : item.status === 'in_progress' ? 'Pågående' : 'Avbruten'}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-text-secondary mb-4">Ingen roadmap definierad ännu.</p>
+                  <button
+                    onClick={() => {
+                      setRoadmapForm({ title: '', description: '', quarter: 'Q1 2026', status: 'planned' })
+                      setEditingRoadmapItem(null)
+                      setShowRoadmapModal(true)
+                    }}
+                    className="btn btn-primary"
+                  >
+                    Lägg till första punkten
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -1647,6 +2930,232 @@ function SuperAdmin() {
             </div>
           </div>
         )}
+
+        {/* Documentation Hub Tab */}
+        {activeTab === 'docs' && (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Dokumentation</h1>
+              <p className="text-text-secondary mt-1">Hur Bobot fungerar - allt du behöver veta</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Architecture Overview */}
+              <div className="lg:col-span-2 card">
+                <h2 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <path d="M3 9h18" />
+                    <path d="M9 21V9" />
+                  </svg>
+                  Systemarkitektur
+                </h2>
+                <div className="bg-bg-secondary rounded-xl p-6">
+                  <pre className="text-xs text-text-secondary overflow-x-auto whitespace-pre font-mono">
+{`┌─────────────────────────────────────────────────────────────────────┐
+│                     KUNDENS HEMSIDA                                  │
+│  ┌──────────────┐                                                   │
+│  │ Chattwidget  │ ◀── Inbäddningsbar React-komponent               │
+│  └──────┬───────┘                                                   │
+└─────────┼───────────────────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Admin-panel    │────▶│  FastAPI Backend│────▶│     Ollama      │
+│  (React)        │     │   (Python)      │     │  (Llama 3.1)    │
+└─────────────────┘     └────────┬────────┘     └─────────────────┘
+                                 │
+                        ┌────────▼────────┐
+                        │   SQLite DB     │
+                        │  (Multi-tenant) │
+                        └─────────────────┘`}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Quick Reference */}
+              <div className="card">
+                <h2 className="text-lg font-bold text-text-primary mb-4">Snabbreferens</h2>
+                <div className="space-y-4">
+                  <div className="p-3 bg-bg-secondary rounded-lg">
+                    <p className="font-medium text-text-primary text-sm">Portar</p>
+                    <div className="mt-2 space-y-1 text-xs text-text-secondary">
+                      <p>Backend API: <code className="px-1 py-0.5 bg-bg-tertiary rounded">8000</code></p>
+                      <p>Admin Panel: <code className="px-1 py-0.5 bg-bg-tertiary rounded">3000</code></p>
+                      <p>Widget Demo: <code className="px-1 py-0.5 bg-bg-tertiary rounded">3001</code></p>
+                      <p>Ollama: <code className="px-1 py-0.5 bg-bg-tertiary rounded">11434</code></p>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-bg-secondary rounded-lg">
+                    <p className="font-medium text-text-primary text-sm">Standardkonton</p>
+                    <div className="mt-2 space-y-1 text-xs text-text-secondary">
+                      <p>Demo: <code className="px-1 py-0.5 bg-bg-tertiary rounded">demo / demo123</code></p>
+                      <p>Admin: <code className="px-1 py-0.5 bg-bg-tertiary rounded">admin / admin123</code></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Runbooks */}
+              <div className="lg:col-span-3 card">
+                <h2 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                  </svg>
+                  Guider & Felsökning
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="p-4 bg-bg-secondary rounded-xl">
+                    <h3 className="font-medium text-text-primary mb-2">Ny kund - Onboarding</h3>
+                    <ol className="text-sm text-text-secondary space-y-2 list-decimal list-inside">
+                      <li>Skapa företag (Företag → Lägg till)</li>
+                      <li>Konfigurera widgeten (utseende, meddelanden)</li>
+                      <li>Lägg till kunskapsbas (minst 10-20 frågor)</li>
+                      <li>Ge kunden inbäddningskoden</li>
+                      <li>Testa med live preview</li>
+                    </ol>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-xl">
+                    <h3 className="font-medium text-text-primary mb-2">AI svarar inte</h3>
+                    <ol className="text-sm text-text-secondary space-y-2 list-decimal list-inside">
+                      <li>Kontrollera Ollama-status (System → Systemhälsa)</li>
+                      <li>Verifiera att modellen är laddad</li>
+                      <li>Kontrollera Docker-loggar: <code className="text-xs">docker logs bobot-ollama-1</code></li>
+                      <li>Starta om Ollama: <code className="text-xs">docker restart bobot-ollama-1</code></li>
+                    </ol>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-xl">
+                    <h3 className="font-medium text-text-primary mb-2">GDPR-hantering</h3>
+                    <ol className="text-sm text-text-secondary space-y-2 list-decimal list-inside">
+                      <li>Ställ in retention (Inställningar → GDPR)</li>
+                      <li>Automatisk rensning körs varje timme</li>
+                      <li>Manuell rensning: Översikt → GDPR-rensning</li>
+                      <li>Statistik behålls anonymiserat</li>
+                    </ol>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-xl">
+                    <h3 className="font-medium text-text-primary mb-2">Hög obesvarad-andel</h3>
+                    <ol className="text-sm text-text-secondary space-y-2 list-decimal list-inside">
+                      <li>Granska "Obesvarade frågor" i Analytics</li>
+                      <li>Lägg till vanliga frågor i kunskapsbasen</li>
+                      <li>Förbättra befintliga svar med nyckelord</li>
+                      <li>Aktivera notifieringar för obesvarade</li>
+                    </ol>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-xl">
+                    <h3 className="font-medium text-text-primary mb-2">Widget visas inte</h3>
+                    <ol className="text-sm text-text-secondary space-y-2 list-decimal list-inside">
+                      <li>Kontrollera att företaget är aktivt</li>
+                      <li>Verifiera company_id i embed-koden</li>
+                      <li>Kolla CORS-inställningar (backend)</li>
+                      <li>Kontrollera webbläsarkonsolen för fel</li>
+                    </ol>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-xl">
+                    <h3 className="font-medium text-text-primary mb-2">Databashantering</h3>
+                    <ol className="text-sm text-text-secondary space-y-2 list-decimal list-inside">
+                      <li>Backup: <code className="text-xs">cp bobot.db bobot.backup.db</code></li>
+                      <li>Storlek visas i System → Systemhälsa</li>
+                      <li>Reset: <code className="text-xs">rm bobot.db && restart</code></li>
+                      <li>Migration: Använd Alembic (produktion)</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+
+              {/* Security & Production */}
+              <div className="lg:col-span-3 card border-green-200 bg-green-50/30">
+                <h2 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                  Säkerhet & Produktion
+                  <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-success-soft text-success rounded-full">Produktionsklar</span>
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="p-4 bg-bg-secondary rounded-xl border border-success/30">
+                    <h3 className="font-medium text-text-primary mb-2 flex items-center gap-2">
+                      <span className="text-success">✓</span> Autentisering
+                    </h3>
+                    <ul className="text-sm text-text-secondary space-y-1">
+                      <li>• bcrypt lösenordshashning</li>
+                      <li>• 2FA för Super Admin</li>
+                      <li>• Brute force-skydd</li>
+                      <li>• JWT med 24h livstid</li>
+                    </ul>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-xl border border-success/30">
+                    <h3 className="font-medium text-text-primary mb-2 flex items-center gap-2">
+                      <span className="text-success">✓</span> Rate Limiting
+                    </h3>
+                    <ul className="text-sm text-text-secondary space-y-1">
+                      <li>• Chat: 15 req/min</li>
+                      <li>• Admin API: 30 req/min</li>
+                      <li>• Login: 5 försök/15 min</li>
+                      <li>• Auto-lockout 15 min</li>
+                    </ul>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-xl border border-success/30">
+                    <h3 className="font-medium text-text-primary mb-2 flex items-center gap-2">
+                      <span className="text-success">✓</span> Security Headers
+                    </h3>
+                    <ul className="text-sm text-text-secondary space-y-1">
+                      <li>• HSTS (produktion)</li>
+                      <li>• CSP konfigurerad</li>
+                      <li>• X-Frame-Options</li>
+                      <li>• XSS-Protection</li>
+                    </ul>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-xl border border-success/30">
+                    <h3 className="font-medium text-text-primary mb-2 flex items-center gap-2">
+                      <span className="text-success">✓</span> Produktionskrav
+                    </h3>
+                    <ul className="text-sm text-text-secondary space-y-1">
+                      <li>• Sätt ENVIRONMENT=production</li>
+                      <li>• Generera SECRET_KEY</li>
+                      <li>• Konfigurera CORS_ORIGINS</li>
+                      <li>• Aktivera HTTPS</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Create Announcement */}
+              <div className="lg:col-span-3 card">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                    </svg>
+                    Skicka meddelande till alla kunder
+                  </h2>
+                  <button
+                    onClick={() => setShowAnnouncementModal(true)}
+                    className="btn btn-primary"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    Nytt meddelande
+                  </button>
+                </div>
+                <p className="text-sm text-text-secondary">
+                  Skapa ett meddelande som visas för alla företagsadministratörer i deras dashboard.
+                  Användbart för systemunderhåll, nya funktioner eller viktiga uppdateringar.
+                </p>
+                {announcement && (
+                  <div className="mt-4 p-4 bg-accent/10 border border-accent/30 rounded-lg">
+                    <p className="text-sm text-text-tertiary mb-1">Aktivt meddelande:</p>
+                    <p className="font-medium text-text-primary">{announcement.title}</p>
+                    <p className="text-sm text-text-secondary">{announcement.message}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Create Company Modal */}
@@ -1963,6 +3472,160 @@ function SuperAdmin() {
                   )}
                 </div>
 
+                {/* Notes & Documents */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  {/* Notes Section */}
+                  <div className="bg-bg-secondary rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-medium text-text-primary flex items-center gap-2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                          <line x1="16" y1="13" x2="8" y2="13" />
+                          <line x1="16" y1="17" x2="8" y2="17" />
+                        </svg>
+                        Anteckningar
+                      </h3>
+                      <span className="text-xs text-text-tertiary">{companyNotes.length}</span>
+                    </div>
+
+                    {/* Add Note Form */}
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        type="text"
+                        value={newNote}
+                        onChange={(e) => setNewNote(e.target.value)}
+                        placeholder="Ny anteckning..."
+                        className="input text-sm flex-1"
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddNote(showCompanyDashboard.id)}
+                      />
+                      <button
+                        onClick={() => handleAddNote(showCompanyDashboard.id)}
+                        disabled={!newNote.trim()}
+                        className="btn btn-primary btn-sm disabled:opacity-50"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* Notes List */}
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {companyNotes.length === 0 ? (
+                        <p className="text-xs text-text-tertiary text-center py-2">Inga anteckningar</p>
+                      ) : (
+                        companyNotes.map((note) => (
+                          <div key={note.id} className={`p-2 rounded-lg text-xs ${note.is_pinned ? 'bg-warning/10 border border-warning/20' : 'bg-bg-primary'}`}>
+                            <p className="text-text-primary">{note.content}</p>
+                            <p className="text-text-tertiary mt-1">{new Date(note.created_at).toLocaleDateString('sv-SE')} - {note.created_by}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Documents Section */}
+                  <div className="bg-bg-secondary rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-medium text-text-primary flex items-center gap-2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                        </svg>
+                        Dokument
+                      </h3>
+                      <button
+                        onClick={() => setShowDocumentUpload(true)}
+                        className="text-xs text-accent hover:text-accent-hover"
+                      >
+                        + Ladda upp
+                      </button>
+                    </div>
+
+                    {/* Upload Form */}
+                    {showDocumentUpload && (
+                      <div className="mb-3 p-3 bg-bg-primary rounded-lg border border-border-subtle">
+                        <select
+                          value={documentForm.document_type}
+                          onChange={(e) => setDocumentForm({ ...documentForm, document_type: e.target.value })}
+                          className="input text-sm mb-2"
+                        >
+                          <option value="agreement">Avtal</option>
+                          <option value="contract">Kontrakt</option>
+                          <option value="invoice">Faktura</option>
+                          <option value="other">Övrigt</option>
+                        </select>
+                        <input
+                          type="text"
+                          value={documentForm.description}
+                          onChange={(e) => setDocumentForm({ ...documentForm, description: e.target.value })}
+                          placeholder="Beskrivning (valfritt)"
+                          className="input text-sm mb-2"
+                        />
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png"
+                          onChange={(e) => e.target.files?.[0] && handleUploadDocument(e.target.files[0])}
+                          className="text-xs"
+                        />
+                        <button
+                          onClick={() => setShowDocumentUpload(false)}
+                          className="text-xs text-text-tertiary mt-2 block"
+                        >
+                          Avbryt
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Documents List */}
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {companyDocuments.length === 0 ? (
+                        <p className="text-xs text-text-tertiary text-center py-2">Inga dokument</p>
+                      ) : (
+                        companyDocuments.map((doc) => (
+                          <div key={doc.id} className="flex items-center gap-2 p-2 rounded-lg bg-bg-primary group">
+                            <div className={`w-8 h-8 rounded flex items-center justify-center flex-shrink-0 ${
+                              doc.file_type.includes('pdf') ? 'bg-red-100 text-red-600' :
+                              doc.file_type.includes('image') ? 'bg-blue-100 text-blue-600' :
+                              'bg-gray-100 text-gray-600'
+                            }`}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                              </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-text-primary truncate">{doc.filename}</p>
+                              <p className="text-xs text-text-tertiary">{(doc.file_size / 1024).toFixed(0)} KB</p>
+                            </div>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => handleDownloadDocument(doc.id, doc.filename)}
+                                className="p-1 text-text-tertiary hover:text-accent"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                  <polyline points="7 10 12 15 17 10" />
+                                  <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteDocument(doc.id)}
+                                className="p-1 text-text-tertiary hover:text-error"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Actions */}
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -2081,6 +3744,564 @@ function SuperAdmin() {
                 disabled={verifying2FA || verifyCode.length !== 6}
               >
                 {verifying2FA ? 'Verifierar...' : 'Verifiera och aktivera'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Command Palette Modal */}
+      {commandPaletteOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-[20vh] z-50">
+          <div className="bg-bg-primary rounded-2xl shadow-2xl border border-border-subtle w-full max-w-2xl overflow-hidden">
+            <div className="p-4 border-b border-border-subtle">
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5 text-text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  value={commandSearch}
+                  onChange={(e) => setCommandSearch(e.target.value)}
+                  placeholder="Sök företag, åtgärder eller inställningar..."
+                  className="flex-1 bg-transparent border-none outline-none text-lg text-text-primary placeholder:text-text-tertiary"
+                  autoFocus
+                />
+                <button
+                  onClick={() => { setCommandPaletteOpen(false); setCommandSearch(''); }}
+                  className="text-text-tertiary hover:text-text-secondary"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-[400px] overflow-y-auto">
+              {/* Quick Actions */}
+              {!commandSearch && (
+                <div className="p-3">
+                  <p className="text-xs text-text-tertiary uppercase tracking-wider px-3 pb-2">Snabbåtgärder</p>
+                  <button
+                    onClick={() => { setCommandPaletteOpen(false); setActiveTab('companies'); setShowCreateModal(true); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-bg-secondary text-left"
+                  >
+                    <span className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </span>
+                    <div>
+                      <p className="text-text-primary font-medium">Skapa nytt företag</p>
+                      <p className="text-xs text-text-tertiary">Lägg till ett nytt kundföretag</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => { setCommandPaletteOpen(false); setShowAnnouncementModal(true); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-bg-secondary text-left"
+                  >
+                    <span className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                      </svg>
+                    </span>
+                    <div>
+                      <p className="text-text-primary font-medium">Skicka meddelande</p>
+                      <p className="text-xs text-text-tertiary">Broadcast till alla administratörer</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => { setCommandPaletteOpen(false); setActiveTab('analytics'); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-bg-secondary text-left"
+                  >
+                    <span className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </span>
+                    <div>
+                      <p className="text-text-primary font-medium">Visa Analytics</p>
+                      <p className="text-xs text-text-tertiary">Detaljerad statistik och rapporter</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => { setCommandPaletteOpen(false); setActiveTab('system'); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-bg-secondary text-left"
+                  >
+                    <span className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </span>
+                    <div>
+                      <p className="text-text-primary font-medium">Systeminställningar</p>
+                      <p className="text-xs text-text-tertiary">AI-modell, GDPR och databas</p>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {/* Search Results - Companies */}
+              {commandSearch && (
+                <div className="p-3">
+                  <p className="text-xs text-text-tertiary uppercase tracking-wider px-3 pb-2">Företag</p>
+                  {companies
+                    .filter(c =>
+                      c.name.toLowerCase().includes(commandSearch.toLowerCase()) ||
+                      c.id.toLowerCase().includes(commandSearch.toLowerCase())
+                    )
+                    .slice(0, 5)
+                    .map(company => (
+                      <button
+                        key={company.id}
+                        onClick={() => { setCommandPaletteOpen(false); setCommandSearch(''); openCompanyDashboard(company); }}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-bg-secondary text-left"
+                      >
+                        <span className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                          <span className="text-sm font-bold text-accent">{company.name.charAt(0)}</span>
+                        </span>
+                        <div>
+                          <p className="text-text-primary font-medium">{company.name}</p>
+                          <p className="text-xs text-text-tertiary">{company.id} • {company.is_active ? 'Aktiv' : 'Inaktiv'}</p>
+                        </div>
+                      </button>
+                    ))
+                  }
+                  {companies.filter(c =>
+                    c.name.toLowerCase().includes(commandSearch.toLowerCase()) ||
+                    c.id.toLowerCase().includes(commandSearch.toLowerCase())
+                  ).length === 0 && (
+                    <p className="text-text-tertiary text-sm px-3 py-4 text-center">Inga företag hittades</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Announcement Modal */}
+      {showAnnouncementModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-bg-primary rounded-2xl shadow-2xl border border-border-subtle w-full max-w-lg overflow-hidden">
+            <div className="p-6 border-b border-border-subtle">
+              <h3 className="text-xl font-bold text-text-primary">Skicka meddelande</h3>
+              <p className="text-text-secondary text-sm mt-1">Meddelandet visas för alla administratörer som loggar in</p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Typ</label>
+                <select
+                  value={announcementForm.type}
+                  onChange={(e) => setAnnouncementForm(prev => ({ ...prev, type: e.target.value }))}
+                  className="input w-full"
+                >
+                  <option value="info">Information</option>
+                  <option value="warning">Varning</option>
+                  <option value="success">Framgång</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Titel</label>
+                <input
+                  type="text"
+                  value={announcementForm.title}
+                  onChange={(e) => setAnnouncementForm(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Systemuppdatering planerad..."
+                  className="input w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Meddelande</label>
+                <textarea
+                  value={announcementForm.message}
+                  onChange={(e) => setAnnouncementForm(prev => ({ ...prev, message: e.target.value }))}
+                  placeholder="Skriv ditt meddelande här..."
+                  rows={4}
+                  className="input w-full resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-border-subtle flex justify-end gap-3">
+              <button
+                onClick={() => { setShowAnnouncementModal(false); setAnnouncementForm({ title: '', message: '', type: 'info' }); }}
+                className="btn btn-ghost"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={async () => {
+                  if (!announcementForm.title || !announcementForm.message) return;
+                  try {
+                    const response = await fetch(`${API_BASE}/admin/announcements`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                      },
+                      body: JSON.stringify(announcementForm)
+                    });
+                    if (response.ok) {
+                      const data = await response.json();
+                      setAnnouncement(data);
+                      setShowAnnouncementModal(false);
+                      setAnnouncementForm({ title: '', message: '', type: 'info' });
+                    }
+                  } catch (error) {
+                    console.error('Failed to create announcement:', error);
+                  }
+                }}
+                className="btn btn-primary"
+                disabled={!announcementForm.title || !announcementForm.message}
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                </svg>
+                Skicka meddelande
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pricing Modal */}
+      {showPricingModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle">
+              <h2 className="text-lg font-semibold text-text-primary">Ändra prisnivå</h2>
+              <p className="text-sm text-text-secondary mt-1">{showPricingModal.name} ({showPricingModal.id})</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="input-label">Prisnivå</label>
+                <select
+                  value={pricingForm.pricing_tier}
+                  onChange={(e) => setPricingForm({ ...pricingForm, pricing_tier: e.target.value })}
+                  className="input w-full"
+                >
+                  {Object.entries(pricingTiers).map(([key, tier]) => (
+                    <option key={key} value={key}>
+                      {tier.name} ({tier.monthly_fee?.toLocaleString('sv-SE')} kr/mån{tier.startup_fee > 0 ? ` + ${tier.startup_fee?.toLocaleString('sv-SE')} kr uppstart` : ', gratis uppstart'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={pricingForm.startup_fee_paid}
+                    onChange={(e) => setPricingForm({ ...pricingForm, startup_fee_paid: e.target.checked })}
+                    className="rounded border-border text-accent focus:ring-accent"
+                  />
+                  <span className="text-sm text-text-primary">Uppstartsavgift betald</span>
+                </label>
+              </div>
+              <div>
+                <label className="input-label">Kontraktsstartdatum</label>
+                <input
+                  type="date"
+                  value={pricingForm.contract_start_date}
+                  onChange={(e) => setPricingForm({ ...pricingForm, contract_start_date: e.target.value })}
+                  className="input w-full"
+                />
+              </div>
+              <div>
+                <label className="input-label">Faktureringsmejl</label>
+                <input
+                  type="email"
+                  value={pricingForm.billing_email}
+                  onChange={(e) => setPricingForm({ ...pricingForm, billing_email: e.target.value })}
+                  className="input w-full"
+                  placeholder="faktura@foretag.se"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-border-subtle flex justify-end gap-3">
+              <button
+                onClick={() => setShowPricingModal(null)}
+                className="btn btn-ghost"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={() => handleUpdatePricing(showPricingModal.id)}
+                className="btn btn-primary"
+              >
+                Spara ändringar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discount Modal */}
+      {showDiscountModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle">
+              <h2 className="text-lg font-semibold text-text-primary">Hantera rabatt</h2>
+              <p className="text-sm text-text-secondary mt-1">{showDiscountModal.name} ({showDiscountModal.id})</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="input-label">Rabattprocent</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={discountForm.discount_percent}
+                  onChange={(e) => setDiscountForm({ ...discountForm, discount_percent: parseFloat(e.target.value) || 0 })}
+                  className="input w-full"
+                  placeholder="0"
+                />
+                <p className="text-xs text-text-tertiary mt-1">0-100%, 0 = ingen rabatt</p>
+              </div>
+              <div>
+                <label className="input-label">Rabatt gäller t.o.m.</label>
+                <input
+                  type="date"
+                  value={discountForm.discount_end_date}
+                  onChange={(e) => setDiscountForm({ ...discountForm, discount_end_date: e.target.value })}
+                  className="input w-full"
+                />
+                <p className="text-xs text-text-tertiary mt-1">Lämna tomt för permanent rabatt</p>
+              </div>
+              <div>
+                <label className="input-label">Anteckning</label>
+                <input
+                  type="text"
+                  value={discountForm.discount_note}
+                  onChange={(e) => setDiscountForm({ ...discountForm, discount_note: e.target.value })}
+                  className="input w-full"
+                  placeholder="T.ex. 'Early adopter', 'Kampanjrabatt'"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-border-subtle flex justify-end gap-3">
+              <button
+                onClick={() => setShowDiscountModal(null)}
+                className="btn btn-ghost"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleSaveDiscount}
+                className="btn btn-primary"
+              >
+                Spara rabatt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Roadmap Modal */}
+      {showRoadmapModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle">
+              <h2 className="text-lg font-semibold text-text-primary">
+                {editingRoadmapItem ? 'Redigera roadmap-punkt' : 'Ny roadmap-punkt'}
+              </h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="input-label">Titel</label>
+                <input
+                  type="text"
+                  value={roadmapForm.title}
+                  onChange={(e) => setRoadmapForm({ ...roadmapForm, title: e.target.value })}
+                  className="input w-full"
+                  placeholder="T.ex. 'Webhook-integrationer'"
+                />
+              </div>
+              <div>
+                <label className="input-label">Beskrivning</label>
+                <textarea
+                  value={roadmapForm.description}
+                  onChange={(e) => setRoadmapForm({ ...roadmapForm, description: e.target.value })}
+                  className="input w-full"
+                  rows={3}
+                  placeholder="Kort beskrivning av funktionen..."
+                />
+              </div>
+              <div>
+                <label className="input-label">Kvartal</label>
+                <select
+                  value={roadmapForm.quarter}
+                  onChange={(e) => setRoadmapForm({ ...roadmapForm, quarter: e.target.value })}
+                  className="input w-full"
+                >
+                  <option value="Q1 2026">Q1 2026</option>
+                  <option value="Q2 2026">Q2 2026</option>
+                  <option value="Q3 2026">Q3 2026</option>
+                  <option value="Q4 2026">Q4 2026</option>
+                  <option value="Q1 2027">Q1 2027</option>
+                  <option value="Backlog">Backlog</option>
+                </select>
+              </div>
+              <div>
+                <label className="input-label">Status</label>
+                <select
+                  value={roadmapForm.status}
+                  onChange={(e) => setRoadmapForm({ ...roadmapForm, status: e.target.value })}
+                  className="input w-full"
+                >
+                  <option value="planned">Planerad</option>
+                  <option value="in_progress">Pågående</option>
+                  <option value="completed">Klar</option>
+                  <option value="cancelled">Avbruten</option>
+                </select>
+              </div>
+            </div>
+            <div className="p-6 border-t border-border-subtle flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowRoadmapModal(false)
+                  setEditingRoadmapItem(null)
+                }}
+                className="btn btn-ghost"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleSaveRoadmapItem}
+                className="btn btn-primary"
+              >
+                {editingRoadmapItem ? 'Spara ändringar' : 'Skapa punkt'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pricing Tier Edit Modal */}
+      {showPricingTierModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-lg animate-scale-in max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-border-subtle">
+              <h2 className="text-lg font-semibold text-text-primary">
+                {editingPricingTier ? 'Redigera prisnivå' : 'Ny prisnivå'}
+              </h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="input-label">Nyckel (ID)</label>
+                <input
+                  type="text"
+                  value={pricingTierForm.tier_key}
+                  onChange={(e) => setPricingTierForm({ ...pricingTierForm, tier_key: e.target.value.toLowerCase().replace(/\s/g, '_') })}
+                  className="input w-full font-mono"
+                  placeholder="t.ex. 'professional'"
+                  disabled={!!editingPricingTier}
+                />
+                {editingPricingTier && (
+                  <p className="text-xs text-text-tertiary mt-1">Nyckel kan inte ändras</p>
+                )}
+              </div>
+              <div>
+                <label className="input-label">Visningsnamn</label>
+                <input
+                  type="text"
+                  value={pricingTierForm.name}
+                  onChange={(e) => setPricingTierForm({ ...pricingTierForm, name: e.target.value })}
+                  className="input w-full"
+                  placeholder="T.ex. 'Professional'"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="input-label">Månadsavgift (kr)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={pricingTierForm.monthly_fee}
+                    onChange={(e) => setPricingTierForm({ ...pricingTierForm, monthly_fee: parseFloat(e.target.value) || 0 })}
+                    className="input w-full"
+                  />
+                </div>
+                <div>
+                  <label className="input-label">Uppstartsavgift (kr)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={pricingTierForm.startup_fee}
+                    onChange={(e) => setPricingTierForm({ ...pricingTierForm, startup_fee: parseFloat(e.target.value) || 0 })}
+                    className="input w-full"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="input-label">Max konversationer/månad</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={pricingTierForm.max_conversations}
+                  onChange={(e) => setPricingTierForm({ ...pricingTierForm, max_conversations: parseInt(e.target.value) || 0 })}
+                  className="input w-full"
+                />
+                <p className="text-xs text-text-tertiary mt-1">0 = obegränsat</p>
+              </div>
+              <div>
+                <label className="input-label">Inkluderade funktioner</label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={newFeature}
+                    onChange={(e) => setNewFeature(e.target.value)}
+                    className="input flex-1"
+                    placeholder="Lägg till funktion..."
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addFeatureToTier())}
+                  />
+                  <button
+                    type="button"
+                    onClick={addFeatureToTier}
+                    className="btn btn-secondary"
+                  >
+                    Lägg till
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {pricingTierForm.features.map((feature, index) => (
+                    <div key={index} className="flex items-center justify-between bg-bg-secondary p-2 rounded">
+                      <span className="text-sm text-text-primary">{feature}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeFeatureFromTier(index)}
+                        className="text-error hover:text-error/80"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="p-6 border-t border-border-subtle flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowPricingTierModal(false)
+                  setEditingPricingTier(null)
+                }}
+                className="btn btn-ghost"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleSavePricingTier}
+                className="btn btn-primary"
+              >
+                {editingPricingTier ? 'Spara ändringar' : 'Skapa prisnivå'}
               </button>
             </div>
           </div>

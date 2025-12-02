@@ -3,10 +3,11 @@ Bobot Backend API
 En GDPR-säker AI-chatbot för fastighetsbolag
 """
 
-from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks, UploadFile, File
+from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks, UploadFile, File, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import datetime, timedelta, date
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
@@ -15,6 +16,7 @@ import os
 import json
 import asyncio
 import uuid
+import time
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
@@ -22,11 +24,13 @@ from database import (
     create_tables, get_db, Company, KnowledgeItem, ChatLog, SuperAdmin,
     CompanySettings, Conversation, Message, DailyStatistics, GDPRAuditLog,
     AdminAuditLog, GlobalSettings, CompanyActivityLog, Subscription, Invoice,
-    CompanyNote, WidgetPerformance, EmailNotificationQueue
+    CompanyNote, CompanyDocument, WidgetPerformance, EmailNotificationQueue,
+    RoadmapItem, PricingTier
 )
 from auth import (
-    hash_password, verify_password, create_token,
-    get_current_company, get_super_admin
+    hash_password, verify_password, create_token, create_2fa_pending_token,
+    get_current_company, get_super_admin, get_2fa_pending_admin,
+    needs_rehash, is_bcrypt_hash
 )
 
 load_dotenv()
@@ -114,23 +118,58 @@ async def scheduled_cleanup_task():
         await cleanup_old_activity_logs()
 
 
+async def email_queue_task():
+    """Process email queue every 5 minutes"""
+    from email_service import process_email_queue
+    from database import SessionLocal
+
+    while True:
+        await asyncio.sleep(300)  # Wait 5 minutes
+        db = SessionLocal()
+        try:
+            processed = await process_email_queue(db)
+            if processed > 0:
+                print(f"[Email] Processed {processed} emails from queue")
+        except Exception as e:
+            print(f"[Email Queue Error] {e}")
+        finally:
+            db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup och shutdown events"""
+    # Initialize Sentry if configured
+    sentry_dsn = os.getenv("SENTRY_DSN")
+    if sentry_dsn:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            environment=os.getenv("ENVIRONMENT", "development"),
+            traces_sample_rate=0.1,  # 10% of transactions
+            profiles_sample_rate=0.1,
+        )
+        print("[Startup] Sentry error tracking initialized")
+
     # Startup
     create_tables()
     init_demo_data()
 
-    # Starta bakgrundsuppgift för cleanup
+    # Start background tasks
     cleanup_task = asyncio.create_task(scheduled_cleanup_task())
     print("[Startup] GDPR cleanup-task startad (körs varje timme)")
+
+    email_task = asyncio.create_task(email_queue_task())
+    print("[Startup] Email queue task started (runs every 5 minutes)")
 
     yield
 
     # Shutdown
     cleanup_task.cancel()
+    email_task.cancel()
     try:
         await cleanup_task
+        await email_task
     except asyncio.CancelledError:
         pass
 
@@ -142,14 +181,190 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS
+# =============================================================================
+# CORS Configuration - Security Hardened
+# =============================================================================
+
+def get_cors_origins():
+    """Get CORS origins from environment or use defaults"""
+    cors_env = os.getenv("CORS_ORIGINS", "")
+
+    if cors_env:
+        # Parse comma-separated origins
+        origins = [o.strip() for o in cors_env.split(",") if o.strip()]
+        return origins
+
+    # Development defaults - restrict in production!
+    if os.getenv("ENVIRONMENT", "development") == "production":
+        # In production, require explicit CORS_ORIGINS
+        print("WARNING: CORS_ORIGINS not set in production. Using restrictive defaults.")
+        return ["https://app.bobot.se"]  # Production default
+
+    # Development: allow localhost and common dev ports
+    return [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+        "http://127.0.0.1:5173",
+    ]
+
+
+CORS_ORIGINS = get_cors_origins()
+
+# Log CORS configuration
+if os.getenv("ENVIRONMENT", "development") != "production":
+    print(f"[CORS] Allowed origins: {CORS_ORIGINS}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
 )
+
+
+# =============================================================================
+# Security Headers Middleware
+# =============================================================================
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses"""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+
+        # Security headers
+        is_production = os.getenv("ENVIRONMENT", "development") == "production"
+
+        # HSTS - Force HTTPS (only in production)
+        if is_production:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+        # Prevent clickjacking - allow embedding only from same origin
+        # Note: Widget needs to be embedded, so we use SAMEORIGIN
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+
+        # Prevent MIME type sniffing
+        response.headers["X-Content-Type-Options"] = "nosniff"
+
+        # XSS Protection (legacy, but still useful)
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+
+        # Referrer Policy
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # Permissions Policy (formerly Feature-Policy)
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+
+        # Content Security Policy (basic - adjust based on needs)
+        # Note: Widget embedding requires relaxed policy
+        if is_production:
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data: https:; "
+                "font-src 'self' https://fonts.gstatic.com; "
+                "connect-src 'self' https:; "
+                "frame-ancestors 'self' *;"  # Allow widget embedding
+            )
+
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+
+# =============================================================================
+# Request ID & Logging Middleware
+# =============================================================================
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    """Add request ID to all requests for tracing"""
+
+    async def dispatch(self, request: Request, call_next):
+        # Generate or get request ID
+        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4())[:8])
+        request.state.request_id = request_id
+
+        # Time the request
+        start_time = time.time()
+
+        response = await call_next(request)
+
+        # Add request ID to response
+        response.headers["X-Request-ID"] = request_id
+
+        # Log request (skip health checks)
+        if request.url.path not in ["/health", "/", "/docs", "/openapi.json"]:
+            duration_ms = (time.time() - start_time) * 1000
+            print(f"[{request_id}] {request.method} {request.url.path} - {response.status_code} ({duration_ms:.0f}ms)")
+
+        return response
+
+
+app.add_middleware(RequestIDMiddleware)
+
+
+# =============================================================================
+# Login Attempt Tracking (Brute Force Protection)
+# =============================================================================
+
+login_attempts: Dict[str, list] = {}  # {identifier: [timestamp, timestamp, ...]}
+LOGIN_ATTEMPT_WINDOW = 900  # 15 minutes
+LOGIN_MAX_ATTEMPTS = 5  # Max failed attempts before lockout
+LOGIN_LOCKOUT_DURATION = 900  # 15 minutes lockout
+
+
+def check_login_attempts(identifier: str) -> tuple:
+    """
+    Check if login is allowed for identifier (username or IP).
+    Returns (allowed: bool, remaining_attempts: int, lockout_seconds: int)
+    """
+    now = time.time()
+
+    if identifier not in login_attempts:
+        return True, LOGIN_MAX_ATTEMPTS, 0
+
+    # Clean old attempts outside window
+    login_attempts[identifier] = [
+        ts for ts in login_attempts[identifier]
+        if now - ts < LOGIN_ATTEMPT_WINDOW
+    ]
+
+    attempts = len(login_attempts[identifier])
+
+    if attempts >= LOGIN_MAX_ATTEMPTS:
+        # Check if still in lockout
+        oldest_attempt = min(login_attempts[identifier]) if login_attempts[identifier] else now
+        lockout_remaining = LOGIN_LOCKOUT_DURATION - (now - oldest_attempt)
+
+        if lockout_remaining > 0:
+            return False, 0, int(lockout_remaining)
+        else:
+            # Lockout expired, clear attempts
+            login_attempts[identifier] = []
+            return True, LOGIN_MAX_ATTEMPTS, 0
+
+    return True, LOGIN_MAX_ATTEMPTS - attempts, 0
+
+
+def record_failed_login(identifier: str):
+    """Record a failed login attempt"""
+    now = time.time()
+    if identifier not in login_attempts:
+        login_attempts[identifier] = []
+    login_attempts[identifier].append(now)
+
+
+def clear_login_attempts(identifier: str):
+    """Clear login attempts on successful login"""
+    if identifier in login_attempts:
+        del login_attempts[identifier]
+
 
 # Ollama-konfiguration
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -198,9 +413,9 @@ response_cache = {}
 CACHE_TTL = 300  # 5 minutes
 
 
-def get_cached_response(company_id: str, question: str):
+def get_cached_response(company_id: str, question: str, language: str = "sv"):
     """Get cached response if available and not expired"""
-    cache_key = f"{company_id}:{question.lower().strip()}"
+    cache_key = f"{company_id}:{language}:{question.lower().strip()}"
     if cache_key in response_cache:
         cached, timestamp = response_cache[cache_key]
         if datetime.utcnow().timestamp() - timestamp < CACHE_TTL:
@@ -210,9 +425,9 @@ def get_cached_response(company_id: str, question: str):
     return None
 
 
-def set_cached_response(company_id: str, question: str, response: dict):
+def set_cached_response(company_id: str, question: str, response: dict, language: str = "sv"):
     """Cache a response"""
-    cache_key = f"{company_id}:{question.lower().strip()}"
+    cache_key = f"{company_id}:{language}:{question.lower().strip()}"
     response_cache[cache_key] = (response, datetime.utcnow().timestamp())
     # Clean old entries if cache gets too large
     if len(response_cache) > 1000:
@@ -227,8 +442,11 @@ RATE_LIMIT_WINDOW = 60  # 1 minute window
 RATE_LIMIT_MAX_REQUESTS = 15  # Max 15 messages per minute
 
 
-def check_rate_limit(session_id: str, ip_address: str) -> bool:
-    """Check if session/IP is rate limited. Returns True if allowed, False if limited."""
+def check_rate_limit(session_id: str, ip_address: str) -> tuple:
+    """
+    Check if session/IP is rate limited.
+    Returns (allowed: bool, current_count: int, reset_time: int)
+    """
     # Use combination of session and IP for rate limiting
     rate_key = f"{session_id}:{ip_address}" if session_id else ip_address
     now = datetime.utcnow().timestamp()
@@ -240,19 +458,90 @@ def check_rate_limit(session_id: str, ip_address: str) -> bool:
     # Remove old timestamps outside window
     rate_limit_store[rate_key] = [ts for ts in rate_limit_store[rate_key] if ts > window_start]
 
+    current_count = len(rate_limit_store[rate_key])
+
+    # Calculate reset time (when the oldest request in window expires)
+    if rate_limit_store[rate_key]:
+        reset_time = int(min(rate_limit_store[rate_key]) + RATE_LIMIT_WINDOW - now)
+    else:
+        reset_time = RATE_LIMIT_WINDOW
+
     # Check if under limit
-    if len(rate_limit_store[rate_key]) >= RATE_LIMIT_MAX_REQUESTS:
-        return False
+    if current_count >= RATE_LIMIT_MAX_REQUESTS:
+        return False, current_count, reset_time
 
     # Add current request
     rate_limit_store[rate_key].append(now)
 
     # Cleanup old entries periodically (every 100 requests)
     if len(rate_limit_store) > 10000:
-        cutoff = now - RATE_LIMIT_WINDOW * 2
         rate_limit_store.clear()  # Simple cleanup - clear all
 
-    return True
+    return True, current_count + 1, reset_time
+
+
+# =============================================================================
+# Admin Rate Limiting (stricter limits for administrative operations)
+# =============================================================================
+
+admin_rate_limit_store = {}  # {admin_username: [timestamps]}
+ADMIN_RATE_LIMIT_WINDOW = 60  # 1 minute window
+ADMIN_RATE_LIMIT_MAX_REQUESTS = 30  # Max 30 admin requests per minute
+
+
+def check_admin_rate_limit(admin_username: str) -> tuple:
+    """
+    Check if admin is rate limited.
+    Returns (allowed: bool, remaining: int, reset_time: int)
+    """
+    now = datetime.utcnow().timestamp()
+    window_start = now - ADMIN_RATE_LIMIT_WINDOW
+
+    if admin_username not in admin_rate_limit_store:
+        admin_rate_limit_store[admin_username] = []
+
+    # Remove old timestamps outside window
+    admin_rate_limit_store[admin_username] = [
+        ts for ts in admin_rate_limit_store[admin_username]
+        if ts > window_start
+    ]
+
+    current_count = len(admin_rate_limit_store[admin_username])
+
+    # Calculate reset time
+    if admin_rate_limit_store[admin_username]:
+        reset_time = int(min(admin_rate_limit_store[admin_username]) + ADMIN_RATE_LIMIT_WINDOW - now)
+    else:
+        reset_time = ADMIN_RATE_LIMIT_WINDOW
+
+    # Check if under limit
+    if current_count >= ADMIN_RATE_LIMIT_MAX_REQUESTS:
+        return False, 0, reset_time
+
+    # Add current request
+    admin_rate_limit_store[admin_username].append(now)
+
+    # Cleanup old entries periodically
+    if len(admin_rate_limit_store) > 1000:
+        admin_rate_limit_store.clear()
+
+    return True, ADMIN_RATE_LIMIT_MAX_REQUESTS - current_count - 1, reset_time
+
+
+def require_admin_rate_limit(admin: dict):
+    """Dependency to enforce admin rate limiting"""
+    allowed, remaining, reset_time = check_admin_rate_limit(admin["username"])
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="För många förfrågningar. Vänta en stund.",
+            headers={
+                "Retry-After": str(reset_time),
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": str(reset_time)
+            }
+        )
+    return admin
 
 
 class KnowledgeItemCreate(BaseModel):
@@ -292,6 +581,60 @@ class CompanyResponse(BaseModel):
     max_conversations_month: int = 0
     current_month_conversations: int = 0
     max_knowledge_items: int = 0
+    # Pricing fields
+    pricing_tier: str = "starter"
+    startup_fee_paid: bool = False
+    contract_start_date: Optional[date] = None
+    billing_email: str = ""
+
+
+class PricingTierUpdate(BaseModel):
+    pricing_tier: str  # starter, professional, business, enterprise
+    startup_fee_paid: Optional[bool] = None
+    contract_start_date: Optional[date] = None
+    billing_email: Optional[str] = None
+
+
+class CompanyDiscountUpdate(BaseModel):
+    discount_percent: float = Field(ge=0, le=100)
+    discount_end_date: Optional[date] = None
+    discount_note: Optional[str] = ""
+
+
+class RoadmapItemCreate(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    quarter: str  # e.g., "Q1 2026"
+    status: Optional[str] = "planned"  # planned, in_progress, completed, cancelled
+    display_order: Optional[int] = 0
+
+
+class RoadmapItemUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    quarter: Optional[str] = None
+    status: Optional[str] = None
+    display_order: Optional[int] = None
+
+
+class PricingTierCreate(BaseModel):
+    tier_key: str
+    name: str
+    monthly_fee: float = 0
+    startup_fee: float = 0
+    max_conversations: int = 0
+    features: List[str] = []
+    display_order: Optional[int] = 0
+
+
+class PricingTierDbUpdate(BaseModel):
+    name: Optional[str] = None
+    monthly_fee: Optional[float] = None
+    startup_fee: Optional[float] = None
+    max_conversations: Optional[int] = None
+    features: Optional[List[str]] = None
+    is_active: Optional[bool] = None
+    display_order: Optional[int] = None
 
 
 class SuperAdminLogin(BaseModel):
@@ -320,6 +663,13 @@ class SettingsUpdate(BaseModel):
     notify_unanswered: Optional[bool] = None
     notification_email: Optional[str] = None
     custom_categories: Optional[str] = None  # JSON string
+    # Widget Typography & Style
+    widget_font_family: Optional[str] = None
+    widget_font_size: Optional[int] = None
+    widget_border_radius: Optional[int] = None
+    widget_position: Optional[str] = None
+    # Quick Reply Suggestions
+    suggested_questions: Optional[str] = None  # JSON array string
     # PuB/GDPR Compliance
     privacy_policy_url: Optional[str] = None
     require_consent: Optional[bool] = None
@@ -341,6 +691,13 @@ class SettingsResponse(BaseModel):
     notify_unanswered: bool
     notification_email: str
     custom_categories: str
+    # Widget Typography & Style
+    widget_font_family: str
+    widget_font_size: int
+    widget_border_radius: int
+    widget_position: str
+    # Quick Reply Suggestions
+    suggested_questions: str
     # PuB/GDPR Compliance
     privacy_policy_url: str
     require_consent: bool
@@ -421,77 +778,124 @@ class AnalyticsResponse(BaseModel):
 
 
 # =============================================================================
-# Init Functions
+# Init Functions - Security Hardened
 # =============================================================================
 
 def init_demo_data():
-    """Skapa demo-data vid start"""
+    """Initialize admin and optionally demo data
+
+    Environment variables:
+    - ADMIN_PASSWORD: Required in production, sets super admin password
+    - ENABLE_DEMO_DATA: Set to "true" to create demo company (disabled in production by default)
+    - ENVIRONMENT: "production" enables strict security checks
+    """
     from database import SessionLocal
+    import secrets
+
     db = SessionLocal()
+    is_production = os.getenv("ENVIRONMENT", "development") == "production"
 
     try:
-        # Skapa super admin om den inte finns
+        # =================================================================
+        # Super Admin Setup
+        # =================================================================
         admin = db.query(SuperAdmin).filter(SuperAdmin.username == "admin").first()
+
         if not admin:
+            # Get admin password from environment or generate one
+            admin_password = os.getenv("ADMIN_PASSWORD")
+
+            if not admin_password:
+                if is_production:
+                    # In production, require explicit password
+                    generated_password = secrets.token_urlsafe(16)
+                    print("=" * 60)
+                    print("SECURITY WARNING: No ADMIN_PASSWORD set!")
+                    print(f"Generated temporary password: {generated_password}")
+                    print("Set ADMIN_PASSWORD environment variable in production!")
+                    print("=" * 60)
+                    admin_password = generated_password
+                else:
+                    # Development: use default but warn
+                    admin_password = "admin123"
+                    print("[WARNING] Using default admin password - NOT for production!")
+
             admin = SuperAdmin(
                 username="admin",
-                password_hash=hash_password("admin123")
+                password_hash=hash_password(admin_password)
             )
             db.add(admin)
             db.commit()
-            print("Super admin skapad: admin / admin123")
 
-        # Skapa demo-företag om det inte finns
-        demo = db.query(Company).filter(Company.id == "demo").first()
-        if not demo:
-            demo = Company(
-                id="demo",
-                name="Demo Fastigheter AB",
-                password_hash=hash_password("demo123")
-            )
-            db.add(demo)
-            db.commit()
+            if not is_production:
+                print(f"Super admin skapad: admin / {admin_password}")
+            else:
+                print("Super admin skapad (password from ADMIN_PASSWORD env)")
 
-            # Skapa standardinställningar för demo
-            demo_settings = CompanySettings(
-                company_id="demo",
-                company_name="Demo Fastigheter AB",
-                contact_email="info@demo.se",
-                contact_phone="08-123 456 78"
-            )
-            db.add(demo_settings)
+        # =================================================================
+        # Demo Data (Optional)
+        # =================================================================
+        enable_demo = os.getenv("ENABLE_DEMO_DATA", "").lower() == "true"
 
-            # Lägg till demo-kunskapsbas med kategorier
-            demo_items = [
-                ("Hur säger jag upp min lägenhet?",
-                 "För att säga upp din lägenhet behöver du skicka en skriftlig uppsägning till oss. Uppsägningstiden är vanligtvis 3 månader.",
-                 "kontrakt"),
-                ("Vad ingår i hyran?",
-                 "I hyran ingår vanligtvis värme, vatten, sophämtning och tillgång till gemensamma utrymmen som tvättstuga.",
-                 "hyra"),
-                ("Hur anmäler jag ett fel i lägenheten?",
-                 "Felanmälan görs via vår hemsida under 'Felanmälan' eller genom att ringa kundtjänst på 08-123 456 78.",
-                 "felanmalan"),
-                ("När är tvättstugan öppen?",
-                 "Tvättstugan är öppen dygnet runt. Du bokar tvättid via bokningstavlan eller vår app.",
-                 "tvattstuga"),
-                ("Får jag ha husdjur?",
-                 "Ja, husdjur är tillåtna så länge de inte stör grannar eller orsakar skada.",
-                 "allmant"),
-                ("Hur betalar jag hyran?",
-                 "Hyran betalas via autogiro eller bankgiro. Du hittar betalningsinformation på din faktura.",
-                 "hyra"),
-                ("Var kan jag parkera?",
-                 "Parkering finns tillgänglig i vårt garage. Kontakta kundtjänst för att hyra en parkeringsplats.",
-                 "parkering"),
-            ]
+        # In development, enable demo by default unless explicitly disabled
+        if not is_production and os.getenv("ENABLE_DEMO_DATA") is None:
+            enable_demo = True
 
-            for q, a, cat in demo_items:
-                item = KnowledgeItem(company_id="demo", question=q, answer=a, category=cat)
-                db.add(item)
+        if enable_demo:
+            demo = db.query(Company).filter(Company.id == "demo").first()
+            if not demo:
+                demo_password = os.getenv("DEMO_PASSWORD", "demo123")
 
-            db.commit()
-            print("Demo-företag skapat: demo / demo123")
+                demo = Company(
+                    id="demo",
+                    name="Demo Fastigheter AB",
+                    password_hash=hash_password(demo_password)
+                )
+                db.add(demo)
+                db.commit()
+
+                # Create default settings for demo
+                demo_settings = CompanySettings(
+                    company_id="demo",
+                    company_name="Demo Fastigheter AB",
+                    contact_email="info@demo.se",
+                    contact_phone="08-123 456 78"
+                )
+                db.add(demo_settings)
+
+                # Add demo knowledge base with categories
+                demo_items = [
+                    ("Hur säger jag upp min lägenhet?",
+                     "För att säga upp din lägenhet behöver du skicka en skriftlig uppsägning till oss. Uppsägningstiden är vanligtvis 3 månader.",
+                     "kontrakt"),
+                    ("Vad ingår i hyran?",
+                     "I hyran ingår vanligtvis värme, vatten, sophämtning och tillgång till gemensamma utrymmen som tvättstuga.",
+                     "hyra"),
+                    ("Hur anmäler jag ett fel i lägenheten?",
+                     "Felanmälan görs via vår hemsida under 'Felanmälan' eller genom att ringa kundtjänst på 08-123 456 78.",
+                     "felanmalan"),
+                    ("När är tvättstugan öppen?",
+                     "Tvättstugan är öppen dygnet runt. Du bokar tvättid via bokningstavlan eller vår app.",
+                     "tvattstuga"),
+                    ("Får jag ha husdjur?",
+                     "Ja, husdjur är tillåtna så länge de inte stör grannar eller orsakar skada.",
+                     "allmant"),
+                    ("Hur betalar jag hyran?",
+                     "Hyran betalas via autogiro eller bankgiro. Du hittar betalningsinformation på din faktura.",
+                     "hyra"),
+                    ("Var kan jag parkera?",
+                     "Parkering finns tillgänglig i vårt garage. Kontakta kundtjänst för att hyra en parkeringsplats.",
+                     "parkering"),
+                ]
+
+                for q, a, cat in demo_items:
+                    item = KnowledgeItem(company_id="demo", question=q, answer=a, category=cat)
+                    db.add(item)
+
+                db.commit()
+                print(f"Demo-företag skapat: demo / {demo_password}")
+        elif is_production:
+            print("[Security] Demo data disabled in production")
     finally:
         db.close()
 
@@ -508,20 +912,34 @@ def normalize_text(text: str) -> str:
     return text
 
 
-def find_relevant_context(question: str, company_id: str, db: Session, top_k: int = 3) -> List[KnowledgeItem]:
-    """Hitta relevanta frågor/svar från kunskapsbasen - fuzzy matching"""
+def find_relevant_context(question: str, company_id: str, db: Session, top_k: int = 3, min_score: int = 5) -> List[KnowledgeItem]:
+    """Hitta relevanta frågor/svar från kunskapsbasen - fuzzy matching
+
+    ANTI-HALLUCINATION: Only returns items with score >= min_score to prevent
+    weak matches from being used as context for AI-generated answers.
+    A score of 5+ indicates meaningful keyword overlap with the question.
+    """
     items = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == company_id).all()
+
+    if not items:
+        return []  # No knowledge base items at all
 
     question_normalized = normalize_text(question)
     question_words = set(question_normalized.split())
 
-    # Common stopwords to ignore
+    # Common stopwords to ignore (Swedish and English)
     stopwords = {'jag', 'vill', 'kan', 'hur', 'vad', 'är', 'har', 'en', 'ett', 'att', 'och',
                  'för', 'med', 'om', 'på', 'av', 'i', 'det', 'den', 'de', 'du', 'vi', 'ni',
-                 'göra', 'gör', 'ska', 'skulle', 'a', 'the', 'is', 'are', 'to', 'how', 'what'}
+                 'göra', 'gör', 'ska', 'skulle', 'a', 'the', 'is', 'are', 'to', 'how', 'what',
+                 'min', 'mitt', 'mina', 'din', 'ditt', 'dina', 'sin', 'sitt', 'sina',
+                 'this', 'that', 'these', 'those', 'my', 'your', 'our', 'their'}
 
     # Get meaningful words (not stopwords)
     meaningful_words = question_words - stopwords
+
+    # ANTI-HALLUCINATION: If no meaningful words after removing stopwords, return empty
+    if not meaningful_words:
+        return []
 
     scored_items = []
     for item in items:
@@ -547,25 +965,42 @@ def find_relevant_context(question: str, company_id: str, db: Session, top_k: in
                         elif q_word[:4] == i_word[:4]:
                             score += 1
 
-        # Category match bonus
-        if item.category:
+        # Category match bonus (only if meaningful words also matched)
+        if item.category and score > 0:
             if item.category.lower() in question_normalized:
                 score += 2
 
-        if score > 0:
+        # ANTI-HALLUCINATION: Only include items with score >= min_score
+        # This prevents weak/coincidental matches from being used as context
+        if score >= min_score:
             scored_items.append((score, item))
 
     scored_items.sort(key=lambda x: x[0], reverse=True)
     return [item for _, item in scored_items[:top_k]]
 
 
-async def query_ollama(prompt: str) -> str:
-    """Skicka fråga till Ollama"""
+async def query_ollama(prompt: str, temperature: float = 0.7) -> str:
+    """Skicka fråga till Ollama
+
+    Args:
+        prompt: The prompt to send to the model
+        temperature: Controls randomness (0.0 = deterministic, 1.0 = creative)
+                    Default 0.7 for natural but consistent responses
+    """
     async with httpx.AsyncClient(timeout=60.0) as client:
         try:
             response = await client.post(
                 f"{OLLAMA_BASE_URL}/api/generate",
-                json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
+                json={
+                    "model": OLLAMA_MODEL,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": temperature,  # 0.7 for natural but grounded responses
+                        "top_p": 0.9,  # Nucleus sampling for quality
+                        "repeat_penalty": 1.1,  # Slight penalty to avoid repetitive text
+                    }
+                }
             )
             response.raise_for_status()
             return response.json().get("response", "Kunde inte generera svar.")
@@ -650,8 +1085,58 @@ def detect_category(text: str) -> str:
     return "allmant"
 
 
-def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None, category: str = None) -> str:
-    """Bygg prompt med kontext - använder specificerat eller detekterat språk"""
+def is_greeting(text: str) -> bool:
+    """Detect if a message is just a greeting (no actual question)"""
+    text_lower = text.lower().strip()
+
+    # Common greetings in Swedish, English, and Arabic
+    greetings = [
+        # Swedish
+        "hej", "hallå", "tjena", "hejsan", "god dag", "goddag", "hejhej",
+        "tja", "tjenare", "morsning", "god morgon", "god kväll",
+        # English
+        "hi", "hello", "hey", "good morning", "good evening", "good afternoon",
+        "howdy", "greetings", "yo", "sup", "what's up", "whats up",
+        # Arabic
+        "مرحبا", "السلام عليكم", "اهلا",
+        # Short variants
+        "hej!", "hi!", "hello!", "hey!"
+    ]
+
+    # Check if the message is ONLY a greeting (with optional punctuation)
+    clean_text = text_lower.rstrip("!?.,")
+    if clean_text in greetings:
+        return True
+
+    # Check for greeting + simple filler (e.g., "hej där", "hello there")
+    greeting_patterns = [
+        "hej där", "hej du", "hallå där", "hello there", "hi there",
+        "hey there", "hej hej", "hej på dig"
+    ]
+    if clean_text in greeting_patterns:
+        return True
+
+    return False
+
+
+def get_greeting_response(language: str, company_name: str = None) -> str:
+    """Generate a warm greeting response"""
+    name = company_name or "oss"
+
+    responses = {
+        "sv": f"Hej! Vad kul att du hör av dig. Hur kan jag hjälpa dig idag?",
+        "en": f"Hi there! Great to hear from you. How can I help you today?",
+        "ar": f"مرحباً! سعيد بتواصلك معنا. كيف يمكنني مساعدتك اليوم؟"
+    }
+    return responses.get(language, responses["sv"])
+
+
+def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None, category: str = None, has_knowledge_match: bool = False) -> str:
+    """Bygg prompt med kontext - använder specificerat eller detekterat språk
+
+    ANTI-HALLUCINATION: This prompt is designed to prevent the AI from inventing information.
+    The AI should ONLY answer based on the provided knowledge base items.
+    """
     # Use provided language or detect from question
     lang = language if language in ["sv", "en", "ar"] else detect_language(question)
 
@@ -678,30 +1163,39 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
 
     company_info = ""
     if company_facts:
-        company_info = "Company information:\n" + "\n".join(f"- {fact}" for fact in company_facts)
+        company_info = "Contact info:\n" + "\n".join(f"- {fact}" for fact in company_facts)
 
     # Build knowledge base context
     knowledge = ""
     if context:
-        knowledge = "Knowledge base (use this to answer):\n"
+        knowledge = "FACTS (answer based on these):\n"
         for item in context:
             knowledge += f"Q: {item.question}\nA: {item.answer}\n\n"
+    else:
+        knowledge = "FACTS: No matching information found.\n"
 
-    return f"""You are a customer service assistant for {company_name}.
+    # Build a warm, conversational prompt that still prevents hallucination
+    return f"""You are a friendly assistant for {company_name}, a property management company. You help tenants with their questions.
 
-=== FACTS (only use these) ===
+PERSONALITY: Warm and helpful, like a friendly neighbor. Professional but not robotic. You genuinely want to help.
+
 {company_info}
+
 {knowledge}
-=== END FACTS ===
 
-RULES:
-1. Use ONLY facts from above. Never invent or guess.
-2. Questions about GDPR/privacy/personuppgifter → use GDPR-ansvarig info.
-3. Reply in {target_lang}. Be concise and helpful (1-2 sentences).
-4. Always include email/phone when giving contact info.
-5. If you truly don't have the info, say so briefly.
+HOW TO RESPOND:
+- Use ONLY the facts above. Never make up information.
+- If you have relevant info: Answer warmly in 1-3 sentences. Include contact info if helpful.
+- If someone reports a problem: Briefly acknowledge ("Tråkigt att höra!" / "I understand") before answering.
+- Be concise but complete.
+- Reply in {target_lang}.
 
-Customer: {question}"""
+NEVER DO THIS:
+- Don't invent facts or give advice not in the knowledge base
+- Don't use "typically", "usually", "vanligtvis" to guess answers
+- Don't pretend to know things you weren't given
+
+Tenant message: {question}"""
 
 
 def anonymize_ip(ip: str) -> str:
@@ -779,7 +1273,7 @@ async def save_conversation_stats(db: Session, conversation: Conversation):
     category = conversation.category or "allmant"
     try:
         cat_counts = json.loads(daily_stat.category_counts or "{}")
-    except:
+    except (json.JSONDecodeError, TypeError, ValueError):
         cat_counts = {}
     cat_counts[category] = cat_counts.get(category, 0) + 1
     daily_stat.category_counts = json.dumps(cat_counts)
@@ -788,7 +1282,7 @@ async def save_conversation_stats(db: Session, conversation: Conversation):
     language = conversation.language or "sv"
     try:
         lang_counts = json.loads(daily_stat.language_counts or "{}")
-    except:
+    except (json.JSONDecodeError, TypeError, ValueError):
         lang_counts = {}
     lang_counts[language] = lang_counts.get(language, 0) + 1
     daily_stat.language_counts = json.dumps(lang_counts)
@@ -797,7 +1291,7 @@ async def save_conversation_stats(db: Session, conversation: Conversation):
     hour = str(conversation.started_at.hour)
     try:
         hour_counts = json.loads(daily_stat.hourly_counts or "{}")
-    except:
+    except (json.JSONDecodeError, TypeError, ValueError):
         hour_counts = {}
     hour_counts[hour] = hour_counts.get(hour, 0) + 1
     daily_stat.hourly_counts = json.dumps(hour_counts)
@@ -938,24 +1432,67 @@ async def root():
 
 
 @app.get("/health")
-async def health():
-    return {"status": "healthy"}
+async def health(db: Session = Depends(get_db)):
+    """Health check endpoint with database connectivity verification"""
+    health_status = {
+        "status": "healthy",
+        "database": "unknown",
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    # Check database connectivity
+    try:
+        db.execute("SELECT 1")
+        health_status["database"] = "connected"
+    except Exception as e:
+        health_status["status"] = "degraded"
+        health_status["database"] = "disconnected"
+        health_status["database_error"] = str(e)
+
+    return health_status
 
 
 # =============================================================================
-# Auth Endpoints
+# Auth Endpoints - Security Hardened
 # =============================================================================
 
 @app.post("/auth/login", response_model=LoginResponse)
-async def login(request: LoginRequest, db: Session = Depends(get_db)):
-    """Logga in som företag"""
+async def login(request: LoginRequest, req: Request, db: Session = Depends(get_db)):
+    """Login as company with automatic password migration and brute-force protection"""
+    # Get client IP for rate limiting
+    client_ip = req.client.host if req.client else "unknown"
+    login_identifier = f"company:{request.company_id}:{client_ip}"
+
+    # Check for brute-force attacks
+    allowed, remaining, lockout = check_login_attempts(login_identifier)
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail=f"För många misslyckade inloggningsförsök. Försök igen om {lockout // 60} minuter.",
+            headers={"Retry-After": str(lockout)}
+        )
+
     company = db.query(Company).filter(Company.id == request.company_id).first()
 
     if not company or not verify_password(request.password, company.password_hash):
-        raise HTTPException(status_code=401, detail="Fel företags-ID eller lösenord")
+        record_failed_login(login_identifier)
+        raise HTTPException(
+            status_code=401,
+            detail="Fel företags-ID eller lösenord",
+            headers={"X-RateLimit-Remaining": str(remaining - 1)}
+        )
 
     if not company.is_active:
         raise HTTPException(status_code=403, detail="Kontot är inaktiverat")
+
+    # Clear failed attempts on successful login
+    clear_login_attempts(login_identifier)
+
+    # Automatic password migration: upgrade SHA256 to bcrypt on successful login
+    if needs_rehash(company.password_hash):
+        company.password_hash = hash_password(request.password)
+        db.commit()
+        print(f"[Security] Migrated password hash for company: {company.id}")
 
     token = create_token({
         "sub": company.id,
@@ -966,20 +1503,124 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
     return LoginResponse(token=token, company_id=company.id, name=company.name)
 
 
-@app.post("/auth/admin/login")
-async def admin_login(request: SuperAdminLogin, db: Session = Depends(get_db)):
-    """Logga in som super admin"""
+class AdminLoginRequest(BaseModel):
+    """Extended admin login request with optional 2FA code"""
+    username: str
+    password: str
+    totp_code: Optional[str] = None  # 2FA code (required if 2FA enabled)
+
+
+class AdminLoginResponse(BaseModel):
+    """Admin login response"""
+    token: str
+    username: str
+    requires_2fa: bool = False  # True if 2FA verification needed
+
+
+@app.post("/auth/admin/login", response_model=AdminLoginResponse)
+async def admin_login(request: AdminLoginRequest, req: Request, db: Session = Depends(get_db)):
+    """Login as super admin with 2FA support, password migration, and brute-force protection"""
+    # Get client IP for rate limiting
+    client_ip = req.client.host if req.client else "unknown"
+    login_identifier = f"admin:{request.username}:{client_ip}"
+
+    # Check for brute-force attacks
+    allowed, remaining, lockout = check_login_attempts(login_identifier)
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail=f"För många misslyckade inloggningsförsök. Försök igen om {lockout // 60} minuter.",
+            headers={"Retry-After": str(lockout)}
+        )
+
     admin = db.query(SuperAdmin).filter(SuperAdmin.username == request.username).first()
 
     if not admin or not verify_password(request.password, admin.password_hash):
-        raise HTTPException(status_code=401, detail="Fel användarnamn eller lösenord")
+        record_failed_login(login_identifier)
+        raise HTTPException(
+            status_code=401,
+            detail="Fel användarnamn eller lösenord",
+            headers={"X-RateLimit-Remaining": str(remaining - 1)}
+        )
 
+    # Automatic password migration: upgrade SHA256 to bcrypt on successful login
+    if needs_rehash(admin.password_hash):
+        admin.password_hash = hash_password(request.password)
+        db.commit()
+        print(f"[Security] Migrated password hash for admin: {admin.username}")
+
+    # Check if 2FA is enabled
+    if admin.totp_enabled:
+        if not request.totp_code:
+            # Return pending token - requires 2FA verification
+            pending_token = create_2fa_pending_token({
+                "sub": admin.username,
+                "type": "super_admin"
+            })
+            return AdminLoginResponse(
+                token=pending_token,
+                username=admin.username,
+                requires_2fa=True
+            )
+
+        # Verify 2FA code
+        import pyotp
+        totp = pyotp.TOTP(admin.totp_secret)
+        if not totp.verify(request.totp_code, valid_window=1):
+            record_failed_login(f"2fa:{request.username}:{client_ip}")
+            raise HTTPException(status_code=401, detail="Felaktig 2FA-kod")
+
+    # Clear failed attempts on successful login
+    clear_login_attempts(login_identifier)
+
+    # Full login - issue complete token
     token = create_token({
         "sub": admin.username,
         "type": "super_admin"
     })
 
-    return {"token": token, "username": admin.username}
+    # Update last login info
+    admin.last_login = datetime.utcnow()
+    db.commit()
+
+    return AdminLoginResponse(token=token, username=admin.username, requires_2fa=False)
+
+
+@app.post("/auth/admin/verify-2fa")
+async def verify_2fa_login(
+    request: dict,
+    admin: dict = Depends(get_2fa_pending_admin),
+    db: Session = Depends(get_db)
+):
+    """Complete 2FA verification and get full access token"""
+    code = request.get("code")
+    if not code:
+        raise HTTPException(status_code=400, detail="2FA-kod krävs")
+
+    admin_user = db.query(SuperAdmin).filter(
+        SuperAdmin.username == admin['username']
+    ).first()
+
+    if not admin_user or not admin_user.totp_secret:
+        raise HTTPException(status_code=400, detail="2FA är inte konfigurerat")
+
+    # Verify the TOTP code
+    import pyotp
+    totp = pyotp.TOTP(admin_user.totp_secret)
+    if not totp.verify(code, valid_window=1):
+        raise HTTPException(status_code=401, detail="Felaktig 2FA-kod")
+
+    # Issue full access token
+    token = create_token({
+        "sub": admin_user.username,
+        "type": "super_admin"
+    })
+
+    # Update last login
+    admin_user.last_login = datetime.utcnow()
+    db.commit()
+
+    return {"token": token, "username": admin_user.username}
 
 
 # =============================================================================
@@ -991,6 +1632,7 @@ async def chat(
     company_id: str,
     request: ChatRequest,
     req: Request,
+    response: Response,
     db: Session = Depends(get_db)
 ):
     """Chatta med AI - öppen endpoint för widget"""
@@ -1004,10 +1646,23 @@ async def chat(
 
     # Rate limiting - check before any heavy processing
     client_ip = req.client.host if req.client else "unknown"
-    if not check_rate_limit(request.session_id, client_ip):
+    allowed, current_count, reset_time = check_rate_limit(request.session_id, client_ip)
+
+    # Add rate limit headers to response
+    response.headers["X-RateLimit-Limit"] = str(RATE_LIMIT_MAX_REQUESTS)
+    response.headers["X-RateLimit-Remaining"] = str(max(0, RATE_LIMIT_MAX_REQUESTS - current_count))
+    response.headers["X-RateLimit-Reset"] = str(reset_time)
+
+    if not allowed:
         raise HTTPException(
             status_code=429,
-            detail="Du skickar meddelanden för snabbt. Vänta en stund och försök igen."
+            detail="Du skickar meddelanden för snabbt. Vänta en stund och försök igen.",
+            headers={
+                "X-RateLimit-Limit": str(RATE_LIMIT_MAX_REQUESTS),
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": str(reset_time),
+                "Retry-After": str(reset_time)
+            }
         )
 
     company = db.query(Company).filter(Company.id == company_id).first()
@@ -1019,8 +1674,11 @@ async def chat(
     if not allowed:
         raise HTTPException(status_code=429, detail=limit_msg)
 
-    # Check cache first
-    cached = get_cached_response(company_id, request.question)
+    # Determine language early (needed for cache key)
+    language = request.language if request.language in ["sv", "en", "ar"] else detect_language(request.question)
+
+    # Check cache first (include language in cache key)
+    cached = get_cached_response(company_id, request.question, language)
     if cached:
         # Return cached response with new session handling
         session_id = request.session_id or str(uuid.uuid4())
@@ -1038,9 +1696,6 @@ async def chat(
 
     # Hantera session
     session_id = request.session_id or str(uuid.uuid4())
-
-    # Determine language (from request or detect from question)
-    language = request.language if request.language in ["sv", "en", "ar"] else detect_language(request.question)
 
     # Auto-detect category from question
     category = detect_category(request.question)
@@ -1097,32 +1752,70 @@ async def chat(
     )
     db.add(user_message)
 
-    # Hitta kontext
-    context = find_relevant_context(request.question, company_id, db)
-    # Consider it "had_answer" if we found context OR if we detected a specific category
-    had_answer = len(context) > 0 or category != "allmant"
-
     # Mät svarstid
     start_time = datetime.utcnow()
 
-    # Bygg prompt och fråga AI med rätt språk och kategori
-    prompt = build_prompt(request.question, context, settings, language, category)
-    answer = await query_ollama(prompt)
+    # Check if this is just a greeting (no actual question)
+    if is_greeting(request.question):
+        # Respond warmly to greetings without hitting the knowledge base
+        answer = get_greeting_response(language, settings.company_name)
+        response_time = 0
+        had_answer = True
+        context = []
+    else:
+        # Hitta kontext i kunskapsbasen
+        context = find_relevant_context(request.question, company_id, db)
 
-    response_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+        # ANTI-HALLUCINATION: Only consider it "had_answer" if we ACTUALLY found knowledge base matches
+        had_answer = len(context) > 0
 
-    # Only use fallback if no context AND no specific category detected (truly generic question)
-    # The AI should try to help based on category even without exact knowledge base matches
-    if not context and category == "allmant" and len(request.question.split()) <= 2:
-        # Only fallback for very short, uncategorized messages where AI can't help
+        # Soft fallback messages - encouraging the user to try other questions
+        # Build contact info string if available
+        contact_info = ""
+        if settings.contact_email or settings.contact_phone:
+            contact_parts = []
+            if settings.contact_phone:
+                contact_parts.append(settings.contact_phone)
+            if settings.contact_email:
+                contact_parts.append(settings.contact_email)
+            contact_info = " (" + ", ".join(contact_parts) + ")"
+
         fallback_messages = {
-            "sv": settings.fallback_message or "Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt.",
-            "en": "I couldn't find an answer to your question. Please contact us directly.",
-            "ar": "لم أتمكن من العثور على إجابة لسؤالك. يرجى الاتصال بنا مباشرة."
+            "sv": settings.fallback_message or f"Den frågan har jag tyvärr inte information om. Men fråga gärna något annat – kanske kan jag hjälpa dig med det! Annars når du oss på{contact_info or ' kontaktuppgifterna på hemsidan'}.",
+            "en": f"I don't have information about that specific question. But feel free to ask me something else – maybe I can help with that! Otherwise, you can reach us at{contact_info or ' the contact details on our website'}.",
+            "ar": f"للأسف ليس لدي معلومات عن هذا السؤال. لكن لا تتردد في طرح سؤال آخر - ربما أستطيع المساعدة! أو يمكنك التواصل معنا{contact_info or ' عبر بيانات الاتصال على موقعنا'}."
         }
-        # Only use fallback if AI gave a very short/unhelpful response
-        if len(answer.strip()) < 50:
-            answer = fallback_messages.get(language, settings.fallback_message)
+
+        # ANTI-HALLUCINATION: If NO knowledge base match found, use fallback immediately
+        if not context:
+            answer = fallback_messages.get(language, fallback_messages["sv"])
+            response_time = 0
+        else:
+            # We have knowledge base context - let AI formulate response based on FACTS
+            prompt = build_prompt(request.question, context, settings, language, category, has_knowledge_match=True)
+            answer = await query_ollama(prompt)
+            response_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+
+            # ANTI-HALLUCINATION: Double-check AI didn't hallucinate despite having context
+            hallucination_indicators = [
+                "I don't have information",
+                "jag har ingen information",
+                "jag vet inte",
+                "I cannot find",
+                "cannot help with that",
+                "typically",  # Hedging words indicate making things up
+                "usually",
+                "generally",
+                "in most cases",
+                "vanligtvis",
+                "oftast",
+                "brukar",
+            ]
+            answer_lower = answer.lower()
+            if any(indicator.lower() in answer_lower for indicator in hallucination_indicators):
+                # AI admitted it doesn't know or is hedging - use clean fallback
+                answer = fallback_messages.get(language, fallback_messages["sv"])
+                had_answer = False
 
     # Spara bot-svaret
     sources = [item.question for item in context]
@@ -1146,21 +1839,17 @@ async def chat(
 
     db.commit()
 
-    # Calculate confidence score based on context quality
-    # 100% = exact match in knowledge base
-    # 80% = partial match / category match
-    # 50% = AI-generated without knowledge base
-    # 30% = fallback message
+    # Calculate confidence score based on ACTUAL knowledge base matches
+    # ANTI-HALLUCINATION: Only high confidence when we have real KB matches
+    # 100% = multiple exact matches in knowledge base
+    # 90% = single match in knowledge base
+    # 0% = no knowledge base match (fallback used)
     if len(context) >= 2:
-        confidence = 100
+        confidence = 100  # Multiple KB matches - very confident
     elif len(context) == 1:
-        confidence = 90
-    elif had_answer and category != "allmant":
-        confidence = 75
-    elif had_answer:
-        confidence = 60
+        confidence = 90   # Single KB match - confident
     else:
-        confidence = 40
+        confidence = 0    # No KB match - fallback message used, no confidence
 
     # Cache the response
     cache_data = {
@@ -1170,7 +1859,7 @@ async def chat(
         "had_answer": had_answer,
         "confidence": confidence
     }
-    set_cached_response(company_id, request.question, cache_data)
+    set_cached_response(company_id, request.question, cache_data, language)
 
     return ChatResponse(
         answer=answer,
@@ -1216,6 +1905,14 @@ async def get_widget_config(
 
     settings = get_or_create_settings(db, company_id)
 
+    # Parse suggested questions JSON
+    suggested_questions = []
+    if settings.suggested_questions:
+        try:
+            suggested_questions = json.loads(settings.suggested_questions)
+        except json.JSONDecodeError:
+            suggested_questions = []
+
     return {
         "company_name": settings.company_name or company.name,
         "welcome_message": settings.welcome_message or "",
@@ -1224,6 +1921,13 @@ async def get_widget_config(
         "primary_color": settings.primary_color or "#D97757",
         "contact_email": settings.contact_email or "",
         "contact_phone": settings.contact_phone or "",
+        # Widget Typography & Style
+        "font_family": settings.widget_font_family or "Inter",
+        "font_size": settings.widget_font_size or 14,
+        "border_radius": settings.widget_border_radius or 16,
+        "position": settings.widget_position or "bottom-right",
+        # Quick Reply Suggestions
+        "suggested_questions": suggested_questions,
         # PuB/GDPR Compliance
         "privacy_policy_url": settings.privacy_policy_url or "",
         "require_consent": settings.require_consent if settings.require_consent is not None else True,
@@ -1257,6 +1961,11 @@ async def get_settings(
         notify_unanswered=settings.notify_unanswered or False,
         notification_email=settings.notification_email or "",
         custom_categories=settings.custom_categories or "",
+        widget_font_family=settings.widget_font_family or "Inter",
+        widget_font_size=settings.widget_font_size or 14,
+        widget_border_radius=settings.widget_border_radius or 16,
+        widget_position=settings.widget_position or "bottom-right",
+        suggested_questions=settings.suggested_questions or "",
         privacy_policy_url=settings.privacy_policy_url or "",
         require_consent=settings.require_consent if settings.require_consent is not None else True,
         consent_text=settings.consent_text or "Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.",
@@ -1289,6 +1998,11 @@ async def update_settings(
         "notification_email": "Notifikations-e-post",
         "subtitle": "Underrubrik",
         "custom_categories": "Kategorier",
+        "widget_font_family": "Typsnitt",
+        "widget_font_size": "Textstorlek",
+        "widget_border_radius": "Hörnradie",
+        "widget_position": "Widgetposition",
+        "suggested_questions": "Föreslagna frågor",
         "privacy_policy_url": "Integritetspolicy-URL",
         "require_consent": "Kräv samtycke",
         "consent_text": "Samtyckestext",
@@ -1319,7 +2033,7 @@ async def update_settings(
         changes.append(field_labels["language"])
         settings.language = update.language
     if update.data_retention_days is not None:
-        new_val = max(7, min(30, update.data_retention_days))
+        new_val = max(7, min(30, update.data_retention_days))  # Allow 7-30 days (GDPR max)
         if settings.data_retention_days != new_val:
             changes.append(field_labels["data_retention_days"])
             settings.data_retention_days = new_val
@@ -1335,6 +2049,28 @@ async def update_settings(
     if update.custom_categories is not None and settings.custom_categories != update.custom_categories:
         changes.append(field_labels["custom_categories"])
         settings.custom_categories = update.custom_categories
+    # Widget Typography & Style
+    if update.widget_font_family is not None and settings.widget_font_family != update.widget_font_family:
+        changes.append(field_labels["widget_font_family"])
+        settings.widget_font_family = update.widget_font_family
+    if update.widget_font_size is not None:
+        new_size = max(10, min(24, update.widget_font_size))  # Limit 10-24px
+        if settings.widget_font_size != new_size:
+            changes.append(field_labels["widget_font_size"])
+            settings.widget_font_size = new_size
+    if update.widget_border_radius is not None:
+        new_radius = max(0, min(32, update.widget_border_radius))  # Limit 0-32px
+        if settings.widget_border_radius != new_radius:
+            changes.append(field_labels["widget_border_radius"])
+            settings.widget_border_radius = new_radius
+    if update.widget_position is not None and update.widget_position in ["bottom-right", "bottom-left"]:
+        if settings.widget_position != update.widget_position:
+            changes.append(field_labels["widget_position"])
+            settings.widget_position = update.widget_position
+    # Quick Reply Suggestions
+    if update.suggested_questions is not None and settings.suggested_questions != update.suggested_questions:
+        changes.append(field_labels["suggested_questions"])
+        settings.suggested_questions = update.suggested_questions
     # PuB/GDPR Compliance fields
     if update.privacy_policy_url is not None and settings.privacy_policy_url != update.privacy_policy_url:
         changes.append(field_labels["privacy_policy_url"])
@@ -1381,6 +2117,11 @@ async def update_settings(
         notify_unanswered=settings.notify_unanswered or False,
         notification_email=settings.notification_email or "",
         custom_categories=settings.custom_categories or "",
+        widget_font_family=settings.widget_font_family or "Inter",
+        widget_font_size=settings.widget_font_size or 14,
+        widget_border_radius=settings.widget_border_radius or 16,
+        widget_position=settings.widget_position or "bottom-right",
+        suggested_questions=settings.suggested_questions or "",
         privacy_policy_url=settings.privacy_policy_url or "",
         require_consent=settings.require_consent if settings.require_consent is not None else True,
         consent_text=settings.consent_text or "Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.",
@@ -1404,8 +2145,8 @@ class ActivityLogEntry(BaseModel):
 async def get_company_activity_log(
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db),
-    limit: int = 100,
-    offset: int = 0
+    limit: int = Query(100, ge=1, le=500, description="Max items to return"),
+    offset: int = Query(0, ge=0, description="Number of items to skip")
 ):
     """Hämta aktivitetslogg för företaget"""
     logs = db.query(CompanyActivityLog).filter(
@@ -1437,8 +2178,8 @@ async def get_company_activity_log(
 async def get_conversations(
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db),
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(50, ge=1, le=500, description="Max items to return"),
+    offset: int = Query(0, ge=0, description="Number of items to skip"),
     category: Optional[str] = None,
     language: Optional[str] = None
 ):
@@ -1539,7 +2280,7 @@ async def delete_conversation(
     if not conversation:
         raise HTTPException(status_code=404, detail="Konversation finns inte")
 
-    reference_id = conversation.reference_id
+    reference_id = conversation.reference_id or f"#{conversation.id}"
     # Spara statistik innan radering
     await save_conversation_stats(db, conversation)
 
@@ -1882,11 +2623,38 @@ async def parse_text_file(content: bytes) -> str:
     """Parse plain text file"""
     try:
         return content.decode('utf-8')
-    except:
+    except UnicodeDecodeError:
         try:
             return content.decode('latin-1')
-        except:
+        except UnicodeDecodeError:
             return ""
+
+
+async def parse_pdf_file(content: bytes) -> str:
+    """Parse PDF file and extract text
+
+    Supports multi-page PDFs. Extracts text from all pages.
+    """
+    import io
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        print("pypdf not installed")
+        return ""
+
+    try:
+        reader = PdfReader(io.BytesIO(content))
+        text_parts = []
+
+        for page_num, page in enumerate(reader.pages):
+            page_text = page.extract_text()
+            if page_text and page_text.strip():
+                text_parts.append(page_text.strip())
+
+        return "\n\n".join(text_parts)
+    except Exception as e:
+        print(f"PDF parse error: {e}")
+        return ""
 
 
 async def fetch_url_content(url: str) -> str:
@@ -1993,7 +2761,15 @@ async def upload_knowledge_file(
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db)
 ):
-    """Upload Excel, Word, or text file to populate knowledge base"""
+    """Upload Excel, Word, PDF, or text file to populate knowledge base
+
+    Supported formats:
+    - Excel (.xlsx, .xls): Q&A pairs in columns
+    - Word (.docx): AI extracts Q&A from text
+    - PDF (.pdf): AI extracts Q&A from PDF text
+    - Text (.txt): AI extracts Q&A from plain text
+    - CSV (.csv): Q&A pairs in comma/semicolon separated format
+    """
     if not file.filename:
         raise HTTPException(status_code=400, detail="Ingen fil vald")
 
@@ -2012,6 +2788,12 @@ async def upload_knowledge_file(
         text = await parse_word_file(content)
         if text:
             # Use AI to extract Q&A from unstructured text
+            settings = get_or_create_settings(db, current["company_id"])
+            items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
+    elif filename.endswith('.pdf'):
+        text = await parse_pdf_file(content)
+        if text:
+            # Use AI to extract Q&A from PDF text
             settings = get_or_create_settings(db, current["company_id"])
             items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
     elif filename.endswith('.txt') or filename.endswith('.csv'):
@@ -2036,7 +2818,7 @@ async def upload_knowledge_file(
     else:
         raise HTTPException(
             status_code=400,
-            detail="Filformat stöds inte. Använd .xlsx, .docx, .txt eller .csv"
+            detail="Filformat stöds inte. Använd .xlsx, .docx, .pdf, .txt eller .csv"
         )
 
     if not items_to_add:
@@ -2196,6 +2978,228 @@ async def delete_knowledge_bulk(
     db.commit()
 
     return {"message": f"{deleted_count} poster har tagits bort", "deleted_count": deleted_count}
+
+
+# =============================================================================
+# Knowledge Templates Endpoints
+# =============================================================================
+
+TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
+
+
+class TemplateInfo(BaseModel):
+    template_id: str
+    name: str
+    description: str
+    version: str
+    language: str
+    industry: str
+    item_count: int
+    categories: List[str]
+
+
+class TemplateApplyRequest(BaseModel):
+    replace_existing: bool = False
+    categories_to_import: Optional[List[str]] = None
+
+
+class TemplateApplyResponse(BaseModel):
+    success: bool
+    items_added: int
+    items_skipped: int
+    message: str
+
+
+def load_template(template_id: str) -> Optional[dict]:
+    """Load a template file from the templates directory"""
+    template_path = os.path.join(TEMPLATES_DIR, f"{template_id}.json")
+    if not os.path.exists(template_path):
+        return None
+
+    with open(template_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+@app.get("/templates", response_model=List[TemplateInfo])
+async def list_templates():
+    """List all available knowledge templates"""
+    templates = []
+
+    if not os.path.exists(TEMPLATES_DIR):
+        return templates
+
+    for filename in os.listdir(TEMPLATES_DIR):
+        if filename.endswith(".json"):
+            template_id = filename.replace(".json", "")
+            template = load_template(template_id)
+            if template:
+                templates.append(TemplateInfo(
+                    template_id=template.get("template_id", template_id),
+                    name=template.get("name", template_id),
+                    description=template.get("description", ""),
+                    version=template.get("version", "1.0.0"),
+                    language=template.get("language", "sv"),
+                    industry=template.get("industry", "general"),
+                    item_count=len(template.get("items", [])),
+                    categories=template.get("categories", [])
+                ))
+
+    return templates
+
+
+@app.get("/templates/{template_id}", response_model=TemplateInfo)
+async def get_template(template_id: str):
+    """Get details about a specific template"""
+    # Handle filename with or without extension
+    clean_id = template_id.replace(".json", "").replace("_template", "")
+
+    # Try different naming patterns
+    for tid in [template_id, f"{template_id}_template", clean_id, f"{clean_id}_template"]:
+        template = load_template(tid)
+        if template:
+            return TemplateInfo(
+                template_id=template.get("template_id", tid),
+                name=template.get("name", tid),
+                description=template.get("description", ""),
+                version=template.get("version", "1.0.0"),
+                language=template.get("language", "sv"),
+                industry=template.get("industry", "general"),
+                item_count=len(template.get("items", [])),
+                categories=template.get("categories", [])
+            )
+
+    raise HTTPException(status_code=404, detail=f"Template '{template_id}' not found")
+
+
+@app.post("/templates/{template_id}/apply", response_model=TemplateApplyResponse)
+async def apply_template(
+    template_id: str,
+    request: TemplateApplyRequest,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Apply a knowledge template to the company's knowledge base"""
+    # Handle filename with or without extension
+    clean_id = template_id.replace(".json", "").replace("_template", "")
+    template = None
+
+    # Try different naming patterns
+    for tid in [template_id, f"{template_id}_template", clean_id, f"{clean_id}_template"]:
+        template = load_template(tid)
+        if template:
+            break
+
+    if not template:
+        raise HTTPException(status_code=404, detail=f"Template '{template_id}' not found")
+
+    company_id = current["company_id"]
+    items_added = 0
+    items_skipped = 0
+
+    # Optionally clear existing knowledge
+    if request.replace_existing:
+        db.query(KnowledgeItem).filter(
+            KnowledgeItem.company_id == company_id
+        ).delete()
+        db.commit()
+
+    # Get existing questions to avoid duplicates
+    existing_questions = set()
+    if not request.replace_existing:
+        existing = db.query(KnowledgeItem.question).filter(
+            KnowledgeItem.company_id == company_id
+        ).all()
+        existing_questions = {q[0].lower().strip() for q in existing}
+
+    # Import template items
+    for item in template.get("items", []):
+        category = item.get("category", "")
+
+        # Filter by categories if specified
+        if request.categories_to_import and category not in request.categories_to_import:
+            continue
+
+        question = item.get("question", "").strip()
+        answer = item.get("answer", "").strip()
+
+        if not question or not answer:
+            continue
+
+        # Skip duplicates
+        if question.lower() in existing_questions:
+            items_skipped += 1
+            continue
+
+        # Create knowledge item
+        db_item = KnowledgeItem(
+            company_id=company_id,
+            question=question,
+            answer=answer,
+            category=category
+        )
+        db.add(db_item)
+        existing_questions.add(question.lower())
+        items_added += 1
+
+    db.commit()
+
+    # Log activity
+    log_company_activity(
+        db=db,
+        company_id=company_id,
+        action_type="template_applied",
+        description=f"Template '{template.get('name', template_id)}' applied",
+        details={
+            "template_id": template_id,
+            "items_added": items_added,
+            "items_skipped": items_skipped,
+            "replace_existing": request.replace_existing
+        }
+    )
+
+    return TemplateApplyResponse(
+        success=True,
+        items_added=items_added,
+        items_skipped=items_skipped,
+        message=f"{items_added} frågor/svar har lagts till från mallen. {items_skipped} duplicerade poster hoppades över."
+    )
+
+
+@app.get("/templates/{template_id}/preview")
+async def preview_template(
+    template_id: str,
+    category: Optional[str] = None,
+    limit: int = 10
+):
+    """Preview items from a template without applying it"""
+    # Handle filename with or without extension
+    clean_id = template_id.replace(".json", "").replace("_template", "")
+    template = None
+
+    for tid in [template_id, f"{template_id}_template", clean_id, f"{clean_id}_template"]:
+        template = load_template(tid)
+        if template:
+            break
+
+    if not template:
+        raise HTTPException(status_code=404, detail=f"Template '{template_id}' not found")
+
+    items = template.get("items", [])
+
+    # Filter by category if specified
+    if category:
+        items = [i for i in items if i.get("category") == category]
+
+    # Limit results
+    items = items[:limit]
+
+    return {
+        "template_id": template.get("template_id", template_id),
+        "name": template.get("name", template_id),
+        "total_items": len(template.get("items", [])),
+        "preview_items": items,
+        "categories": template.get("categories", [])
+    }
 
 
 # =============================================================================
@@ -2440,7 +3444,7 @@ async def get_analytics(
                 cats = json.loads(s.category_counts)
                 for cat, count in cats.items():
                     category_stats[cat] = category_stats.get(cat, 0) + count
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError):
                 pass
 
         # Language counts from history
@@ -2449,7 +3453,7 @@ async def get_analytics(
                 langs = json.loads(s.language_counts)
                 for lang, count in langs.items():
                     language_stats[lang] = language_stats.get(lang, 0) + count
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError):
                 pass
 
         # Hourly counts from history
@@ -2458,7 +3462,7 @@ async def get_analytics(
                 hours = json.loads(s.hourly_counts)
                 for hour, count in hours.items():
                     hourly_stats[hour] = hourly_stats.get(hour, 0) + count
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError):
                 pass
 
         # Feedback from history
@@ -2875,7 +3879,11 @@ async def list_companies(
             chat_count=chat_count,
             max_conversations_month=settings.max_conversations_month if settings else 0,
             current_month_conversations=settings.current_month_conversations if settings else 0,
-            max_knowledge_items=settings.max_knowledge_items if settings else 0
+            max_knowledge_items=settings.max_knowledge_items if settings else 0,
+            pricing_tier=c.pricing_tier or "starter",
+            startup_fee_paid=c.startup_fee_paid or False,
+            contract_start_date=c.contract_start_date,
+            billing_email=c.billing_email or ""
         ))
 
     return result
@@ -2888,6 +3896,9 @@ async def create_company(
     db: Session = Depends(get_db)
 ):
     """Skapa nytt företag"""
+    # Rate limit check for sensitive operation
+    require_admin_rate_limit(admin)
+
     existing = db.query(Company).filter(Company.id == company.id).first()
     if existing:
         raise HTTPException(status_code=400, detail="Företags-ID finns redan")
@@ -2932,6 +3943,9 @@ async def delete_company(
     db: Session = Depends(get_db)
 ):
     """Ta bort företag"""
+    # Rate limit check for sensitive operation
+    require_admin_rate_limit(admin)
+
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise HTTPException(status_code=404, detail="Företag finns inte")
@@ -2995,7 +4009,7 @@ async def system_health(
             response = await client.get(f"{OLLAMA_BASE_URL}/api/tags")
             if response.status_code == 200:
                 ollama_status = "online"
-    except:
+    except (httpx.RequestError, httpx.TimeoutException, Exception):
         ollama_status = "offline"
 
     # Get database size
@@ -3057,8 +4071,8 @@ async def manual_gdpr_cleanup(
 async def get_admin_audit_log(
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db),
-    limit: int = 100,
-    offset: int = 0
+    limit: int = Query(100, ge=1, le=500, description="Max items to return"),
+    offset: int = Query(0, ge=0, description="Number of items to skip")
 ):
     """Get admin audit log"""
     logs = db.query(AdminAuditLog).order_by(
@@ -3099,6 +4113,9 @@ async def impersonate_company(
     db: Session = Depends(get_db)
 ):
     """Generate a temporary token to login as a company (for support)"""
+    # Rate limit check for sensitive operation
+    require_admin_rate_limit(admin)
+
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise HTTPException(status_code=404, detail="Företag finns inte")
@@ -3268,10 +4285,508 @@ async def get_company_usage(
     }
 
 
+@app.put("/admin/companies/{company_id}/pricing")
+async def update_company_pricing(
+    company_id: str,
+    update: PricingTierUpdate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Update pricing tier for a company"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    valid_tiers = ["starter", "professional", "business", "enterprise"]
+    if update.pricing_tier not in valid_tiers:
+        raise HTTPException(status_code=400, detail=f"Ogiltig prisnivå. Giltiga: {', '.join(valid_tiers)}")
+
+    old_tier = company.pricing_tier
+    company.pricing_tier = update.pricing_tier
+
+    if update.startup_fee_paid is not None:
+        company.startup_fee_paid = update.startup_fee_paid
+
+    if update.contract_start_date is not None:
+        company.contract_start_date = update.contract_start_date
+
+    if update.billing_email is not None:
+        company.billing_email = update.billing_email
+
+    db.commit()
+
+    # Log admin action
+    log_admin_action(
+        db, admin["username"], "update_pricing",
+        target_company_id=company_id,
+        description=f"Ändrade prisnivå: {old_tier} → {update.pricing_tier}"
+    )
+
+    return {
+        "message": "Prisnivå uppdaterad",
+        "company_id": company_id,
+        "pricing_tier": company.pricing_tier,
+        "startup_fee_paid": company.startup_fee_paid,
+        "contract_start_date": company.contract_start_date.isoformat() if company.contract_start_date else None
+    }
+
+
+# Pricing tier configuration (SEK)
+PRICING_TIERS = {
+    "starter": {
+        "name": "Starter",
+        "monthly_fee": 1500,
+        "startup_fee": 0,  # Free setup for starter
+        "max_conversations": 500,
+        "features": ["Grundläggande AI-chatt", "500 konversationer/månad", "E-postsupport", "Standardanalytik", "Gratis uppstart"]
+    },
+    "professional": {
+        "name": "Professional",
+        "monthly_fee": 3500,
+        "startup_fee": 10000,
+        "max_conversations": 2000,
+        "features": ["Allt i Starter", "2000 konversationer/månad", "Prioriterad support", "Avancerad analytik", "Anpassad widget"]
+    },
+    "business": {
+        "name": "Business",
+        "monthly_fee": 6500,
+        "startup_fee": 25000,
+        "max_conversations": 10000,
+        "features": ["Allt i Professional", "10000 konversationer/månad", "Dedikerad support", "API-åtkomst", "Anpassade integrationer", "Onboarding"]
+    },
+    "enterprise": {
+        "name": "Enterprise",
+        "monthly_fee": 10000,
+        "startup_fee": 50000,
+        "max_conversations": 0,  # 0 = unlimited
+        "features": ["Allt i Business", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling", "Dedikerad onboarding & utbildning"]
+    }
+}
+
+
+def get_pricing_tiers_dict(db: Session) -> dict:
+    """Helper to get pricing tiers from database or fallback to defaults"""
+    db_tiers = db.query(PricingTier).filter(PricingTier.is_active == True).order_by(PricingTier.display_order).all()
+
+    if db_tiers:
+        return {
+            tier.tier_key: {
+                "id": tier.id,
+                "name": tier.name,
+                "monthly_fee": tier.monthly_fee,
+                "startup_fee": tier.startup_fee,
+                "max_conversations": tier.max_conversations,
+                "features": json.loads(tier.features) if tier.features else []
+            }
+            for tier in db_tiers
+        }
+
+    # Fallback to hardcoded defaults
+    return PRICING_TIERS
+
+
+@app.get("/admin/pricing-tiers")
+async def get_pricing_tiers(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all pricing tier configurations from database"""
+    return get_pricing_tiers_dict(db)
+
+
+@app.get("/admin/revenue-dashboard")
+async def get_revenue_dashboard(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get revenue dashboard statistics with discount calculations"""
+    companies = db.query(Company).filter(Company.is_active == True).all()
+    pricing_tiers = get_pricing_tiers_dict(db)
+
+    # Calculate revenue by tier
+    tier_stats = {tier: {"count": 0, "mrr": 0, "mrr_after_discount": 0, "startup_collected": 0, "startup_pending": 0}
+                  for tier in pricing_tiers.keys()}
+
+    total_mrr = 0
+    total_mrr_after_discount = 0
+    total_startup_collected = 0
+    total_startup_pending = 0
+    total_discount_given = 0
+
+    for company in companies:
+        tier = company.pricing_tier or "starter"
+        if tier in pricing_tiers:
+            tier_stats[tier]["count"] += 1
+            base_fee = pricing_tiers[tier]["monthly_fee"]
+            tier_stats[tier]["mrr"] += base_fee
+            total_mrr += base_fee
+
+            # Apply discount if valid
+            discount = 0
+            if company.discount_percent and company.discount_percent > 0:
+                # Check if discount is still valid
+                if company.discount_end_date is None or company.discount_end_date >= date.today():
+                    discount = company.discount_percent
+
+            discounted_fee = base_fee * (1 - discount / 100)
+            tier_stats[tier]["mrr_after_discount"] += discounted_fee
+            total_mrr_after_discount += discounted_fee
+            total_discount_given += (base_fee - discounted_fee)
+
+            if company.startup_fee_paid:
+                tier_stats[tier]["startup_collected"] += pricing_tiers[tier]["startup_fee"]
+                total_startup_collected += pricing_tiers[tier]["startup_fee"]
+            else:
+                tier_stats[tier]["startup_pending"] += pricing_tiers[tier]["startup_fee"]
+                total_startup_pending += pricing_tiers[tier]["startup_fee"]
+
+    # Annual revenue projection
+    arr = total_mrr * 12
+    arr_after_discount = total_mrr_after_discount * 12
+
+    return {
+        "total_active_companies": len(companies),
+        "mrr": total_mrr,  # Monthly Recurring Revenue (before discount)
+        "mrr_after_discount": total_mrr_after_discount,  # MRR after discounts
+        "total_discount_given": total_discount_given,  # Monthly discount amount
+        "arr": arr,  # Annual Recurring Revenue (before discount)
+        "arr_after_discount": arr_after_discount,  # ARR after discounts
+        "startup_fees_collected": total_startup_collected,
+        "startup_fees_pending": total_startup_pending,
+        "tier_breakdown": tier_stats,
+        "pricing_tiers": pricing_tiers
+    }
+
+
+# =============================================================================
+# Roadmap Management (Editable)
+# =============================================================================
+
+@app.get("/admin/roadmap")
+async def get_roadmap_items(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all roadmap items"""
+    items = db.query(RoadmapItem).order_by(RoadmapItem.quarter, RoadmapItem.display_order).all()
+    return {
+        "items": [
+            {
+                "id": item.id,
+                "title": item.title,
+                "description": item.description,
+                "quarter": item.quarter,
+                "status": item.status,
+                "display_order": item.display_order
+            }
+            for item in items
+        ]
+    }
+
+
+@app.post("/admin/roadmap")
+async def create_roadmap_item(
+    item: RoadmapItemCreate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Create a new roadmap item"""
+    new_item = RoadmapItem(
+        title=item.title,
+        description=item.description,
+        quarter=item.quarter,
+        status=item.status,
+        display_order=item.display_order
+    )
+    db.add(new_item)
+    db.commit()
+    db.refresh(new_item)
+
+    return {
+        "message": "Roadmap-punkt skapad",
+        "item": {
+            "id": new_item.id,
+            "title": new_item.title,
+            "description": new_item.description,
+            "quarter": new_item.quarter,
+            "status": new_item.status,
+            "display_order": new_item.display_order
+        }
+    }
+
+
+@app.put("/admin/roadmap/{item_id}")
+async def update_roadmap_item(
+    item_id: int,
+    item: RoadmapItemUpdate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Update a roadmap item"""
+    db_item = db.query(RoadmapItem).filter(RoadmapItem.id == item_id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Roadmap-punkt hittades inte")
+
+    if item.title is not None:
+        db_item.title = item.title
+    if item.description is not None:
+        db_item.description = item.description
+    if item.quarter is not None:
+        db_item.quarter = item.quarter
+    if item.status is not None:
+        db_item.status = item.status
+    if item.display_order is not None:
+        db_item.display_order = item.display_order
+
+    db.commit()
+
+    return {
+        "message": "Roadmap-punkt uppdaterad",
+        "item": {
+            "id": db_item.id,
+            "title": db_item.title,
+            "description": db_item.description,
+            "quarter": db_item.quarter,
+            "status": db_item.status,
+            "display_order": db_item.display_order
+        }
+    }
+
+
+@app.delete("/admin/roadmap/{item_id}")
+async def delete_roadmap_item(
+    item_id: int,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a roadmap item"""
+    db_item = db.query(RoadmapItem).filter(RoadmapItem.id == item_id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Roadmap-punkt hittades inte")
+
+    db.delete(db_item)
+    db.commit()
+
+    return {"message": "Roadmap-punkt raderad"}
+
+
+# =============================================================================
+# Pricing Tier Management (Editable)
+# =============================================================================
+
+@app.get("/admin/pricing-tiers/db")
+async def get_pricing_tiers_from_db(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all pricing tiers from database (including inactive)"""
+    tiers = db.query(PricingTier).order_by(PricingTier.display_order).all()
+    return {
+        "tiers": [
+            {
+                "id": tier.id,
+                "tier_key": tier.tier_key,
+                "name": tier.name,
+                "monthly_fee": tier.monthly_fee,
+                "startup_fee": tier.startup_fee,
+                "max_conversations": tier.max_conversations,
+                "features": json.loads(tier.features) if tier.features else [],
+                "is_active": tier.is_active,
+                "display_order": tier.display_order
+            }
+            for tier in tiers
+        ]
+    }
+
+
+@app.post("/admin/pricing-tiers/init")
+async def init_pricing_tiers(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Initialize pricing tiers from default config (run once)"""
+    existing = db.query(PricingTier).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Prisnivåer finns redan i databasen")
+
+    order = 0
+    for tier_key, config in PRICING_TIERS.items():
+        tier = PricingTier(
+            tier_key=tier_key,
+            name=config["name"],
+            monthly_fee=config["monthly_fee"],
+            startup_fee=config["startup_fee"],
+            max_conversations=config["max_conversations"],
+            features=json.dumps(config["features"]),
+            display_order=order
+        )
+        db.add(tier)
+        order += 1
+
+    db.commit()
+
+    return {"message": f"Initierade {len(PRICING_TIERS)} prisnivåer i databasen"}
+
+
+@app.post("/admin/pricing-tiers/db")
+async def create_pricing_tier(
+    tier: PricingTierCreate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Create a new pricing tier"""
+    existing = db.query(PricingTier).filter(PricingTier.tier_key == tier.tier_key).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Prisnivå med nyckel '{tier.tier_key}' finns redan")
+
+    new_tier = PricingTier(
+        tier_key=tier.tier_key,
+        name=tier.name,
+        monthly_fee=tier.monthly_fee,
+        startup_fee=tier.startup_fee,
+        max_conversations=tier.max_conversations,
+        features=json.dumps(tier.features),
+        display_order=tier.display_order
+    )
+    db.add(new_tier)
+    db.commit()
+    db.refresh(new_tier)
+
+    return {
+        "message": "Prisnivå skapad",
+        "tier": {
+            "id": new_tier.id,
+            "tier_key": new_tier.tier_key,
+            "name": new_tier.name,
+            "monthly_fee": new_tier.monthly_fee,
+            "startup_fee": new_tier.startup_fee,
+            "max_conversations": new_tier.max_conversations,
+            "features": json.loads(new_tier.features) if new_tier.features else [],
+            "is_active": new_tier.is_active,
+            "display_order": new_tier.display_order
+        }
+    }
+
+
+@app.put("/admin/pricing-tiers/db/{tier_key}")
+async def update_pricing_tier(
+    tier_key: str,
+    tier: PricingTierDbUpdate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Update a pricing tier"""
+    db_tier = db.query(PricingTier).filter(PricingTier.tier_key == tier_key).first()
+    if not db_tier:
+        raise HTTPException(status_code=404, detail="Prisnivå hittades inte")
+
+    if tier.name is not None:
+        db_tier.name = tier.name
+    if tier.monthly_fee is not None:
+        db_tier.monthly_fee = tier.monthly_fee
+    if tier.startup_fee is not None:
+        db_tier.startup_fee = tier.startup_fee
+    if tier.max_conversations is not None:
+        db_tier.max_conversations = tier.max_conversations
+    if tier.features is not None:
+        db_tier.features = json.dumps(tier.features)
+    if tier.is_active is not None:
+        db_tier.is_active = tier.is_active
+    if tier.display_order is not None:
+        db_tier.display_order = tier.display_order
+
+    db.commit()
+
+    return {
+        "message": "Prisnivå uppdaterad",
+        "tier": {
+            "id": db_tier.id,
+            "tier_key": db_tier.tier_key,
+            "name": db_tier.name,
+            "monthly_fee": db_tier.monthly_fee,
+            "startup_fee": db_tier.startup_fee,
+            "max_conversations": db_tier.max_conversations,
+            "features": json.loads(db_tier.features) if db_tier.features else [],
+            "is_active": db_tier.is_active,
+            "display_order": db_tier.display_order
+        }
+    }
+
+
+@app.delete("/admin/pricing-tiers/db/{tier_key}")
+async def delete_pricing_tier(
+    tier_key: str,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a pricing tier (will fail if companies are using it)"""
+    db_tier = db.query(PricingTier).filter(PricingTier.tier_key == tier_key).first()
+    if not db_tier:
+        raise HTTPException(status_code=404, detail="Prisnivå hittades inte")
+
+    # Check if any companies are using this tier
+    companies_using = db.query(Company).filter(Company.pricing_tier == tier_key).count()
+    if companies_using > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Kan inte radera: {companies_using} företag använder denna prisnivå"
+        )
+
+    db.delete(db_tier)
+    db.commit()
+
+    return {"message": "Prisnivå raderad"}
+
+
+# =============================================================================
+# Company Discount Management
+# =============================================================================
+
+@app.put("/admin/companies/{company_id}/discount")
+async def update_company_discount(
+    company_id: str,
+    discount: CompanyDiscountUpdate,
+    admin: dict = Depends(get_super_admin),
+    req: Request = None,
+    db: Session = Depends(get_db)
+):
+    """Apply or update discount for a company"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag hittades inte")
+
+    company.discount_percent = discount.discount_percent
+    company.discount_end_date = discount.discount_end_date
+    company.discount_note = discount.discount_note or ""
+
+    db.commit()
+
+    # Log admin action
+    log_admin_action(
+        db, admin["username"], "update_discount",
+        target_company_id=company_id,
+        description=f"Uppdaterade rabatt: {discount.discount_percent}%",
+        details={
+            "discount_percent": discount.discount_percent,
+            "discount_end_date": discount.discount_end_date.isoformat() if discount.discount_end_date else None,
+            "discount_note": discount.discount_note
+        },
+        ip_address=req.client.host if req else None
+    )
+
+    return {
+        "message": "Rabatt uppdaterad",
+        "company_id": company_id,
+        "discount_percent": company.discount_percent,
+        "discount_end_date": company.discount_end_date.isoformat() if company.discount_end_date else None,
+        "discount_note": company.discount_note
+    }
+
+
 @app.get("/admin/company-activity/{company_id}")
 async def get_company_activity(
     company_id: str,
-    limit: int = 20,
+    limit: int = Query(20, ge=1, le=200, description="Max items to return"),
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db)
 ):
@@ -3482,7 +4997,7 @@ async def create_or_update_subscription(
 async def get_all_invoices(
     company_id: Optional[str] = None,
     status: Optional[str] = None,
-    limit: int = 50,
+    limit: int = Query(50, ge=1, le=500, description="Max items to return"),
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db)
 ):
@@ -3657,6 +5172,394 @@ async def delete_note(
 
 
 # =============================================================================
+# Company Documents Endpoints
+# =============================================================================
+
+class DocumentCreate(BaseModel):
+    filename: str
+    file_type: str
+    file_size: int
+    file_data: str  # Base64 encoded
+    document_type: str = "other"  # agreement, contract, invoice, other
+    description: str = ""
+
+
+@app.get("/admin/companies/{company_id}/documents")
+async def get_company_documents(
+    company_id: str,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all documents for a company"""
+    docs = db.query(CompanyDocument).filter(
+        CompanyDocument.company_id == company_id
+    ).order_by(CompanyDocument.uploaded_at.desc()).all()
+
+    return {
+        "documents": [{
+            "id": d.id,
+            "filename": d.filename,
+            "file_type": d.file_type,
+            "file_size": d.file_size,
+            "document_type": d.document_type,
+            "description": d.description,
+            "uploaded_by": d.uploaded_by,
+            "uploaded_at": d.uploaded_at.isoformat()
+        } for d in docs]
+    }
+
+
+@app.post("/admin/companies/{company_id}/documents")
+async def upload_company_document(
+    company_id: str,
+    doc: DocumentCreate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Upload a document for a company"""
+    # Validate file size (max 10MB)
+    if doc.file_size > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Filen är för stor (max 10MB)")
+
+    # Validate file type
+    allowed_types = [
+        "application/pdf",
+        "image/jpeg", "image/png", "image/gif",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "text/plain"
+    ]
+    if doc.file_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Filtypen stöds inte")
+
+    new_doc = CompanyDocument(
+        company_id=company_id,
+        filename=doc.filename,
+        file_type=doc.file_type,
+        file_size=doc.file_size,
+        file_data=doc.file_data,
+        document_type=doc.document_type,
+        description=doc.description,
+        uploaded_by=admin["username"]
+    )
+    db.add(new_doc)
+    db.commit()
+    db.refresh(new_doc)
+
+    # Log the action
+    log_admin_action(db, admin["username"], "upload_document", company_id,
+                     f"Uploaded document: {doc.filename}")
+
+    return {"message": "Dokument uppladdat", "id": new_doc.id}
+
+
+@app.get("/admin/documents/{doc_id}/download")
+async def download_company_document(
+    doc_id: int,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Download a company document"""
+    doc = db.query(CompanyDocument).filter(CompanyDocument.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Dokument hittades inte")
+
+    return {
+        "filename": doc.filename,
+        "file_type": doc.file_type,
+        "file_data": doc.file_data
+    }
+
+
+@app.delete("/admin/documents/{doc_id}")
+async def delete_company_document(
+    doc_id: int,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a company document"""
+    doc = db.query(CompanyDocument).filter(CompanyDocument.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Dokument hittades inte")
+
+    filename = doc.filename
+    company_id = doc.company_id
+    db.delete(doc)
+    db.commit()
+
+    # Log the action
+    log_admin_action(db, admin["username"], "delete_document", company_id,
+                     f"Deleted document: {filename}")
+
+    return {"message": "Dokument borttaget"}
+
+
+# =============================================================================
+# Live Activity Stream Endpoint
+# =============================================================================
+
+@app.get("/admin/activity-stream")
+async def get_activity_stream(
+    limit: int = 20,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get recent activity across all companies for live stream"""
+    # Get recent conversations
+    recent_conversations = db.query(Conversation).order_by(
+        Conversation.started_at.desc()
+    ).limit(limit).all()
+
+    # Get recent admin actions
+    recent_admin_actions = db.query(AdminAuditLog).order_by(
+        AdminAuditLog.timestamp.desc()
+    ).limit(limit).all()
+
+    # Get company info for display
+    company_names = {}
+    for conv in recent_conversations:
+        if conv.company_id not in company_names:
+            company = db.query(Company).filter(Company.id == conv.company_id).first()
+            if company:
+                settings = db.query(CompanySettings).filter(
+                    CompanySettings.company_id == company.id
+                ).first()
+                company_names[conv.company_id] = settings.company_name if settings and settings.company_name else company.name
+
+    activities = []
+
+    # Add conversations as activities
+    for conv in recent_conversations:
+        activities.append({
+            "type": "conversation",
+            "timestamp": conv.started_at.isoformat(),
+            "company_id": conv.company_id,
+            "company_name": company_names.get(conv.company_id, conv.company_id),
+            "message_count": conv.message_count,
+            "category": conv.category,
+            "language": conv.language
+        })
+
+    # Add admin actions as activities
+    for action in recent_admin_actions:
+        activities.append({
+            "type": "admin_action",
+            "timestamp": action.timestamp.isoformat(),
+            "action_type": action.action_type,
+            "admin": action.admin_username,
+            "company_id": action.target_company_id,
+            "description": action.description
+        })
+
+    # Sort by timestamp descending
+    activities.sort(key=lambda x: x["timestamp"], reverse=True)
+
+    return {"activities": activities[:limit]}
+
+
+# =============================================================================
+# AI Insights Endpoint
+# =============================================================================
+
+@app.get("/admin/ai-insights")
+async def get_ai_insights(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get AI-powered insights about system health and company performance"""
+    insights = []
+    today = date.today()
+    week_ago = today - timedelta(days=7)
+
+    # Get all companies with their stats
+    companies = db.query(Company).filter(Company.is_active == True).all()
+
+    for company in companies:
+        settings = db.query(CompanySettings).filter(
+            CompanySettings.company_id == company.id
+        ).first()
+        company_name = settings.company_name if settings and settings.company_name else company.name
+
+        # Get recent stats
+        recent_stats = db.query(DailyStatistics).filter(
+            DailyStatistics.company_id == company.id,
+            DailyStatistics.date >= week_ago
+        ).all()
+
+        if not recent_stats:
+            continue
+
+        total_answered = sum(s.questions_answered for s in recent_stats)
+        total_unanswered = sum(s.questions_unanswered for s in recent_stats)
+        total_questions = total_answered + total_unanswered
+
+        if total_questions > 0:
+            unanswered_rate = (total_unanswered / total_questions) * 100
+
+            # High unanswered rate warning
+            if unanswered_rate > 30 and total_questions >= 5:
+                insights.append({
+                    "type": "warning",
+                    "severity": "high" if unanswered_rate > 50 else "medium",
+                    "company_id": company.id,
+                    "company_name": company_name,
+                    "title": f"Hög andel obesvarade frågor",
+                    "description": f"{unanswered_rate:.0f}% av frågorna kunde inte besvaras senaste veckan. Kunskapsbasen behöver utökas.",
+                    "metric": f"{total_unanswered}/{total_questions}",
+                    "action": "expand_knowledge"
+                })
+
+        # Check for traffic spikes
+        if len(recent_stats) >= 2:
+            daily_conversations = [s.total_conversations for s in recent_stats]
+            avg_conv = sum(daily_conversations) / len(daily_conversations)
+            latest_conv = daily_conversations[-1] if daily_conversations else 0
+
+            if latest_conv > avg_conv * 2 and latest_conv >= 10:
+                insights.append({
+                    "type": "info",
+                    "severity": "low",
+                    "company_id": company.id,
+                    "company_name": company_name,
+                    "title": f"Trafiktopp upptäckt",
+                    "description": f"{latest_conv} konversationer idag, {latest_conv/avg_conv:.1f}x normalt.",
+                    "metric": f"{latest_conv}",
+                    "action": "monitor"
+                })
+
+        # Check for low feedback
+        helpful = sum(s.helpful_count for s in recent_stats)
+        not_helpful = sum(s.not_helpful_count for s in recent_stats)
+        total_feedback = helpful + not_helpful
+
+        if total_feedback >= 5:
+            satisfaction = (helpful / total_feedback) * 100
+            if satisfaction < 60:
+                insights.append({
+                    "type": "warning",
+                    "severity": "medium",
+                    "company_id": company.id,
+                    "company_name": company_name,
+                    "title": f"Låg nöjdhet",
+                    "description": f"Endast {satisfaction:.0f}% positiv feedback. Granska svaren.",
+                    "metric": f"{helpful}/{total_feedback}",
+                    "action": "review_responses"
+                })
+
+    # Sort by severity
+    severity_order = {"high": 0, "medium": 1, "low": 2}
+    insights.sort(key=lambda x: severity_order.get(x["severity"], 3))
+
+    # Get trending topics across all companies
+    all_categories = {}
+    all_stats = db.query(DailyStatistics).filter(
+        DailyStatistics.date >= week_ago
+    ).all()
+
+    for s in all_stats:
+        cats = json.loads(s.category_counts) if s.category_counts else {}
+        for cat, count in cats.items():
+            all_categories[cat] = all_categories.get(cat, 0) + count
+
+    trending = sorted(all_categories.items(), key=lambda x: x[1], reverse=True)[:5]
+
+    return {
+        "insights": insights,
+        "trending_topics": [{"topic": t[0], "count": t[1]} for t in trending],
+        "generated_at": datetime.utcnow().isoformat()
+    }
+
+
+# =============================================================================
+# Broadcast Announcements Endpoints
+# =============================================================================
+
+class AnnouncementCreate(BaseModel):
+    title: str
+    message: str
+    type: str = "info"  # info, warning, maintenance
+
+
+@app.get("/admin/announcements")
+async def get_announcements(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get active announcements"""
+    announcement = db.query(GlobalSettings).filter(
+        GlobalSettings.key == "active_announcement"
+    ).first()
+
+    if announcement and announcement.value:
+        try:
+            data = json.loads(announcement.value)
+            return {"announcement": data}
+        except:
+            pass
+
+    return {"announcement": None}
+
+
+@app.post("/admin/announcements")
+async def create_announcement(
+    announcement: AnnouncementCreate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Create or update active announcement"""
+    existing = db.query(GlobalSettings).filter(
+        GlobalSettings.key == "active_announcement"
+    ).first()
+
+    data = {
+        "title": announcement.title,
+        "message": announcement.message,
+        "type": announcement.type,
+        "created_at": datetime.utcnow().isoformat(),
+        "created_by": admin["username"]
+    }
+
+    if existing:
+        existing.value = json.dumps(data)
+        existing.updated_at = datetime.utcnow()
+        existing.updated_by = admin["username"]
+    else:
+        new_setting = GlobalSettings(
+            key="active_announcement",
+            value=json.dumps(data),
+            updated_by=admin["username"]
+        )
+        db.add(new_setting)
+
+    db.commit()
+
+    # Log the action
+    log_admin_action(db, admin["username"], "create_announcement", None,
+                     f"Created announcement: {announcement.title}")
+
+    return {"message": "Meddelande publicerat"}
+
+
+@app.delete("/admin/announcements")
+async def delete_announcement(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete active announcement"""
+    existing = db.query(GlobalSettings).filter(
+        GlobalSettings.key == "active_announcement"
+    ).first()
+
+    if existing:
+        existing.value = None
+        db.commit()
+
+    return {"message": "Meddelande borttaget"}
+
+
+# =============================================================================
 # Enhanced Analytics Endpoints
 # =============================================================================
 
@@ -3787,7 +5690,7 @@ async def get_usage_trends(
 
 @app.get("/admin/analytics/companies")
 async def get_company_analytics_comparison(
-    limit: int = 10,
+    limit: int = Query(10, ge=1, le=100, description="Max companies to return"),
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db)
 ):
@@ -3830,8 +5733,8 @@ async def search_audit_logs(
     action_type: Optional[str] = None,
     company_id: Optional[str] = None,
     search_term: Optional[str] = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(50, ge=1, le=500, description="Max items to return"),
+    offset: int = Query(0, ge=0, description="Number of items to skip"),
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db)
 ):
@@ -4263,7 +6166,7 @@ async def check_and_queue_usage_notifications(db: Session):
 @app.get("/admin/notifications/queue")
 async def get_notification_queue(
     status: Optional[str] = None,
-    limit: int = 50,
+    limit: int = Query(50, ge=1, le=500, description="Max items to return"),
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db)
 ):

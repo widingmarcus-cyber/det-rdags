@@ -1,19 +1,51 @@
 """
-Bobot Database - SQLite med SQLAlchemy
+Bobot Database - SQLite/PostgreSQL med SQLAlchemy
 GDPR-compliant med anonymiserad statistik
 """
 
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Float, Date
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Float, Date, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.pool import QueuePool
 from datetime import datetime
 import os
 
+# =============================================================================
+# Database Configuration
+# =============================================================================
+
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./bobot.db")
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+def get_engine_config():
+    """Get database engine configuration based on database type"""
+    if DATABASE_URL.startswith("sqlite"):
+        # SQLite configuration
+        return {
+            "connect_args": {"check_same_thread": False},
+        }
+    elif DATABASE_URL.startswith("postgresql"):
+        # PostgreSQL configuration with connection pooling
+        return {
+            "poolclass": QueuePool,
+            "pool_size": int(os.getenv("DB_POOL_SIZE", "5")),
+            "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "10")),
+            "pool_timeout": int(os.getenv("DB_POOL_TIMEOUT", "30")),
+            "pool_recycle": int(os.getenv("DB_POOL_RECYCLE", "1800")),  # 30 minutes
+            "pool_pre_ping": True,  # Verify connections before using
+        }
+    else:
+        # Generic database
+        return {}
+
+
+engine = create_engine(DATABASE_URL, **get_engine_config())
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+# Log database type
+db_type = "PostgreSQL" if DATABASE_URL.startswith("postgresql") else "SQLite"
+if os.getenv("ENVIRONMENT", "development") != "production":
+    print(f"[Database] Using {db_type}")
 
 
 # =============================================================================
@@ -29,6 +61,17 @@ class Company(Base):
     password_hash = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
+
+    # Pricing & Billing
+    pricing_tier = Column(String, default="starter")  # starter, professional, business, enterprise
+    startup_fee_paid = Column(Boolean, default=False)
+    contract_start_date = Column(Date)  # When subscription started
+    billing_email = Column(String, default="")  # Separate billing contact
+
+    # Discounts
+    discount_percent = Column(Float, default=0)  # Percentage discount (0-100)
+    discount_end_date = Column(Date)  # When discount expires (null = permanent)
+    discount_note = Column(String, default="")  # Reason for discount
 
     # Relations
     knowledge_items = relationship("KnowledgeItem", back_populates="company", cascade="all, delete-orphan")
@@ -58,6 +101,15 @@ class CompanySettings(Base):
     # Utseende & Språk
     primary_color = Column(String, default="#D97757")
     language = Column(String, default="sv")  # sv, en, ar
+
+    # Widget Typography & Style
+    widget_font_family = Column(String, default="Inter")  # Main font family
+    widget_font_size = Column(Integer, default=14)  # Base font size in pixels
+    widget_border_radius = Column(Integer, default=16)  # Border radius in pixels
+    widget_position = Column(String, default="bottom-right")  # bottom-right, bottom-left
+
+    # Quick Reply Suggestions (JSON array: ["Hur betalar jag hyran?", "Felanmälan", ...])
+    suggested_questions = Column(Text, default="")  # Up to 4 suggested questions
 
     # Custom categories (JSON array: [{"value": "hyra", "label": "Hyra & Betalning"}, ...])
     custom_categories = Column(Text, default="")
@@ -94,15 +146,20 @@ class KnowledgeItem(Base):
     __tablename__ = "knowledge_items"
 
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False, index=True)
     question = Column(Text, nullable=False)
     answer = Column(Text, nullable=False)
-    category = Column(String, default="")  # Kategori för filtrering
-    created_at = Column(DateTime, default=datetime.utcnow)
+    category = Column(String, default="", index=True)  # Kategori för filtrering
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relations
     company = relationship("Company", back_populates="knowledge_items")
+
+    # Composite index for common queries
+    __table_args__ = (
+        Index('ix_knowledge_company_category', 'company_id', 'category'),
+    )
 
 
 class ChatLog(Base):
@@ -124,7 +181,7 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False, index=True)
     session_id = Column(String, index=True)  # För att gruppera meddelanden från samma session
     reference_id = Column(String, index=True)  # Short readable ID (e.g., "BOB-A1B2")
 
@@ -132,14 +189,14 @@ class Conversation(Base):
     user_ip_anonymous = Column(String)  # Endast första 3 oktetter, t.ex. "192.168.1.xxx"
     user_agent_anonymous = Column(String)  # Endast webbläsare/enhet, inga fingerprints
 
-    started_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, default=datetime.utcnow, index=True)
     ended_at = Column(DateTime)
 
     # Metadata
     message_count = Column(Integer, default=0)
     was_helpful = Column(Boolean)  # Feedback från användaren
-    category = Column(String, default="allmant")  # Auto-detected category
-    language = Column(String, default="sv")  # Detected/provided language
+    category = Column(String, default="allmant", index=True)  # Auto-detected category
+    language = Column(String, default="sv", index=True)  # Detected/provided language
 
     # GDPR/PuB Consent tracking
     consent_given = Column(Boolean, default=False)  # User gave consent
@@ -149,13 +206,19 @@ class Conversation(Base):
     company = relationship("Company", back_populates="conversations")
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
 
+    # Composite indexes for common queries
+    __table_args__ = (
+        Index('ix_conversation_company_started', 'company_id', 'started_at'),
+        Index('ix_conversation_company_category', 'company_id', 'category'),
+    )
+
 
 class Message(Base):
     """Ett meddelande i en konversation"""
     __tablename__ = "messages"
 
     id = Column(Integer, primary_key=True, index=True)
-    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False, index=True)
 
     role = Column(String, nullable=False)  # "user" eller "bot"
     content = Column(Text, nullable=False)
@@ -176,7 +239,7 @@ class DailyStatistics(Base):
     __tablename__ = "daily_statistics"
 
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False, index=True)
     date = Column(Date, nullable=False, index=True)
 
     # Konversationsstatistik
@@ -206,8 +269,10 @@ class DailyStatistics(Base):
     # Relations
     company = relationship("Company", back_populates="statistics")
 
-    class Meta:
-        unique_together = ('company_id', 'date')
+    # Composite index for analytics queries
+    __table_args__ = (
+        Index('ix_daily_stats_company_date', 'company_id', 'date'),
+    )
 
 
 class SuperAdmin(Base):
@@ -258,17 +323,17 @@ class AdminAuditLog(Base):
     __tablename__ = "admin_audit_log"
 
     id = Column(Integer, primary_key=True, index=True)
-    admin_username = Column(String, nullable=False)
+    admin_username = Column(String, nullable=False, index=True)
 
     # Action details
-    action_type = Column(String, nullable=False)  # "create_company", "delete_company", "toggle_company", "impersonate", "export_data", etc.
-    target_company_id = Column(String)  # Which company was affected
+    action_type = Column(String, nullable=False, index=True)  # "create_company", "delete_company", "toggle_company", "impersonate", "export_data", etc.
+    target_company_id = Column(String, index=True)  # Which company was affected
     description = Column(Text)  # Human-readable description
     details = Column(Text)  # JSON with additional details
 
     # Metadata
     ip_address = Column(String)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
 
 
 class CompanyActivityLog(Base):
@@ -276,15 +341,20 @@ class CompanyActivityLog(Base):
     __tablename__ = "company_activity_log"
 
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False, index=True)
 
     # Action details
-    action_type = Column(String, nullable=False)  # "knowledge_create", "knowledge_update", "knowledge_delete", "settings_update", "conversation_delete", "export_data"
+    action_type = Column(String, nullable=False, index=True)  # "knowledge_create", "knowledge_update", "knowledge_delete", "settings_update", "conversation_delete", "export_data"
     description = Column(Text)  # Human-readable description
     details = Column(Text)  # JSON with additional details (e.g., which item was affected)
 
     # Metadata
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # Composite index for common queries
+    __table_args__ = (
+        Index('ix_company_activity_company_timestamp', 'company_id', 'timestamp'),
+    )
 
 
 class GlobalSettings(Base):
@@ -368,6 +438,31 @@ class CompanyNote(Base):
     is_pinned = Column(Boolean, default=False)
 
 
+class CompanyDocument(Base):
+    """Documents uploaded for a company (contracts, agreements, etc.)"""
+    __tablename__ = "company_documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False, index=True)
+
+    # File info
+    filename = Column(String, nullable=False)  # Original filename
+    file_type = Column(String, nullable=False)  # MIME type
+    file_size = Column(Integer, nullable=False)  # Size in bytes
+    file_data = Column(Text, nullable=False)  # Base64 encoded file content
+
+    # Metadata
+    document_type = Column(String, default="other")  # agreement, contract, invoice, other
+    description = Column(Text, default="")
+    uploaded_by = Column(String, nullable=False)  # Admin username
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+
+    # Composite index
+    __table_args__ = (
+        Index('ix_company_document_company_type', 'company_id', 'document_type'),
+    )
+
+
 class WidgetPerformance(Base):
     """Hourly performance stats for widget monitoring"""
     __tablename__ = "widget_performance"
@@ -417,8 +512,35 @@ class EmailNotificationQueue(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
-# Extend SuperAdmin with 2FA fields (we'll modify the existing class)
-# Note: Add these columns via migration
+class RoadmapItem(Base):
+    """Roadmap items for upcoming features - editable by super admin"""
+    __tablename__ = "roadmap_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, default="")
+    quarter = Column(String, nullable=False)  # e.g., "Q1 2026", "Q2 2026"
+    status = Column(String, default="planned")  # planned, in_progress, completed, cancelled
+    display_order = Column(Integer, default=0)  # For custom ordering
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PricingTier(Base):
+    """Pricing tiers - editable by super admin"""
+    __tablename__ = "pricing_tiers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tier_key = Column(String, unique=True, nullable=False)  # starter, professional, business, enterprise
+    name = Column(String, nullable=False)  # Display name
+    monthly_fee = Column(Float, default=0)  # Monthly fee in SEK
+    startup_fee = Column(Float, default=0)  # One-time startup fee in SEK
+    max_conversations = Column(Integer, default=0)  # 0 = unlimited
+    features = Column(Text, default="[]")  # JSON array of feature descriptions
+    is_active = Column(Boolean, default=True)  # Can be disabled
+    display_order = Column(Integer, default=0)  # For custom ordering
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 # =============================================================================

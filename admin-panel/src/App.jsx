@@ -7,6 +7,7 @@ import Preview from './pages/Preview'
 import Settings from './pages/Settings'
 import Conversations from './pages/Conversations'
 import Analytics from './pages/Analytics'
+import Documentation from './pages/Documentation'
 import Navbar from './components/Navbar'
 import AdminLogin from './pages/AdminLogin'
 import SuperAdmin from './pages/SuperAdmin'
@@ -101,13 +102,57 @@ function App() {
     }
   }
 
-  // Admin login
-  const handleAdminLogin = async (username, password) => {
+  // Admin login with 2FA support
+  const handleAdminLogin = async (username, password, totpCode = null) => {
     try {
+      const body = { username, password }
+      if (totpCode) {
+        body.totp_code = totpCode
+      }
+
       const response = await fetch(`${API_BASE}/auth/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify(body)
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+
+        // Check if 2FA verification is required
+        if (data.requires_2fa) {
+          return {
+            success: false,
+            requires2FA: true,
+            token: data.token  // Pending token for 2FA verification
+          }
+        }
+
+        // Full login successful
+        setAdminAuth({
+          token: data.token,
+          username: data.username
+        })
+        return { success: true }
+      } else {
+        const err = await response.json()
+        return { success: false, error: err.detail || 'Inloggning misslyckades' }
+      }
+    } catch (e) {
+      return { success: false, error: 'Kunde inte ansluta till servern' }
+    }
+  }
+
+  // Verify 2FA code
+  const handleVerify2FA = async (pendingToken, code) => {
+    try {
+      const response = await fetch(`${API_BASE}/auth/admin/verify-2fa`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${pendingToken}`
+        },
+        body: JSON.stringify({ code })
       })
 
       if (response.ok) {
@@ -119,7 +164,7 @@ function App() {
         return { success: true }
       } else {
         const err = await response.json()
-        return { success: false, error: err.detail || 'Inloggning misslyckades' }
+        return { success: false, error: err.detail || 'Verifiering misslyckades' }
       }
     } catch (e) {
       return { success: false, error: 'Kunde inte ansluta till servern' }
@@ -180,7 +225,7 @@ function App() {
   // Admin routes
   if (isAdminRoute) {
     if (!adminAuth) {
-      return <AdminLogin onLogin={handleAdminLogin} />
+      return <AdminLogin onLogin={handleAdminLogin} onVerify2FA={handleVerify2FA} />
     }
 
     return (
@@ -200,6 +245,14 @@ function App() {
 
   return (
     <AuthContext.Provider value={{ auth, authFetch, darkMode, toggleDarkMode }}>
+      {/* Skip links for keyboard navigation */}
+      <a href="#main-content" className="skip-link">
+        Hoppa till huvudinnehåll
+      </a>
+      <a href="#main-nav" className="skip-link" style={{ left: '200px' }}>
+        Hoppa till navigation
+      </a>
+
       <div className="flex min-h-screen bg-bg-primary">
         <Navbar
           companyId={auth.companyId}
@@ -208,7 +261,7 @@ function App() {
           darkMode={darkMode}
           toggleDarkMode={toggleDarkMode}
         />
-        <main className="flex-1 p-8 overflow-auto">
+        <main id="main-content" className="flex-1 p-8 overflow-auto" role="main" aria-label="Huvudinnehåll">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/knowledge" element={<Knowledge />} />
@@ -216,6 +269,7 @@ function App() {
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/preview" element={<Preview />} />
+            <Route path="/documentation" element={<Documentation />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

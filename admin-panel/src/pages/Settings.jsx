@@ -3,6 +3,94 @@ import { AuthContext } from '../App'
 
 const API_BASE = '/api'
 
+// Component for editing suggested questions
+function SuggestedQuestionsEditor({ value, onChange }) {
+  const [questions, setQuestions] = useState(() => {
+    try {
+      return value ? JSON.parse(value) : []
+    } catch {
+      return []
+    }
+  })
+  const [newQuestion, setNewQuestion] = useState('')
+
+  const handleAdd = () => {
+    if (newQuestion.trim() && questions.length < 4) {
+      const updated = [...questions, newQuestion.trim()]
+      setQuestions(updated)
+      onChange(JSON.stringify(updated))
+      setNewQuestion('')
+    }
+  }
+
+  const handleRemove = (index) => {
+    const updated = questions.filter((_, i) => i !== index)
+    setQuestions(updated)
+    onChange(JSON.stringify(updated))
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleAdd()
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Existing questions */}
+      {questions.map((q, index) => (
+        <div
+          key={index}
+          className="flex items-center gap-2 p-3 bg-bg-secondary rounded-lg border border-border-subtle group"
+        >
+          <div className="flex-1 text-sm text-text-primary">{q}</div>
+          <button
+            type="button"
+            onClick={() => handleRemove(index)}
+            className="opacity-0 group-hover:opacity-100 p-1.5 text-text-tertiary hover:text-red-500 hover:bg-red-50 rounded transition-all"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      ))}
+
+      {/* Add new question */}
+      {questions.length < 4 && (
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newQuestion}
+            onChange={(e) => setNewQuestion(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Skriv en fråga..."
+            className="input flex-1"
+            maxLength={100}
+          />
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={!newQuestion.trim()}
+            className="btn btn-secondary disabled:opacity-50"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {questions.length >= 4 && (
+        <p className="text-xs text-text-tertiary">Maxgräns uppnådd (4 frågor)</p>
+      )}
+    </div>
+  )
+}
+
 function Settings() {
   const { auth, authFetch } = useContext(AuthContext)
   const [activeTab, setActiveTab] = useState('general')
@@ -24,6 +112,13 @@ function Settings() {
     consent_text: 'Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.',
     data_controller_name: '',
     data_controller_email: '',
+    // Widget Typography & Style
+    widget_font_family: 'Inter',
+    widget_font_size: 14,
+    widget_border_radius: 16,
+    widget_position: 'bottom-right',
+    // Quick Reply Suggestions
+    suggested_questions: '',
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -36,6 +131,7 @@ function Settings() {
     { id: 'appearance', label: 'Utseende', icon: 'palette' },
     { id: 'notifications', label: 'Notiser', icon: 'bell' },
     { id: 'privacy', label: 'Integritet', icon: 'shield' },
+    { id: 'compliance', label: 'Compliance', icon: 'badge' },
     { id: 'activity', label: 'Aktivitet', icon: 'clock' },
     { id: 'install', label: 'Installation', icon: 'code' },
   ]
@@ -167,6 +263,12 @@ function Settings() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />
+          </svg>
+        )
+      case 'badge':
+        return (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
           </svg>
         )
       default:
@@ -316,6 +418,17 @@ function Settings() {
                   />
                   <p className="text-xs text-text-tertiary mt-1">Visas när AI inte kan hitta ett svar i kunskapsbasen</p>
                 </div>
+
+                {/* Suggested Questions */}
+                <div className="border-t border-border-subtle pt-5">
+                  <label className="input-label">Föreslagna frågor</label>
+                  <p className="text-xs text-text-tertiary mb-3">Klickbara snabbfrågor som visas innan användaren skriver sitt första meddelande (max 4)</p>
+                  <SuggestedQuestionsEditor
+                    value={settings.suggested_questions}
+                    onChange={(value) => setSettings({ ...settings, suggested_questions: value })}
+                  />
+                </div>
+
                 <div className="bg-bg-secondary rounded-lg p-4 border border-border-subtle">
                   <div className="flex items-center gap-2 text-sm text-text-secondary">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -402,66 +515,256 @@ function Settings() {
 
           {/* Appearance Tab */}
           {activeTab === 'appearance' && (
-            <div className="card animate-fade-in">
-              <h2 className="text-lg font-medium text-text-primary mb-6">Utseende</h2>
-              <div className="space-y-5">
-                <div>
-                  <label className="input-label">Primärfärg</label>
-                  <div className="flex items-center gap-4">
-                    <input
-                      type="color"
-                      value={settings.primary_color}
-                      onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
-                      className="w-14 h-14 rounded-lg border border-border cursor-pointer"
-                    />
-                    <div className="flex-1">
+            <div className="space-y-6 animate-fade-in">
+              {/* Color Settings */}
+              <div className="card">
+                <h2 className="text-lg font-medium text-text-primary mb-6">Färger</h2>
+                <div className="space-y-5">
+                  <div>
+                    <label className="input-label">Primärfärg</label>
+                    <div className="flex items-center gap-4">
                       <input
-                        type="text"
+                        type="color"
                         value={settings.primary_color}
                         onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
-                        className="input w-32"
-                        placeholder="#D97757"
+                        className="w-14 h-14 rounded-lg border border-border cursor-pointer"
                       />
-                      <p className="text-xs text-text-tertiary mt-1">HEX-färgkod</p>
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={settings.primary_color}
+                          onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
+                          className="input w-32"
+                          placeholder="#D97757"
+                        />
+                        <p className="text-xs text-text-tertiary mt-1">HEX-färgkod</p>
+                      </div>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Preview */}
-                <div>
-                  <label className="input-label mb-3">Förhandsvisning</label>
-                  <div className="bg-bg-secondary rounded-xl p-4 border border-border-subtle">
-                    <div
-                      className="rounded-lg overflow-hidden shadow-lg max-w-xs"
-                      style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }}
+              {/* Typography Settings */}
+              <div className="card">
+                <h2 className="text-lg font-medium text-text-primary mb-6">Typografi</h2>
+                <div className="space-y-5">
+                  <div>
+                    <label className="input-label">Typsnitt</label>
+                    <select
+                      value={settings.widget_font_family}
+                      onChange={(e) => setSettings({ ...settings, widget_font_family: e.target.value })}
+                      className="input"
                     >
-                      {/* Widget Header Preview */}
-                      <div
-                        className="text-white px-4 py-3"
-                        style={{
-                          background: `linear-gradient(135deg, ${settings.primary_color}, ${adjustColor(settings.primary_color, -30)})`
-                        }}
+                      <option value="Inter">Inter (Standard)</option>
+                      <option value="System">System (Snabbast)</option>
+                      <option value="Roboto">Roboto</option>
+                      <option value="Open Sans">Open Sans</option>
+                      <option value="Lato">Lato</option>
+                      <option value="Poppins">Poppins</option>
+                      <option value="Nunito">Nunito</option>
+                      <option value="Source Sans Pro">Source Sans Pro</option>
+                    </select>
+                    <p className="text-xs text-text-tertiary mt-1">Välj typsnitt för widgeten</p>
+                  </div>
+                  <div>
+                    <label className="input-label">Textstorlek</label>
+                    <div className="flex items-center gap-4 mt-2">
+                      <input
+                        type="range"
+                        min="12"
+                        max="18"
+                        value={settings.widget_font_size}
+                        onChange={(e) => setSettings({ ...settings, widget_font_size: parseInt(e.target.value) })}
+                        className="flex-1 h-2 bg-bg-secondary rounded-lg appearance-none cursor-pointer accent-accent"
+                      />
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="12"
+                          max="18"
+                          value={settings.widget_font_size}
+                          onChange={(e) => setSettings({ ...settings, widget_font_size: parseInt(e.target.value) || 14 })}
+                          className="input w-16 text-center"
+                        />
+                        <span className="text-sm text-text-tertiary">px</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-text-tertiary mt-1">Baskant textstorlek (12-18 pixlar)</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Style Settings */}
+              <div className="card">
+                <h2 className="text-lg font-medium text-text-primary mb-6">Stil & Position</h2>
+                <div className="space-y-5">
+                  <div>
+                    <label className="input-label">Rundade hörn</label>
+                    <div className="flex items-center gap-4 mt-2">
+                      <input
+                        type="range"
+                        min="0"
+                        max="24"
+                        value={settings.widget_border_radius}
+                        onChange={(e) => setSettings({ ...settings, widget_border_radius: parseInt(e.target.value) })}
+                        className="flex-1 h-2 bg-bg-secondary rounded-lg appearance-none cursor-pointer accent-accent"
+                      />
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          max="24"
+                          value={settings.widget_border_radius}
+                          onChange={(e) => setSettings({ ...settings, widget_border_radius: parseInt(e.target.value) || 16 })}
+                          className="input w-16 text-center"
+                        />
+                        <span className="text-sm text-text-tertiary">px</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-text-tertiary mt-1">Hur rundade hörn widgeten ska ha (0-24 pixlar)</p>
+                  </div>
+                  <div>
+                    <label className="input-label">Widget-position</label>
+                    <div className="flex gap-3 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => setSettings({ ...settings, widget_position: 'bottom-right' })}
+                        className={`flex-1 p-4 rounded-lg border-2 transition-all ${
+                          settings.widget_position === 'bottom-right'
+                            ? 'border-accent bg-accent-soft'
+                            : 'border-border-subtle hover:border-border'
+                        }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                            </svg>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-sm">{settings.company_name || 'Ditt Företag'}</p>
-                            <p className="text-xs opacity-80">Alltid redo att hjälpa</p>
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                          <div className="w-12 h-8 bg-bg-secondary rounded border border-border-subtle relative">
+                            <div
+                              className="absolute bottom-1 right-1 w-3 h-3 rounded-full"
+                              style={{ backgroundColor: settings.primary_color }}
+                            />
                           </div>
                         </div>
+                        <p className="text-sm font-medium text-text-primary">Nedre höger</p>
+                        <p className="text-xs text-text-tertiary">Standard</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSettings({ ...settings, widget_position: 'bottom-left' })}
+                        className={`flex-1 p-4 rounded-lg border-2 transition-all ${
+                          settings.widget_position === 'bottom-left'
+                            ? 'border-accent bg-accent-soft'
+                            : 'border-border-subtle hover:border-border'
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                          <div className="w-12 h-8 bg-bg-secondary rounded border border-border-subtle relative">
+                            <div
+                              className="absolute bottom-1 left-1 w-3 h-3 rounded-full"
+                              style={{ backgroundColor: settings.primary_color }}
+                            />
+                          </div>
+                        </div>
+                        <p className="text-sm font-medium text-text-primary">Nedre vänster</p>
+                        <p className="text-xs text-text-tertiary">Alternativ</p>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Preview */}
+              <div className="card">
+                <h2 className="text-lg font-medium text-text-primary mb-4">Förhandsvisning</h2>
+                <p className="text-sm text-text-secondary mb-4">Se hur din widget kommer att se ut med aktuella inställningar</p>
+                <div className="bg-bg-secondary rounded-xl p-6 border border-border-subtle">
+                  <div
+                    className="overflow-hidden shadow-xl max-w-xs mx-auto"
+                    style={{
+                      borderRadius: `${settings.widget_border_radius}px`,
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                      fontFamily: settings.widget_font_family === 'System'
+                        ? '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+                        : `"${settings.widget_font_family}", sans-serif`
+                    }}
+                  >
+                    {/* Widget Header Preview */}
+                    <div
+                      className="text-white px-4 py-3"
+                      style={{
+                        background: `linear-gradient(135deg, ${settings.primary_color} 0%, ${adjustColor(settings.primary_color, -25)} 100%)`
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white/15 rounded-full flex items-center justify-center backdrop-blur-sm">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-semibold" style={{ fontSize: `${settings.widget_font_size}px` }}>
+                            {settings.company_name || 'Ditt Företag'}
+                          </p>
+                          <p style={{ fontSize: `${settings.widget_font_size - 2}px`, opacity: 0.85 }}>
+                            {settings.subtitle || 'Alltid redo att hjälpa'}
+                          </p>
+                        </div>
                       </div>
-                      {/* Widget Body Preview */}
-                      <div className="bg-white p-3">
-                        <div className="bg-gray-100 rounded-lg rounded-bl-sm px-3 py-2 text-sm text-gray-700 max-w-[80%]">
-                          {settings.welcome_message || 'Hej! Hur kan jag hjälpa dig?'}
+                    </div>
+                    {/* Widget Body Preview */}
+                    <div className="bg-stone-50 p-4">
+                      <div
+                        className="bg-white border border-stone-200 px-3.5 py-2.5 text-stone-700 max-w-[85%] shadow-sm"
+                        style={{
+                          borderRadius: `${Math.min(settings.widget_border_radius, 16)}px`,
+                          borderBottomLeftRadius: '4px',
+                          fontSize: `${settings.widget_font_size}px`
+                        }}
+                      >
+                        {settings.welcome_message || 'Hej! Hur kan jag hjälpa dig?'}
+                      </div>
+                      <div className="flex justify-end mt-3">
+                        <div
+                          className="px-3.5 py-2.5 text-stone-700 max-w-[85%]"
+                          style={{
+                            backgroundColor: '#F7F3EE',
+                            borderRadius: `${Math.min(settings.widget_border_radius, 16)}px`,
+                            borderBottomRightRadius: '4px',
+                            fontSize: `${settings.widget_font_size}px`
+                          }}
+                        >
+                          Kan jag få hjälp?
+                        </div>
+                      </div>
+                    </div>
+                    {/* Widget Input Preview */}
+                    <div className="bg-white px-3 py-2.5 border-t border-stone-200">
+                      <div className="flex gap-2 items-center">
+                        <div
+                          className="flex-1 bg-stone-100 px-3 py-2 text-stone-400"
+                          style={{
+                            borderRadius: `${Math.min(settings.widget_border_radius, 20)}px`,
+                            fontSize: `${settings.widget_font_size}px`
+                          }}
+                        >
+                          Skriv ett meddelande...
+                        </div>
+                        <div
+                          className="w-9 h-9 flex items-center justify-center text-white"
+                          style={{
+                            backgroundColor: settings.primary_color,
+                            borderRadius: '50%'
+                          }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <line x1="22" y1="2" x2="11" y2="13" />
+                            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                          </svg>
                         </div>
                       </div>
                     </div>
                   </div>
+                  <p className="text-center text-xs text-text-tertiary mt-4">
+                    Widgeten visas i {settings.widget_position === 'bottom-right' ? 'nedre högra' : 'nedre vänstra'} hörnet
+                  </p>
                 </div>
               </div>
             </div>
@@ -654,6 +957,176 @@ function Settings() {
                       Alla åtgärder loggas i GDPR-revisionsloggen.
                     </p>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Compliance Tab */}
+          {activeTab === 'compliance' && (
+            <div className="space-y-6 animate-fade-in">
+              {/* EU Hosting Badge */}
+              <div className="card">
+                <div className="flex items-start gap-4">
+                  <div className="w-16 h-16 bg-accent-soft rounded-xl flex items-center justify-center flex-shrink-0">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                      <path d="M2 12h20" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h2 className="text-lg font-medium text-text-primary">EU-hostning</h2>
+                      <span className="px-2 py-0.5 bg-success/20 text-success text-xs font-medium rounded-full">Aktivt</span>
+                    </div>
+                    <p className="text-sm text-text-secondary mb-4">
+                      All data lagras och bearbetas inom EU/EES i enlighet med GDPR.
+                    </p>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="bg-bg-secondary rounded-lg p-3">
+                        <p className="text-text-tertiary text-xs uppercase tracking-wide mb-1">Datacenter</p>
+                        <p className="text-text-primary font-medium">EU Region</p>
+                      </div>
+                      <div className="bg-bg-secondary rounded-lg p-3">
+                        <p className="text-text-tertiary text-xs uppercase tracking-wide mb-1">AI-behandling</p>
+                        <p className="text-text-primary font-medium">Lokal (Ollama)</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Compliance Badges */}
+              <div className="card">
+                <h3 className="font-medium text-text-primary mb-4">Certifieringar & Compliance</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="border border-success/30 bg-success/5 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 bg-success/20 rounded-lg flex items-center justify-center">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success">
+                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                          <polyline points="9 12 11 14 15 10" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-medium text-text-primary">GDPR</p>
+                        <p className="text-xs text-success">Kompatibel</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-text-secondary">
+                      Full efterlevnad av EU:s dataskyddsförordning (2016/679)
+                    </p>
+                  </div>
+
+                  <div className="border border-success/30 bg-success/5 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 bg-success/20 rounded-lg flex items-center justify-center">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M12 8v4l2 2" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-medium text-text-primary">WCAG 2.2 AA</p>
+                        <p className="text-xs text-success">Uppfyllt</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-text-secondary">
+                      Tillgänglighetskraven enligt DOS-lagen och WCAG 2.2
+                    </p>
+                  </div>
+
+                  <div className="border border-success/30 bg-success/5 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 bg-success/20 rounded-lg flex items-center justify-center">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success">
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-medium text-text-primary">PuB</p>
+                        <p className="text-xs text-success">Kompatibel</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-text-secondary">
+                      Svensk personuppgiftsbehandling enligt offentlighetsprincipen
+                    </p>
+                  </div>
+
+                  <div className="border border-success/30 bg-success/5 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 bg-success/20 rounded-lg flex items-center justify-center">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success">
+                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-medium text-text-primary">Lokal AI</p>
+                        <p className="text-xs text-success">Ingen extern data</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-text-secondary">
+                      AI-behandling sker lokalt - data skickas aldrig till tredje part
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Data Processing Summary */}
+              <div className="card">
+                <h3 className="font-medium text-text-primary mb-4">Databehandlingsöversikt</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-bg-secondary rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-success rounded-full"></div>
+                      <span className="text-sm text-text-primary">Chattmeddelanden</span>
+                    </div>
+                    <span className="text-xs text-text-tertiary">Raderas efter {settings.data_retention_days} dagar</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-bg-secondary rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-success rounded-full"></div>
+                      <span className="text-sm text-text-primary">IP-adresser</span>
+                    </div>
+                    <span className="text-xs text-text-tertiary">Anonymiseras omedelbart</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-bg-secondary rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-success rounded-full"></div>
+                      <span className="text-sm text-text-primary">Statistik</span>
+                    </div>
+                    <span className="text-xs text-text-tertiary">Aggregerad & anonymiserad</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-bg-secondary rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-success rounded-full"></div>
+                      <span className="text-sm text-text-primary">AI-förfrågningar</span>
+                    </div>
+                    <span className="text-xs text-text-tertiary">Behandlas lokalt (Ollama)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Documentation Link */}
+              <div className="bg-accent-soft border border-accent/20 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                    </svg>
+                    <div>
+                      <p className="font-medium text-text-primary">Fullständig dokumentation</p>
+                      <p className="text-xs text-text-secondary">Tekniska detaljer om GDPR, säkerhet och tillgänglighet</p>
+                    </div>
+                  </div>
+                  <a href="/documentation" className="btn btn-secondary text-sm">
+                    Visa dokumentation
+                  </a>
                 </div>
               </div>
             </div>
