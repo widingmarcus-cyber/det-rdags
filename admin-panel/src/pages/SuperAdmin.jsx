@@ -88,6 +88,23 @@ function SuperAdmin() {
     billing_email: ''
   })
 
+  // Editable Roadmap
+  const [roadmapItems, setRoadmapItems] = useState([])
+  const [showRoadmapModal, setShowRoadmapModal] = useState(false)
+  const [roadmapForm, setRoadmapForm] = useState({ title: '', description: '', quarter: 'Q1 2026', status: 'planned' })
+  const [editingRoadmapItem, setEditingRoadmapItem] = useState(null)
+
+  // Editable Pricing Tiers
+  const [dbPricingTiers, setDbPricingTiers] = useState([])
+  const [showPricingTierModal, setShowPricingTierModal] = useState(false)
+  const [pricingTierForm, setPricingTierForm] = useState({ tier_key: '', name: '', monthly_fee: 0, startup_fee: 0, max_conversations: 0, features: [] })
+  const [editingPricingTier, setEditingPricingTier] = useState(null)
+  const [newFeature, setNewFeature] = useState('')
+
+  // Company Discounts
+  const [showDiscountModal, setShowDiscountModal] = useState(null)
+  const [discountForm, setDiscountForm] = useState({ discount_percent: 0, discount_end_date: '', discount_note: '' })
+
   useEffect(() => {
     fetchCompanies()
     fetchSystemHealth()
@@ -110,6 +127,8 @@ function SuperAdmin() {
     } else if (activeTab === 'pricing') {
       fetchPricingTiers()
       fetchRevenueDashboard()
+      fetchRoadmapItems()
+      fetchDbPricingTiers()
     }
   }, [activeTab])
 
@@ -272,6 +291,193 @@ function SuperAdmin() {
       billing_email: company.billing_email || ''
     })
     setShowPricingModal(company)
+  }
+
+  // Roadmap CRUD Functions
+  const fetchRoadmapItems = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/roadmap`)
+      if (response.ok) {
+        const data = await response.json()
+        setRoadmapItems(data.items || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch roadmap:', error)
+    }
+  }
+
+  const handleSaveRoadmapItem = async () => {
+    try {
+      const url = editingRoadmapItem
+        ? `${API_BASE}/admin/roadmap/${editingRoadmapItem.id}`
+        : `${API_BASE}/admin/roadmap`
+      const method = editingRoadmapItem ? 'PUT' : 'POST'
+
+      const response = await adminFetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(roadmapForm)
+      })
+
+      if (response.ok) {
+        showNotification(editingRoadmapItem ? 'Roadmap-punkt uppdaterad' : 'Roadmap-punkt skapad', 'success')
+        setShowRoadmapModal(false)
+        setEditingRoadmapItem(null)
+        setRoadmapForm({ title: '', description: '', quarter: 'Q1 2026', status: 'planned' })
+        fetchRoadmapItems()
+      } else {
+        const error = await response.json()
+        showNotification(error.detail || 'Kunde inte spara', 'error')
+      }
+    } catch (error) {
+      showNotification('Fel vid sparning', 'error')
+    }
+  }
+
+  const handleDeleteRoadmapItem = async (itemId) => {
+    if (!confirm('Vill du radera denna roadmap-punkt?')) return
+
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/roadmap/${itemId}`, { method: 'DELETE' })
+      if (response.ok) {
+        showNotification('Roadmap-punkt raderad', 'success')
+        fetchRoadmapItems()
+      }
+    } catch (error) {
+      showNotification('Kunde inte radera', 'error')
+    }
+  }
+
+  const openEditRoadmapModal = (item) => {
+    setRoadmapForm({
+      title: item.title,
+      description: item.description,
+      quarter: item.quarter,
+      status: item.status
+    })
+    setEditingRoadmapItem(item)
+    setShowRoadmapModal(true)
+  }
+
+  // Pricing Tier CRUD Functions
+  const fetchDbPricingTiers = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/pricing-tiers/db`)
+      if (response.ok) {
+        const data = await response.json()
+        setDbPricingTiers(data.tiers || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch db pricing tiers:', error)
+    }
+  }
+
+  const handleInitPricingTiers = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/pricing-tiers/init`, { method: 'POST' })
+      if (response.ok) {
+        showNotification('Prisnivåer initierade', 'success')
+        fetchDbPricingTiers()
+        fetchPricingTiers()
+      } else {
+        const error = await response.json()
+        showNotification(error.detail || 'Kunde inte initiera', 'error')
+      }
+    } catch (error) {
+      showNotification('Fel vid initiering', 'error')
+    }
+  }
+
+  const handleSavePricingTier = async () => {
+    try {
+      const url = editingPricingTier
+        ? `${API_BASE}/admin/pricing-tiers/db/${editingPricingTier.tier_key}`
+        : `${API_BASE}/admin/pricing-tiers/db`
+      const method = editingPricingTier ? 'PUT' : 'POST'
+
+      const response = await adminFetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pricingTierForm)
+      })
+
+      if (response.ok) {
+        showNotification(editingPricingTier ? 'Prisnivå uppdaterad' : 'Prisnivå skapad', 'success')
+        setShowPricingTierModal(false)
+        setEditingPricingTier(null)
+        setPricingTierForm({ tier_key: '', name: '', monthly_fee: 0, startup_fee: 0, max_conversations: 0, features: [] })
+        fetchDbPricingTiers()
+        fetchPricingTiers()
+        fetchRevenueDashboard()
+      } else {
+        const error = await response.json()
+        showNotification(error.detail || 'Kunde inte spara', 'error')
+      }
+    } catch (error) {
+      showNotification('Fel vid sparning', 'error')
+    }
+  }
+
+  const openEditPricingTierModal = (tier) => {
+    setPricingTierForm({
+      tier_key: tier.tier_key,
+      name: tier.name,
+      monthly_fee: tier.monthly_fee,
+      startup_fee: tier.startup_fee,
+      max_conversations: tier.max_conversations,
+      features: tier.features || []
+    })
+    setEditingPricingTier(tier)
+    setShowPricingTierModal(true)
+  }
+
+  const addFeatureToTier = () => {
+    if (newFeature.trim()) {
+      setPricingTierForm(prev => ({
+        ...prev,
+        features: [...prev.features, newFeature.trim()]
+      }))
+      setNewFeature('')
+    }
+  }
+
+  const removeFeatureFromTier = (index) => {
+    setPricingTierForm(prev => ({
+      ...prev,
+      features: prev.features.filter((_, i) => i !== index)
+    }))
+  }
+
+  // Discount Functions
+  const openDiscountModal = (company) => {
+    setDiscountForm({
+      discount_percent: company.discount_percent || 0,
+      discount_end_date: company.discount_end_date || '',
+      discount_note: company.discount_note || ''
+    })
+    setShowDiscountModal(company)
+  }
+
+  const handleSaveDiscount = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/companies/${showDiscountModal.id}/discount`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(discountForm)
+      })
+
+      if (response.ok) {
+        showNotification('Rabatt uppdaterad', 'success')
+        setShowDiscountModal(null)
+        fetchCompanies()
+        fetchRevenueDashboard()
+      } else {
+        const error = await response.json()
+        showNotification(error.detail || 'Kunde inte uppdatera', 'error')
+      }
+    } catch (error) {
+      showNotification('Fel vid uppdatering', 'error')
+    }
   }
 
   const fetchAdminPrefs = async () => {
@@ -1917,9 +2123,10 @@ function SuperAdmin() {
                       <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Företag</th>
                       <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Prisnivå</th>
                       <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Månadskostnad</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Rabatt</th>
                       <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Uppstart betald</th>
                       <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Startdatum</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Åtgärd</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Åtgärder</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1945,6 +2152,20 @@ function SuperAdmin() {
                             {tier?.monthly_fee?.toLocaleString('sv-SE')} kr
                           </td>
                           <td className="px-4 py-3">
+                            {company.discount_percent > 0 ? (
+                              <span className="text-green-600 font-medium">
+                                {company.discount_percent}%
+                                {company.discount_end_date && (
+                                  <span className="text-xs text-text-tertiary ml-1">
+                                    (t.o.m. {company.discount_end_date})
+                                  </span>
+                                )}
+                              </span>
+                            ) : (
+                              <span className="text-text-tertiary">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
                             {company.startup_fee_paid ? (
                               <span className="text-green-600 flex items-center gap-1">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1965,12 +2186,20 @@ function SuperAdmin() {
                             {company.contract_start_date || '—'}
                           </td>
                           <td className="px-4 py-3">
-                            <button
-                              onClick={() => openPricingModal(company)}
-                              className="btn btn-ghost text-sm"
-                            >
-                              Ändra
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => openPricingModal(company)}
+                                className="btn btn-ghost text-sm"
+                              >
+                                Ändra nivå
+                              </button>
+                              <button
+                                onClick={() => openDiscountModal(company)}
+                                className="btn btn-ghost text-sm"
+                              >
+                                Rabatt
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       )
@@ -1980,62 +2209,160 @@ function SuperAdmin() {
               </div>
             </div>
 
-            {/* Upcoming Features Roadmap */}
-            <div className="card border-dashed border-2 border-accent/30 bg-accent/5">
-              <h2 className="text-lg font-semibold text-text-primary mb-2 flex items-center gap-2">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                </svg>
-                Kommande funktioner (Roadmap)
-              </h2>
-              <p className="text-sm text-text-secondary mb-4">Funktioner som planeras för framtida versioner</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="p-4 bg-white rounded-lg border border-border-subtle">
-                  <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">Q1 2026</span>
-                  <h4 className="font-medium text-text-primary mt-2">Webhook-integrationer</h4>
-                  <p className="text-sm text-text-secondary mt-1">Skicka data vid händelser till externa system</p>
-                </div>
-                <div className="p-4 bg-white rounded-lg border border-border-subtle">
-                  <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">Q1 2026</span>
-                  <h4 className="font-medium text-text-primary mt-2">Publik API</h4>
-                  <p className="text-sm text-text-secondary mt-1">API-nyckel för egna integrationer och automatisering</p>
-                </div>
-                <div className="p-4 bg-white rounded-lg border border-border-subtle">
-                  <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded">Q2 2026</span>
-                  <h4 className="font-medium text-text-primary mt-2">Momentum-integration</h4>
-                  <p className="text-sm text-text-secondary mt-1">Skapa ärenden direkt i Momentum från chatten</p>
-                </div>
-                <div className="p-4 bg-white rounded-lg border border-border-subtle">
-                  <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded">Q2 2026</span>
-                  <h4 className="font-medium text-text-primary mt-2">Användarroller</h4>
-                  <p className="text-sm text-text-secondary mt-1">Admin / Redaktör / Läsare per företag</p>
-                </div>
-                <div className="p-4 bg-white rounded-lg border border-border-subtle">
-                  <span className="text-xs font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded">Q3 2026</span>
-                  <h4 className="font-medium text-text-primary mt-2">SSO / SAML</h4>
-                  <p className="text-sm text-text-secondary mt-1">Enterprise Single Sign-On för stora kunder</p>
-                </div>
-                <div className="p-4 bg-white rounded-lg border border-border-subtle">
-                  <span className="text-xs font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded">Q3 2026</span>
-                  <h4 className="font-medium text-text-primary mt-2">Versionshistorik</h4>
-                  <p className="text-sm text-text-secondary mt-1">Se och återställ tidigare versioner av kunskapsbasen</p>
-                </div>
-                <div className="p-4 bg-white rounded-lg border border-border-subtle">
-                  <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-2 py-1 rounded">Backlog</span>
-                  <h4 className="font-medium text-text-primary mt-2">Widget-triggers</h4>
-                  <p className="text-sm text-text-secondary mt-1">Visa widget efter X sekunder eller på specifika sidor</p>
-                </div>
-                <div className="p-4 bg-white rounded-lg border border-border-subtle">
-                  <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-2 py-1 rounded">Backlog</span>
-                  <h4 className="font-medium text-text-primary mt-2">Bulk-redigering</h4>
-                  <p className="text-sm text-text-secondary mt-1">Ändra flera kunskapsbasartiklar samtidigt</p>
-                </div>
-                <div className="p-4 bg-white rounded-lg border border-border-subtle">
-                  <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-2 py-1 rounded">Backlog</span>
-                  <h4 className="font-medium text-text-primary mt-2">White-label</h4>
-                  <p className="text-sm text-text-secondary mt-1">Helt anpassningsbar branding för Enterprise</p>
+            {/* Editable Pricing Tiers */}
+            <div className="card mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-text-primary">Redigera prisnivåer</h2>
+                <div className="flex gap-2">
+                  {dbPricingTiers.length === 0 && (
+                    <button
+                      onClick={handleInitPricingTiers}
+                      className="btn btn-secondary text-sm"
+                    >
+                      Initiera standardpriser
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setPricingTierForm({ tier_key: '', name: '', monthly_fee: 0, startup_fee: 0, max_conversations: 0, features: [] })
+                      setEditingPricingTier(null)
+                      setShowPricingTierModal(true)
+                    }}
+                    className="btn btn-primary text-sm"
+                  >
+                    + Ny prisnivå
+                  </button>
                 </div>
               </div>
+              {dbPricingTiers.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border-subtle">
+                        <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Nyckel</th>
+                        <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Namn</th>
+                        <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Månadsavgift</th>
+                        <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Uppstartsavgift</th>
+                        <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Max konv.</th>
+                        <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Status</th>
+                        <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Åtgärd</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dbPricingTiers.map(tier => (
+                        <tr key={tier.tier_key} className="border-b border-border-subtle hover:bg-bg-secondary/50">
+                          <td className="px-4 py-3 text-sm font-mono text-text-secondary">{tier.tier_key}</td>
+                          <td className="px-4 py-3 text-sm font-medium text-text-primary">{tier.name}</td>
+                          <td className="px-4 py-3 text-sm text-text-primary">{tier.monthly_fee?.toLocaleString('sv-SE')} kr</td>
+                          <td className="px-4 py-3 text-sm text-text-primary">{tier.startup_fee?.toLocaleString('sv-SE')} kr</td>
+                          <td className="px-4 py-3 text-sm text-text-secondary">{tier.max_conversations === 0 ? 'Obegränsat' : tier.max_conversations}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex px-2 py-1 text-xs rounded-full ${tier.is_active ? 'bg-success-soft text-success' : 'bg-error-soft text-error'}`}>
+                              {tier.is_active ? 'Aktiv' : 'Inaktiv'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => openEditPricingTierModal(tier)}
+                              className="btn btn-ghost text-sm"
+                            >
+                              Redigera
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-text-secondary text-center py-8">Inga prisnivåer i databasen. Klicka "Initiera standardpriser" för att komma igång.</p>
+              )}
+            </div>
+
+            {/* Upcoming Features Roadmap */}
+            <div className="card border-dashed border-2 border-accent/30 bg-accent/5">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                  Kommande funktioner (Roadmap)
+                </h2>
+                <button
+                  onClick={() => {
+                    setRoadmapForm({ title: '', description: '', quarter: 'Q1 2026', status: 'planned' })
+                    setEditingRoadmapItem(null)
+                    setShowRoadmapModal(true)
+                  }}
+                  className="btn btn-primary text-sm"
+                >
+                  + Ny punkt
+                </button>
+              </div>
+              <p className="text-sm text-text-secondary mb-4">Funktioner som planeras för framtida versioner</p>
+              {roadmapItems.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {roadmapItems.map(item => {
+                    const quarterColor = item.quarter?.includes('Q1') ? 'blue' :
+                                          item.quarter?.includes('Q2') ? 'green' :
+                                          item.quarter?.includes('Q3') ? 'purple' :
+                                          item.quarter?.includes('Backlog') ? 'amber' : 'gray'
+                    const statusBadge = item.status === 'completed' ? 'bg-success-soft text-success' :
+                                        item.status === 'in_progress' ? 'bg-accent-soft text-accent' :
+                                        item.status === 'cancelled' ? 'bg-error-soft text-error' : ''
+                    return (
+                      <div key={item.id} className="p-4 bg-white rounded-lg border border-border-subtle group relative">
+                        <div className="flex items-start justify-between">
+                          <span className={`text-xs font-semibold text-${quarterColor}-600 bg-${quarterColor}-100 px-2 py-1 rounded`}>
+                            {item.quarter}
+                          </span>
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                            <button
+                              onClick={() => openEditRoadmapModal(item)}
+                              className="p-1 hover:bg-bg-secondary rounded"
+                              title="Redigera"
+                            >
+                              <svg className="w-4 h-4 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteRoadmapItem(item.id)}
+                              className="p-1 hover:bg-error-soft rounded"
+                              title="Radera"
+                            >
+                              <svg className="w-4 h-4 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                        <h4 className="font-medium text-text-primary mt-2">{item.title}</h4>
+                        <p className="text-sm text-text-secondary mt-1">{item.description}</p>
+                        {item.status !== 'planned' && (
+                          <span className={`mt-2 inline-flex px-2 py-0.5 text-xs rounded-full ${statusBadge}`}>
+                            {item.status === 'completed' ? 'Klar' : item.status === 'in_progress' ? 'Pågående' : 'Avbruten'}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-text-secondary mb-4">Ingen roadmap definierad ännu.</p>
+                  <button
+                    onClick={() => {
+                      setRoadmapForm({ title: '', description: '', quarter: 'Q1 2026', status: 'planned' })
+                      setEditingRoadmapItem(null)
+                      setShowRoadmapModal(true)
+                    }}
+                    className="btn btn-primary"
+                  >
+                    Lägg till första punkten
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -3669,10 +3996,11 @@ function SuperAdmin() {
                   onChange={(e) => setPricingForm({ ...pricingForm, pricing_tier: e.target.value })}
                   className="input w-full"
                 >
-                  <option value="starter">Starter (1 500 kr/mån, gratis uppstart)</option>
-                  <option value="professional">Professional (3 500 kr/mån + 10 000 kr uppstart)</option>
-                  <option value="business">Business (6 500 kr/mån + 25 000 kr uppstart)</option>
-                  <option value="enterprise">Enterprise (10 000 kr/mån + 50 000 kr uppstart)</option>
+                  {Object.entries(pricingTiers).map(([key, tier]) => (
+                    <option key={key} value={key}>
+                      {tier.name} ({tier.monthly_fee?.toLocaleString('sv-SE')} kr/mån{tier.startup_fee > 0 ? ` + ${tier.startup_fee?.toLocaleString('sv-SE')} kr uppstart` : ', gratis uppstart'})
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -3718,6 +4046,272 @@ function SuperAdmin() {
                 className="btn btn-primary"
               >
                 Spara ändringar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discount Modal */}
+      {showDiscountModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle">
+              <h2 className="text-lg font-semibold text-text-primary">Hantera rabatt</h2>
+              <p className="text-sm text-text-secondary mt-1">{showDiscountModal.name} ({showDiscountModal.id})</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="input-label">Rabattprocent</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={discountForm.discount_percent}
+                  onChange={(e) => setDiscountForm({ ...discountForm, discount_percent: parseFloat(e.target.value) || 0 })}
+                  className="input w-full"
+                  placeholder="0"
+                />
+                <p className="text-xs text-text-tertiary mt-1">0-100%, 0 = ingen rabatt</p>
+              </div>
+              <div>
+                <label className="input-label">Rabatt gäller t.o.m.</label>
+                <input
+                  type="date"
+                  value={discountForm.discount_end_date}
+                  onChange={(e) => setDiscountForm({ ...discountForm, discount_end_date: e.target.value })}
+                  className="input w-full"
+                />
+                <p className="text-xs text-text-tertiary mt-1">Lämna tomt för permanent rabatt</p>
+              </div>
+              <div>
+                <label className="input-label">Anteckning</label>
+                <input
+                  type="text"
+                  value={discountForm.discount_note}
+                  onChange={(e) => setDiscountForm({ ...discountForm, discount_note: e.target.value })}
+                  className="input w-full"
+                  placeholder="T.ex. 'Early adopter', 'Kampanjrabatt'"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-border-subtle flex justify-end gap-3">
+              <button
+                onClick={() => setShowDiscountModal(null)}
+                className="btn btn-ghost"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleSaveDiscount}
+                className="btn btn-primary"
+              >
+                Spara rabatt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Roadmap Modal */}
+      {showRoadmapModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle">
+              <h2 className="text-lg font-semibold text-text-primary">
+                {editingRoadmapItem ? 'Redigera roadmap-punkt' : 'Ny roadmap-punkt'}
+              </h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="input-label">Titel</label>
+                <input
+                  type="text"
+                  value={roadmapForm.title}
+                  onChange={(e) => setRoadmapForm({ ...roadmapForm, title: e.target.value })}
+                  className="input w-full"
+                  placeholder="T.ex. 'Webhook-integrationer'"
+                />
+              </div>
+              <div>
+                <label className="input-label">Beskrivning</label>
+                <textarea
+                  value={roadmapForm.description}
+                  onChange={(e) => setRoadmapForm({ ...roadmapForm, description: e.target.value })}
+                  className="input w-full"
+                  rows={3}
+                  placeholder="Kort beskrivning av funktionen..."
+                />
+              </div>
+              <div>
+                <label className="input-label">Kvartal</label>
+                <select
+                  value={roadmapForm.quarter}
+                  onChange={(e) => setRoadmapForm({ ...roadmapForm, quarter: e.target.value })}
+                  className="input w-full"
+                >
+                  <option value="Q1 2026">Q1 2026</option>
+                  <option value="Q2 2026">Q2 2026</option>
+                  <option value="Q3 2026">Q3 2026</option>
+                  <option value="Q4 2026">Q4 2026</option>
+                  <option value="Q1 2027">Q1 2027</option>
+                  <option value="Backlog">Backlog</option>
+                </select>
+              </div>
+              <div>
+                <label className="input-label">Status</label>
+                <select
+                  value={roadmapForm.status}
+                  onChange={(e) => setRoadmapForm({ ...roadmapForm, status: e.target.value })}
+                  className="input w-full"
+                >
+                  <option value="planned">Planerad</option>
+                  <option value="in_progress">Pågående</option>
+                  <option value="completed">Klar</option>
+                  <option value="cancelled">Avbruten</option>
+                </select>
+              </div>
+            </div>
+            <div className="p-6 border-t border-border-subtle flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowRoadmapModal(false)
+                  setEditingRoadmapItem(null)
+                }}
+                className="btn btn-ghost"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleSaveRoadmapItem}
+                className="btn btn-primary"
+              >
+                {editingRoadmapItem ? 'Spara ändringar' : 'Skapa punkt'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pricing Tier Edit Modal */}
+      {showPricingTierModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-lg animate-scale-in max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-border-subtle">
+              <h2 className="text-lg font-semibold text-text-primary">
+                {editingPricingTier ? 'Redigera prisnivå' : 'Ny prisnivå'}
+              </h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="input-label">Nyckel (ID)</label>
+                <input
+                  type="text"
+                  value={pricingTierForm.tier_key}
+                  onChange={(e) => setPricingTierForm({ ...pricingTierForm, tier_key: e.target.value.toLowerCase().replace(/\s/g, '_') })}
+                  className="input w-full font-mono"
+                  placeholder="t.ex. 'professional'"
+                  disabled={!!editingPricingTier}
+                />
+                {editingPricingTier && (
+                  <p className="text-xs text-text-tertiary mt-1">Nyckel kan inte ändras</p>
+                )}
+              </div>
+              <div>
+                <label className="input-label">Visningsnamn</label>
+                <input
+                  type="text"
+                  value={pricingTierForm.name}
+                  onChange={(e) => setPricingTierForm({ ...pricingTierForm, name: e.target.value })}
+                  className="input w-full"
+                  placeholder="T.ex. 'Professional'"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="input-label">Månadsavgift (kr)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={pricingTierForm.monthly_fee}
+                    onChange={(e) => setPricingTierForm({ ...pricingTierForm, monthly_fee: parseFloat(e.target.value) || 0 })}
+                    className="input w-full"
+                  />
+                </div>
+                <div>
+                  <label className="input-label">Uppstartsavgift (kr)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={pricingTierForm.startup_fee}
+                    onChange={(e) => setPricingTierForm({ ...pricingTierForm, startup_fee: parseFloat(e.target.value) || 0 })}
+                    className="input w-full"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="input-label">Max konversationer/månad</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={pricingTierForm.max_conversations}
+                  onChange={(e) => setPricingTierForm({ ...pricingTierForm, max_conversations: parseInt(e.target.value) || 0 })}
+                  className="input w-full"
+                />
+                <p className="text-xs text-text-tertiary mt-1">0 = obegränsat</p>
+              </div>
+              <div>
+                <label className="input-label">Inkluderade funktioner</label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={newFeature}
+                    onChange={(e) => setNewFeature(e.target.value)}
+                    className="input flex-1"
+                    placeholder="Lägg till funktion..."
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addFeatureToTier())}
+                  />
+                  <button
+                    type="button"
+                    onClick={addFeatureToTier}
+                    className="btn btn-secondary"
+                  >
+                    Lägg till
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {pricingTierForm.features.map((feature, index) => (
+                    <div key={index} className="flex items-center justify-between bg-bg-secondary p-2 rounded">
+                      <span className="text-sm text-text-primary">{feature}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeFeatureFromTier(index)}
+                        className="text-error hover:text-error/80"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="p-6 border-t border-border-subtle flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowPricingTierModal(false)
+                  setEditingPricingTier(null)
+                }}
+                className="btn btn-ghost"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleSavePricingTier}
+                className="btn btn-primary"
+              >
+                {editingPricingTier ? 'Spara ändringar' : 'Skapa prisnivå'}
               </button>
             </div>
           </div>

@@ -24,7 +24,8 @@ from database import (
     create_tables, get_db, Company, KnowledgeItem, ChatLog, SuperAdmin,
     CompanySettings, Conversation, Message, DailyStatistics, GDPRAuditLog,
     AdminAuditLog, GlobalSettings, CompanyActivityLog, Subscription, Invoice,
-    CompanyNote, CompanyDocument, WidgetPerformance, EmailNotificationQueue
+    CompanyNote, CompanyDocument, WidgetPerformance, EmailNotificationQueue,
+    RoadmapItem, PricingTier
 )
 from auth import (
     hash_password, verify_password, create_token, create_2fa_pending_token,
@@ -592,6 +593,48 @@ class PricingTierUpdate(BaseModel):
     startup_fee_paid: Optional[bool] = None
     contract_start_date: Optional[date] = None
     billing_email: Optional[str] = None
+
+
+class CompanyDiscountUpdate(BaseModel):
+    discount_percent: float = Field(ge=0, le=100)
+    discount_end_date: Optional[date] = None
+    discount_note: Optional[str] = ""
+
+
+class RoadmapItemCreate(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    quarter: str  # e.g., "Q1 2026"
+    status: Optional[str] = "planned"  # planned, in_progress, completed, cancelled
+    display_order: Optional[int] = 0
+
+
+class RoadmapItemUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    quarter: Optional[str] = None
+    status: Optional[str] = None
+    display_order: Optional[int] = None
+
+
+class PricingTierCreate(BaseModel):
+    tier_key: str
+    name: str
+    monthly_fee: float = 0
+    startup_fee: float = 0
+    max_conversations: int = 0
+    features: List[str] = []
+    display_order: Optional[int] = 0
+
+
+class PricingTierDbUpdate(BaseModel):
+    name: Optional[str] = None
+    monthly_fee: Optional[float] = None
+    startup_fee: Optional[float] = None
+    max_conversations: Optional[int] = None
+    features: Optional[List[str]] = None
+    is_active: Optional[bool] = None
+    display_order: Optional[int] = None
 
 
 class SuperAdminLogin(BaseModel):
@@ -4308,12 +4351,34 @@ PRICING_TIERS = {
 }
 
 
+def get_pricing_tiers_dict(db: Session) -> dict:
+    """Helper to get pricing tiers from database or fallback to defaults"""
+    db_tiers = db.query(PricingTier).filter(PricingTier.is_active == True).order_by(PricingTier.display_order).all()
+
+    if db_tiers:
+        return {
+            tier.tier_key: {
+                "id": tier.id,
+                "name": tier.name,
+                "monthly_fee": tier.monthly_fee,
+                "startup_fee": tier.startup_fee,
+                "max_conversations": tier.max_conversations,
+                "features": json.loads(tier.features) if tier.features else []
+            }
+            for tier in db_tiers
+        }
+
+    # Fallback to hardcoded defaults
+    return PRICING_TIERS
+
+
 @app.get("/admin/pricing-tiers")
 async def get_pricing_tiers(
-    admin: dict = Depends(get_super_admin)
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
 ):
-    """Get all pricing tier configurations"""
-    return PRICING_TIERS
+    """Get all pricing tier configurations from database"""
+    return get_pricing_tiers_dict(db)
 
 
 @app.get("/admin/revenue-dashboard")
@@ -4321,42 +4386,387 @@ async def get_revenue_dashboard(
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db)
 ):
-    """Get revenue dashboard statistics"""
+    """Get revenue dashboard statistics with discount calculations"""
     companies = db.query(Company).filter(Company.is_active == True).all()
+    pricing_tiers = get_pricing_tiers_dict(db)
 
     # Calculate revenue by tier
-    tier_stats = {tier: {"count": 0, "mrr": 0, "startup_collected": 0, "startup_pending": 0}
-                  for tier in PRICING_TIERS.keys()}
+    tier_stats = {tier: {"count": 0, "mrr": 0, "mrr_after_discount": 0, "startup_collected": 0, "startup_pending": 0}
+                  for tier in pricing_tiers.keys()}
 
     total_mrr = 0
+    total_mrr_after_discount = 0
     total_startup_collected = 0
     total_startup_pending = 0
+    total_discount_given = 0
 
     for company in companies:
         tier = company.pricing_tier or "starter"
-        if tier in PRICING_TIERS:
+        if tier in pricing_tiers:
             tier_stats[tier]["count"] += 1
-            tier_stats[tier]["mrr"] += PRICING_TIERS[tier]["monthly_fee"]
-            total_mrr += PRICING_TIERS[tier]["monthly_fee"]
+            base_fee = pricing_tiers[tier]["monthly_fee"]
+            tier_stats[tier]["mrr"] += base_fee
+            total_mrr += base_fee
+
+            # Apply discount if valid
+            discount = 0
+            if company.discount_percent and company.discount_percent > 0:
+                # Check if discount is still valid
+                if company.discount_end_date is None or company.discount_end_date >= date.today():
+                    discount = company.discount_percent
+
+            discounted_fee = base_fee * (1 - discount / 100)
+            tier_stats[tier]["mrr_after_discount"] += discounted_fee
+            total_mrr_after_discount += discounted_fee
+            total_discount_given += (base_fee - discounted_fee)
 
             if company.startup_fee_paid:
-                tier_stats[tier]["startup_collected"] += PRICING_TIERS[tier]["startup_fee"]
-                total_startup_collected += PRICING_TIERS[tier]["startup_fee"]
+                tier_stats[tier]["startup_collected"] += pricing_tiers[tier]["startup_fee"]
+                total_startup_collected += pricing_tiers[tier]["startup_fee"]
             else:
-                tier_stats[tier]["startup_pending"] += PRICING_TIERS[tier]["startup_fee"]
-                total_startup_pending += PRICING_TIERS[tier]["startup_fee"]
+                tier_stats[tier]["startup_pending"] += pricing_tiers[tier]["startup_fee"]
+                total_startup_pending += pricing_tiers[tier]["startup_fee"]
 
     # Annual revenue projection
     arr = total_mrr * 12
+    arr_after_discount = total_mrr_after_discount * 12
 
     return {
         "total_active_companies": len(companies),
-        "mrr": total_mrr,  # Monthly Recurring Revenue
-        "arr": arr,  # Annual Recurring Revenue
+        "mrr": total_mrr,  # Monthly Recurring Revenue (before discount)
+        "mrr_after_discount": total_mrr_after_discount,  # MRR after discounts
+        "total_discount_given": total_discount_given,  # Monthly discount amount
+        "arr": arr,  # Annual Recurring Revenue (before discount)
+        "arr_after_discount": arr_after_discount,  # ARR after discounts
         "startup_fees_collected": total_startup_collected,
         "startup_fees_pending": total_startup_pending,
         "tier_breakdown": tier_stats,
-        "pricing_tiers": PRICING_TIERS
+        "pricing_tiers": pricing_tiers
+    }
+
+
+# =============================================================================
+# Roadmap Management (Editable)
+# =============================================================================
+
+@app.get("/admin/roadmap")
+async def get_roadmap_items(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all roadmap items"""
+    items = db.query(RoadmapItem).order_by(RoadmapItem.quarter, RoadmapItem.display_order).all()
+    return {
+        "items": [
+            {
+                "id": item.id,
+                "title": item.title,
+                "description": item.description,
+                "quarter": item.quarter,
+                "status": item.status,
+                "display_order": item.display_order
+            }
+            for item in items
+        ]
+    }
+
+
+@app.post("/admin/roadmap")
+async def create_roadmap_item(
+    item: RoadmapItemCreate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Create a new roadmap item"""
+    new_item = RoadmapItem(
+        title=item.title,
+        description=item.description,
+        quarter=item.quarter,
+        status=item.status,
+        display_order=item.display_order
+    )
+    db.add(new_item)
+    db.commit()
+    db.refresh(new_item)
+
+    return {
+        "message": "Roadmap-punkt skapad",
+        "item": {
+            "id": new_item.id,
+            "title": new_item.title,
+            "description": new_item.description,
+            "quarter": new_item.quarter,
+            "status": new_item.status,
+            "display_order": new_item.display_order
+        }
+    }
+
+
+@app.put("/admin/roadmap/{item_id}")
+async def update_roadmap_item(
+    item_id: int,
+    item: RoadmapItemUpdate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Update a roadmap item"""
+    db_item = db.query(RoadmapItem).filter(RoadmapItem.id == item_id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Roadmap-punkt hittades inte")
+
+    if item.title is not None:
+        db_item.title = item.title
+    if item.description is not None:
+        db_item.description = item.description
+    if item.quarter is not None:
+        db_item.quarter = item.quarter
+    if item.status is not None:
+        db_item.status = item.status
+    if item.display_order is not None:
+        db_item.display_order = item.display_order
+
+    db.commit()
+
+    return {
+        "message": "Roadmap-punkt uppdaterad",
+        "item": {
+            "id": db_item.id,
+            "title": db_item.title,
+            "description": db_item.description,
+            "quarter": db_item.quarter,
+            "status": db_item.status,
+            "display_order": db_item.display_order
+        }
+    }
+
+
+@app.delete("/admin/roadmap/{item_id}")
+async def delete_roadmap_item(
+    item_id: int,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a roadmap item"""
+    db_item = db.query(RoadmapItem).filter(RoadmapItem.id == item_id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Roadmap-punkt hittades inte")
+
+    db.delete(db_item)
+    db.commit()
+
+    return {"message": "Roadmap-punkt raderad"}
+
+
+# =============================================================================
+# Pricing Tier Management (Editable)
+# =============================================================================
+
+@app.get("/admin/pricing-tiers/db")
+async def get_pricing_tiers_from_db(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all pricing tiers from database (including inactive)"""
+    tiers = db.query(PricingTier).order_by(PricingTier.display_order).all()
+    return {
+        "tiers": [
+            {
+                "id": tier.id,
+                "tier_key": tier.tier_key,
+                "name": tier.name,
+                "monthly_fee": tier.monthly_fee,
+                "startup_fee": tier.startup_fee,
+                "max_conversations": tier.max_conversations,
+                "features": json.loads(tier.features) if tier.features else [],
+                "is_active": tier.is_active,
+                "display_order": tier.display_order
+            }
+            for tier in tiers
+        ]
+    }
+
+
+@app.post("/admin/pricing-tiers/init")
+async def init_pricing_tiers(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Initialize pricing tiers from default config (run once)"""
+    existing = db.query(PricingTier).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Prisnivåer finns redan i databasen")
+
+    order = 0
+    for tier_key, config in PRICING_TIERS.items():
+        tier = PricingTier(
+            tier_key=tier_key,
+            name=config["name"],
+            monthly_fee=config["monthly_fee"],
+            startup_fee=config["startup_fee"],
+            max_conversations=config["max_conversations"],
+            features=json.dumps(config["features"]),
+            display_order=order
+        )
+        db.add(tier)
+        order += 1
+
+    db.commit()
+
+    return {"message": f"Initierade {len(PRICING_TIERS)} prisnivåer i databasen"}
+
+
+@app.post("/admin/pricing-tiers/db")
+async def create_pricing_tier(
+    tier: PricingTierCreate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Create a new pricing tier"""
+    existing = db.query(PricingTier).filter(PricingTier.tier_key == tier.tier_key).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Prisnivå med nyckel '{tier.tier_key}' finns redan")
+
+    new_tier = PricingTier(
+        tier_key=tier.tier_key,
+        name=tier.name,
+        monthly_fee=tier.monthly_fee,
+        startup_fee=tier.startup_fee,
+        max_conversations=tier.max_conversations,
+        features=json.dumps(tier.features),
+        display_order=tier.display_order
+    )
+    db.add(new_tier)
+    db.commit()
+    db.refresh(new_tier)
+
+    return {
+        "message": "Prisnivå skapad",
+        "tier": {
+            "id": new_tier.id,
+            "tier_key": new_tier.tier_key,
+            "name": new_tier.name,
+            "monthly_fee": new_tier.monthly_fee,
+            "startup_fee": new_tier.startup_fee,
+            "max_conversations": new_tier.max_conversations,
+            "features": json.loads(new_tier.features) if new_tier.features else [],
+            "is_active": new_tier.is_active,
+            "display_order": new_tier.display_order
+        }
+    }
+
+
+@app.put("/admin/pricing-tiers/db/{tier_key}")
+async def update_pricing_tier(
+    tier_key: str,
+    tier: PricingTierDbUpdate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Update a pricing tier"""
+    db_tier = db.query(PricingTier).filter(PricingTier.tier_key == tier_key).first()
+    if not db_tier:
+        raise HTTPException(status_code=404, detail="Prisnivå hittades inte")
+
+    if tier.name is not None:
+        db_tier.name = tier.name
+    if tier.monthly_fee is not None:
+        db_tier.monthly_fee = tier.monthly_fee
+    if tier.startup_fee is not None:
+        db_tier.startup_fee = tier.startup_fee
+    if tier.max_conversations is not None:
+        db_tier.max_conversations = tier.max_conversations
+    if tier.features is not None:
+        db_tier.features = json.dumps(tier.features)
+    if tier.is_active is not None:
+        db_tier.is_active = tier.is_active
+    if tier.display_order is not None:
+        db_tier.display_order = tier.display_order
+
+    db.commit()
+
+    return {
+        "message": "Prisnivå uppdaterad",
+        "tier": {
+            "id": db_tier.id,
+            "tier_key": db_tier.tier_key,
+            "name": db_tier.name,
+            "monthly_fee": db_tier.monthly_fee,
+            "startup_fee": db_tier.startup_fee,
+            "max_conversations": db_tier.max_conversations,
+            "features": json.loads(db_tier.features) if db_tier.features else [],
+            "is_active": db_tier.is_active,
+            "display_order": db_tier.display_order
+        }
+    }
+
+
+@app.delete("/admin/pricing-tiers/db/{tier_key}")
+async def delete_pricing_tier(
+    tier_key: str,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a pricing tier (will fail if companies are using it)"""
+    db_tier = db.query(PricingTier).filter(PricingTier.tier_key == tier_key).first()
+    if not db_tier:
+        raise HTTPException(status_code=404, detail="Prisnivå hittades inte")
+
+    # Check if any companies are using this tier
+    companies_using = db.query(Company).filter(Company.pricing_tier == tier_key).count()
+    if companies_using > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Kan inte radera: {companies_using} företag använder denna prisnivå"
+        )
+
+    db.delete(db_tier)
+    db.commit()
+
+    return {"message": "Prisnivå raderad"}
+
+
+# =============================================================================
+# Company Discount Management
+# =============================================================================
+
+@app.put("/admin/companies/{company_id}/discount")
+async def update_company_discount(
+    company_id: str,
+    discount: CompanyDiscountUpdate,
+    admin: dict = Depends(get_super_admin),
+    req: Request = None,
+    db: Session = Depends(get_db)
+):
+    """Apply or update discount for a company"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag hittades inte")
+
+    company.discount_percent = discount.discount_percent
+    company.discount_end_date = discount.discount_end_date
+    company.discount_note = discount.discount_note or ""
+
+    db.commit()
+
+    # Log admin action
+    log_admin_action(
+        db, admin["username"], "update_discount",
+        target_company_id=company_id,
+        description=f"Uppdaterade rabatt: {discount.discount_percent}%",
+        details={
+            "discount_percent": discount.discount_percent,
+            "discount_end_date": discount.discount_end_date.isoformat() if discount.discount_end_date else None,
+            "discount_note": discount.discount_note
+        },
+        ip_address=req.client.host if req else None
+    )
+
+    return {
+        "message": "Rabatt uppdaterad",
+        "company_id": company_id,
+        "discount_percent": company.discount_percent,
+        "discount_end_date": company.discount_end_date.isoformat() if company.discount_end_date else None,
+        "discount_note": company.discount_note
     }
 
 

@@ -68,6 +68,11 @@ class Company(Base):
     contract_start_date = Column(Date)  # When subscription started
     billing_email = Column(String, default="")  # Separate billing contact
 
+    # Discounts
+    discount_percent = Column(Float, default=0)  # Percentage discount (0-100)
+    discount_end_date = Column(Date)  # When discount expires (null = permanent)
+    discount_note = Column(String, default="")  # Reason for discount
+
     # Relations
     knowledge_items = relationship("KnowledgeItem", back_populates="company", cascade="all, delete-orphan")
     chat_logs = relationship("ChatLog", back_populates="company", cascade="all, delete-orphan")
@@ -507,8 +512,35 @@ class EmailNotificationQueue(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
-# Extend SuperAdmin with 2FA fields (we'll modify the existing class)
-# Note: Add these columns via migration
+class RoadmapItem(Base):
+    """Roadmap items for upcoming features - editable by super admin"""
+    __tablename__ = "roadmap_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, default="")
+    quarter = Column(String, nullable=False)  # e.g., "Q1 2026", "Q2 2026"
+    status = Column(String, default="planned")  # planned, in_progress, completed, cancelled
+    display_order = Column(Integer, default=0)  # For custom ordering
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PricingTier(Base):
+    """Pricing tiers - editable by super admin"""
+    __tablename__ = "pricing_tiers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tier_key = Column(String, unique=True, nullable=False)  # starter, professional, business, enterprise
+    name = Column(String, nullable=False)  # Display name
+    monthly_fee = Column(Float, default=0)  # Monthly fee in SEK
+    startup_fee = Column(Float, default=0)  # One-time startup fee in SEK
+    max_conversations = Column(Integer, default=0)  # 0 = unlimited
+    features = Column(Text, default="[]")  # JSON array of feature descriptions
+    is_active = Column(Boolean, default=True)  # Can be disabled
+    display_order = Column(Integer, default=0)  # For custom ordering
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 # =============================================================================
