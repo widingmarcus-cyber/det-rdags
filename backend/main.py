@@ -1236,13 +1236,20 @@ async def save_conversation_stats(db: Session, conversation: Conversation):
     if not daily_stat:
         daily_stat = DailyStatistics(
             company_id=conversation.company_id,
-            date=conv_date
+            date=conv_date,
+            total_conversations=0,
+            total_messages=0,
+            questions_answered=0,
+            questions_unanswered=0,
+            helpful_count=0,
+            not_helpful_count=0,
+            avg_response_time_ms=0
         )
         db.add(daily_stat)
 
-    # Uppdatera statistik (handle None values from old conversations)
-    daily_stat.total_conversations += 1
-    daily_stat.total_messages += (conversation.message_count or 0)
+    # Uppdatera statistik (handle None values from old data)
+    daily_stat.total_conversations = (daily_stat.total_conversations or 0) + 1
+    daily_stat.total_messages = (daily_stat.total_messages or 0) + (conversation.message_count or 0)
 
     # Räkna besvarade/obesvarade
     messages = db.query(Message).filter(
@@ -1252,15 +1259,15 @@ async def save_conversation_stats(db: Session, conversation: Conversation):
 
     for msg in messages:
         if msg.had_answer:
-            daily_stat.questions_answered += 1
+            daily_stat.questions_answered = (daily_stat.questions_answered or 0) + 1
         else:
-            daily_stat.questions_unanswered += 1
+            daily_stat.questions_unanswered = (daily_stat.questions_unanswered or 0) + 1
 
     # Feedback
     if conversation.was_helpful is True:
-        daily_stat.helpful_count += 1
+        daily_stat.helpful_count = (daily_stat.helpful_count or 0) + 1
     elif conversation.was_helpful is False:
-        daily_stat.not_helpful_count += 1
+        daily_stat.not_helpful_count = (daily_stat.not_helpful_count or 0) + 1
 
     # Update category counts
     category = conversation.category or "allmant"
@@ -2536,7 +2543,10 @@ async def parse_excel_file(content: bytes) -> List[dict]:
     try:
         import openpyxl
     except ImportError:
-        return []
+        raise HTTPException(
+            status_code=500,
+            detail="Excel-stöd saknas. Kontakta administratör för att installera openpyxl."
+        )
 
     items = []
     try:
@@ -2592,7 +2602,10 @@ async def parse_word_file(content: bytes) -> str:
     try:
         from docx import Document
     except ImportError:
-        return ""
+        raise HTTPException(
+            status_code=500,
+            detail="Word-stöd saknas. Kontakta administratör för att installera python-docx."
+        )
 
     try:
         doc = Document(io.BytesIO(content))
