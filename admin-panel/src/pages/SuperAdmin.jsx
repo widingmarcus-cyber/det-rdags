@@ -63,10 +63,27 @@ function SuperAdmin() {
   const [auditDateRange, setAuditDateRange] = useState({ start: '', end: '' })
   const [auditActionTypes, setAuditActionTypes] = useState([])
 
+  // New JARVIS features
+  const [activityStream, setActivityStream] = useState([])
+  const [activityLoading, setActivityLoading] = useState(false)
+  const [aiInsights, setAiInsights] = useState({ insights: [], trending_topics: [] })
+  const [insightsLoading, setInsightsLoading] = useState(false)
+  const [announcement, setAnnouncement] = useState(null)
+  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false)
+  const [announcementForm, setAnnouncementForm] = useState({ title: '', message: '', type: 'info' })
+  const [companyDocuments, setCompanyDocuments] = useState([])
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false)
+  const [documentForm, setDocumentForm] = useState({ document_type: 'agreement', description: '' })
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [commandSearch, setCommandSearch] = useState('')
+
   useEffect(() => {
     fetchCompanies()
     fetchSystemHealth()
     fetchMaintenanceMode()
+    fetchActivityStream()
+    fetchAiInsights()
+    fetchAnnouncement()
   }, [])
 
   useEffect(() => {
@@ -220,6 +237,148 @@ function SuperAdmin() {
       }
     } catch (error) {
       console.error('Failed to fetch notes:', error)
+    }
+  }
+
+  const fetchCompanyDocuments = async (companyId) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/companies/${companyId}/documents`)
+      if (response.ok) {
+        const data = await response.json()
+        setCompanyDocuments(data.documents || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch documents:', error)
+    }
+  }
+
+  const fetchActivityStream = async () => {
+    setActivityLoading(true)
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/activity-stream?limit=15`)
+      if (response.ok) {
+        const data = await response.json()
+        setActivityStream(data.activities || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch activity stream:', error)
+    } finally {
+      setActivityLoading(false)
+    }
+  }
+
+  const fetchAiInsights = async () => {
+    setInsightsLoading(true)
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/ai-insights`)
+      if (response.ok) {
+        const data = await response.json()
+        setAiInsights(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch AI insights:', error)
+    } finally {
+      setInsightsLoading(false)
+    }
+  }
+
+  const fetchAnnouncement = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/announcements`)
+      if (response.ok) {
+        const data = await response.json()
+        setAnnouncement(data.announcement)
+      }
+    } catch (error) {
+      console.error('Failed to fetch announcement:', error)
+    }
+  }
+
+  const handleCreateAnnouncement = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/announcements`, {
+        method: 'POST',
+        body: JSON.stringify(announcementForm)
+      })
+      if (response.ok) {
+        showNotification('Meddelande publicerat')
+        setShowAnnouncementModal(false)
+        setAnnouncementForm({ title: '', message: '', type: 'info' })
+        fetchAnnouncement()
+      }
+    } catch (error) {
+      console.error('Failed to create announcement:', error)
+    }
+  }
+
+  const handleDeleteAnnouncement = async () => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/announcements`, { method: 'DELETE' })
+      if (response.ok) {
+        showNotification('Meddelande borttaget')
+        setAnnouncement(null)
+      }
+    } catch (error) {
+      console.error('Failed to delete announcement:', error)
+    }
+  }
+
+  const handleUploadDocument = async (file) => {
+    if (!showCompanyDashboard) return
+
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      const base64 = e.target.result.split(',')[1]
+      try {
+        const response = await adminFetch(`${API_BASE}/admin/companies/${showCompanyDashboard.id}/documents`, {
+          method: 'POST',
+          body: JSON.stringify({
+            filename: file.name,
+            file_type: file.type,
+            file_size: file.size,
+            file_data: base64,
+            document_type: documentForm.document_type,
+            description: documentForm.description
+          })
+        })
+        if (response.ok) {
+          showNotification('Dokument uppladdat')
+          setShowDocumentUpload(false)
+          setDocumentForm({ document_type: 'agreement', description: '' })
+          fetchCompanyDocuments(showCompanyDashboard.id)
+        }
+      } catch (error) {
+        console.error('Failed to upload document:', error)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleDownloadDocument = async (docId, filename) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/documents/${docId}/download`)
+      if (response.ok) {
+        const data = await response.json()
+        const link = document.createElement('a')
+        link.href = `data:${data.file_type};base64,${data.file_data}`
+        link.download = filename
+        link.click()
+      }
+    } catch (error) {
+      console.error('Failed to download document:', error)
+    }
+  }
+
+  const handleDeleteDocument = async (docId) => {
+    if (!confirm('Vill du radera detta dokument?')) return
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/documents/${docId}`, { method: 'DELETE' })
+      if (response.ok) {
+        showNotification('Dokument borttaget')
+        fetchCompanyDocuments(showCompanyDashboard.id)
+      }
+    } catch (error) {
+      console.error('Failed to delete document:', error)
     }
   }
 
@@ -569,20 +728,36 @@ function SuperAdmin() {
     setCompanyLoading(true)
     setCompanyUsage(null)
     setCompanyActivity([])
+    setCompanyNotes([])
+    setCompanyDocuments([])
 
     try {
-      // Fetch usage data
-      const usageRes = await adminFetch(`${API_BASE}/admin/companies/${company.id}/usage`)
+      // Fetch all data in parallel
+      const [usageRes, activityRes, notesRes, docsRes] = await Promise.all([
+        adminFetch(`${API_BASE}/admin/companies/${company.id}/usage`),
+        adminFetch(`${API_BASE}/admin/company-activity/${company.id}?limit=10`),
+        adminFetch(`${API_BASE}/admin/companies/${company.id}/notes`),
+        adminFetch(`${API_BASE}/admin/companies/${company.id}/documents`)
+      ])
+
       if (usageRes.ok) {
         const usageData = await usageRes.json()
         setCompanyUsage(usageData)
       }
 
-      // Fetch activity logs for this company
-      const activityRes = await adminFetch(`${API_BASE}/admin/company-activity/${company.id}?limit=10`)
       if (activityRes.ok) {
         const activityData = await activityRes.json()
         setCompanyActivity(activityData.logs || [])
+      }
+
+      if (notesRes.ok) {
+        const notesData = await notesRes.json()
+        setCompanyNotes(notesData.notes || [])
+      }
+
+      if (docsRes.ok) {
+        const docsData = await docsRes.json()
+        setCompanyDocuments(docsData.documents || [])
       }
     } catch (error) {
       console.error('Failed to fetch company details:', error)
@@ -713,6 +888,7 @@ function SuperAdmin() {
               { id: 'billing', label: 'Fakturering', icon: <><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></> },
               { id: 'audit', label: 'Logg', icon: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></> },
               { id: 'system', label: 'System', icon: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></> },
+              { id: 'docs', label: 'Docs', icon: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></> },
               { id: 'preferences', label: 'Konto', icon: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></> }
             ].map(tab => (
               <button
@@ -742,13 +918,59 @@ function SuperAdmin() {
             <div className="mb-8">
               <div className="flex items-center justify-between mb-2">
                 <h1 className="text-2xl font-bold text-text-primary tracking-tight">Kontrollcenter</h1>
-                <div className="flex items-center gap-2 text-sm text-text-tertiary">
-                  <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
-                  Senast uppdaterad: {new Date().toLocaleTimeString('sv-SE')}
+                <div className="flex items-center gap-4">
+                  {/* Command Palette Trigger */}
+                  <button
+                    onClick={() => setCommandPaletteOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-bg-secondary hover:bg-bg-tertiary border border-border-subtle rounded-lg text-text-secondary hover:text-text-primary transition-colors"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="11" cy="11" r="8" />
+                      <path d="m21 21-4.35-4.35" />
+                    </svg>
+                    <span className="text-sm">Sök kund, fråga, eller åtgärd...</span>
+                  </button>
+                  <div className="flex items-center gap-2 text-sm text-text-tertiary">
+                    <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
+                    Senast uppdaterad: {new Date().toLocaleTimeString('sv-SE')}
+                  </div>
                 </div>
               </div>
               <p className="text-text-secondary">Allt du behöver se för att förstå hur din verksamhet går</p>
             </div>
+
+            {/* Active Announcement Banner */}
+            {announcement && (
+              <div className={`rounded-xl p-4 mb-6 flex items-center justify-between ${
+                announcement.type === 'warning' ? 'bg-warning/10 border border-warning/30' :
+                announcement.type === 'maintenance' ? 'bg-info/10 border border-info/30' :
+                'bg-accent/10 border border-accent/30'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    announcement.type === 'warning' ? 'bg-warning text-white' :
+                    announcement.type === 'maintenance' ? 'bg-info text-white' :
+                    'bg-accent text-white'
+                  }`}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-medium text-text-primary">{announcement.title}</p>
+                    <p className="text-sm text-text-secondary">{announcement.message}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleDeleteAnnouncement}
+                  className="p-2 rounded-lg hover:bg-bg-secondary text-text-tertiary hover:text-text-primary transition-colors"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
 
             {/* SYSTEM STATUS BANNER */}
             <div className={`rounded-xl p-6 mb-8 border-2 ${
@@ -1068,6 +1290,154 @@ function SuperAdmin() {
                     Visa alla {companies.length} kunder →
                   </button>
                 </div>
+              </div>
+            </div>
+
+            {/* AI INSIGHTS & LIVE ACTIVITY STREAM */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              {/* AI INSIGHTS PANEL */}
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-white">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a2 2 0 0 1 0 4h-1v1a2 2 0 0 1-2 2h-1v1a2 2 0 0 1-4 0v-1h-2v1a2 2 0 0 1-4 0v-1H6a2 2 0 0 1-2-2v-1H3a2 2 0 0 1 0-4h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2" />
+                        <circle cx="12" cy="14" r="3" />
+                      </svg>
+                    </div>
+                    AI Insikter
+                  </h2>
+                  <button onClick={fetchAiInsights} className="text-sm text-accent hover:text-accent-hover">
+                    Uppdatera
+                  </button>
+                </div>
+
+                {insightsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin w-6 h-6 border-2 border-accent border-t-transparent rounded-full" />
+                  </div>
+                ) : aiInsights.insights.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="w-12 h-12 mx-auto mb-3 bg-success/20 rounded-full flex items-center justify-center text-success">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+                    <p className="text-text-secondary">Allt ser bra ut! Inga problem upptäckta.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {aiInsights.insights.slice(0, 5).map((insight, i) => (
+                      <div key={i} className={`p-3 rounded-lg border ${
+                        insight.severity === 'high' ? 'bg-error/10 border-error/30' :
+                        insight.severity === 'medium' ? 'bg-warning/10 border-warning/30' :
+                        'bg-info/10 border-info/30'
+                      }`}>
+                        <div className="flex items-start gap-3">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            insight.severity === 'high' ? 'bg-error text-white' :
+                            insight.severity === 'medium' ? 'bg-warning text-white' :
+                            'bg-info text-white'
+                          }`}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-text-primary text-sm">{insight.company_name}</p>
+                            <p className="text-xs text-text-secondary">{insight.description}</p>
+                          </div>
+                          <span className="text-xs font-medium text-text-tertiary">{insight.metric}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {aiInsights.trending_topics.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-border-subtle">
+                    <p className="text-xs text-text-tertiary mb-2">Trendande ämnen denna vecka:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {aiInsights.trending_topics.map((topic, i) => (
+                        <span key={i} className="px-2 py-1 bg-bg-secondary rounded-full text-xs text-text-secondary">
+                          {topic.topic} <span className="text-text-tertiary">({topic.count})</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* LIVE ACTIVITY STREAM */}
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-teal-500 rounded-lg flex items-center justify-center text-white">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                      </svg>
+                    </div>
+                    Live Aktivitet
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-success rounded-full animate-pulse" />
+                    <button onClick={fetchActivityStream} className="text-sm text-accent hover:text-accent-hover">
+                      Uppdatera
+                    </button>
+                  </div>
+                </div>
+
+                {activityLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin w-6 h-6 border-2 border-accent border-t-transparent rounded-full" />
+                  </div>
+                ) : activityStream.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-text-secondary">Ingen aktivitet ännu</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {activityStream.map((activity, i) => (
+                      <div key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-secondary transition-colors">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          activity.type === 'conversation' ? 'bg-accent/20 text-accent' : 'bg-info/20 text-info'
+                        }`}>
+                          {activity.type === 'conversation' ? (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                            </svg>
+                          ) : (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <circle cx="12" cy="12" r="3" />
+                              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          {activity.type === 'conversation' ? (
+                            <>
+                              <p className="text-sm text-text-primary truncate">
+                                <span className="font-medium">{activity.company_name}</span>
+                                <span className="text-text-tertiary"> fick </span>
+                                <span className="font-medium">{activity.message_count}</span>
+                                <span className="text-text-tertiary"> {activity.message_count === 1 ? 'fråga' : 'frågor'}</span>
+                              </p>
+                              <p className="text-xs text-text-tertiary">{activity.category} • {activity.language}</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-sm text-text-primary truncate">{activity.description}</p>
+                              <p className="text-xs text-text-tertiary">av {activity.admin}</p>
+                            </>
+                          )}
+                        </div>
+                        <span className="text-xs text-text-tertiary flex-shrink-0">
+                          {new Date(activity.timestamp).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1942,6 +2312,175 @@ function SuperAdmin() {
             </div>
           </div>
         )}
+
+        {/* Documentation Hub Tab */}
+        {activeTab === 'docs' && (
+          <div className="animate-fade-in">
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Dokumentation</h1>
+              <p className="text-text-secondary mt-1">Hur Bobot fungerar - allt du behöver veta</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Architecture Overview */}
+              <div className="lg:col-span-2 card">
+                <h2 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <path d="M3 9h18" />
+                    <path d="M9 21V9" />
+                  </svg>
+                  Systemarkitektur
+                </h2>
+                <div className="bg-bg-secondary rounded-xl p-6">
+                  <pre className="text-xs text-text-secondary overflow-x-auto whitespace-pre font-mono">
+{`┌─────────────────────────────────────────────────────────────────────┐
+│                     KUNDENS HEMSIDA                                  │
+│  ┌──────────────┐                                                   │
+│  │ Chattwidget  │ ◀── Inbäddningsbar React-komponent               │
+│  └──────┬───────┘                                                   │
+└─────────┼───────────────────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Admin-panel    │────▶│  FastAPI Backend│────▶│     Ollama      │
+│  (React)        │     │   (Python)      │     │  (Llama 3.1)    │
+└─────────────────┘     └────────┬────────┘     └─────────────────┘
+                                 │
+                        ┌────────▼────────┐
+                        │   SQLite DB     │
+                        │  (Multi-tenant) │
+                        └─────────────────┘`}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Quick Reference */}
+              <div className="card">
+                <h2 className="text-lg font-bold text-text-primary mb-4">Snabbreferens</h2>
+                <div className="space-y-4">
+                  <div className="p-3 bg-bg-secondary rounded-lg">
+                    <p className="font-medium text-text-primary text-sm">Portar</p>
+                    <div className="mt-2 space-y-1 text-xs text-text-secondary">
+                      <p>Backend API: <code className="px-1 py-0.5 bg-bg-tertiary rounded">8000</code></p>
+                      <p>Admin Panel: <code className="px-1 py-0.5 bg-bg-tertiary rounded">3000</code></p>
+                      <p>Widget Demo: <code className="px-1 py-0.5 bg-bg-tertiary rounded">3001</code></p>
+                      <p>Ollama: <code className="px-1 py-0.5 bg-bg-tertiary rounded">11434</code></p>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-bg-secondary rounded-lg">
+                    <p className="font-medium text-text-primary text-sm">Standardkonton</p>
+                    <div className="mt-2 space-y-1 text-xs text-text-secondary">
+                      <p>Demo: <code className="px-1 py-0.5 bg-bg-tertiary rounded">demo / demo123</code></p>
+                      <p>Admin: <code className="px-1 py-0.5 bg-bg-tertiary rounded">admin / admin123</code></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Runbooks */}
+              <div className="lg:col-span-3 card">
+                <h2 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                  </svg>
+                  Guider & Felsökning
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="p-4 bg-bg-secondary rounded-xl">
+                    <h3 className="font-medium text-text-primary mb-2">Ny kund - Onboarding</h3>
+                    <ol className="text-sm text-text-secondary space-y-2 list-decimal list-inside">
+                      <li>Skapa företag (Företag → Lägg till)</li>
+                      <li>Konfigurera widgeten (utseende, meddelanden)</li>
+                      <li>Lägg till kunskapsbas (minst 10-20 frågor)</li>
+                      <li>Ge kunden inbäddningskoden</li>
+                      <li>Testa med live preview</li>
+                    </ol>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-xl">
+                    <h3 className="font-medium text-text-primary mb-2">AI svarar inte</h3>
+                    <ol className="text-sm text-text-secondary space-y-2 list-decimal list-inside">
+                      <li>Kontrollera Ollama-status (System → Systemhälsa)</li>
+                      <li>Verifiera att modellen är laddad</li>
+                      <li>Kontrollera Docker-loggar: <code className="text-xs">docker logs bobot-ollama-1</code></li>
+                      <li>Starta om Ollama: <code className="text-xs">docker restart bobot-ollama-1</code></li>
+                    </ol>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-xl">
+                    <h3 className="font-medium text-text-primary mb-2">GDPR-hantering</h3>
+                    <ol className="text-sm text-text-secondary space-y-2 list-decimal list-inside">
+                      <li>Ställ in retention (Inställningar → GDPR)</li>
+                      <li>Automatisk rensning körs varje timme</li>
+                      <li>Manuell rensning: Översikt → GDPR-rensning</li>
+                      <li>Statistik behålls anonymiserat</li>
+                    </ol>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-xl">
+                    <h3 className="font-medium text-text-primary mb-2">Hög obesvarad-andel</h3>
+                    <ol className="text-sm text-text-secondary space-y-2 list-decimal list-inside">
+                      <li>Granska "Obesvarade frågor" i Analytics</li>
+                      <li>Lägg till vanliga frågor i kunskapsbasen</li>
+                      <li>Förbättra befintliga svar med nyckelord</li>
+                      <li>Aktivera notifieringar för obesvarade</li>
+                    </ol>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-xl">
+                    <h3 className="font-medium text-text-primary mb-2">Widget visas inte</h3>
+                    <ol className="text-sm text-text-secondary space-y-2 list-decimal list-inside">
+                      <li>Kontrollera att företaget är aktivt</li>
+                      <li>Verifiera company_id i embed-koden</li>
+                      <li>Kolla CORS-inställningar (backend)</li>
+                      <li>Kontrollera webbläsarkonsolen för fel</li>
+                    </ol>
+                  </div>
+                  <div className="p-4 bg-bg-secondary rounded-xl">
+                    <h3 className="font-medium text-text-primary mb-2">Databashantering</h3>
+                    <ol className="text-sm text-text-secondary space-y-2 list-decimal list-inside">
+                      <li>Backup: <code className="text-xs">cp bobot.db bobot.backup.db</code></li>
+                      <li>Storlek visas i System → Systemhälsa</li>
+                      <li>Reset: <code className="text-xs">rm bobot.db && restart</code></li>
+                      <li>Migration: Använd Alembic (produktion)</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+
+              {/* Create Announcement */}
+              <div className="lg:col-span-3 card">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                    </svg>
+                    Skicka meddelande till alla kunder
+                  </h2>
+                  <button
+                    onClick={() => setShowAnnouncementModal(true)}
+                    className="btn btn-primary"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    Nytt meddelande
+                  </button>
+                </div>
+                <p className="text-sm text-text-secondary">
+                  Skapa ett meddelande som visas för alla företagsadministratörer i deras dashboard.
+                  Användbart för systemunderhåll, nya funktioner eller viktiga uppdateringar.
+                </p>
+                {announcement && (
+                  <div className="mt-4 p-4 bg-accent/10 border border-accent/30 rounded-lg">
+                    <p className="text-sm text-text-tertiary mb-1">Aktivt meddelande:</p>
+                    <p className="font-medium text-text-primary">{announcement.title}</p>
+                    <p className="text-sm text-text-secondary">{announcement.message}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Create Company Modal */}
@@ -2258,6 +2797,160 @@ function SuperAdmin() {
                   )}
                 </div>
 
+                {/* Notes & Documents */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  {/* Notes Section */}
+                  <div className="bg-bg-secondary rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-medium text-text-primary flex items-center gap-2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                          <line x1="16" y1="13" x2="8" y2="13" />
+                          <line x1="16" y1="17" x2="8" y2="17" />
+                        </svg>
+                        Anteckningar
+                      </h3>
+                      <span className="text-xs text-text-tertiary">{companyNotes.length}</span>
+                    </div>
+
+                    {/* Add Note Form */}
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        type="text"
+                        value={newNote}
+                        onChange={(e) => setNewNote(e.target.value)}
+                        placeholder="Ny anteckning..."
+                        className="input text-sm flex-1"
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddNote(showCompanyDashboard.id)}
+                      />
+                      <button
+                        onClick={() => handleAddNote(showCompanyDashboard.id)}
+                        disabled={!newNote.trim()}
+                        className="btn btn-primary btn-sm disabled:opacity-50"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* Notes List */}
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {companyNotes.length === 0 ? (
+                        <p className="text-xs text-text-tertiary text-center py-2">Inga anteckningar</p>
+                      ) : (
+                        companyNotes.map((note) => (
+                          <div key={note.id} className={`p-2 rounded-lg text-xs ${note.is_pinned ? 'bg-warning/10 border border-warning/20' : 'bg-bg-primary'}`}>
+                            <p className="text-text-primary">{note.content}</p>
+                            <p className="text-text-tertiary mt-1">{new Date(note.created_at).toLocaleDateString('sv-SE')} - {note.created_by}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Documents Section */}
+                  <div className="bg-bg-secondary rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-medium text-text-primary flex items-center gap-2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                        </svg>
+                        Dokument
+                      </h3>
+                      <button
+                        onClick={() => setShowDocumentUpload(true)}
+                        className="text-xs text-accent hover:text-accent-hover"
+                      >
+                        + Ladda upp
+                      </button>
+                    </div>
+
+                    {/* Upload Form */}
+                    {showDocumentUpload && (
+                      <div className="mb-3 p-3 bg-bg-primary rounded-lg border border-border-subtle">
+                        <select
+                          value={documentForm.document_type}
+                          onChange={(e) => setDocumentForm({ ...documentForm, document_type: e.target.value })}
+                          className="input text-sm mb-2"
+                        >
+                          <option value="agreement">Avtal</option>
+                          <option value="contract">Kontrakt</option>
+                          <option value="invoice">Faktura</option>
+                          <option value="other">Övrigt</option>
+                        </select>
+                        <input
+                          type="text"
+                          value={documentForm.description}
+                          onChange={(e) => setDocumentForm({ ...documentForm, description: e.target.value })}
+                          placeholder="Beskrivning (valfritt)"
+                          className="input text-sm mb-2"
+                        />
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png"
+                          onChange={(e) => e.target.files?.[0] && handleUploadDocument(e.target.files[0])}
+                          className="text-xs"
+                        />
+                        <button
+                          onClick={() => setShowDocumentUpload(false)}
+                          className="text-xs text-text-tertiary mt-2 block"
+                        >
+                          Avbryt
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Documents List */}
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {companyDocuments.length === 0 ? (
+                        <p className="text-xs text-text-tertiary text-center py-2">Inga dokument</p>
+                      ) : (
+                        companyDocuments.map((doc) => (
+                          <div key={doc.id} className="flex items-center gap-2 p-2 rounded-lg bg-bg-primary group">
+                            <div className={`w-8 h-8 rounded flex items-center justify-center flex-shrink-0 ${
+                              doc.file_type.includes('pdf') ? 'bg-red-100 text-red-600' :
+                              doc.file_type.includes('image') ? 'bg-blue-100 text-blue-600' :
+                              'bg-gray-100 text-gray-600'
+                            }`}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                              </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-text-primary truncate">{doc.filename}</p>
+                              <p className="text-xs text-text-tertiary">{(doc.file_size / 1024).toFixed(0)} KB</p>
+                            </div>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => handleDownloadDocument(doc.id, doc.filename)}
+                                className="p-1 text-text-tertiary hover:text-accent"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                  <polyline points="7 10 12 15 17 10" />
+                                  <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteDocument(doc.id)}
+                                className="p-1 text-text-tertiary hover:text-error"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Actions */}
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -2376,6 +3069,226 @@ function SuperAdmin() {
                 disabled={verifying2FA || verifyCode.length !== 6}
               >
                 {verifying2FA ? 'Verifierar...' : 'Verifiera och aktivera'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Command Palette Modal */}
+      {commandPaletteOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-[20vh] z-50">
+          <div className="bg-bg-primary rounded-2xl shadow-2xl border border-border-subtle w-full max-w-2xl overflow-hidden">
+            <div className="p-4 border-b border-border-subtle">
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5 text-text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  value={commandSearch}
+                  onChange={(e) => setCommandSearch(e.target.value)}
+                  placeholder="Sök företag, åtgärder eller inställningar..."
+                  className="flex-1 bg-transparent border-none outline-none text-lg text-text-primary placeholder:text-text-tertiary"
+                  autoFocus
+                />
+                <button
+                  onClick={() => { setCommandPaletteOpen(false); setCommandSearch(''); }}
+                  className="text-text-tertiary hover:text-text-secondary"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-[400px] overflow-y-auto">
+              {/* Quick Actions */}
+              {!commandSearch && (
+                <div className="p-3">
+                  <p className="text-xs text-text-tertiary uppercase tracking-wider px-3 pb-2">Snabbåtgärder</p>
+                  <button
+                    onClick={() => { setCommandPaletteOpen(false); setActiveTab('companies'); setShowCreateModal(true); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-bg-secondary text-left"
+                  >
+                    <span className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </span>
+                    <div>
+                      <p className="text-text-primary font-medium">Skapa nytt företag</p>
+                      <p className="text-xs text-text-tertiary">Lägg till ett nytt kundföretag</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => { setCommandPaletteOpen(false); setShowAnnouncementModal(true); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-bg-secondary text-left"
+                  >
+                    <span className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                      </svg>
+                    </span>
+                    <div>
+                      <p className="text-text-primary font-medium">Skicka meddelande</p>
+                      <p className="text-xs text-text-tertiary">Broadcast till alla administratörer</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => { setCommandPaletteOpen(false); setActiveTab('analytics'); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-bg-secondary text-left"
+                  >
+                    <span className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </span>
+                    <div>
+                      <p className="text-text-primary font-medium">Visa Analytics</p>
+                      <p className="text-xs text-text-tertiary">Detaljerad statistik och rapporter</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => { setCommandPaletteOpen(false); setActiveTab('system'); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-bg-secondary text-left"
+                  >
+                    <span className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </span>
+                    <div>
+                      <p className="text-text-primary font-medium">Systeminställningar</p>
+                      <p className="text-xs text-text-tertiary">AI-modell, GDPR och databas</p>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {/* Search Results - Companies */}
+              {commandSearch && (
+                <div className="p-3">
+                  <p className="text-xs text-text-tertiary uppercase tracking-wider px-3 pb-2">Företag</p>
+                  {companies
+                    .filter(c =>
+                      c.name.toLowerCase().includes(commandSearch.toLowerCase()) ||
+                      c.id.toLowerCase().includes(commandSearch.toLowerCase())
+                    )
+                    .slice(0, 5)
+                    .map(company => (
+                      <button
+                        key={company.id}
+                        onClick={() => { setCommandPaletteOpen(false); setCommandSearch(''); openCompanyDashboard(company); }}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-bg-secondary text-left"
+                      >
+                        <span className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                          <span className="text-sm font-bold text-accent">{company.name.charAt(0)}</span>
+                        </span>
+                        <div>
+                          <p className="text-text-primary font-medium">{company.name}</p>
+                          <p className="text-xs text-text-tertiary">{company.id} • {company.is_active ? 'Aktiv' : 'Inaktiv'}</p>
+                        </div>
+                      </button>
+                    ))
+                  }
+                  {companies.filter(c =>
+                    c.name.toLowerCase().includes(commandSearch.toLowerCase()) ||
+                    c.id.toLowerCase().includes(commandSearch.toLowerCase())
+                  ).length === 0 && (
+                    <p className="text-text-tertiary text-sm px-3 py-4 text-center">Inga företag hittades</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Announcement Modal */}
+      {showAnnouncementModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-bg-primary rounded-2xl shadow-2xl border border-border-subtle w-full max-w-lg overflow-hidden">
+            <div className="p-6 border-b border-border-subtle">
+              <h3 className="text-xl font-bold text-text-primary">Skicka meddelande</h3>
+              <p className="text-text-secondary text-sm mt-1">Meddelandet visas för alla administratörer som loggar in</p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Typ</label>
+                <select
+                  value={announcementForm.type}
+                  onChange={(e) => setAnnouncementForm(prev => ({ ...prev, type: e.target.value }))}
+                  className="input w-full"
+                >
+                  <option value="info">Information</option>
+                  <option value="warning">Varning</option>
+                  <option value="success">Framgång</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Titel</label>
+                <input
+                  type="text"
+                  value={announcementForm.title}
+                  onChange={(e) => setAnnouncementForm(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Systemuppdatering planerad..."
+                  className="input w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Meddelande</label>
+                <textarea
+                  value={announcementForm.message}
+                  onChange={(e) => setAnnouncementForm(prev => ({ ...prev, message: e.target.value }))}
+                  placeholder="Skriv ditt meddelande här..."
+                  rows={4}
+                  className="input w-full resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-border-subtle flex justify-end gap-3">
+              <button
+                onClick={() => { setShowAnnouncementModal(false); setAnnouncementForm({ title: '', message: '', type: 'info' }); }}
+                className="btn btn-ghost"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={async () => {
+                  if (!announcementForm.title || !announcementForm.message) return;
+                  try {
+                    const response = await fetch(`${API_BASE}/admin/announcements`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                      },
+                      body: JSON.stringify(announcementForm)
+                    });
+                    if (response.ok) {
+                      const data = await response.json();
+                      setAnnouncement(data);
+                      setShowAnnouncementModal(false);
+                      setAnnouncementForm({ title: '', message: '', type: 'info' });
+                    }
+                  } catch (error) {
+                    console.error('Failed to create announcement:', error);
+                  }
+                }}
+                className="btn btn-primary"
+                disabled={!announcementForm.title || !announcementForm.message}
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                </svg>
+                Skicka meddelande
               </button>
             </div>
           </div>

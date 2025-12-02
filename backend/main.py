@@ -24,7 +24,7 @@ from database import (
     create_tables, get_db, Company, KnowledgeItem, ChatLog, SuperAdmin,
     CompanySettings, Conversation, Message, DailyStatistics, GDPRAuditLog,
     AdminAuditLog, GlobalSettings, CompanyActivityLog, Subscription, Invoice,
-    CompanyNote, WidgetPerformance, EmailNotificationQueue
+    CompanyNote, CompanyDocument, WidgetPerformance, EmailNotificationQueue
 )
 from auth import (
     hash_password, verify_password, create_token, create_2fa_pending_token,
@@ -4599,6 +4599,394 @@ async def delete_note(
     db.commit()
 
     return {"message": "Anteckning borttagen"}
+
+
+# =============================================================================
+# Company Documents Endpoints
+# =============================================================================
+
+class DocumentCreate(BaseModel):
+    filename: str
+    file_type: str
+    file_size: int
+    file_data: str  # Base64 encoded
+    document_type: str = "other"  # agreement, contract, invoice, other
+    description: str = ""
+
+
+@app.get("/admin/companies/{company_id}/documents")
+async def get_company_documents(
+    company_id: str,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all documents for a company"""
+    docs = db.query(CompanyDocument).filter(
+        CompanyDocument.company_id == company_id
+    ).order_by(CompanyDocument.uploaded_at.desc()).all()
+
+    return {
+        "documents": [{
+            "id": d.id,
+            "filename": d.filename,
+            "file_type": d.file_type,
+            "file_size": d.file_size,
+            "document_type": d.document_type,
+            "description": d.description,
+            "uploaded_by": d.uploaded_by,
+            "uploaded_at": d.uploaded_at.isoformat()
+        } for d in docs]
+    }
+
+
+@app.post("/admin/companies/{company_id}/documents")
+async def upload_company_document(
+    company_id: str,
+    doc: DocumentCreate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Upload a document for a company"""
+    # Validate file size (max 10MB)
+    if doc.file_size > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Filen är för stor (max 10MB)")
+
+    # Validate file type
+    allowed_types = [
+        "application/pdf",
+        "image/jpeg", "image/png", "image/gif",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "text/plain"
+    ]
+    if doc.file_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Filtypen stöds inte")
+
+    new_doc = CompanyDocument(
+        company_id=company_id,
+        filename=doc.filename,
+        file_type=doc.file_type,
+        file_size=doc.file_size,
+        file_data=doc.file_data,
+        document_type=doc.document_type,
+        description=doc.description,
+        uploaded_by=admin["username"]
+    )
+    db.add(new_doc)
+    db.commit()
+    db.refresh(new_doc)
+
+    # Log the action
+    log_admin_action(db, admin["username"], "upload_document", company_id,
+                     f"Uploaded document: {doc.filename}")
+
+    return {"message": "Dokument uppladdat", "id": new_doc.id}
+
+
+@app.get("/admin/documents/{doc_id}/download")
+async def download_company_document(
+    doc_id: int,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Download a company document"""
+    doc = db.query(CompanyDocument).filter(CompanyDocument.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Dokument hittades inte")
+
+    return {
+        "filename": doc.filename,
+        "file_type": doc.file_type,
+        "file_data": doc.file_data
+    }
+
+
+@app.delete("/admin/documents/{doc_id}")
+async def delete_company_document(
+    doc_id: int,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a company document"""
+    doc = db.query(CompanyDocument).filter(CompanyDocument.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Dokument hittades inte")
+
+    filename = doc.filename
+    company_id = doc.company_id
+    db.delete(doc)
+    db.commit()
+
+    # Log the action
+    log_admin_action(db, admin["username"], "delete_document", company_id,
+                     f"Deleted document: {filename}")
+
+    return {"message": "Dokument borttaget"}
+
+
+# =============================================================================
+# Live Activity Stream Endpoint
+# =============================================================================
+
+@app.get("/admin/activity-stream")
+async def get_activity_stream(
+    limit: int = 20,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get recent activity across all companies for live stream"""
+    # Get recent conversations
+    recent_conversations = db.query(Conversation).order_by(
+        Conversation.started_at.desc()
+    ).limit(limit).all()
+
+    # Get recent admin actions
+    recent_admin_actions = db.query(AdminAuditLog).order_by(
+        AdminAuditLog.timestamp.desc()
+    ).limit(limit).all()
+
+    # Get company info for display
+    company_names = {}
+    for conv in recent_conversations:
+        if conv.company_id not in company_names:
+            company = db.query(Company).filter(Company.id == conv.company_id).first()
+            if company:
+                settings = db.query(CompanySettings).filter(
+                    CompanySettings.company_id == company.id
+                ).first()
+                company_names[conv.company_id] = settings.company_name if settings and settings.company_name else company.name
+
+    activities = []
+
+    # Add conversations as activities
+    for conv in recent_conversations:
+        activities.append({
+            "type": "conversation",
+            "timestamp": conv.started_at.isoformat(),
+            "company_id": conv.company_id,
+            "company_name": company_names.get(conv.company_id, conv.company_id),
+            "message_count": conv.message_count,
+            "category": conv.category,
+            "language": conv.language
+        })
+
+    # Add admin actions as activities
+    for action in recent_admin_actions:
+        activities.append({
+            "type": "admin_action",
+            "timestamp": action.timestamp.isoformat(),
+            "action_type": action.action_type,
+            "admin": action.admin_username,
+            "company_id": action.target_company_id,
+            "description": action.description
+        })
+
+    # Sort by timestamp descending
+    activities.sort(key=lambda x: x["timestamp"], reverse=True)
+
+    return {"activities": activities[:limit]}
+
+
+# =============================================================================
+# AI Insights Endpoint
+# =============================================================================
+
+@app.get("/admin/ai-insights")
+async def get_ai_insights(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get AI-powered insights about system health and company performance"""
+    insights = []
+    today = date.today()
+    week_ago = today - timedelta(days=7)
+
+    # Get all companies with their stats
+    companies = db.query(Company).filter(Company.is_active == True).all()
+
+    for company in companies:
+        settings = db.query(CompanySettings).filter(
+            CompanySettings.company_id == company.id
+        ).first()
+        company_name = settings.company_name if settings and settings.company_name else company.name
+
+        # Get recent stats
+        recent_stats = db.query(DailyStatistics).filter(
+            DailyStatistics.company_id == company.id,
+            DailyStatistics.date >= week_ago
+        ).all()
+
+        if not recent_stats:
+            continue
+
+        total_answered = sum(s.questions_answered for s in recent_stats)
+        total_unanswered = sum(s.questions_unanswered for s in recent_stats)
+        total_questions = total_answered + total_unanswered
+
+        if total_questions > 0:
+            unanswered_rate = (total_unanswered / total_questions) * 100
+
+            # High unanswered rate warning
+            if unanswered_rate > 30 and total_questions >= 5:
+                insights.append({
+                    "type": "warning",
+                    "severity": "high" if unanswered_rate > 50 else "medium",
+                    "company_id": company.id,
+                    "company_name": company_name,
+                    "title": f"Hög andel obesvarade frågor",
+                    "description": f"{unanswered_rate:.0f}% av frågorna kunde inte besvaras senaste veckan. Kunskapsbasen behöver utökas.",
+                    "metric": f"{total_unanswered}/{total_questions}",
+                    "action": "expand_knowledge"
+                })
+
+        # Check for traffic spikes
+        if len(recent_stats) >= 2:
+            daily_conversations = [s.total_conversations for s in recent_stats]
+            avg_conv = sum(daily_conversations) / len(daily_conversations)
+            latest_conv = daily_conversations[-1] if daily_conversations else 0
+
+            if latest_conv > avg_conv * 2 and latest_conv >= 10:
+                insights.append({
+                    "type": "info",
+                    "severity": "low",
+                    "company_id": company.id,
+                    "company_name": company_name,
+                    "title": f"Trafiktopp upptäckt",
+                    "description": f"{latest_conv} konversationer idag, {latest_conv/avg_conv:.1f}x normalt.",
+                    "metric": f"{latest_conv}",
+                    "action": "monitor"
+                })
+
+        # Check for low feedback
+        helpful = sum(s.helpful_count for s in recent_stats)
+        not_helpful = sum(s.not_helpful_count for s in recent_stats)
+        total_feedback = helpful + not_helpful
+
+        if total_feedback >= 5:
+            satisfaction = (helpful / total_feedback) * 100
+            if satisfaction < 60:
+                insights.append({
+                    "type": "warning",
+                    "severity": "medium",
+                    "company_id": company.id,
+                    "company_name": company_name,
+                    "title": f"Låg nöjdhet",
+                    "description": f"Endast {satisfaction:.0f}% positiv feedback. Granska svaren.",
+                    "metric": f"{helpful}/{total_feedback}",
+                    "action": "review_responses"
+                })
+
+    # Sort by severity
+    severity_order = {"high": 0, "medium": 1, "low": 2}
+    insights.sort(key=lambda x: severity_order.get(x["severity"], 3))
+
+    # Get trending topics across all companies
+    all_categories = {}
+    all_stats = db.query(DailyStatistics).filter(
+        DailyStatistics.date >= week_ago
+    ).all()
+
+    for s in all_stats:
+        cats = json.loads(s.category_counts) if s.category_counts else {}
+        for cat, count in cats.items():
+            all_categories[cat] = all_categories.get(cat, 0) + count
+
+    trending = sorted(all_categories.items(), key=lambda x: x[1], reverse=True)[:5]
+
+    return {
+        "insights": insights,
+        "trending_topics": [{"topic": t[0], "count": t[1]} for t in trending],
+        "generated_at": datetime.utcnow().isoformat()
+    }
+
+
+# =============================================================================
+# Broadcast Announcements Endpoints
+# =============================================================================
+
+class AnnouncementCreate(BaseModel):
+    title: str
+    message: str
+    type: str = "info"  # info, warning, maintenance
+
+
+@app.get("/admin/announcements")
+async def get_announcements(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get active announcements"""
+    announcement = db.query(GlobalSettings).filter(
+        GlobalSettings.key == "active_announcement"
+    ).first()
+
+    if announcement and announcement.value:
+        try:
+            data = json.loads(announcement.value)
+            return {"announcement": data}
+        except:
+            pass
+
+    return {"announcement": None}
+
+
+@app.post("/admin/announcements")
+async def create_announcement(
+    announcement: AnnouncementCreate,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Create or update active announcement"""
+    existing = db.query(GlobalSettings).filter(
+        GlobalSettings.key == "active_announcement"
+    ).first()
+
+    data = {
+        "title": announcement.title,
+        "message": announcement.message,
+        "type": announcement.type,
+        "created_at": datetime.utcnow().isoformat(),
+        "created_by": admin["username"]
+    }
+
+    if existing:
+        existing.value = json.dumps(data)
+        existing.updated_at = datetime.utcnow()
+        existing.updated_by = admin["username"]
+    else:
+        new_setting = GlobalSettings(
+            key="active_announcement",
+            value=json.dumps(data),
+            updated_by=admin["username"]
+        )
+        db.add(new_setting)
+
+    db.commit()
+
+    # Log the action
+    log_admin_action(db, admin["username"], "create_announcement", None,
+                     f"Created announcement: {announcement.title}")
+
+    return {"message": "Meddelande publicerat"}
+
+
+@app.delete("/admin/announcements")
+async def delete_announcement(
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete active announcement"""
+    existing = db.query(GlobalSettings).filter(
+        GlobalSettings.key == "active_announcement"
+    ).first()
+
+    if existing:
+        existing.value = None
+        db.commit()
+
+    return {"message": "Meddelande borttaget"}
 
 
 # =============================================================================

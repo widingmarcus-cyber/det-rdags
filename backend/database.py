@@ -427,6 +427,31 @@ class CompanyNote(Base):
     is_pinned = Column(Boolean, default=False)
 
 
+class CompanyDocument(Base):
+    """Documents uploaded for a company (contracts, agreements, etc.)"""
+    __tablename__ = "company_documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False, index=True)
+
+    # File info
+    filename = Column(String, nullable=False)  # Original filename
+    file_type = Column(String, nullable=False)  # MIME type
+    file_size = Column(Integer, nullable=False)  # Size in bytes
+    file_data = Column(Text, nullable=False)  # Base64 encoded file content
+
+    # Metadata
+    document_type = Column(String, default="other")  # agreement, contract, invoice, other
+    description = Column(Text, default="")
+    uploaded_by = Column(String, nullable=False)  # Admin username
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+
+    # Composite index
+    __table_args__ = (
+        Index('ix_company_document_company_type', 'company_id', 'document_type'),
+    )
+
+
 class WidgetPerformance(Base):
     """Hourly performance stats for widget monitoring"""
     __tablename__ = "widget_performance"
