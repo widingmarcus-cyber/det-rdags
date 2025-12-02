@@ -2273,7 +2273,7 @@ async def delete_conversation(
     if not conversation:
         raise HTTPException(status_code=404, detail="Konversation finns inte")
 
-    reference_id = conversation.reference_id
+    reference_id = conversation.reference_id or f"#{conversation.id}"
     # Spara statistik innan radering
     await save_conversation_stats(db, conversation)
 
