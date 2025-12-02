@@ -3,10 +3,11 @@ Bobot Backend API
 En GDPR-säker AI-chatbot för fastighetsbolag
 """
 
-from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks, UploadFile, File
+from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks, UploadFile, File, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import datetime, timedelta, date
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
@@ -15,6 +16,7 @@ import os
 import json
 import asyncio
 import uuid
+import time
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
@@ -187,6 +189,147 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
 )
 
+
+# =============================================================================
+# Security Headers Middleware
+# =============================================================================
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses"""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+
+        # Security headers
+        is_production = os.getenv("ENVIRONMENT", "development") == "production"
+
+        # HSTS - Force HTTPS (only in production)
+        if is_production:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+        # Prevent clickjacking - allow embedding only from same origin
+        # Note: Widget needs to be embedded, so we use SAMEORIGIN
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+
+        # Prevent MIME type sniffing
+        response.headers["X-Content-Type-Options"] = "nosniff"
+
+        # XSS Protection (legacy, but still useful)
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+
+        # Referrer Policy
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # Permissions Policy (formerly Feature-Policy)
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+
+        # Content Security Policy (basic - adjust based on needs)
+        # Note: Widget embedding requires relaxed policy
+        if is_production:
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data: https:; "
+                "font-src 'self' https://fonts.gstatic.com; "
+                "connect-src 'self' https:; "
+                "frame-ancestors 'self' *;"  # Allow widget embedding
+            )
+
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+
+# =============================================================================
+# Request ID & Logging Middleware
+# =============================================================================
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    """Add request ID to all requests for tracing"""
+
+    async def dispatch(self, request: Request, call_next):
+        # Generate or get request ID
+        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4())[:8])
+        request.state.request_id = request_id
+
+        # Time the request
+        start_time = time.time()
+
+        response = await call_next(request)
+
+        # Add request ID to response
+        response.headers["X-Request-ID"] = request_id
+
+        # Log request (skip health checks)
+        if request.url.path not in ["/health", "/", "/docs", "/openapi.json"]:
+            duration_ms = (time.time() - start_time) * 1000
+            print(f"[{request_id}] {request.method} {request.url.path} - {response.status_code} ({duration_ms:.0f}ms)")
+
+        return response
+
+
+app.add_middleware(RequestIDMiddleware)
+
+
+# =============================================================================
+# Login Attempt Tracking (Brute Force Protection)
+# =============================================================================
+
+login_attempts: Dict[str, list] = {}  # {identifier: [timestamp, timestamp, ...]}
+LOGIN_ATTEMPT_WINDOW = 900  # 15 minutes
+LOGIN_MAX_ATTEMPTS = 5  # Max failed attempts before lockout
+LOGIN_LOCKOUT_DURATION = 900  # 15 minutes lockout
+
+
+def check_login_attempts(identifier: str) -> tuple:
+    """
+    Check if login is allowed for identifier (username or IP).
+    Returns (allowed: bool, remaining_attempts: int, lockout_seconds: int)
+    """
+    now = time.time()
+
+    if identifier not in login_attempts:
+        return True, LOGIN_MAX_ATTEMPTS, 0
+
+    # Clean old attempts outside window
+    login_attempts[identifier] = [
+        ts for ts in login_attempts[identifier]
+        if now - ts < LOGIN_ATTEMPT_WINDOW
+    ]
+
+    attempts = len(login_attempts[identifier])
+
+    if attempts >= LOGIN_MAX_ATTEMPTS:
+        # Check if still in lockout
+        oldest_attempt = min(login_attempts[identifier]) if login_attempts[identifier] else now
+        lockout_remaining = LOGIN_LOCKOUT_DURATION - (now - oldest_attempt)
+
+        if lockout_remaining > 0:
+            return False, 0, int(lockout_remaining)
+        else:
+            # Lockout expired, clear attempts
+            login_attempts[identifier] = []
+            return True, LOGIN_MAX_ATTEMPTS, 0
+
+    return True, LOGIN_MAX_ATTEMPTS - attempts, 0
+
+
+def record_failed_login(identifier: str):
+    """Record a failed login attempt"""
+    now = time.time()
+    if identifier not in login_attempts:
+        login_attempts[identifier] = []
+    login_attempts[identifier].append(now)
+
+
+def clear_login_attempts(identifier: str):
+    """Clear login attempts on successful login"""
+    if identifier in login_attempts:
+        del login_attempts[identifier]
+
+
 # Ollama-konfiguration
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1")
@@ -263,8 +406,11 @@ RATE_LIMIT_WINDOW = 60  # 1 minute window
 RATE_LIMIT_MAX_REQUESTS = 15  # Max 15 messages per minute
 
 
-def check_rate_limit(session_id: str, ip_address: str) -> bool:
-    """Check if session/IP is rate limited. Returns True if allowed, False if limited."""
+def check_rate_limit(session_id: str, ip_address: str) -> tuple:
+    """
+    Check if session/IP is rate limited.
+    Returns (allowed: bool, current_count: int, reset_time: int)
+    """
     # Use combination of session and IP for rate limiting
     rate_key = f"{session_id}:{ip_address}" if session_id else ip_address
     now = datetime.utcnow().timestamp()
@@ -276,19 +422,26 @@ def check_rate_limit(session_id: str, ip_address: str) -> bool:
     # Remove old timestamps outside window
     rate_limit_store[rate_key] = [ts for ts in rate_limit_store[rate_key] if ts > window_start]
 
+    current_count = len(rate_limit_store[rate_key])
+
+    # Calculate reset time (when the oldest request in window expires)
+    if rate_limit_store[rate_key]:
+        reset_time = int(min(rate_limit_store[rate_key]) + RATE_LIMIT_WINDOW - now)
+    else:
+        reset_time = RATE_LIMIT_WINDOW
+
     # Check if under limit
-    if len(rate_limit_store[rate_key]) >= RATE_LIMIT_MAX_REQUESTS:
-        return False
+    if current_count >= RATE_LIMIT_MAX_REQUESTS:
+        return False, current_count, reset_time
 
     # Add current request
     rate_limit_store[rate_key].append(now)
 
     # Cleanup old entries periodically (every 100 requests)
     if len(rate_limit_store) > 10000:
-        cutoff = now - RATE_LIMIT_WINDOW * 2
         rate_limit_store.clear()  # Simple cleanup - clear all
 
-    return True
+    return True, current_count + 1, reset_time
 
 
 class KnowledgeItemCreate(BaseModel):
@@ -1023,15 +1176,36 @@ async def health():
 # =============================================================================
 
 @app.post("/auth/login", response_model=LoginResponse)
-async def login(request: LoginRequest, db: Session = Depends(get_db)):
-    """Login as company with automatic password migration"""
+async def login(request: LoginRequest, req: Request, db: Session = Depends(get_db)):
+    """Login as company with automatic password migration and brute-force protection"""
+    # Get client IP for rate limiting
+    client_ip = req.client.host if req.client else "unknown"
+    login_identifier = f"company:{request.company_id}:{client_ip}"
+
+    # Check for brute-force attacks
+    allowed, remaining, lockout = check_login_attempts(login_identifier)
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail=f"För många misslyckade inloggningsförsök. Försök igen om {lockout // 60} minuter.",
+            headers={"Retry-After": str(lockout)}
+        )
+
     company = db.query(Company).filter(Company.id == request.company_id).first()
 
     if not company or not verify_password(request.password, company.password_hash):
-        raise HTTPException(status_code=401, detail="Fel företags-ID eller lösenord")
+        record_failed_login(login_identifier)
+        raise HTTPException(
+            status_code=401,
+            detail="Fel företags-ID eller lösenord",
+            headers={"X-RateLimit-Remaining": str(remaining - 1)}
+        )
 
     if not company.is_active:
         raise HTTPException(status_code=403, detail="Kontot är inaktiverat")
+
+    # Clear failed attempts on successful login
+    clear_login_attempts(login_identifier)
 
     # Automatic password migration: upgrade SHA256 to bcrypt on successful login
     if needs_rehash(company.password_hash):
@@ -1063,12 +1237,30 @@ class AdminLoginResponse(BaseModel):
 
 
 @app.post("/auth/admin/login", response_model=AdminLoginResponse)
-async def admin_login(request: AdminLoginRequest, db: Session = Depends(get_db)):
-    """Login as super admin with 2FA support and password migration"""
+async def admin_login(request: AdminLoginRequest, req: Request, db: Session = Depends(get_db)):
+    """Login as super admin with 2FA support, password migration, and brute-force protection"""
+    # Get client IP for rate limiting
+    client_ip = req.client.host if req.client else "unknown"
+    login_identifier = f"admin:{request.username}:{client_ip}"
+
+    # Check for brute-force attacks
+    allowed, remaining, lockout = check_login_attempts(login_identifier)
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail=f"För många misslyckade inloggningsförsök. Försök igen om {lockout // 60} minuter.",
+            headers={"Retry-After": str(lockout)}
+        )
+
     admin = db.query(SuperAdmin).filter(SuperAdmin.username == request.username).first()
 
     if not admin or not verify_password(request.password, admin.password_hash):
-        raise HTTPException(status_code=401, detail="Fel användarnamn eller lösenord")
+        record_failed_login(login_identifier)
+        raise HTTPException(
+            status_code=401,
+            detail="Fel användarnamn eller lösenord",
+            headers={"X-RateLimit-Remaining": str(remaining - 1)}
+        )
 
     # Automatic password migration: upgrade SHA256 to bcrypt on successful login
     if needs_rehash(admin.password_hash):
@@ -1094,7 +1286,11 @@ async def admin_login(request: AdminLoginRequest, db: Session = Depends(get_db))
         import pyotp
         totp = pyotp.TOTP(admin.totp_secret)
         if not totp.verify(request.totp_code, valid_window=1):
+            record_failed_login(f"2fa:{request.username}:{client_ip}")
             raise HTTPException(status_code=401, detail="Felaktig 2FA-kod")
+
+    # Clear failed attempts on successful login
+    clear_login_attempts(login_identifier)
 
     # Full login - issue complete token
     token = create_token({
@@ -1155,6 +1351,7 @@ async def chat(
     company_id: str,
     request: ChatRequest,
     req: Request,
+    response: Response,
     db: Session = Depends(get_db)
 ):
     """Chatta med AI - öppen endpoint för widget"""
@@ -1168,10 +1365,23 @@ async def chat(
 
     # Rate limiting - check before any heavy processing
     client_ip = req.client.host if req.client else "unknown"
-    if not check_rate_limit(request.session_id, client_ip):
+    allowed, current_count, reset_time = check_rate_limit(request.session_id, client_ip)
+
+    # Add rate limit headers to response
+    response.headers["X-RateLimit-Limit"] = str(RATE_LIMIT_MAX_REQUESTS)
+    response.headers["X-RateLimit-Remaining"] = str(max(0, RATE_LIMIT_MAX_REQUESTS - current_count))
+    response.headers["X-RateLimit-Reset"] = str(reset_time)
+
+    if not allowed:
         raise HTTPException(
             status_code=429,
-            detail="Du skickar meddelanden för snabbt. Vänta en stund och försök igen."
+            detail="Du skickar meddelanden för snabbt. Vänta en stund och försök igen.",
+            headers={
+                "X-RateLimit-Limit": str(RATE_LIMIT_MAX_REQUESTS),
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": str(reset_time),
+                "Retry-After": str(reset_time)
+            }
         )
 
     company = db.query(Company).filter(Company.id == company_id).first()
