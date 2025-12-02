@@ -379,7 +379,7 @@ function Dashboard() {
             Klistra in på din hemsida för att aktivera chatboten
           </p>
           <div className="bg-[#1C1917] text-[#F5F5F4] p-4 rounded-lg text-sm font-mono overflow-x-auto">
-            <pre className="whitespace-pre-wrap">{`<script src="https://cdn.bobot.se/widget.js"></script>
+            <pre className="whitespace-pre-wrap">{`<script src="https://cdn.bobot.nu/widget.js"></script>
 <script>
   Bobot.init({
     companyId: "${auth.companyId}"
@@ -388,7 +388,7 @@ function Dashboard() {
           </div>
           <button
             onClick={() => {
-              navigator.clipboard.writeText(`<script src="https://cdn.bobot.se/widget.js"></script>\n<script>\n  Bobot.init({\n    companyId: "${auth.companyId}"\n  });\n</script>`)
+              navigator.clipboard.writeText(`<script src="https://cdn.bobot.nu/widget.js"></script>\n<script>\n  Bobot.init({\n    companyId: "${auth.companyId}"\n  });\n</script>`)
             }}
             className="btn btn-primary mt-4"
           >

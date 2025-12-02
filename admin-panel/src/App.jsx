@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useState, useEffect, createContext } from 'react'
+import LandingPage from './pages/LandingPage'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Knowledge from './pages/Knowledge'
@@ -238,11 +239,18 @@ function App() {
     )
   }
 
-  // Company routes
+  // Public routes (landing page and login)
   if (!auth) {
-    return <Login onLogin={handleLogin} />
+    return (
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<Login onLogin={handleLogin} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    )
   }
 
+  // Authenticated company routes
   return (
     <AuthContext.Provider value={{ auth, authFetch, darkMode, toggleDarkMode }}>
       {/* Skip links for keyboard navigation */}
@@ -263,14 +271,15 @@ function App() {
         />
         <main id="main-content" className="flex-1 p-8 overflow-auto" role="main" aria-label="Huvudinnehåll">
           <Routes>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/knowledge" element={<Knowledge />} />
             <Route path="/conversations" element={<Conversations />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/preview" element={<Preview />} />
             <Route path="/documentation" element={<Documentation />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
       </div>

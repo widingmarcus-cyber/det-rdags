@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 
 function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode }) {
   const navItems = [
-    { to: '/', label: 'Dashboard', icon: 'chart' },
+    { to: '/dashboard', label: 'Dashboard', icon: 'chart' },
     { to: '/knowledge', label: 'Kunskapsbas', icon: 'book' },
     { to: '/conversations', label: 'Konversationer', icon: 'messages' },
     { to: '/analytics', label: 'Statistik', icon: 'analytics' },
