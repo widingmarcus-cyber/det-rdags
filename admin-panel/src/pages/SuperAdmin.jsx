@@ -2061,22 +2061,12 @@ function SuperAdmin() {
             {/* Pricing Tiers */}
             <div className="card mb-8">
               <h2 className="text-lg font-semibold text-text-primary mb-4">Prisnivåer</h2>
-              <p className="text-sm text-text-secondary mb-6">
-                Jämför med konkurrenten Kundo: 95 000 kr/år (med 25% rabatt) + 35 000 kr uppstartsavgift
-              </p>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {Object.entries(pricingTiers).map(([key, tier]) => (
                   <div
                     key={key}
-                    className={`p-5 rounded-xl border-2 ${
-                      key === 'professional' ? 'border-accent bg-accent/5' : 'border-border-subtle bg-bg-secondary'
-                    }`}
+                    className="p-5 rounded-xl border-2 border-border-subtle bg-bg-secondary"
                   >
-                    {key === 'professional' && (
-                      <span className="text-xs font-semibold text-accent bg-accent/10 px-2 py-1 rounded-full mb-3 inline-block">
-                        Populärast
-                      </span>
-                    )}
                     <h3 className="text-lg font-bold text-text-primary">{tier.name}</h3>
                     <div className="mt-2">
                       <span className="text-3xl font-bold text-text-primary">{tier.monthly_fee?.toLocaleString('sv-SE')}</span>
@@ -3081,12 +3071,12 @@ function SuperAdmin() {
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   </svg>
                   Säkerhet & Produktion
-                  <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">Produktionsklar</span>
+                  <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-success-soft text-success rounded-full">Produktionsklar</span>
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="p-4 bg-white rounded-xl border border-green-200">
+                  <div className="p-4 bg-bg-secondary rounded-xl border border-success/30">
                     <h3 className="font-medium text-text-primary mb-2 flex items-center gap-2">
-                      <span className="text-green-600">✓</span> Autentisering
+                      <span className="text-success">✓</span> Autentisering
                     </h3>
                     <ul className="text-sm text-text-secondary space-y-1">
                       <li>• bcrypt lösenordshashning</li>
@@ -3095,9 +3085,9 @@ function SuperAdmin() {
                       <li>• JWT med 24h livstid</li>
                     </ul>
                   </div>
-                  <div className="p-4 bg-white rounded-xl border border-green-200">
+                  <div className="p-4 bg-bg-secondary rounded-xl border border-success/30">
                     <h3 className="font-medium text-text-primary mb-2 flex items-center gap-2">
-                      <span className="text-green-600">✓</span> Rate Limiting
+                      <span className="text-success">✓</span> Rate Limiting
                     </h3>
                     <ul className="text-sm text-text-secondary space-y-1">
                       <li>• Chat: 15 req/min</li>
@@ -3106,9 +3096,9 @@ function SuperAdmin() {
                       <li>• Auto-lockout 15 min</li>
                     </ul>
                   </div>
-                  <div className="p-4 bg-white rounded-xl border border-green-200">
+                  <div className="p-4 bg-bg-secondary rounded-xl border border-success/30">
                     <h3 className="font-medium text-text-primary mb-2 flex items-center gap-2">
-                      <span className="text-green-600">✓</span> Security Headers
+                      <span className="text-success">✓</span> Security Headers
                     </h3>
                     <ul className="text-sm text-text-secondary space-y-1">
                       <li>• HSTS (produktion)</li>
@@ -3117,9 +3107,9 @@ function SuperAdmin() {
                       <li>• XSS-Protection</li>
                     </ul>
                   </div>
-                  <div className="p-4 bg-white rounded-xl border border-green-200">
+                  <div className="p-4 bg-bg-secondary rounded-xl border border-success/30">
                     <h3 className="font-medium text-text-primary mb-2 flex items-center gap-2">
-                      <span className="text-green-600">✓</span> Produktionskrav
+                      <span className="text-success">✓</span> Produktionskrav
                     </h3>
                     <ul className="text-sm text-text-secondary space-y-1">
                       <li>• Sätt ENVIRONMENT=production</li>
