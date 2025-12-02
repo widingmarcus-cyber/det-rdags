@@ -605,7 +605,7 @@ function Knowledge() {
               <label className={`btn btn-ghost cursor-pointer ${uploading ? 'opacity-50' : ''}`}>
                 <input
                   type="file"
-                  accept=".xlsx,.xls,.docx,.txt,.csv"
+                  accept=".xlsx,.xls,.docx,.pdf,.txt,.csv"
                   onChange={handleFileUpload}
                   disabled={uploading}
                   className="hidden"

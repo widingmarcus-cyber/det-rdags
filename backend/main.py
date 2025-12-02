@@ -857,20 +857,34 @@ def normalize_text(text: str) -> str:
     return text
 
 
-def find_relevant_context(question: str, company_id: str, db: Session, top_k: int = 3) -> List[KnowledgeItem]:
-    """Hitta relevanta frågor/svar från kunskapsbasen - fuzzy matching"""
+def find_relevant_context(question: str, company_id: str, db: Session, top_k: int = 3, min_score: int = 5) -> List[KnowledgeItem]:
+    """Hitta relevanta frågor/svar från kunskapsbasen - fuzzy matching
+
+    ANTI-HALLUCINATION: Only returns items with score >= min_score to prevent
+    weak matches from being used as context for AI-generated answers.
+    A score of 5+ indicates meaningful keyword overlap with the question.
+    """
     items = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == company_id).all()
+
+    if not items:
+        return []  # No knowledge base items at all
 
     question_normalized = normalize_text(question)
     question_words = set(question_normalized.split())
 
-    # Common stopwords to ignore
+    # Common stopwords to ignore (Swedish and English)
     stopwords = {'jag', 'vill', 'kan', 'hur', 'vad', 'är', 'har', 'en', 'ett', 'att', 'och',
                  'för', 'med', 'om', 'på', 'av', 'i', 'det', 'den', 'de', 'du', 'vi', 'ni',
-                 'göra', 'gör', 'ska', 'skulle', 'a', 'the', 'is', 'are', 'to', 'how', 'what'}
+                 'göra', 'gör', 'ska', 'skulle', 'a', 'the', 'is', 'are', 'to', 'how', 'what',
+                 'min', 'mitt', 'mina', 'din', 'ditt', 'dina', 'sin', 'sitt', 'sina',
+                 'this', 'that', 'these', 'those', 'my', 'your', 'our', 'their'}
 
     # Get meaningful words (not stopwords)
     meaningful_words = question_words - stopwords
+
+    # ANTI-HALLUCINATION: If no meaningful words after removing stopwords, return empty
+    if not meaningful_words:
+        return []
 
     scored_items = []
     for item in items:
@@ -896,12 +910,14 @@ def find_relevant_context(question: str, company_id: str, db: Session, top_k: in
                         elif q_word[:4] == i_word[:4]:
                             score += 1
 
-        # Category match bonus
-        if item.category:
+        # Category match bonus (only if meaningful words also matched)
+        if item.category and score > 0:
             if item.category.lower() in question_normalized:
                 score += 2
 
-        if score > 0:
+        # ANTI-HALLUCINATION: Only include items with score >= min_score
+        # This prevents weak/coincidental matches from being used as context
+        if score >= min_score:
             scored_items.append((score, item))
 
     scored_items.sort(key=lambda x: x[0], reverse=True)
@@ -999,8 +1015,12 @@ def detect_category(text: str) -> str:
     return "allmant"
 
 
-def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None, category: str = None) -> str:
-    """Bygg prompt med kontext - använder specificerat eller detekterat språk"""
+def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None, category: str = None, has_knowledge_match: bool = False) -> str:
+    """Bygg prompt med kontext - använder specificerat eller detekterat språk
+
+    ANTI-HALLUCINATION: This prompt is designed to prevent the AI from inventing information.
+    The AI should ONLY answer based on the provided knowledge base items.
+    """
     # Use provided language or detect from question
     lang = language if language in ["sv", "en", "ar"] else detect_language(question)
 
@@ -1032,25 +1052,33 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
     # Build knowledge base context
     knowledge = ""
     if context:
-        knowledge = "Knowledge base (use this to answer):\n"
+        knowledge = "Knowledge base - ONLY use these answers:\n"
         for item in context:
             knowledge += f"Q: {item.question}\nA: {item.answer}\n\n"
+    else:
+        knowledge = "Knowledge base: NO MATCHING INFORMATION FOUND.\n"
 
+    # CRITICAL: Strict anti-hallucination instructions
     return f"""You are a customer service assistant for {company_name}.
 
-=== FACTS (only use these) ===
+=== AVAILABLE FACTS ===
 {company_info}
 {knowledge}
-=== END FACTS ===
+=== END AVAILABLE FACTS ===
 
-RULES:
-1. Use ONLY facts from above. Never invent or guess.
-2. Questions about GDPR/privacy/personuppgifter → use GDPR-ansvarig info.
-3. Reply in {target_lang}. Be concise and helpful (1-2 sentences).
-4. Always include email/phone when giving contact info.
-5. If you truly don't have the info, say so briefly.
+CRITICAL RULES - YOU MUST FOLLOW THESE:
+1. ONLY answer using the EXACT information from the knowledge base above.
+2. If the knowledge base says "NO MATCHING INFORMATION FOUND" or is empty, you MUST respond with ONLY: "I don't have information about that. Please contact us directly."
+3. DO NOT invent, guess, assume, or make up ANY information - not even general advice.
+4. DO NOT say "typically", "usually", "generally", or similar hedging words to make up answers.
+5. If asked about something not in the knowledge base, say you don't have that information.
+6. For GDPR/privacy questions, use the GDPR-ansvarig contact info if available.
+7. Reply in {target_lang}. Be concise (1-2 sentences max).
+8. If contact info is available, include it when helpful.
 
-Customer: {question}"""
+Remember: It is BETTER to say "I don't know" than to give incorrect information.
+
+Customer question: {question}"""
 
 
 def anonymize_ip(ip: str) -> str:
@@ -1600,32 +1628,56 @@ async def chat(
     )
     db.add(user_message)
 
-    # Hitta kontext
+    # Hitta kontext i kunskapsbasen
     context = find_relevant_context(request.question, company_id, db)
-    # Consider it "had_answer" if we found context OR if we detected a specific category
-    had_answer = len(context) > 0 or category != "allmant"
+
+    # ANTI-HALLUCINATION: Only consider it "had_answer" if we ACTUALLY found knowledge base matches
+    # DO NOT trust category detection alone - it can lead to hallucinations
+    had_answer = len(context) > 0
 
     # Mät svarstid
     start_time = datetime.utcnow()
 
-    # Bygg prompt och fråga AI med rätt språk och kategori
-    prompt = build_prompt(request.question, context, settings, language, category)
-    answer = await query_ollama(prompt)
+    # Fallback messages for when we have NO knowledge base match
+    fallback_messages = {
+        "sv": settings.fallback_message or "Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt.",
+        "en": "I couldn't find an answer to your question. Please contact us directly.",
+        "ar": "لم أتمكن من العثور على إجابة لسؤالك. يرجى الاتصال بنا مباشرة."
+    }
 
-    response_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+    # ANTI-HALLUCINATION: If NO knowledge base match found, use fallback immediately
+    # Do NOT let the AI generate an answer without factual grounding
+    if not context:
+        # No knowledge base match - use fallback to prevent hallucination
+        answer = fallback_messages.get(language, settings.fallback_message)
+        response_time = 0  # No AI call needed
+    else:
+        # We have knowledge base context - let AI formulate response based on FACTS
+        prompt = build_prompt(request.question, context, settings, language, category, has_knowledge_match=True)
+        answer = await query_ollama(prompt)
+        response_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
 
-    # Only use fallback if no context AND no specific category detected (truly generic question)
-    # The AI should try to help based on category even without exact knowledge base matches
-    if not context and category == "allmant" and len(request.question.split()) <= 2:
-        # Only fallback for very short, uncategorized messages where AI can't help
-        fallback_messages = {
-            "sv": settings.fallback_message or "Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt.",
-            "en": "I couldn't find an answer to your question. Please contact us directly.",
-            "ar": "لم أتمكن من العثور على إجابة لسؤالك. يرجى الاتصال بنا مباشرة."
-        }
-        # Only use fallback if AI gave a very short/unhelpful response
-        if len(answer.strip()) < 50:
+        # ANTI-HALLUCINATION: Double-check AI didn't hallucinate despite having context
+        # If AI response doesn't seem to reference the knowledge base, use fallback
+        hallucination_indicators = [
+            "I don't have information",
+            "jag har ingen information",
+            "jag vet inte",
+            "I cannot find",
+            "cannot help with that",
+            "typically",  # Hedging words indicate making things up
+            "usually",
+            "generally",
+            "in most cases",
+            "vanligtvis",
+            "oftast",
+            "brukar",
+        ]
+        answer_lower = answer.lower()
+        if any(indicator.lower() in answer_lower for indicator in hallucination_indicators):
+            # AI admitted it doesn't know or is hedging - use clean fallback
             answer = fallback_messages.get(language, settings.fallback_message)
+            had_answer = False
 
     # Spara bot-svaret
     sources = [item.question for item in context]
@@ -1649,21 +1701,17 @@ async def chat(
 
     db.commit()
 
-    # Calculate confidence score based on context quality
-    # 100% = exact match in knowledge base
-    # 80% = partial match / category match
-    # 50% = AI-generated without knowledge base
-    # 30% = fallback message
+    # Calculate confidence score based on ACTUAL knowledge base matches
+    # ANTI-HALLUCINATION: Only high confidence when we have real KB matches
+    # 100% = multiple exact matches in knowledge base
+    # 90% = single match in knowledge base
+    # 0% = no knowledge base match (fallback used)
     if len(context) >= 2:
-        confidence = 100
+        confidence = 100  # Multiple KB matches - very confident
     elif len(context) == 1:
-        confidence = 90
-    elif had_answer and category != "allmant":
-        confidence = 75
-    elif had_answer:
-        confidence = 60
+        confidence = 90   # Single KB match - confident
     else:
-        confidence = 40
+        confidence = 0    # No KB match - fallback message used, no confidence
 
     # Cache the response
     cache_data = {
@@ -2438,6 +2486,33 @@ async def parse_text_file(content: bytes) -> str:
             return ""
 
 
+async def parse_pdf_file(content: bytes) -> str:
+    """Parse PDF file and extract text
+
+    Supports multi-page PDFs. Extracts text from all pages.
+    """
+    import io
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        print("pypdf not installed")
+        return ""
+
+    try:
+        reader = PdfReader(io.BytesIO(content))
+        text_parts = []
+
+        for page_num, page in enumerate(reader.pages):
+            page_text = page.extract_text()
+            if page_text and page_text.strip():
+                text_parts.append(page_text.strip())
+
+        return "\n\n".join(text_parts)
+    except Exception as e:
+        print(f"PDF parse error: {e}")
+        return ""
+
+
 async def fetch_url_content(url: str) -> str:
     """Fetch and extract text content from a URL"""
     MAX_URL_CONTENT_SIZE = 1024 * 1024  # 1MB max for URL imports
@@ -2542,7 +2617,15 @@ async def upload_knowledge_file(
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db)
 ):
-    """Upload Excel, Word, or text file to populate knowledge base"""
+    """Upload Excel, Word, PDF, or text file to populate knowledge base
+
+    Supported formats:
+    - Excel (.xlsx, .xls): Q&A pairs in columns
+    - Word (.docx): AI extracts Q&A from text
+    - PDF (.pdf): AI extracts Q&A from PDF text
+    - Text (.txt): AI extracts Q&A from plain text
+    - CSV (.csv): Q&A pairs in comma/semicolon separated format
+    """
     if not file.filename:
         raise HTTPException(status_code=400, detail="Ingen fil vald")
 
@@ -2561,6 +2644,12 @@ async def upload_knowledge_file(
         text = await parse_word_file(content)
         if text:
             # Use AI to extract Q&A from unstructured text
+            settings = get_or_create_settings(db, current["company_id"])
+            items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
+    elif filename.endswith('.pdf'):
+        text = await parse_pdf_file(content)
+        if text:
+            # Use AI to extract Q&A from PDF text
             settings = get_or_create_settings(db, current["company_id"])
             items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
     elif filename.endswith('.txt') or filename.endswith('.csv'):
@@ -2585,7 +2674,7 @@ async def upload_knowledge_file(
     else:
         raise HTTPException(
             status_code=400,
-            detail="Filformat stöds inte. Använd .xlsx, .docx, .txt eller .csv"
+            detail="Filformat stöds inte. Använd .xlsx, .docx, .pdf, .txt eller .csv"
         )
 
     if not items_to_add:
