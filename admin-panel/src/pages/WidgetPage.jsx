@@ -905,15 +905,17 @@ function WidgetPage({ widgetType }) {
                     </div>
                     <div className="col-span-2">
                       <label className="flex items-center gap-3 cursor-pointer group">
-                        <div className="relative">
-                          <input
-                            type="checkbox"
-                            checked={formData.start_expanded}
-                            onChange={(e) => setFormData({ ...formData, start_expanded: e.target.checked })}
-                            className="sr-only peer"
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={formData.start_expanded}
+                          onClick={() => setFormData({ ...formData, start_expanded: !formData.start_expanded })}
+                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg-primary ${formData.start_expanded ? 'bg-accent' : 'bg-border-default'}`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${formData.start_expanded ? 'translate-x-5' : 'translate-x-0'}`}
                           />
-                          <div className="w-11 h-6 bg-bg-tertiary peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-accent/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
-                        </div>
+                        </button>
                         <div>
                           <span className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors">Starta öppen</span>
                           <p className="text-xs text-text-tertiary">Widgeten öppnas direkt istället för att visa en flytande knapp</p>

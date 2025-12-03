@@ -898,24 +898,60 @@ function Knowledge() {
               </h2>
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-4">
-              {widgets.length > 0 && (
-                <div>
-                  <label className="input-label">Widget</label>
-                  <select
-                    value={formData.widget_id || ''}
-                    onChange={(e) => setFormData({ ...formData, widget_id: e.target.value ? parseInt(e.target.value) : null })}
-                    className="input"
-                  >
-                    <option value="">Delad (tillgänglig för alla widgets)</option>
-                    {widgets.map(w => (
-                      <option key={w.id} value={w.id}>{w.name} ({w.widget_type === 'external' ? 'Extern' : 'Intern'})</option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-text-tertiary mt-1">
-                    Välj vilken widget denna kunskap ska vara tillgänglig för
-                  </p>
+              <div>
+                <label className="input-label">Tillgänglighet</label>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-3 p-3 rounded-lg border border-border-subtle hover:border-accent/50 cursor-pointer transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/5">
+                    <input
+                      type="radio"
+                      name="widget_scope"
+                      checked={formData.widget_id === null}
+                      onChange={() => setFormData({ ...formData, widget_id: null })}
+                      className="w-4 h-4 text-accent accent-accent"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-text-primary">Delad</span>
+                      <p className="text-xs text-text-tertiary">Tillgänglig för både intern och extern widget</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <span className="px-1.5 py-0.5 text-xs rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">Extern</span>
+                      <span className="px-1.5 py-0.5 text-xs rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">Intern</span>
+                    </div>
+                  </label>
+                  {widgets.filter(w => w.widget_type === 'external').map(w => (
+                    <label key={w.id} className="flex items-center gap-3 p-3 rounded-lg border border-border-subtle hover:border-accent/50 cursor-pointer transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/5">
+                      <input
+                        type="radio"
+                        name="widget_scope"
+                        checked={formData.widget_id === w.id}
+                        onChange={() => setFormData({ ...formData, widget_id: w.id })}
+                        className="w-4 h-4 text-accent accent-accent"
+                      />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-text-primary">Endast extern widget</span>
+                        <p className="text-xs text-text-tertiary">Endast tillgänglig för kunder på hemsidan</p>
+                      </div>
+                      <span className="px-1.5 py-0.5 text-xs rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">Extern</span>
+                    </label>
+                  ))}
+                  {widgets.filter(w => w.widget_type === 'internal').map(w => (
+                    <label key={w.id} className="flex items-center gap-3 p-3 rounded-lg border border-border-subtle hover:border-accent/50 cursor-pointer transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/5">
+                      <input
+                        type="radio"
+                        name="widget_scope"
+                        checked={formData.widget_id === w.id}
+                        onChange={() => setFormData({ ...formData, widget_id: w.id })}
+                        className="w-4 h-4 text-accent accent-accent"
+                      />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-text-primary">Endast intern widget</span>
+                        <p className="text-xs text-text-tertiary">Endast tillgänglig för medarbetare</p>
+                      </div>
+                      <span className="px-1.5 py-0.5 text-xs rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">Intern</span>
+                    </label>
+                  ))}
                 </div>
-              )}
+              </div>
               <div>
                 <label className="input-label">Kategori</label>
                 <select
