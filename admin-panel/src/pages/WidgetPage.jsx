@@ -63,6 +63,7 @@ function WidgetPage({ widgetType }) {
   const [previewLoading, setPreviewLoading] = useState(false)
   const [sessionId] = useState(() => 'preview-' + Math.random().toString(36).substring(2, 15))
   const [darkMode, setDarkMode] = useState(false)
+  const [feedbackGiven, setFeedbackGiven] = useState({})
   const messagesEndRef = useRef(null)
   const [healthStatus, setHealthStatus] = useState(null)
 
@@ -517,6 +518,11 @@ function WidgetPage({ widgetType }) {
 
   const resetPreview = () => {
     setPreviewMessages([{ type: 'bot', text: formData.welcome_message || 'Hej! Hur kan jag hjälpa dig?' }])
+    setFeedbackGiven({})
+  }
+
+  const handlePreviewFeedback = (msgIndex, helpful) => {
+    setFeedbackGiven(prev => ({ ...prev, [msgIndex]: helpful }))
   }
 
   useEffect(() => {
@@ -899,12 +905,15 @@ function WidgetPage({ widgetType }) {
                     </div>
                     <div className="col-span-2">
                       <label className="flex items-center gap-3 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={formData.start_expanded}
-                          onChange={(e) => setFormData({ ...formData, start_expanded: e.target.checked })}
-                          className="w-5 h-5 rounded border-border-subtle text-accent focus:ring-accent cursor-pointer"
-                        />
+                        <div className="relative">
+                          <input
+                            type="checkbox"
+                            checked={formData.start_expanded}
+                            onChange={(e) => setFormData({ ...formData, start_expanded: e.target.checked })}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-bg-tertiary peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-accent/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                        </div>
                         <div>
                           <span className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors">Starta öppen</span>
                           <p className="text-xs text-text-tertiary">Widgeten öppnas direkt istället för att visa en flytande knapp</p>
@@ -1009,33 +1018,65 @@ function WidgetPage({ widgetType }) {
                     }}
                   >
                     {previewMessages.map((msg, i) => (
-                      <div key={i} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'} items-end gap-2`}>
-                        {msg.type === 'bot' && (
-                          <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: `${formData.primary_color}15` }}>
-                            <svg width="14" height="14" viewBox="0 0 120 120" fill="none">
-                              <rect x="35" y="20" width="50" height="28" rx="4" fill={formData.primary_color} opacity="0.6" />
-                              <ellipse cx="48" cy="34" rx="5" ry="4" fill="white" />
-                              <ellipse cx="72" cy="34" rx="5" ry="4" fill="white" />
-                            </svg>
+                      <div key={i} className={`flex flex-col ${msg.type === 'user' ? 'items-end' : 'items-start'}`}>
+                        <div className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'} items-end gap-2`}>
+                          {msg.type === 'bot' && (
+                            <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: `${formData.primary_color}15` }}>
+                              <svg width="14" height="14" viewBox="0 0 120 120" fill="none">
+                                <rect x="35" y="20" width="50" height="28" rx="4" fill={formData.primary_color} opacity="0.6" />
+                                <ellipse cx="48" cy="34" rx="5" ry="4" fill="white" />
+                                <ellipse cx="72" cy="34" rx="5" ry="4" fill="white" />
+                              </svg>
+                            </div>
+                          )}
+                          <div
+                            className="max-w-[80%] px-3.5 py-2.5 shadow-sm"
+                            style={{
+                              background: msg.type === 'user'
+                                ? `linear-gradient(135deg, ${formData.primary_color} 0%, ${adjustColor(formData.primary_color, -20)} 100%)`
+                                : darkMode ? '#292524' : formData.secondary_color,
+                              color: msg.type === 'user' ? 'white' : (darkMode ? '#FAF9F7' : '#44403C'),
+                              border: msg.type === 'bot' ? `1px solid ${darkMode ? '#3D3835' : adjustColor(formData.secondary_color, -15)}` : 'none',
+                              borderRadius: msg.type === 'user'
+                                ? `${formData.widget_border_radius}px ${formData.widget_border_radius}px 4px ${formData.widget_border_radius}px`
+                                : `${formData.widget_border_radius}px ${formData.widget_border_radius}px ${formData.widget_border_radius}px 4px`,
+                              fontSize: `${formData.widget_font_size}px`,
+                              lineHeight: '1.5'
+                            }}
+                          >
+                            <p className="whitespace-pre-wrap">{msg.text}</p>
+                          </div>
+                        </div>
+                        {/* Feedback buttons for bot messages */}
+                        {msg.type === 'bot' && i > 0 && (
+                          <div className="flex items-center gap-1 mt-1.5 ml-8" style={{ fontSize: `${formData.widget_font_size - 2}px` }}>
+                            {feedbackGiven[i] === undefined ? (
+                              <>
+                                <span style={{ color: darkMode ? '#78716C' : '#A8A29E' }}>Hjälpsamt?</span>
+                                <button
+                                  onClick={() => handlePreviewFeedback(i, true)}
+                                  className="p-1 rounded hover:bg-success/10 transition-colors"
+                                  style={{ color: darkMode ? '#78716C' : '#A8A29E' }}
+                                  title="Ja, hjälpsamt"
+                                >
+                                  👍
+                                </button>
+                                <button
+                                  onClick={() => handlePreviewFeedback(i, false)}
+                                  className="p-1 rounded hover:bg-error/10 transition-colors"
+                                  style={{ color: darkMode ? '#78716C' : '#A8A29E' }}
+                                  title="Nej, inte hjälpsamt"
+                                >
+                                  👎
+                                </button>
+                              </>
+                            ) : (
+                              <span style={{ color: feedbackGiven[i] ? '#22C55E' : '#EF4444' }}>
+                                {feedbackGiven[i] ? '👍 Tack för feedback!' : '👎 Tack, vi förbättrar oss!'}
+                              </span>
+                            )}
                           </div>
                         )}
-                        <div
-                          className="max-w-[80%] px-3.5 py-2.5 shadow-sm"
-                          style={{
-                            background: msg.type === 'user'
-                              ? `linear-gradient(135deg, ${formData.primary_color} 0%, ${adjustColor(formData.primary_color, -20)} 100%)`
-                              : darkMode ? '#292524' : formData.secondary_color,
-                            color: msg.type === 'user' ? 'white' : (darkMode ? '#FAF9F7' : '#44403C'),
-                            border: msg.type === 'bot' ? `1px solid ${darkMode ? '#3D3835' : adjustColor(formData.secondary_color, -15)}` : 'none',
-                            borderRadius: msg.type === 'user'
-                              ? `${formData.widget_border_radius}px ${formData.widget_border_radius}px 4px ${formData.widget_border_radius}px`
-                              : `${formData.widget_border_radius}px ${formData.widget_border_radius}px ${formData.widget_border_radius}px 4px`,
-                            fontSize: `${formData.widget_font_size}px`,
-                            lineHeight: '1.5'
-                          }}
-                        >
-                          <p className="whitespace-pre-wrap">{msg.text}</p>
-                        </div>
                       </div>
                     ))}
                     {previewLoading && (

@@ -315,29 +315,34 @@ function Analytics() {
       {analytics.daily_stats && analytics.daily_stats.length > 0 && (
         <div className="card mb-8">
           <h3 className="text-lg font-medium text-text-primary mb-4">Senaste 30 dagarna</h3>
-          <div className="h-48 flex items-end gap-1">
-            {analytics.daily_stats.map((day, index) => (
-              <div
-                key={index}
-                className="flex-1 flex flex-col items-center group"
-              >
-                <div className="relative w-full">
+          <div className="h-40 flex items-end gap-[3px]">
+            {analytics.daily_stats.map((day, index) => {
+              const barHeight = maxMessages > 0 ? (day.messages / maxMessages) * 100 : 0
+              return (
+                <div
+                  key={index}
+                  className="flex-1 flex flex-col items-center group relative"
+                >
                   {/* Tooltip */}
-                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-text-primary text-bg-primary text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-text-primary text-bg-primary text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
                     {new Date(day.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}
                     <br />
                     {day.messages} meddelanden
                   </div>
-                  {/* Bar */}
-                  <div
-                    className="w-full bg-accent/80 hover:bg-accent rounded-t transition-all cursor-pointer"
-                    style={{
-                      height: `${Math.max((day.messages / maxMessages) * 160, 4)}px`
-                    }}
-                  />
+                  {/* Bar container */}
+                  <div className="w-full h-full flex items-end">
+                    <div
+                      className={`w-full rounded-t transition-all cursor-pointer ${
+                        day.messages > 0 ? 'bg-accent hover:bg-accent/80' : 'bg-bg-tertiary'
+                      }`}
+                      style={{
+                        height: day.messages > 0 ? `${Math.max(barHeight, 3)}%` : '2px'
+                      }}
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
           <div className="flex justify-between mt-2 text-xs text-text-tertiary">
             <span>30 dagar sedan</span>

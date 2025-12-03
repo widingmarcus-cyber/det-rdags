@@ -6532,6 +6532,26 @@ class AnnouncementCreate(BaseModel):
     type: str = "info"  # info, warning, maintenance
 
 
+@app.get("/announcements")
+async def get_company_announcements(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Get active announcements for companies"""
+    announcement = db.query(GlobalSettings).filter(
+        GlobalSettings.key == "active_announcement"
+    ).first()
+
+    if announcement and announcement.value:
+        try:
+            data = json.loads(announcement.value)
+            return {"announcement": data}
+        except:
+            pass
+
+    return {"announcement": None}
+
+
 @app.get("/admin/announcements")
 async def get_announcements(
     admin: dict = Depends(get_super_admin),

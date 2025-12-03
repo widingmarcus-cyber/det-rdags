@@ -1,6 +1,8 @@
 import { NavLink } from 'react-router-dom'
+import { useState } from 'react'
 
-function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode }) {
+function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, announcement, onDismissAnnouncement }) {
+  const [showAnnouncement, setShowAnnouncement] = useState(false)
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: 'chart' },
     { to: '/widget/external', label: 'Kundtjänst', icon: 'external' },
@@ -173,6 +175,89 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode }) 
           </NavLink>
         ))}
       </nav>
+
+      {/* Notification bell */}
+      {announcement && (
+        <div className="px-3 py-2 relative">
+          <button
+            onClick={() => setShowAnnouncement(!showAnnouncement)}
+            className="sidebar-item w-full text-left relative"
+            aria-label="Visa meddelanden"
+          >
+            <span className="relative">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-accent rounded-full animate-pulse" />
+            </span>
+            <span>Meddelanden</span>
+            <span className="ml-auto bg-accent text-white text-xs px-1.5 py-0.5 rounded-full">1</span>
+          </button>
+
+          {/* Announcement popup */}
+          {showAnnouncement && (
+            <div className="absolute left-full bottom-0 ml-2 w-72 bg-bg-primary border border-border-subtle rounded-lg shadow-xl z-50 overflow-hidden">
+              <div className={`px-4 py-3 border-b border-border-subtle ${
+                announcement.type === 'warning' ? 'bg-warning/10' :
+                announcement.type === 'maintenance' ? 'bg-error/10' : 'bg-accent-soft'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {announcement.type === 'warning' ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-warning">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                      </svg>
+                    ) : announcement.type === 'maintenance' ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-error">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="16" x2="12" y2="12" />
+                        <line x1="12" y1="8" x2="12.01" y2="8" />
+                      </svg>
+                    )}
+                    <span className="font-medium text-text-primary text-sm">{announcement.title}</span>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowAnnouncement(false) }}
+                    className="text-text-tertiary hover:text-text-primary"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-sm text-text-secondary leading-relaxed">{announcement.message}</p>
+                {announcement.created_at && (
+                  <p className="text-xs text-text-tertiary mt-2">
+                    {new Date(announcement.created_at).toLocaleDateString('sv-SE', {
+                      day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                    })}
+                  </p>
+                )}
+              </div>
+              <div className="px-4 py-2 bg-bg-secondary border-t border-border-subtle">
+                <button
+                  onClick={() => { onDismissAnnouncement(); setShowAnnouncement(false) }}
+                  className="text-xs text-text-tertiary hover:text-text-primary"
+                >
+                  Markera som läst
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* User section */}
       <div className="p-3 border-t border-border-subtle" role="region" aria-label="Användarmeny">
