@@ -3,94 +3,6 @@ import { AuthContext } from '../App'
 
 const API_BASE = '/api'
 
-// Component for editing suggested questions
-function SuggestedQuestionsEditor({ value, onChange }) {
-  const [questions, setQuestions] = useState(() => {
-    try {
-      return value ? JSON.parse(value) : []
-    } catch {
-      return []
-    }
-  })
-  const [newQuestion, setNewQuestion] = useState('')
-
-  const handleAdd = () => {
-    if (newQuestion.trim() && questions.length < 4) {
-      const updated = [...questions, newQuestion.trim()]
-      setQuestions(updated)
-      onChange(JSON.stringify(updated))
-      setNewQuestion('')
-    }
-  }
-
-  const handleRemove = (index) => {
-    const updated = questions.filter((_, i) => i !== index)
-    setQuestions(updated)
-    onChange(JSON.stringify(updated))
-  }
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleAdd()
-    }
-  }
-
-  return (
-    <div className="space-y-3">
-      {/* Existing questions */}
-      {questions.map((q, index) => (
-        <div
-          key={index}
-          className="flex items-center gap-2 p-3 bg-bg-secondary rounded-lg border border-border-subtle group"
-        >
-          <div className="flex-1 text-sm text-text-primary">{q}</div>
-          <button
-            type="button"
-            onClick={() => handleRemove(index)}
-            className="opacity-0 group-hover:opacity-100 p-1.5 text-text-tertiary hover:text-red-500 hover:bg-red-50 rounded transition-all"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
-      ))}
-
-      {/* Add new question */}
-      {questions.length < 4 && (
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newQuestion}
-            onChange={(e) => setNewQuestion(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Skriv en fråga..."
-            className="input flex-1"
-            maxLength={100}
-          />
-          <button
-            type="button"
-            onClick={handleAdd}
-            disabled={!newQuestion.trim()}
-            className="btn btn-secondary disabled:opacity-50"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </button>
-        </div>
-      )}
-
-      {questions.length >= 4 && (
-        <p className="text-xs text-text-tertiary">Maxgräns uppnådd (4 frågor)</p>
-      )}
-    </div>
-  )
-}
-
 function Settings() {
   const { auth, authFetch } = useContext(AuthContext)
   const [activeTab, setActiveTab] = useState('general')
@@ -127,8 +39,6 @@ function Settings() {
 
   const tabs = [
     { id: 'general', label: 'Allmänt', icon: 'building' },
-    { id: 'chatbot', label: 'Chatbot', icon: 'chat' },
-    { id: 'appearance', label: 'Utseende', icon: 'palette' },
     { id: 'notifications', label: 'Notiser', icon: 'bell' },
     { id: 'privacy', label: 'Integritet', icon: 'shield' },
     { id: 'compliance', label: 'Compliance', icon: 'badge' },
@@ -222,22 +132,6 @@ function Settings() {
             <path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4M9 9v.01M9 12v.01M9 15v.01M9 18v.01" />
           </svg>
         )
-      case 'chat':
-        return (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-        )
-      case 'palette':
-        return (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <circle cx="13.5" cy="6.5" r="2.5" />
-            <circle cx="17.5" cy="10.5" r="2.5" />
-            <circle cx="8.5" cy="7.5" r="2.5" />
-            <circle cx="6.5" cy="12.5" r="2.5" />
-            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z" />
-          </svg>
-        )
       case 'bell':
         return (
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -290,7 +184,7 @@ function Settings() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Inställningar</h1>
-          <p className="text-text-secondary mt-1">Anpassa din chatbot och widget</p>
+          <p className="text-text-secondary mt-1">Hantera företagsinställningar och GDPR</p>
         </div>
         <div className="flex items-center gap-3">
           {saved && (
@@ -380,69 +274,6 @@ function Settings() {
             </div>
           )}
 
-          {/* Chatbot Tab */}
-          {activeTab === 'chatbot' && (
-            <div className="card animate-fade-in">
-              <h2 className="text-lg font-medium text-text-primary mb-6">Chatbot-meddelanden</h2>
-              <div className="space-y-5">
-                <div>
-                  <label className="input-label">Välkomstmeddelande</label>
-                  <textarea
-                    value={settings.welcome_message}
-                    onChange={(e) => setSettings({ ...settings, welcome_message: e.target.value })}
-                    placeholder="Hej! Hur kan jag hjälpa dig idag?"
-                    rows={3}
-                    className="input resize-none"
-                  />
-                  <p className="text-xs text-text-tertiary mt-1">Första meddelandet användaren ser när chatten öppnas</p>
-                </div>
-                <div>
-                  <label className="input-label">Slogan/Underrubrik</label>
-                  <input
-                    type="text"
-                    value={settings.subtitle}
-                    onChange={(e) => setSettings({ ...settings, subtitle: e.target.value })}
-                    placeholder="Alltid redo att hjälpa"
-                    className="input"
-                  />
-                  <p className="text-xs text-text-tertiary mt-1">Visas under företagsnamnet i widgetens header</p>
-                </div>
-                <div>
-                  <label className="input-label">Fallback-meddelande</label>
-                  <textarea
-                    value={settings.fallback_message}
-                    onChange={(e) => setSettings({ ...settings, fallback_message: e.target.value })}
-                    placeholder="Tyvärr kunde jag inte svara på din fråga..."
-                    rows={3}
-                    className="input resize-none"
-                  />
-                  <p className="text-xs text-text-tertiary mt-1">Visas när AI inte kan hitta ett svar i kunskapsbasen</p>
-                </div>
-
-                {/* Suggested Questions */}
-                <div className="border-t border-border-subtle pt-5">
-                  <label className="input-label">Föreslagna frågor</label>
-                  <p className="text-xs text-text-tertiary mb-3">Klickbara snabbfrågor som visas innan användaren skriver sitt första meddelande (max 4)</p>
-                  <SuggestedQuestionsEditor
-                    value={settings.suggested_questions}
-                    onChange={(value) => setSettings({ ...settings, suggested_questions: value })}
-                  />
-                </div>
-
-                <div className="bg-bg-secondary rounded-lg p-4 border border-border-subtle">
-                  <div className="flex items-center gap-2 text-sm text-text-secondary">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" y1="16" x2="12" y2="12" />
-                      <line x1="12" y1="8" x2="12.01" y2="8" />
-                    </svg>
-                    <span>Chatboten svarar automatiskt på samma språk som användaren skriver</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Notifications Tab */}
           {activeTab === 'notifications' && (
             <div className="card animate-fade-in">
@@ -508,263 +339,6 @@ function Settings() {
                       </p>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Appearance Tab */}
-          {activeTab === 'appearance' && (
-            <div className="space-y-6 animate-fade-in">
-              {/* Color Settings */}
-              <div className="card">
-                <h2 className="text-lg font-medium text-text-primary mb-6">Färger</h2>
-                <div className="space-y-5">
-                  <div>
-                    <label className="input-label">Primärfärg</label>
-                    <div className="flex items-center gap-4">
-                      <input
-                        type="color"
-                        value={settings.primary_color}
-                        onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
-                        className="w-14 h-14 rounded-lg border border-border cursor-pointer"
-                      />
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          value={settings.primary_color}
-                          onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
-                          className="input w-32"
-                          placeholder="#D97757"
-                        />
-                        <p className="text-xs text-text-tertiary mt-1">HEX-färgkod</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Typography Settings */}
-              <div className="card">
-                <h2 className="text-lg font-medium text-text-primary mb-6">Typografi</h2>
-                <div className="space-y-5">
-                  <div>
-                    <label className="input-label">Typsnitt</label>
-                    <select
-                      value={settings.widget_font_family}
-                      onChange={(e) => setSettings({ ...settings, widget_font_family: e.target.value })}
-                      className="input"
-                    >
-                      <option value="Inter">Inter (Standard)</option>
-                      <option value="System">System (Snabbast)</option>
-                      <option value="Roboto">Roboto</option>
-                      <option value="Open Sans">Open Sans</option>
-                      <option value="Lato">Lato</option>
-                      <option value="Poppins">Poppins</option>
-                      <option value="Nunito">Nunito</option>
-                      <option value="Source Sans Pro">Source Sans Pro</option>
-                    </select>
-                    <p className="text-xs text-text-tertiary mt-1">Välj typsnitt för widgeten</p>
-                  </div>
-                  <div>
-                    <label className="input-label">Textstorlek</label>
-                    <div className="flex items-center gap-4 mt-2">
-                      <input
-                        type="range"
-                        min="12"
-                        max="18"
-                        value={settings.widget_font_size}
-                        onChange={(e) => setSettings({ ...settings, widget_font_size: parseInt(e.target.value) })}
-                        className="flex-1 h-2 bg-bg-secondary rounded-lg appearance-none cursor-pointer accent-accent"
-                      />
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="12"
-                          max="18"
-                          value={settings.widget_font_size}
-                          onChange={(e) => setSettings({ ...settings, widget_font_size: parseInt(e.target.value) || 14 })}
-                          className="input w-16 text-center"
-                        />
-                        <span className="text-sm text-text-tertiary">px</span>
-                      </div>
-                    </div>
-                    <p className="text-xs text-text-tertiary mt-1">Baskant textstorlek (12-18 pixlar)</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Style Settings */}
-              <div className="card">
-                <h2 className="text-lg font-medium text-text-primary mb-6">Stil & Position</h2>
-                <div className="space-y-5">
-                  <div>
-                    <label className="input-label">Rundade hörn</label>
-                    <div className="flex items-center gap-4 mt-2">
-                      <input
-                        type="range"
-                        min="0"
-                        max="24"
-                        value={settings.widget_border_radius}
-                        onChange={(e) => setSettings({ ...settings, widget_border_radius: parseInt(e.target.value) })}
-                        className="flex-1 h-2 bg-bg-secondary rounded-lg appearance-none cursor-pointer accent-accent"
-                      />
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="0"
-                          max="24"
-                          value={settings.widget_border_radius}
-                          onChange={(e) => setSettings({ ...settings, widget_border_radius: parseInt(e.target.value) || 16 })}
-                          className="input w-16 text-center"
-                        />
-                        <span className="text-sm text-text-tertiary">px</span>
-                      </div>
-                    </div>
-                    <p className="text-xs text-text-tertiary mt-1">Hur rundade hörn widgeten ska ha (0-24 pixlar)</p>
-                  </div>
-                  <div>
-                    <label className="input-label">Widget-position</label>
-                    <div className="flex gap-3 mt-2">
-                      <button
-                        type="button"
-                        onClick={() => setSettings({ ...settings, widget_position: 'bottom-right' })}
-                        className={`flex-1 p-4 rounded-lg border-2 transition-all ${
-                          settings.widget_position === 'bottom-right'
-                            ? 'border-accent bg-accent-soft'
-                            : 'border-border-subtle hover:border-border'
-                        }`}
-                      >
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                          <div className="w-12 h-8 bg-bg-secondary rounded border border-border-subtle relative">
-                            <div
-                              className="absolute bottom-1 right-1 w-3 h-3 rounded-full"
-                              style={{ backgroundColor: settings.primary_color }}
-                            />
-                          </div>
-                        </div>
-                        <p className="text-sm font-medium text-text-primary">Nedre höger</p>
-                        <p className="text-xs text-text-tertiary">Standard</p>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSettings({ ...settings, widget_position: 'bottom-left' })}
-                        className={`flex-1 p-4 rounded-lg border-2 transition-all ${
-                          settings.widget_position === 'bottom-left'
-                            ? 'border-accent bg-accent-soft'
-                            : 'border-border-subtle hover:border-border'
-                        }`}
-                      >
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                          <div className="w-12 h-8 bg-bg-secondary rounded border border-border-subtle relative">
-                            <div
-                              className="absolute bottom-1 left-1 w-3 h-3 rounded-full"
-                              style={{ backgroundColor: settings.primary_color }}
-                            />
-                          </div>
-                        </div>
-                        <p className="text-sm font-medium text-text-primary">Nedre vänster</p>
-                        <p className="text-xs text-text-tertiary">Alternativ</p>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Live Preview */}
-              <div className="card">
-                <h2 className="text-lg font-medium text-text-primary mb-4">Förhandsvisning</h2>
-                <p className="text-sm text-text-secondary mb-4">Se hur din widget kommer att se ut med aktuella inställningar</p>
-                <div className="bg-bg-secondary rounded-xl p-6 border border-border-subtle">
-                  <div
-                    className="overflow-hidden shadow-xl max-w-xs mx-auto"
-                    style={{
-                      borderRadius: `${settings.widget_border_radius}px`,
-                      boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-                      fontFamily: settings.widget_font_family === 'System'
-                        ? '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-                        : `"${settings.widget_font_family}", sans-serif`
-                    }}
-                  >
-                    {/* Widget Header Preview */}
-                    <div
-                      className="text-white px-4 py-3"
-                      style={{
-                        background: `linear-gradient(135deg, ${settings.primary_color} 0%, ${adjustColor(settings.primary_color, -25)} 100%)`
-                      }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white/15 rounded-full flex items-center justify-center backdrop-blur-sm">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                          </svg>
-                        </div>
-                        <div>
-                          <p className="font-semibold" style={{ fontSize: `${settings.widget_font_size}px` }}>
-                            {settings.company_name || 'Ditt Företag'}
-                          </p>
-                          <p style={{ fontSize: `${settings.widget_font_size - 2}px`, opacity: 0.85 }}>
-                            {settings.subtitle || 'Alltid redo att hjälpa'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Widget Body Preview */}
-                    <div className="bg-stone-50 p-4">
-                      <div
-                        className="bg-white border border-stone-200 px-3.5 py-2.5 text-stone-700 max-w-[85%] shadow-sm"
-                        style={{
-                          borderRadius: `${Math.min(settings.widget_border_radius, 16)}px`,
-                          borderBottomLeftRadius: '4px',
-                          fontSize: `${settings.widget_font_size}px`
-                        }}
-                      >
-                        {settings.welcome_message || 'Hej! Hur kan jag hjälpa dig?'}
-                      </div>
-                      <div className="flex justify-end mt-3">
-                        <div
-                          className="px-3.5 py-2.5 text-stone-700 max-w-[85%]"
-                          style={{
-                            backgroundColor: '#F7F3EE',
-                            borderRadius: `${Math.min(settings.widget_border_radius, 16)}px`,
-                            borderBottomRightRadius: '4px',
-                            fontSize: `${settings.widget_font_size}px`
-                          }}
-                        >
-                          Kan jag få hjälp?
-                        </div>
-                      </div>
-                    </div>
-                    {/* Widget Input Preview */}
-                    <div className="bg-white px-3 py-2.5 border-t border-stone-200">
-                      <div className="flex gap-2 items-center">
-                        <div
-                          className="flex-1 bg-stone-100 px-3 py-2 text-stone-400"
-                          style={{
-                            borderRadius: `${Math.min(settings.widget_border_radius, 20)}px`,
-                            fontSize: `${settings.widget_font_size}px`
-                          }}
-                        >
-                          Skriv ett meddelande...
-                        </div>
-                        <div
-                          className="w-9 h-9 flex items-center justify-center text-white"
-                          style={{
-                            backgroundColor: settings.primary_color,
-                            borderRadius: '50%'
-                          }}
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <line x1="22" y1="2" x2="11" y2="13" />
-                            <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-center text-xs text-text-tertiary mt-4">
-                    Widgeten visas i {settings.widget_position === 'bottom-right' ? 'nedre högra' : 'nedre vänstra'} hörnet
-                  </p>
                 </div>
               </div>
             </div>
@@ -1337,16 +911,6 @@ function Settings() {
       </div>
     </div>
   )
-}
-
-// Helper function to darken/lighten a hex color
-function adjustColor(hex, amount) {
-  if (!hex) return '#C4613D'
-  const num = parseInt(hex.replace('#', ''), 16)
-  const r = Math.min(255, Math.max(0, (num >> 16) + amount))
-  const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amount))
-  const b = Math.min(255, Math.max(0, (num & 0x0000FF) + amount))
-  return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`
 }
 
 export default Settings
