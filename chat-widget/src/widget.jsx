@@ -429,7 +429,12 @@ function ChatWidget({ config }) {
       const res = await fetch(`${config.apiUrl}/chat/${config.companyId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: text, session_id: sessionId, language: lang })
+        body: JSON.stringify({
+          question: text,
+          session_id: sessionId,
+          language: lang,
+          widget_key: config.widgetKey || null  // Pass widget key for personalized responses
+        })
       })
 
       if (res.ok) {

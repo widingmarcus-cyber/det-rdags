@@ -3,6 +3,71 @@ import { useState, useEffect, useRef } from 'react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
+// Page view tracking hook
+function usePageTracking() {
+  useEffect(() => {
+    const startTime = Date.now()
+    const SESSION_KEY = 'bobot_session_id'
+
+    // Get or create session ID
+    let sessionId = sessionStorage.getItem(SESSION_KEY)
+    if (!sessionId) {
+      sessionId = 'sess_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36)
+      sessionStorage.setItem(SESSION_KEY, sessionId)
+    }
+
+    // Get UTM parameters
+    const params = new URLSearchParams(window.location.search)
+    const utmSource = params.get('utm_source')
+    const utmMedium = params.get('utm_medium')
+    const utmCampaign = params.get('utm_campaign')
+    const utmContent = params.get('utm_content')
+    const utmTerm = params.get('utm_term')
+
+    // Track page view
+    fetch(`${API_URL}/track/pageview`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        page_url: window.location.href,
+        page_name: 'Bobot Landing Page',
+        session_id: sessionId,
+        referrer: document.referrer,
+        user_agent: navigator.userAgent,
+        utm_source: utmSource,
+        utm_medium: utmMedium,
+        utm_campaign: utmCampaign,
+        utm_content: utmContent,
+        utm_term: utmTerm
+      })
+    }).catch(() => {})
+
+    // Track engagement on page unload
+    const trackEngagement = () => {
+      const timeOnPage = Math.round((Date.now() - startTime) / 1000)
+      const isBounce = timeOnPage < 10
+
+      navigator.sendBeacon(`${API_URL}/track/engagement`, JSON.stringify({
+        session_id: sessionId,
+        page_url: window.location.href,
+        time_on_page_seconds: timeOnPage,
+        is_bounce: isBounce
+      }))
+    }
+
+    window.addEventListener('beforeunload', trackEngagement)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        trackEngagement()
+      }
+    })
+
+    return () => {
+      window.removeEventListener('beforeunload', trackEngagement)
+    }
+  }, [])
+}
+
 // Full-size Bobot mascot with eyes that follow cursor
 function BobotMascot({ className = "", size = 160, mousePos = { x: 0.5, y: 0.5 }, isWaving = false }) {
   const pupilOffsetX = (mousePos.x - 0.5) * 8
@@ -421,6 +486,10 @@ function useScrollAnimation(threshold = 0.1) {
 
 function LandingPage() {
   const navigate = useNavigate()
+
+  // Track page views for analytics
+  usePageTracking()
+
   const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 })
   const [loginHover, setLoginHover] = useState(false)
   const [ctaHover, setCtaHover] = useState(false)

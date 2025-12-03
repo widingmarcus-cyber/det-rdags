@@ -390,6 +390,7 @@ class ChatRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000, description="User question (max 2000 characters)")
     session_id: Optional[str] = None
     language: Optional[str] = None  # Language code from widget (sv, en, ar)
+    widget_key: Optional[str] = None  # Widget key to determine personality (internal/external)
 
     @field_validator('question')
     @classmethod
@@ -1282,11 +1283,13 @@ def get_greeting_response(language: str, company_name: str = None) -> str:
     return responses.get(language, responses["sv"])
 
 
-def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None, category: str = None, has_knowledge_match: bool = False) -> str:
+def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None, category: str = None, has_knowledge_match: bool = False, widget_type: str = "external") -> str:
     """Bygg prompt med kontext - använder specificerat eller detekterat språk
 
     ANTI-HALLUCINATION: This prompt is designed to prevent the AI from inventing information.
     The AI should ONLY answer based on the provided knowledge base items.
+
+    widget_type: "external" (customers/tenants) or "internal" (employees)
     """
     # Use provided language or detect from question
     lang = language if language in ["sv", "en", "ar"] else detect_language(question)
@@ -1325,8 +1328,40 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
     else:
         knowledge = "FACTS: No matching information found.\n"
 
-    # Build a warm, conversational prompt that still prevents hallucination
-    return f"""You are a friendly assistant for {company_name}, a property management company. You help tenants with their questions.
+    # Different personalities based on widget type
+    if widget_type == "internal":
+        # Internal widget - colleague-like, more thoughtful and collaborative
+        return f"""You are a helpful internal assistant for {company_name} - like a knowledgeable colleague who genuinely wants to help their teammates succeed.
+
+PERSONALITY:
+- You're a thoughtful colleague, not a bot. Think of yourself as the team member who always knows where to find information.
+- Be warm and supportive. Show that you understand the daily challenges employees face.
+- When appropriate, add context or helpful tips that might make their job easier.
+- Use a natural, conversational tone - like chatting with a trusted coworker.
+- It's okay to be slightly more detailed than you would be with external customers.
+
+{company_info}
+
+{knowledge}
+
+HOW TO RESPOND:
+- Use ONLY the facts above. Never make up information or policies.
+- Answer thoughtfully in 2-4 sentences. Add relevant context when helpful.
+- If someone seems stressed or frustrated: Show empathy first ("Jag förstår, det kan vara krångligt!" / "I hear you, that can be tricky!").
+- If you know of related information that might help: Briefly mention it.
+- When relevant, you can say things like "Hoppas det hjälper!" or "Säg till om du behöver mer info!"
+- Reply in {target_lang}.
+
+NEVER DO THIS:
+- Don't invent facts, policies, or procedures
+- Don't use "typically", "usually", "vanligtvis" to guess answers
+- Don't pretend to know internal processes you weren't given info about
+- Don't be overly formal or robotic - you're a colleague, not a customer service bot
+
+Colleague's question: {question}"""
+    else:
+        # External widget - warm but concise for customers/tenants
+        return f"""You are a friendly assistant for {company_name}, a property management company. You help tenants with their questions.
 
 PERSONALITY: Warm and helpful, like a friendly neighbor. Professional but not robotic. You genuinely want to help.
 
@@ -1845,6 +1880,16 @@ async def chat(
     # Hämta inställningar
     settings = get_or_create_settings(db, company_id)
 
+    # Determine widget type (internal vs external) for personalized responses
+    widget_type = "external"  # Default to customer-facing
+    if request.widget_key:
+        widget = db.query(Widget).filter(
+            Widget.widget_key == request.widget_key,
+            Widget.company_id == company_id
+        ).first()
+        if widget:
+            widget_type = widget.widget_type or "external"
+
     # Hantera session
     session_id = request.session_id or str(uuid.uuid4())
 
@@ -1943,7 +1988,7 @@ async def chat(
             response_time = 0
         else:
             # We have knowledge base context - let AI formulate response based on FACTS
-            prompt = build_prompt(request.question, context, settings, language, category, has_knowledge_match=True)
+            prompt = build_prompt(request.question, context, settings, language, category, has_knowledge_match=True, widget_type=widget_type)
             answer = await query_ollama(prompt)
             response_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
 
