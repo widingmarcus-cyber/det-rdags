@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Knowledge from './pages/Knowledge'
+import Widgets from './pages/Widgets'
 import Preview from './pages/Preview'
 import Settings from './pages/Settings'
 import Conversations from './pages/Conversations'
@@ -274,6 +275,7 @@ function App() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/knowledge" element={<Knowledge />} />
+            <Route path="/widgets" element={<Widgets />} />
             <Route path="/conversations" element={<Conversations />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/settings" element={<Settings />} />

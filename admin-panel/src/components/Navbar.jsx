@@ -4,6 +4,7 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode }) 
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: 'chart' },
     { to: '/knowledge', label: 'Kunskapsbas', icon: 'book' },
+    { to: '/widgets', label: 'Widgets', icon: 'widgets' },
     { to: '/conversations', label: 'Konversationer', icon: 'messages' },
     { to: '/analytics', label: 'Statistik', icon: 'analytics' },
     { to: '/settings', label: 'Inställningar', icon: 'settings' },
@@ -26,6 +27,15 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode }) 
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
             <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+          </svg>
+        )
+      case 'widgets':
+        return (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
           </svg>
         )
       case 'messages':
