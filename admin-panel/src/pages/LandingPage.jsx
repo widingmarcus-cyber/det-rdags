@@ -308,11 +308,16 @@ function TypedText({ text, delay = 0, speed = 30, onComplete }) {
     }
   }, [displayedText, text, speed, hasStarted, onComplete])
 
-  if (!hasStarted) return null
-  return <span>{displayedText}{isTyping && <span className="animate-pulse">|</span>}</span>
+  // Always render full text for layout, show typed portion visibly
+  return (
+    <span className="relative">
+      <span className="invisible">{text}</span>
+      <span className="absolute inset-0">{displayedText}{isTyping && <span className="animate-pulse">|</span>}</span>
+    </span>
+  )
 }
 
-function ChatWidget({ messages, label, className = "", startDelay = 0, compact = false }) {
+function ChatWidget({ messages, label, className = "", startDelay = 0 }) {
   const [visibleMessages, setVisibleMessages] = useState([])
   const [currentTyping, setCurrentTyping] = useState(0)
 
@@ -323,36 +328,32 @@ function ChatWidget({ messages, label, className = "", startDelay = 0, compact =
   const handleMessageComplete = () => setTimeout(() => setCurrentTyping(prev => prev + 1), 300)
 
   return (
-    <div className={`w-full ${compact ? 'max-w-xs' : 'max-w-sm'} bg-white dark:bg-stone-800 rounded-2xl shadow-2xl border border-stone-200 dark:border-stone-700 overflow-hidden ${className}`}>
-      <div className={`bg-[#D97757] ${compact ? 'px-4 py-3' : 'px-5 py-4'} flex items-center justify-between`}>
-        <div className="flex items-center gap-3">
-          <div className={`${compact ? 'w-9 h-9' : 'w-10 h-10'} bg-white/20 rounded-full flex items-center justify-center`}>
-            <BobotMini className="scale-75" />
+    <div className={`w-full max-w-[280px] bg-white dark:bg-stone-800 rounded-2xl shadow-2xl border border-stone-200 dark:border-stone-700 overflow-hidden ${className}`}>
+      <div className="bg-[#D97757] px-3 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center">
+            <BobotMini className="scale-50" />
           </div>
           <div>
-            <span className={`text-white font-semibold block ${compact ? 'text-sm' : 'text-base'}`}>Bobot</span>
-            <span className={`text-white/80 ${compact ? 'text-xs' : 'text-sm'}`}>Online</span>
+            <span className="text-white font-semibold block text-xs">Bobot</span>
+            <span className="text-white/80 text-[10px]">Online</span>
           </div>
         </div>
-        {label && <span className={`bg-white/25 text-white font-medium ${compact ? 'text-xs px-2.5 py-1' : 'text-sm px-3 py-1'} rounded-full`}>{label}</span>}
+        {label && <span className="bg-white/25 text-white font-medium text-[10px] px-2 py-0.5 rounded-full">{label}</span>}
       </div>
-      <div className={`${compact ? 'p-4 space-y-3' : 'p-5 space-y-4'} bg-stone-100 dark:bg-stone-900`}>
+      <div className="p-3 space-y-2 bg-stone-100 dark:bg-stone-900">
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'} ${visibleMessages.includes(i) ? 'opacity-100' : 'opacity-0'}`}>
-            <div className={`max-w-[85%] rounded-2xl ${compact ? 'px-3.5 py-2 text-sm' : 'px-4 py-2.5 text-base'} ${msg.from === 'user' ? 'bg-[#D97757] text-white rounded-br-md' : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm rounded-bl-md'}`}>
-              {visibleMessages.includes(i) ? (
-                <TypedText text={msg.text} delay={i === 0 ? startDelay : 0} speed={msg.from === 'bot' ? 20 : 40} onComplete={i === currentTyping ? handleMessageComplete : undefined} />
-              ) : (
-                <span className="invisible">{msg.text}</span>
-              )}
+          <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'} transition-opacity duration-300 ${visibleMessages.includes(i) ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`max-w-[85%] rounded-xl px-2.5 py-1.5 text-xs ${msg.from === 'user' ? 'bg-[#D97757] text-white rounded-br-sm' : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm rounded-bl-sm'}`}>
+              <TypedText text={msg.text} delay={i === 0 ? startDelay : 0} speed={msg.from === 'bot' ? 15 : 30} onComplete={i === currentTyping ? handleMessageComplete : undefined} />
             </div>
           </div>
         ))}
       </div>
-      <div className={`${compact ? 'px-4 py-3' : 'px-5 py-4'} border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800`}>
-        <div className="flex items-center gap-3 text-stone-400">
-          <span className={`flex-1 bg-stone-100 dark:bg-stone-700 rounded-full ${compact ? 'px-4 py-2 text-sm' : 'px-5 py-2.5 text-base'}`}>Skriv ett meddelande...</span>
-          <svg className={compact ? 'w-5 h-5' : 'w-6 h-6'} fill="currentColor" viewBox="0 0 20 20">
+      <div className="px-3 py-2 border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800">
+        <div className="flex items-center gap-2 text-stone-400">
+          <span className="flex-1 bg-stone-100 dark:bg-stone-700 rounded-full px-3 py-1.5 text-[10px]">Skriv ett meddelande...</span>
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
           </svg>
         </div>
