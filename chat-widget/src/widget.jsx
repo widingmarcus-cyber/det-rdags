@@ -103,10 +103,9 @@ const lightTheme = {
   bgElevated: '#FFFFFF',
   bgSubtle: '#F5F5F4',
   bgAccentSoft: 'rgba(217, 119, 87, 0.08)',
-  // User message - warm cream
-  bgUser: '#F7F3EE',
-  // Bot message - clean white
+  // Bot message - subtle warm background
   bgBot: '#FFFFFF',
+  bgBotBorder: '#F0EFEE',
   // Text
   text: '#1C1917',
   textSecondary: '#57534E',
@@ -115,7 +114,7 @@ const lightTheme = {
   // Borders
   border: '#E7E5E4',
   borderSubtle: '#F0EFEE',
-  // Accent
+  // Accent (used for user messages)
   accent: '#D97757',
   accentHover: '#C4613D',
   accentGlow: 'rgba(217, 119, 87, 0.12)',
@@ -133,14 +132,16 @@ const darkTheme = {
   bgElevated: '#1E1B18',
   bgSubtle: '#262320',
   bgAccentSoft: 'rgba(217, 119, 87, 0.12)',
-  bgUser: '#2A2622',
-  bgBot: '#1E1B18',
+  // Bot message - subtle elevated background
+  bgBot: '#262320',
+  bgBotBorder: '#3D3835',
   text: '#FAFAF9',
   textSecondary: '#D4D0CC',
   textMuted: '#8A8580',
   textOnAccent: '#FFFFFF',
   border: '#3D3835',
   borderSubtle: '#2E2A27',
+  // Accent (used for user messages)
   accent: '#E8886A',
   accentHover: '#F09A7E',
   accentGlow: 'rgba(232, 136, 106, 0.2)',
@@ -688,9 +689,14 @@ function ChatWidget({ config }) {
                   borderRadius: borderRadius - 4,
                   fontSize: fontSize,
                   lineHeight: 1.55,
-                  background: msg.type === 'user' ? theme.bgUser : theme.bgBot,
-                  color: theme.text,
-                  border: msg.type === 'bot' ? `1px solid ${theme.borderSubtle}` : 'none',
+                  // User messages: accent gradient with white text
+                  // Bot messages: subtle background with border
+                  background: msg.type === 'user'
+                    ? `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(primaryColor, -15)} 100%)`
+                    : theme.bgBot,
+                  color: msg.type === 'user' ? theme.textOnAccent : theme.text,
+                  border: msg.type === 'bot' ? `1px solid ${theme.bgBotBorder}` : 'none',
+                  boxShadow: msg.type === 'user' ? '0 2px 8px rgba(0, 0, 0, 0.08)' : 'none',
                   borderBottomRightRadius: msg.type === 'user' && !isRTL ? 4 : borderRadius - 4,
                   borderBottomLeftRadius: msg.type === 'user' && isRTL ? 4 : (msg.type === 'bot' && !isRTL ? 4 : borderRadius - 4),
                 }}>

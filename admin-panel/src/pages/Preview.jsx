@@ -212,6 +212,16 @@ function Preview() {
   const borderRadius = settings?.widget_border_radius || 16
   const position = settings?.widget_position || 'bottom-right'
 
+  // Darken/lighten color for gradients
+  const adjustColor = (hex, amount) => {
+    if (!hex) return '#C4613D'
+    const num = parseInt(hex.replace('#', ''), 16)
+    const r = Math.min(255, Math.max(0, (num >> 16) + amount))
+    const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amount))
+    const b = Math.min(255, Math.max(0, (num & 0x0000FF) + amount))
+    return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`
+  }
+
   // Font family CSS
   const getFontFamily = () => {
     if (fontFamily === 'System') {
@@ -225,11 +235,12 @@ function Preview() {
     bg: '#FAFAF9',
     bgElevated: '#FFFFFF',
     bgSubtle: '#F5F5F4',
-    bgUser: '#F7F3EE',
     bgBot: '#FFFFFF',
+    bgBotBorder: '#F0EFEE',
     text: '#1C1917',
     textSecondary: '#57534E',
     textMuted: '#A8A29E',
+    textOnAccent: '#FFFFFF',
     border: '#E7E5E4',
     borderSubtle: '#F5F5F4',
   }
@@ -238,11 +249,12 @@ function Preview() {
     bg: '#1C1917',
     bgElevated: '#292524',
     bgSubtle: '#292524',
-    bgUser: '#3D3835',
-    bgBot: '#292524',
+    bgBot: '#262320',
+    bgBotBorder: '#3D3835',
     text: '#FAFAF9',
     textSecondary: '#A8A29E',
     textMuted: '#78716C',
+    textOnAccent: '#FFFFFF',
     border: '#3D3835',
     borderSubtle: '#292524',
   }
@@ -484,25 +496,35 @@ function Preview() {
                   <div
                     className="px-4 py-3 transition-all"
                     style={{
-                      backgroundColor: msg.type === 'user'
-                        ? theme.bgUser
+                      // User messages: accent gradient with white text
+                      // Bot messages: subtle background with border
+                      background: msg.type === 'user'
+                        ? `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(primaryColor, -15)} 100%)`
                         : msg.error
                           ? 'rgba(239, 68, 68, 0.1)'
                           : msg.hadAnswer === false
                             ? 'rgba(245, 158, 11, 0.1)'
                             : theme.bgBot,
-                      color: msg.error ? '#DC2626' : theme.text,
+                      color: msg.type === 'user'
+                        ? theme.textOnAccent
+                        : msg.error
+                          ? '#DC2626'
+                          : theme.text,
                       borderRadius: `${Math.min(borderRadius, 16)}px`,
                       borderBottomLeftRadius: msg.type === 'bot' ? '4px' : `${Math.min(borderRadius, 16)}px`,
                       borderBottomRightRadius: msg.type === 'user' ? '4px' : `${Math.min(borderRadius, 16)}px`,
                       border: msg.type === 'bot' && !msg.error && msg.hadAnswer !== false
-                        ? `1px solid ${theme.border}`
+                        ? `1px solid ${theme.bgBotBorder}`
                         : msg.error
                           ? '1px solid rgba(239, 68, 68, 0.2)'
                           : msg.hadAnswer === false
                             ? '1px solid rgba(245, 158, 11, 0.2)'
                             : 'none',
-                      boxShadow: msg.type === 'bot' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+                      boxShadow: msg.type === 'user'
+                        ? '0 2px 8px rgba(0,0,0,0.08)'
+                        : msg.type === 'bot'
+                          ? '0 1px 2px rgba(0,0,0,0.05)'
+                          : 'none'
                     }}
                   >
                     <p
