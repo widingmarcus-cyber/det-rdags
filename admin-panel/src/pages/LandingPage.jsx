@@ -216,43 +216,118 @@ function ThemeToggle({ isDark, onToggle }) {
   )
 }
 
-// Full-sized chat widget
-function ChatWidget({ messages, label, className = "" }) {
+// Typing text component
+function TypedText({ text, delay = 0, speed = 30, onComplete }) {
+  const [displayedText, setDisplayedText] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+  const [hasStarted, setHasStarted] = useState(false)
+
+  useEffect(() => {
+    const startTimer = setTimeout(() => {
+      setHasStarted(true)
+      setIsTyping(true)
+    }, delay)
+    return () => clearTimeout(startTimer)
+  }, [delay])
+
+  useEffect(() => {
+    if (!hasStarted) return
+    if (displayedText.length < text.length) {
+      const timer = setTimeout(() => {
+        setDisplayedText(text.slice(0, displayedText.length + 1))
+      }, speed)
+      return () => clearTimeout(timer)
+    } else {
+      setIsTyping(false)
+      onComplete?.()
+    }
+  }, [displayedText, text, speed, hasStarted, onComplete])
+
+  if (!hasStarted) return null
+
   return (
-    <div className={`w-96 bg-white dark:bg-stone-800 rounded-2xl shadow-xl border border-stone-200 dark:border-stone-700 overflow-hidden ${className}`}>
-      <div className="bg-[#D97757] px-5 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-            <BobotMini className="scale-90" />
+    <span>
+      {displayedText}
+      {isTyping && <span className="animate-pulse">|</span>}
+    </span>
+  )
+}
+
+// Full-sized chat widget with typing animation
+function ChatWidget({ messages, label, className = "", startDelay = 0 }) {
+  const [visibleMessages, setVisibleMessages] = useState([])
+  const [currentTyping, setCurrentTyping] = useState(0)
+
+  useEffect(() => {
+    if (currentTyping < messages.length) {
+      setVisibleMessages(prev => [...prev, currentTyping])
+    }
+  }, [currentTyping, messages.length])
+
+  const handleMessageComplete = () => {
+    setTimeout(() => {
+      setCurrentTyping(prev => prev + 1)
+    }, 300)
+  }
+
+  return (
+    <div className={`w-full max-w-96 bg-white dark:bg-stone-800 rounded-2xl shadow-xl border border-stone-200 dark:border-stone-700 overflow-hidden ${className}`}>
+      <div className="bg-[#D97757] px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-full flex items-center justify-center">
+            <BobotMini className="scale-75 sm:scale-90" />
           </div>
           <div>
-            <span className="text-white font-medium block">Bobot</span>
-            <span className="text-white/70 text-sm">Online</span>
+            <span className="text-white font-medium block text-sm sm:text-base">Bobot</span>
+            <span className="text-white/70 text-xs sm:text-sm">Online</span>
           </div>
         </div>
-        {label && <span className="bg-white/20 text-white text-sm px-3 py-1 rounded-full">{label}</span>}
+        {label && <span className="bg-white/20 text-white text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-full">{label}</span>}
       </div>
-      <div className="p-5 space-y-4 bg-stone-50 dark:bg-stone-900 min-h-[120px]">
+      <div className="p-4 sm:p-5 space-y-3 sm:space-y-4 bg-stone-50 dark:bg-stone-900 min-h-[100px] sm:min-h-[120px]">
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-              msg.from === 'user'
-                ? 'bg-[#D97757] text-white'
-                : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm'
-            }`}>
-              {msg.text}
+          visibleMessages.includes(i) && (
+            <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[85%] rounded-2xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base ${
+                msg.from === 'user'
+                  ? 'bg-[#D97757] text-white'
+                  : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm'
+              }`}>
+                <TypedText
+                  text={msg.text}
+                  delay={i === 0 ? startDelay : 0}
+                  speed={msg.from === 'bot' ? 20 : 40}
+                  onComplete={i === currentTyping ? handleMessageComplete : undefined}
+                />
+              </div>
             </div>
-          </div>
+          )
         ))}
       </div>
-      <div className="px-5 py-4 border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800">
-        <div className="flex items-center gap-3 text-stone-400">
-          <span className="flex-1 bg-stone-100 dark:bg-stone-700 rounded-full px-5 py-3">Skriv ett meddelande...</span>
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+      <div className="px-4 sm:px-5 py-3 sm:py-4 border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800">
+        <div className="flex items-center gap-2 sm:gap-3 text-stone-400">
+          <span className="flex-1 bg-stone-100 dark:bg-stone-700 rounded-full px-4 sm:px-5 py-2 sm:py-3 text-sm sm:text-base">Skriv ett meddelande...</span>
+          <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 20 20">
             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
           </svg>
         </div>
       </div>
+    </div>
+  )
+}
+
+// How it works step component
+function HowItWorksStep({ number, title, description, icon }) {
+  return (
+    <div className="flex flex-col items-center text-center p-6">
+      <div className="w-16 h-16 bg-[#D97757]/10 dark:bg-[#D97757]/20 rounded-2xl flex items-center justify-center mb-4">
+        {icon}
+      </div>
+      <div className="w-8 h-8 bg-[#D97757] text-white rounded-full flex items-center justify-center text-sm font-bold mb-3">
+        {number}
+      </div>
+      <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100 mb-2">{title}</h3>
+      <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">{description}</p>
     </div>
   )
 }
@@ -323,7 +398,7 @@ function LandingPage() {
   ]
 
   return (
-    <div ref={containerRef} className="h-screen bg-gradient-to-br from-stone-50 via-orange-50/30 to-stone-50 dark:from-stone-900 dark:via-stone-800 dark:to-stone-900 flex flex-col overflow-hidden relative">
+    <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-stone-50 via-orange-50/30 to-stone-50 dark:from-stone-900 dark:via-stone-800 dark:to-stone-900 flex flex-col relative overflow-x-hidden">
 
       {/* Sparkles - visible in both light and dark mode */}
       <Sparkle delay={0} size={3} className="top-20 left-[10%]" />
@@ -362,9 +437,9 @@ function LandingPage() {
       </div>
 
       {/* Main content */}
-      <main className="flex-1 px-6 flex items-center relative overflow-hidden">
+      <main className="flex-1 px-4 sm:px-6 py-8 lg:py-0 lg:flex lg:items-center relative">
         <div className="max-w-7xl mx-auto w-full">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
 
             {/* Left: Headline + CTA */}
             <div className={`relative transition-all duration-1000 ${contentVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
@@ -377,19 +452,24 @@ function LandingPage() {
                 </div>
               </div>
 
+              {/* Mobile mascot */}
+              <div className="flex justify-center mb-6 lg:hidden">
+                <BobotMascot size={120} mousePos={mousePos} isWaving={ctaHover} className="animate-float" />
+              </div>
+
               <div className="lg:pl-4">
-                <h1 className="text-3xl lg:text-4xl font-semibold text-stone-900 dark:text-stone-100 tracking-tight leading-tight mb-4">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-stone-900 dark:text-stone-100 tracking-tight leading-tight mb-3 sm:mb-4 text-center lg:text-left">
                   Din nya medarbetare, som alltid är där
                 </h1>
-                <p className="text-stone-600 dark:text-stone-400 mb-6 leading-relaxed">
+                <p className="text-stone-600 dark:text-stone-400 mb-4 sm:mb-6 leading-relaxed text-center lg:text-left text-sm sm:text-base">
                   Bobot svarar på frågor från kunder och anställda. Direkt, dygnet runt.
                 </p>
 
                 {/* All selling points in one compact section */}
-                <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-stone-500 dark:text-stone-400 mb-8">
+                <div className="flex flex-wrap justify-center lg:justify-start gap-x-3 sm:gap-x-4 gap-y-2 text-xs sm:text-sm text-stone-500 dark:text-stone-400 mb-6 sm:mb-8">
                   {sellingPoints.map(point => (
-                    <span key={point} className="flex items-center gap-1.5">
-                      <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
+                    <span key={point} className="flex items-center gap-1 sm:gap-1.5">
+                      <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                       {point}
@@ -398,44 +478,89 @@ function LandingPage() {
                 </div>
 
                 {/* CTA Section */}
-                <div className="p-6 bg-gradient-to-br from-[#D97757]/10 to-[#D97757]/5 dark:from-[#D97757]/20 dark:to-[#D97757]/10 rounded-2xl border border-[#D97757]/20">
-                  <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100 mb-2">
+                <div className="p-4 sm:p-6 bg-gradient-to-br from-[#D97757]/10 to-[#D97757]/5 dark:from-[#D97757]/20 dark:to-[#D97757]/10 rounded-2xl border border-[#D97757]/20">
+                  <h3 className="text-base sm:text-lg font-semibold text-stone-900 dark:text-stone-100 mb-2 text-center lg:text-left">
                     Vill du veta mer?
                   </h3>
-                  <p className="text-sm text-stone-600 dark:text-stone-400 mb-4">
+                  <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-400 mb-3 sm:mb-4 text-center lg:text-left">
                     Boka en gratis demo och se hur Bobot kan hjälpa er organisation.
                   </p>
-                  <a
-                    href="mailto:hej@bobot.nu"
-                    className="inline-flex items-center gap-2 bg-[#D97757] hover:bg-[#c4613d] text-white px-6 py-3 rounded-xl font-medium transition-all hover:scale-105 hover:shadow-xl shadow-lg shadow-[#D97757]/25"
-                    onMouseEnter={() => setCtaHover(true)}
-                    onMouseLeave={() => setCtaHover(false)}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    Kontakta oss
-                  </a>
+                  <div className="flex justify-center lg:justify-start">
+                    <a
+                      href="mailto:hej@bobot.nu"
+                      className="inline-flex items-center gap-2 bg-[#D97757] hover:bg-[#c4613d] text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium transition-all hover:scale-105 hover:shadow-xl shadow-lg shadow-[#D97757]/25 text-sm sm:text-base"
+                      onMouseEnter={() => setCtaHover(true)}
+                      onMouseLeave={() => setCtaHover(false)}
+                    >
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Kontakta oss
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Right: 2 full-size demo widgets */}
-            <div className={`flex flex-col gap-6 pt-4 transition-all duration-1000 delay-300 ${contentVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
+            <div className={`flex flex-col gap-4 sm:gap-6 pt-4 transition-all duration-1000 delay-300 ${contentVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
               <ChatWidget
                 messages={convo1}
                 label="Kund"
-                className="self-start hover:scale-[1.02] transition-transform"
+                startDelay={800}
+                className="self-center lg:self-start hover:scale-[1.02] transition-transform"
               />
               <ChatWidget
                 messages={convo2}
                 label="Anställd"
-                className="self-end hover:scale-[1.02] transition-transform"
+                startDelay={4000}
+                className="self-center lg:self-end hover:scale-[1.02] transition-transform"
               />
             </div>
           </div>
         </div>
       </main>
+
+      {/* How it works section */}
+      <section className="px-4 sm:px-6 py-12 sm:py-16 bg-white/50 dark:bg-stone-800/50 border-t border-stone-200 dark:border-stone-700">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-xl sm:text-2xl font-semibold text-stone-900 dark:text-stone-100 text-center mb-8 sm:mb-12">
+            Så fungerar det
+          </h2>
+          <div className="grid sm:grid-cols-3 gap-6 sm:gap-8">
+            <HowItWorksStep
+              number={1}
+              title="Bygg din kunskapsbank"
+              description="Lägg till frågor och svar som Bobot ska kunna besvara. Importera enkelt från Excel eller skriv direkt."
+              icon={
+                <svg className="w-8 h-8 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                </svg>
+              }
+            />
+            <HowItWorksStep
+              number={2}
+              title="Integrera på din sida"
+              description="Kopiera en enkel kodrad och klistra in på din hemsida. Klart på under 5 minuter."
+              icon={
+                <svg className="w-8 h-8 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
+                </svg>
+              }
+            />
+            <HowItWorksStep
+              number={3}
+              title="Bobot svarar åt dig"
+              description="Dina kunder och anställda får svar direkt, dygnet runt. Du följer upp via dashboarden."
+              icon={
+                <svg className="w-8 h-8 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                </svg>
+              }
+            />
+          </div>
+        </div>
+      </section>
 
       {/* Footer with email */}
       <footer className="px-6 py-4 shrink-0 relative z-10 border-t border-stone-200 dark:border-stone-800">
