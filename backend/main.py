@@ -4461,20 +4461,37 @@ async def get_analytics(
     answer_rate = (total_answered / (total_answered + total_unanswered) * 100) if (total_answered + total_unanswered) > 0 else 100
 
     # Daily breakdown (senaste 30 dagarna)
-    daily_stats_list = []
+    daily_stats_dict = {}
     month_stats = db.query(DailyStatistics).filter(
         DailyStatistics.company_id == company_id,
         DailyStatistics.date >= month_ago
     ).order_by(DailyStatistics.date.asc()).all()
 
     for s in month_stats:
-        daily_stats_list.append({
+        daily_stats_dict[s.date.isoformat()] = {
             "date": s.date.isoformat(),
             "conversations": s.total_conversations,
             "messages": s.total_messages,
             "answered": s.questions_answered,
             "unanswered": s.questions_unanswered
-        })
+        }
+
+    # Add active conversations to daily stats
+    for conv in active_convs:
+        conv_date = conv.started_at.date().isoformat()
+        if conv_date not in daily_stats_dict:
+            daily_stats_dict[conv_date] = {
+                "date": conv_date,
+                "conversations": 0,
+                "messages": 0,
+                "answered": 0,
+                "unanswered": 0
+            }
+        daily_stats_dict[conv_date]["conversations"] += 1
+        daily_stats_dict[conv_date]["messages"] += conv.message_count or 0
+
+    # Convert to sorted list
+    daily_stats_list = [daily_stats_dict[d] for d in sorted(daily_stats_dict.keys())]
 
     # Merge historical stats
     for s in stats:
