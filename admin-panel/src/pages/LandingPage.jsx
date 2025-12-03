@@ -296,13 +296,37 @@ function DemoWidget() {
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
 
-  const demoResponses = [
-    'Det låter som en bra fråga! I en riktig implementation skulle jag söka igenom er kunskapsbas för att ge ett precist svar.',
-    'Absolut! Med Bobot kan ni bygga en egen kunskapsbas med era vanligaste frågor och svar.',
-    'Jag kan hjälpa era kunder dygnet runt, på svenska, engelska och arabiska!',
-    'Det här är bara en demo - i den riktiga versionen kan jag svara på allt ni lär mig!',
-    'Bra att du frågar! Kontakta oss på hej@bobot.nu för att komma igång.'
-  ]
+  // Smart demo responses based on keywords
+  const getSmartResponse = (userMsg) => {
+    const msg = userMsg.toLowerCase()
+
+    if (msg.includes('pris') || msg.includes('kost') || msg.includes('betala')) {
+      return 'Våra priser börjar från 1 500 kr/månad. Scrolla ner för att se alla paket, eller kontakta oss för en skräddarsydd offert!'
+    }
+    if (msg.includes('gdpr') || msg.includes('säker') || msg.includes('data')) {
+      return 'Absolut! Bobot är 100% GDPR-kompatibel. All data lagras inom EU och raderas automatiskt efter din valda tidsperiod (7-30 dagar).'
+    }
+    if (msg.includes('språk') || msg.includes('engelska') || msg.includes('arabiska')) {
+      return 'Bobot stöder svenska, engelska och arabiska - inklusive höger-till-vänster-stöd för arabiska! Språket väljs automatiskt.'
+    }
+    if (msg.includes('integrer') || msg.includes('install') || msg.includes('wordpress') || msg.includes('hemsida')) {
+      return 'Super enkelt! Det är bara två rader JavaScript-kod att klistra in. Fungerar med WordPress, Wix, Squarespace och alla andra plattformar.'
+    }
+    if (msg.includes('demo') || msg.includes('test') || msg.includes('prova')) {
+      return 'Du pratar med demon just nu! 😊 För en fullständig demo med er egen kunskapsbas, kontakta oss på hej@bobot.nu.'
+    }
+    if (msg.includes('hej') || msg.includes('hejsan') || msg.includes('tjena')) {
+      return 'Hej! Kul att du vill veta mer om Bobot. Ställ gärna frågor om priser, funktioner eller hur det fungerar!'
+    }
+
+    // Default responses
+    const defaults = [
+      'Bra fråga! I en riktig Bobot-installation skulle jag söka igenom er kunskapsbas och ge ett precist svar baserat på era egna dokument.',
+      'Det kan jag tyvärr inte svara på i demon. Men med den riktiga Bobot kan ni träna mig på precis det ni behöver!',
+      'Intressant fråga! Kontakta oss på hej@bobot.nu så berättar vi mer om hur Bobot kan hjälpa er.',
+    ]
+    return defaults[Math.floor(Math.random() * defaults.length)]
+  }
 
   const handleSend = () => {
     if (!input.trim() || isTyping) return
@@ -312,10 +336,10 @@ function DemoWidget() {
     setIsTyping(true)
 
     setTimeout(() => {
-      const response = demoResponses[Math.floor(Math.random() * demoResponses.length)]
+      const response = getSmartResponse(userMsg)
       setMessages(prev => [...prev, { type: 'bot', text: response }])
       setIsTyping(false)
-    }, 1000 + Math.random() * 1000)
+    }, 800 + Math.random() * 700)
   }
 
   return (
@@ -562,16 +586,6 @@ function ScrollIndicator({ onClick }) {
         <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
       </svg>
     </button>
-  )
-}
-
-function SectionDots({ currentSection, totalSections, onNavigate }) {
-  return (
-    <div className="fixed right-6 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-3">
-      {Array.from({ length: totalSections }).map((_, i) => (
-        <button key={i} onClick={() => onNavigate(i)} className={`w-3 h-3 rounded-full transition-all duration-300 ${currentSection === i ? 'bg-[#D97757] scale-125' : 'bg-stone-300 dark:bg-stone-600 hover:bg-stone-400 dark:hover:bg-stone-500'}`} aria-label={`Gå till sektion ${i + 1}`} />
-      ))}
-    </div>
   )
 }
 
@@ -850,9 +864,9 @@ function LandingPage() {
         </div>
       </nav>
 
-      <div className="fixed top-0 right-6 z-50"><HangingMascot mousePos={mousePos} isVisible={loginHover} /></div>
+      {/* Hanging mascot positioned near login button */}
+      <div className="fixed top-0 right-[90px] z-50"><HangingMascot mousePos={mousePos} isVisible={loginHover} /></div>
       <PeekingMascot mousePos={mousePos} isVisible={currentSection === 2} />
-      <SectionDots currentSection={currentSection} totalSections={totalSections} onNavigate={navigateToSection} />
 
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-10">
         <Sparkle delay={0} size={3} className="top-20 left-[10%]" />
