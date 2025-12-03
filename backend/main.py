@@ -4491,7 +4491,11 @@ async def get_analytics(
                 "unanswered": 0
             }
         daily_stats_dict[conv_date]["conversations"] += 1
-        daily_stats_dict[conv_date]["messages"] += conv.message_count or 0
+        # Use message_count if available, otherwise count actual messages
+        msg_count = conv.message_count or 0
+        if msg_count == 0:
+            msg_count = db.query(Message).filter(Message.conversation_id == conv.id).count()
+        daily_stats_dict[conv_date]["messages"] += msg_count
 
     # Convert to sorted list
     daily_stats_list = [daily_stats_dict[d] for d in sorted(daily_stats_dict.keys())]
