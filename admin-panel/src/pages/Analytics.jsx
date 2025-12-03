@@ -315,35 +315,49 @@ function Analytics() {
       {analytics.daily_stats && analytics.daily_stats.length > 0 && (
         <div className="card mb-8">
           <h3 className="text-lg font-medium text-text-primary mb-4">Senaste 30 dagarna</h3>
-          <div className="h-40 flex items-end gap-[3px]">
-            {analytics.daily_stats.map((day, index) => {
-              const barHeight = maxMessages > 0 ? (day.messages / maxMessages) * 100 : 0
-              return (
-                <div
-                  key={index}
-                  className="flex-1 flex flex-col items-center group relative"
-                >
-                  {/* Tooltip */}
-                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-text-primary text-bg-primary text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
-                    {new Date(day.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}
-                    <br />
-                    {day.messages} meddelanden
+          {maxMessages === 0 ? (
+            <div className="h-40 flex items-center justify-center">
+              <div className="text-center">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary mx-auto mb-2">
+                  <line x1="18" y1="20" x2="18" y2="10" />
+                  <line x1="12" y1="20" x2="12" y2="4" />
+                  <line x1="6" y1="20" x2="6" y2="14" />
+                </svg>
+                <p className="text-text-tertiary text-sm">Ingen aktivitet ännu</p>
+                <p className="text-text-tertiary text-xs mt-1">Data visas när konversationer startar</p>
+              </div>
+            </div>
+          ) : (
+            <div className="h-40 flex items-end gap-[3px]">
+              {analytics.daily_stats.map((day, index) => {
+                const barHeight = maxMessages > 0 ? (day.messages / maxMessages) * 100 : 0
+                return (
+                  <div
+                    key={index}
+                    className="flex-1 flex flex-col items-center group relative"
+                  >
+                    {/* Tooltip */}
+                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-text-primary text-bg-primary text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                      {new Date(day.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}
+                      <br />
+                      {day.messages} meddelanden
+                    </div>
+                    {/* Bar container */}
+                    <div className="w-full h-full flex items-end">
+                      <div
+                        className={`w-full rounded-t transition-all cursor-pointer ${
+                          day.messages > 0 ? 'bg-accent hover:bg-accent/80' : 'bg-border-subtle'
+                        }`}
+                        style={{
+                          height: day.messages > 0 ? `${Math.max(barHeight, 5)}%` : '4px'
+                        }}
+                      />
+                    </div>
                   </div>
-                  {/* Bar container */}
-                  <div className="w-full h-full flex items-end">
-                    <div
-                      className={`w-full rounded-t transition-all cursor-pointer ${
-                        day.messages > 0 ? 'bg-accent hover:bg-accent/80' : 'bg-bg-tertiary'
-                      }`}
-                      style={{
-                        height: day.messages > 0 ? `${Math.max(barHeight, 3)}%` : '2px'
-                      }}
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          )}
           <div className="flex justify-between mt-2 text-xs text-text-tertiary">
             <span>30 dagar sedan</span>
             <span>Idag</span>

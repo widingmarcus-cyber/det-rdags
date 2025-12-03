@@ -285,38 +285,52 @@ function Dashboard() {
               </div>
             </div>
           </div>
-          <div className="h-32 flex items-end gap-1">
-            {dailyStats.map((day, i) => {
-              const maxQuestions = Math.max(...dailyStats.map(d => d.questions || 0), 1)
-              const questionHeight = Math.max(((day.questions || 0) / maxQuestions) * 100, 0)
-              const date = new Date(day.date)
-              const dayNum = date.getDate()
-              const isWeekend = date.getDay() === 0 || date.getDay() === 6
+          {dailyStats.every(d => !d.questions || d.questions === 0) ? (
+            <div className="h-32 flex items-center justify-center">
+              <div className="text-center">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary mx-auto mb-2">
+                  <line x1="18" y1="20" x2="18" y2="10" />
+                  <line x1="12" y1="20" x2="12" y2="4" />
+                  <line x1="6" y1="20" x2="6" y2="14" />
+                </svg>
+                <p className="text-text-tertiary text-sm">Ingen aktivitet ännu</p>
+                <p className="text-text-tertiary text-xs mt-1">Data visas när konversationer startar</p>
+              </div>
+            </div>
+          ) : (
+            <div className="h-32 flex items-end gap-1">
+              {dailyStats.map((day, i) => {
+                const maxQuestions = Math.max(...dailyStats.map(d => d.questions || 0), 1)
+                const questionHeight = Math.max(((day.questions || 0) / maxQuestions) * 100, 0)
+                const date = new Date(day.date)
+                const dayNum = date.getDate()
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6
 
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center group" title={`${date.toLocaleDateString('sv-SE')}: ${day.questions || 0} konversationer`}>
-                  <div className="w-full h-24 flex items-end">
-                    <div
-                      className={`w-full rounded-t transition-all ${
-                        day.questions > 0
-                          ? 'bg-accent hover:bg-accent/80'
-                          : 'bg-bg-secondary'
-                      }`}
-                      style={{ height: day.questions > 0 ? `${Math.max(questionHeight, 4)}%` : '2px' }}
-                    />
+                return (
+                  <div key={i} className="flex-1 flex flex-col items-center group" title={`${date.toLocaleDateString('sv-SE')}: ${day.questions || 0} konversationer`}>
+                    <div className="w-full h-24 flex items-end">
+                      <div
+                        className={`w-full rounded-t transition-all ${
+                          day.questions > 0
+                            ? 'bg-accent hover:bg-accent/80'
+                            : 'bg-border-subtle'
+                        }`}
+                        style={{ height: day.questions > 0 ? `${Math.max(questionHeight, 8)}%` : '4px' }}
+                      />
+                    </div>
+                    {chartPeriod === 7 && (
+                      <span className={`text-xs mt-1 ${isWeekend ? 'text-text-tertiary' : 'text-text-secondary'}`}>
+                        {date.toLocaleDateString('sv-SE', { weekday: 'short' })}
+                      </span>
+                    )}
+                    {chartPeriod === 30 && i % 5 === 0 && (
+                      <span className="text-xs text-text-tertiary mt-1">{dayNum}</span>
+                    )}
                   </div>
-                  {chartPeriod === 7 && (
-                    <span className={`text-xs mt-1 ${isWeekend ? 'text-text-tertiary' : 'text-text-secondary'}`}>
-                      {date.toLocaleDateString('sv-SE', { weekday: 'short' })}
-                    </span>
-                  )}
-                  {chartPeriod === 30 && i % 5 === 0 && (
-                    <span className="text-xs text-text-tertiary mt-1">{dayNum}</span>
-                  )}
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
