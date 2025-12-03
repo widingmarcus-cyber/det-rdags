@@ -15,9 +15,7 @@ function Dashboard() {
     answerRate: 0
   })
   const [dailyStats, setDailyStats] = useState([])
-  const [allDailyStats, setAllDailyStats] = useState([])
   const [loading, setLoading] = useState(true)
-  const [chartPeriod, setChartPeriod] = useState(7) // 7 or 30 days
   const [usage, setUsage] = useState(null)
 
   useEffect(() => {
@@ -52,9 +50,7 @@ function Dashboard() {
       const response = await authFetch(`${API_BASE}/analytics`)
       if (response.ok) {
         const data = await response.json()
-        const allStats = data.daily_stats || []
-        setAllDailyStats(allStats)
-        setDailyStats(allStats.slice(-7))
+        setDailyStats(data.daily_stats || [])
       }
     } catch (error) {
       console.error('Kunde inte hämta analytics:', error)
@@ -72,10 +68,6 @@ function Dashboard() {
       console.error('Kunde inte hämta användning:', error)
     }
   }
-
-  useEffect(() => {
-    setDailyStats(allDailyStats.slice(-chartPeriod))
-  }, [chartPeriod, allDailyStats])
 
   const StatCard = ({ title, value, icon, trend }) => (
     <div className="card group hover:shadow-md">
@@ -254,85 +246,57 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Activity Chart */}
-      {dailyStats.length > 0 && (
-        <div className="card mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-text-primary">
-              Aktivitet senaste {chartPeriod} dagarna
-            </h2>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-4 text-xs text-text-tertiary">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-accent"></span> Konversationer
-                </span>
-              </div>
-              <div className="flex rounded-lg bg-bg-secondary p-1">
-                <button
-                  onClick={() => setChartPeriod(7)}
-                  className={`px-3 py-1 text-xs rounded-md transition-colors ${chartPeriod === 7 ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary'}`}
-                  aria-pressed={chartPeriod === 7}
-                >
-                  7 dagar
-                </button>
-                <button
-                  onClick={() => setChartPeriod(30)}
-                  className={`px-3 py-1 text-xs rounded-md transition-colors ${chartPeriod === 30 ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary'}`}
-                  aria-pressed={chartPeriod === 30}
-                >
-                  30 dagar
-                </button>
-              </div>
-            </div>
-          </div>
-          {dailyStats.every(d => !d.messages || d.messages === 0) ? (
-            <div className="h-32 flex items-center justify-center">
-              <div className="text-center">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary mx-auto mb-2">
-                  <line x1="18" y1="20" x2="18" y2="10" />
-                  <line x1="12" y1="20" x2="12" y2="4" />
-                  <line x1="6" y1="20" x2="6" y2="14" />
-                </svg>
-                <p className="text-text-tertiary text-sm">Ingen aktivitet ännu</p>
-                <p className="text-text-tertiary text-xs mt-1">Data visas när konversationer startar</p>
-              </div>
-            </div>
-          ) : (
-            <div className="h-32 flex items-end gap-1">
-              {dailyStats.map((day, i) => {
-                const maxMessages = Math.max(...dailyStats.map(d => d.messages || 0), 1)
-                const barHeight = Math.max(((day.messages || 0) / maxMessages) * 100, 0)
-                const date = new Date(day.date)
-                const dayNum = date.getDate()
-                const isWeekend = date.getDay() === 0 || date.getDay() === 6
-
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center group" title={`${date.toLocaleDateString('sv-SE')}: ${day.messages || 0} konversationer`}>
-                    <div className="w-full h-24 flex items-end">
-                      <div
-                        className={`w-full rounded-t transition-all ${
-                          day.messages > 0
-                            ? 'bg-accent hover:bg-accent/80'
-                            : 'bg-border-subtle'
-                        }`}
-                        style={{ height: day.messages > 0 ? `${Math.max(barHeight, 8)}%` : '4px' }}
-                      />
-                    </div>
-                    {chartPeriod === 7 && (
-                      <span className={`text-xs mt-1 ${isWeekend ? 'text-text-tertiary' : 'text-text-secondary'}`}>
-                        {date.toLocaleDateString('sv-SE', { weekday: 'short' })}
-                      </span>
-                    )}
-                    {chartPeriod === 30 && i % 5 === 0 && (
-                      <span className="text-xs text-text-tertiary mt-1">{dayNum}</span>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
+      {/* Recent Activity */}
+      <div className="card mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-medium text-text-primary">Senaste aktivitet</h2>
+          <Link to="/analytics" className="text-sm text-accent hover:underline">
+            Se all statistik →
+          </Link>
         </div>
-      )}
+        {dailyStats.length === 0 || dailyStats.every(d => !d.messages && !d.conversations) ? (
+          <div className="py-8 text-center">
+            <div className="w-12 h-12 bg-bg-secondary rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </div>
+            <p className="text-text-secondary text-sm">Inga konversationer ännu</p>
+            <p className="text-text-tertiary text-xs mt-1">Aktivitet visas här när kunder börjar chatta</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {dailyStats.slice(-7).reverse().map((day, i) => {
+              const date = new Date(day.date)
+              const isToday = new Date().toDateString() === date.toDateString()
+              const count = day.messages || day.conversations || 0
+              return (
+                <div key={i} className="flex items-center justify-between py-2 border-b border-border-subtle last:border-0">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-medium ${isToday ? 'bg-accent text-white' : 'bg-bg-secondary text-text-secondary'}`}>
+                      {date.getDate()}
+                    </div>
+                    <div>
+                      <p className="text-sm text-text-primary">
+                        {isToday ? 'Idag' : date.toLocaleDateString('sv-SE', { weekday: 'long' })}
+                      </p>
+                      <p className="text-xs text-text-tertiary">
+                        {date.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-lg font-semibold ${count > 0 ? 'text-text-primary' : 'text-text-tertiary'}`}>
+                      {count}
+                    </p>
+                    <p className="text-xs text-text-tertiary">konversationer</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Actions Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -354,6 +318,25 @@ function Dashboard() {
               <div>
                 <p className="font-medium text-text-primary">Se statistik</p>
                 <p className="text-sm text-text-secondary">Detaljerad analys och rapporter</p>
+              </div>
+            </Link>
+            <Link
+              to="/analytics"
+              state={{ downloadKpi: true }}
+              className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all duration-150 group"
+            >
+              <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium text-text-primary">KPI-rapport</p>
+                <p className="text-sm text-text-secondary">Ladda ner sammanställd statistik</p>
               </div>
             </Link>
             <Link
