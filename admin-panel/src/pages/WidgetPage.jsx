@@ -21,6 +21,7 @@ function WidgetPage({ widgetType }) {
     fallback_message: 'Tyvärr kunde jag inte hitta ett svar på din fråga.',
     subtitle: 'Alltid redo att hjälpa',
     language: 'sv',
+    tone: '',  // professional, collegial, casual - empty means use widget_type default
     // Per-widget contact info
     display_name: '',
     contact_email: '',
@@ -137,6 +138,7 @@ function WidgetPage({ widgetType }) {
             fallback_message: existingWidget.fallback_message || 'Tyvärr kunde jag inte hitta ett svar.',
             subtitle: existingWidget.subtitle || 'Alltid redo att hjälpa',
             language: existingWidget.language || 'sv',
+            tone: existingWidget.tone || '',
             // Per-widget contact info
             display_name: existingWidget.display_name || '',
             contact_email: existingWidget.contact_email || '',
@@ -178,7 +180,8 @@ function WidgetPage({ widgetType }) {
           welcome_message: defaultWelcome,
           fallback_message: 'Tyvärr kunde jag inte hitta ett svar på din fråga.',
           subtitle: 'Alltid redo att hjälpa',
-          language: 'sv'
+          language: 'sv',
+          tone: ''  // Use widget_type default
         })
       })
 
@@ -193,6 +196,7 @@ function WidgetPage({ widgetType }) {
           fallback_message: newWidget.fallback_message,
           subtitle: newWidget.subtitle,
           language: newWidget.language,
+          tone: newWidget.tone || '',
           display_name: newWidget.display_name || '',
           contact_email: newWidget.contact_email || '',
           contact_phone: newWidget.contact_phone || '',
@@ -695,6 +699,50 @@ function WidgetPage({ widgetType }) {
                     placeholder="Tyvärr kunde jag inte hitta ett svar..."
                   />
                   <p className="text-xs text-text-tertiary mt-1">Visas när AI:n inte hittar svar. Kan inkludera kontaktinfo.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">AI-ton</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, tone: '' })}
+                      className={`p-3 rounded-lg border-2 transition-all text-left ${
+                        !formData.tone
+                          ? 'border-accent bg-accent-soft'
+                          : 'border-border-subtle hover:border-accent/50'
+                      }`}
+                    >
+                      <div className="font-medium text-text-primary text-sm">Standard</div>
+                      <p className="text-xs text-text-tertiary mt-0.5">
+                        {isExternal ? 'Professionell & vänlig' : 'Som en kollega'}
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, tone: 'collegial' })}
+                      className={`p-3 rounded-lg border-2 transition-all text-left ${
+                        formData.tone === 'collegial'
+                          ? 'border-accent bg-accent-soft'
+                          : 'border-border-subtle hover:border-accent/50'
+                      }`}
+                    >
+                      <div className="font-medium text-text-primary text-sm">Kollegial</div>
+                      <p className="text-xs text-text-tertiary mt-0.5">Varm & hjälpsam kollega</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, tone: 'casual' })}
+                      className={`p-3 rounded-lg border-2 transition-all text-left ${
+                        formData.tone === 'casual'
+                          ? 'border-accent bg-accent-soft'
+                          : 'border-border-subtle hover:border-accent/50'
+                      }`}
+                    >
+                      <div className="font-medium text-text-primary text-sm">Avslappnad</div>
+                      <p className="text-xs text-text-tertiary mt-0.5">Som en kompis</p>
+                    </button>
+                  </div>
+                  <p className="text-xs text-text-tertiary mt-2">Påverkar hur AI:n formulerar sina svar - från professionell till mer personlig ton.</p>
                 </div>
               </div>
             </div>

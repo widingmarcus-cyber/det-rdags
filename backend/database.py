@@ -119,6 +119,7 @@ class Widget(Base):
 
     # Widget-specific settings
     language = Column(String, default="sv")  # sv, en, ar
+    tone = Column(String, default="")  # professional, collegial, casual - empty means use widget_type default
     suggested_questions = Column(Text, default="")  # JSON array
 
     # GDPR/Consent for this widget

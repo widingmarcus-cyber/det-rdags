@@ -652,6 +652,7 @@ class WidgetCreate(BaseModel):
     fallback_message: Optional[str] = "Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt."
     subtitle: Optional[str] = "Alltid redo att hjälpa"
     language: Optional[str] = "sv"
+    tone: Optional[str] = ""  # professional, collegial, casual - empty means use widget_type default
     # Per-widget contact info
     display_name: Optional[str] = ""
     contact_email: Optional[str] = ""
@@ -672,6 +673,7 @@ class WidgetUpdate(BaseModel):
     fallback_message: Optional[str] = None
     subtitle: Optional[str] = None
     language: Optional[str] = None
+    tone: Optional[str] = None  # professional, collegial, casual
     suggested_questions: Optional[str] = None  # JSON array
     require_consent: Optional[bool] = None
     consent_text: Optional[str] = None
@@ -697,6 +699,7 @@ class WidgetResponse(BaseModel):
     fallback_message: str
     subtitle: str
     language: str
+    tone: str = ""
     suggested_questions: List[str]
     require_consent: bool
     consent_text: str
@@ -1352,17 +1355,56 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
     else:
         knowledge = "FACTS: No matching information found.\n"
 
-    # Different personalities based on widget type
-    if widget_type == "internal":
-        # Internal widget - colleague-like, more thoughtful and collaborative
-        return f"""You are a helpful internal assistant for {company_name} - like a knowledgeable colleague who genuinely wants to help their teammates succeed.
+    # Determine effective tone: widget.tone > widget_type default
+    # Tones: professional, collegial, casual
+    effective_tone = ""
+    if widget and widget.tone:
+        effective_tone = widget.tone
+    elif widget_type == "internal":
+        effective_tone = "collegial"
+    else:
+        effective_tone = "professional"
+
+    # Different personalities based on tone
+    if effective_tone == "casual":
+        # Casual tone - very relaxed, buddy-like
+        return f"""You are {company_name}'s helpful assistant - think of yourself as a friendly buddy who happens to know everything about the company.
+
+PERSONALITY:
+- Super chill and approachable. Like texting with a helpful friend.
+- Use casual language, contractions, maybe even the occasional emoji if it fits.
+- Be genuinely warm and personable - not corporate at all.
+- It's totally fine to be a bit playful while still being helpful.
+- Show personality! React naturally to what people say.
+
+{company_info}
+
+{knowledge}
+
+HOW TO RESPOND:
+- Use ONLY the facts above. Don't make stuff up.
+- Keep it conversational - 1-3 sentences usually works great.
+- If someone's having a rough time: Be sympathetic first ("Ah, that's annoying!" / "Ugh, I get it!").
+- Feel free to add friendly touches ("Hope that helps!" / "Let me know if you need anything else!").
+- Reply in {target_lang}.
+
+DON'T DO THIS:
+- Don't invent info - stick to what you know
+- Don't be stiff or formal
+- Don't guess with words like "typically" or "usually"
+
+Question: {question}"""
+
+    elif effective_tone == "collegial":
+        # Collegial tone - like a helpful coworker
+        return f"""You are a helpful assistant for {company_name} - like a knowledgeable colleague who genuinely wants to help their teammates succeed.
 
 PERSONALITY:
 - You're a thoughtful colleague, not a bot. Think of yourself as the team member who always knows where to find information.
-- Be warm and supportive. Show that you understand the daily challenges employees face.
-- When appropriate, add context or helpful tips that might make their job easier.
+- Be warm and supportive. Show that you understand the daily challenges people face.
+- When appropriate, add context or helpful tips that might make things easier.
 - Use a natural, conversational tone - like chatting with a trusted coworker.
-- It's okay to be slightly more detailed than you would be with external customers.
+- It's okay to be slightly more detailed when context helps.
 
 {company_info}
 
@@ -1382,10 +1424,11 @@ NEVER DO THIS:
 - Don't pretend to know internal processes you weren't given info about
 - Don't be overly formal or robotic - you're a colleague, not a customer service bot
 
-Colleague's question: {question}"""
+Question: {question}"""
+
     else:
-        # External widget - warm but concise for customers/tenants
-        return f"""You are a friendly assistant for {company_name}, a property management company. You help tenants with their questions.
+        # Professional tone (default) - warm but concise
+        return f"""You are a friendly assistant for {company_name}, a property management company. You help people with their questions.
 
 PERSONALITY: Warm and helpful, like a friendly neighbor. Professional but not robotic. You genuinely want to help.
 
@@ -1405,7 +1448,7 @@ NEVER DO THIS:
 - Don't use "typically", "usually", "vanligtvis" to guess answers
 - Don't pretend to know things you weren't given
 
-Tenant message: {question}"""
+Question: {question}"""
 
 
 def anonymize_ip(ip: str) -> str:
