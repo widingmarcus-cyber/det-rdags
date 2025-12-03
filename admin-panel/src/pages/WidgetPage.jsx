@@ -561,11 +561,6 @@ function WidgetPage({ widgetType }) {
           <button onClick={() => setError('')} className="text-error hover:text-error/80">&times;</button>
         </div>
       )}
-      {success && (
-        <div className="bg-success/10 border border-success/20 text-success px-4 py-3 rounded-lg mb-4">
-          {success}
-        </div>
-      )}
 
       {/* Tabs */}
       <div className="border-b border-border-subtle mb-6">
@@ -605,8 +600,7 @@ function WidgetPage({ widgetType }) {
 
       {/* Settings Tab */}
       {activeTab === 'settings' && (
-        <div className="grid lg:grid-cols-[1fr,380px] gap-6">
-          {/* Settings Form */}
+        <div className="space-y-6">
           <form onSubmit={handleSaveSettings} className="space-y-6">
             {/* Contact Info Section */}
             <div className="card p-6">
@@ -697,106 +691,307 @@ function WidgetPage({ widgetType }) {
               </div>
             </div>
 
-            {/* Appearance Section */}
-            <div className="card p-6">
-              <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10" />
-                  <circle cx="12" cy="12" r="4" />
-                  <line x1="4.93" y1="4.93" x2="9.17" y2="9.17" />
-                  <line x1="14.83" y1="14.83" x2="19.07" y2="19.07" />
-                  <line x1="14.83" y1="9.17" x2="19.07" y2="4.93" />
-                  <line x1="4.93" y1="19.07" x2="9.17" y2="14.83" />
-                </svg>
-                Utseende
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1">Primärfärg</label>
-                  <div className="flex gap-2 max-w-xs">
-                    <input
-                      type="color"
-                      value={formData.primary_color}
-                      onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
-                      className="w-10 h-10 rounded cursor-pointer border border-border-subtle"
-                    />
-                    <input
-                      type="text"
-                      value={formData.primary_color}
-                      onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
-                      className="input flex-1"
-                    />
+            {/* Appearance Section with Preview */}
+            <div className="grid lg:grid-cols-[1fr,400px] gap-6">
+              {/* Appearance Settings */}
+              <div className="card p-6">
+                <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <circle cx="12" cy="12" r="4" />
+                    <line x1="4.93" y1="4.93" x2="9.17" y2="9.17" />
+                    <line x1="14.83" y1="14.83" x2="19.07" y2="19.07" />
+                    <line x1="14.83" y1="9.17" x2="19.07" y2="4.93" />
+                    <line x1="4.93" y1="19.07" x2="9.17" y2="14.83" />
+                  </svg>
+                  Utseende
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-1">Primärfärg</label>
+                    <div className="flex gap-2 max-w-xs">
+                      <input
+                        type="color"
+                        value={formData.primary_color}
+                        onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
+                        className="w-10 h-10 rounded cursor-pointer border border-border-subtle"
+                      />
+                      <input
+                        type="text"
+                        value={formData.primary_color}
+                        onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
+                        className="input flex-1"
+                      />
+                    </div>
+                    <p className="text-xs text-text-tertiary mt-1">Accentfärg för knappar och header</p>
                   </div>
-                  <p className="text-xs text-text-tertiary mt-1">Accentfärg för knappar och header</p>
-                </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-1">Typsnitt</label>
-                    <select
-                      value={formData.widget_font_family}
-                      onChange={(e) => setFormData({ ...formData, widget_font_family: e.target.value })}
-                      className="input w-full"
-                    >
-                      <option value="Inter">Inter (standard)</option>
-                      <option value="system-ui">System UI</option>
-                      <option value="Roboto">Roboto</option>
-                      <option value="Open Sans">Open Sans</option>
-                      <option value="Lato">Lato</option>
-                      <option value="Nunito">Nunito</option>
-                      <option value="Poppins">Poppins</option>
-                      <option value="Source Sans Pro">Source Sans Pro</option>
-                    </select>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">Typsnitt</label>
+                      <select
+                        value={formData.widget_font_family}
+                        onChange={(e) => setFormData({ ...formData, widget_font_family: e.target.value })}
+                        className="input w-full"
+                      >
+                        <option value="Inter">Inter (standard)</option>
+                        <option value="system-ui">System UI</option>
+                        <option value="Roboto">Roboto</option>
+                        <option value="Open Sans">Open Sans</option>
+                        <option value="Lato">Lato</option>
+                        <option value="Nunito">Nunito</option>
+                        <option value="Poppins">Poppins</option>
+                        <option value="Source Sans Pro">Source Sans Pro</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">
+                        Textstorlek: {formData.widget_font_size}px
+                      </label>
+                      <input
+                        type="range"
+                        min="12"
+                        max="18"
+                        value={formData.widget_font_size}
+                        onChange={(e) => setFormData({ ...formData, widget_font_size: parseInt(e.target.value) })}
+                        className="w-full h-2 bg-bg-tertiary rounded-lg appearance-none cursor-pointer accent-accent"
+                      />
+                      <div className="flex justify-between text-xs text-text-tertiary mt-1">
+                        <span>Liten</span>
+                        <span>Stor</span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-1">
-                      Textstorlek: {formData.widget_font_size}px
-                    </label>
-                    <input
-                      type="range"
-                      min="12"
-                      max="18"
-                      value={formData.widget_font_size}
-                      onChange={(e) => setFormData({ ...formData, widget_font_size: parseInt(e.target.value) })}
-                      className="w-full h-2 bg-bg-tertiary rounded-lg appearance-none cursor-pointer accent-accent"
-                    />
-                    <div className="flex justify-between text-xs text-text-tertiary mt-1">
-                      <span>Liten</span>
-                      <span>Stor</span>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">
+                        Hörnradie: {formData.widget_border_radius}px
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="24"
+                        value={formData.widget_border_radius}
+                        onChange={(e) => setFormData({ ...formData, widget_border_radius: parseInt(e.target.value) })}
+                        className="w-full h-2 bg-bg-tertiary rounded-lg appearance-none cursor-pointer accent-accent"
+                      />
+                      <div className="flex justify-between text-xs text-text-tertiary mt-1">
+                        <span>Kantig</span>
+                        <span>Rund</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">Widgetposition</label>
+                      <select
+                        value={formData.widget_position}
+                        onChange={(e) => setFormData({ ...formData, widget_position: e.target.value })}
+                        className="input w-full"
+                      >
+                        <option value="bottom-right">Nedre högra hörnet</option>
+                        <option value="bottom-left">Nedre vänstra hörnet</option>
+                      </select>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-1">
-                      Hörnradie: {formData.widget_border_radius}px
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="24"
-                      value={formData.widget_border_radius}
-                      onChange={(e) => setFormData({ ...formData, widget_border_radius: parseInt(e.target.value) })}
-                      className="w-full h-2 bg-bg-tertiary rounded-lg appearance-none cursor-pointer accent-accent"
-                    />
-                    <div className="flex justify-between text-xs text-text-tertiary mt-1">
-                      <span>Kantig</span>
-                      <span>Rund</span>
-                    </div>
+              {/* Live Preview */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-text-primary">Förhandsgranskning</span>
+                    <div className={`w-2 h-2 rounded-full ${healthStatus?.ollama === 'connected' ? 'bg-success animate-pulse' : 'bg-warning'}`} title={healthStatus?.ollama === 'connected' ? 'AI redo' : 'AI ej ansluten'} />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-1">Widgetposition</label>
-                    <select
-                      value={formData.widget_position}
-                      onChange={(e) => setFormData({ ...formData, widget_position: e.target.value })}
-                      className="input w-full"
-                    >
-                      <option value="bottom-right">Nedre högra hörnet</option>
-                      <option value="bottom-left">Nedre vänstra hörnet</option>
-                    </select>
+                  <div className="flex gap-1">
+                    <button type="button" onClick={() => setDarkMode(!darkMode)} className="p-1.5 rounded hover:bg-bg-secondary transition-colors" title={darkMode ? 'Ljust läge' : 'Mörkt läge'}>
+                      {darkMode ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                      )}
+                    </button>
+                    <button type="button" onClick={resetPreview} className="p-1.5 rounded hover:bg-bg-secondary transition-colors" title="Börja om">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                    </button>
                   </div>
                 </div>
+
+                {/* Redesigned Widget Preview - Warm Earthy Style */}
+                <div
+                  className="overflow-hidden"
+                  style={{
+                    borderRadius: `${formData.widget_border_radius}px`,
+                    fontFamily: `'${formData.widget_font_family}', system-ui, sans-serif`,
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05)'
+                  }}
+                >
+                  {/* Header with Bobot mascot */}
+                  <div
+                    className="px-4 py-3.5"
+                    style={{
+                      background: `linear-gradient(145deg, ${formData.primary_color} 0%, ${adjustColor(formData.primary_color, -30)} 100%)`,
+                      borderBottom: `1px solid ${adjustColor(formData.primary_color, -40)}`
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* Mini Bobot Mascot */}
+                      <div className="relative">
+                        <svg width="40" height="40" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-sm">
+                          {/* Feet */}
+                          <rect x="25" y="95" width="30" height="12" rx="6" fill="rgba(255,255,255,0.2)" />
+                          <rect x="65" y="95" width="30" height="12" rx="6" fill="rgba(255,255,255,0.2)" />
+                          {/* Body */}
+                          <rect x="30" y="55" width="60" height="42" rx="4" fill="rgba(255,255,255,0.95)" />
+                          <rect x="36" y="75" width="20" height="16" rx="2" fill={formData.primary_color} opacity="0.3" />
+                          <rect x="64" y="75" width="20" height="16" rx="2" fill={formData.primary_color} opacity="0.3" />
+                          {/* Neck */}
+                          <rect x="50" y="45" width="20" height="14" rx="2" fill="rgba(255,255,255,0.6)" />
+                          {/* Head */}
+                          <rect x="35" y="20" width="50" height="28" rx="4" fill="rgba(255,255,255,0.95)" />
+                          {/* Eyes outer */}
+                          <ellipse cx="48" cy="34" rx="10" ry="9" fill={formData.primary_color} opacity="0.2" />
+                          <ellipse cx="72" cy="34" rx="10" ry="9" fill={formData.primary_color} opacity="0.2" />
+                          {/* Eyes inner */}
+                          <ellipse cx="48" cy="34" rx="7" ry="6" fill={adjustColor(formData.primary_color, -20)} />
+                          <ellipse cx="72" cy="34" rx="7" ry="6" fill={adjustColor(formData.primary_color, -20)} />
+                          {/* Pupils */}
+                          <ellipse cx="48" cy="35" rx="4" ry="4" fill="white" />
+                          <ellipse cx="72" cy="35" rx="4" ry="4" fill="white" />
+                          {/* Eye highlights */}
+                          <circle cx="50" cy="33" r="1.5" fill="rgba(255,255,255,0.8)" />
+                          <circle cx="74" cy="33" r="1.5" fill="rgba(255,255,255,0.8)" />
+                          {/* Nose */}
+                          <rect x="56" y="30" width="8" height="8" rx="2" fill="rgba(255,255,255,0.4)" />
+                          {/* Antenna */}
+                          <rect x="58" y="12" width="4" height="10" rx="2" fill="rgba(255,255,255,0.4)" />
+                          <circle cx="60" cy="10" r="4" fill="#4A9D7C">
+                            <animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite" />
+                          </circle>
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h2 className="font-semibold text-white text-sm tracking-tight truncate">{formData.display_name || 'Bobot'}</h2>
+                        <p className="text-white/70 text-xs truncate">{formData.subtitle || 'Alltid redo att hjälpa'}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                        <span className="text-white/60 text-xs">Online</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Messages area - Warm earthy background */}
+                  <div
+                    className="h-64 overflow-y-auto p-4 space-y-3"
+                    style={{
+                      backgroundColor: darkMode ? '#1C1917' : '#FAF9F7',
+                      backgroundImage: darkMode ? 'none' : 'radial-gradient(circle at 100% 0%, rgba(217, 119, 87, 0.03) 0%, transparent 50%)'
+                    }}
+                  >
+                    {previewMessages.map((msg, i) => (
+                      <div key={i} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'} items-end gap-2`}>
+                        {msg.type === 'bot' && (
+                          <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: `${formData.primary_color}15` }}>
+                            <svg width="14" height="14" viewBox="0 0 120 120" fill="none">
+                              <rect x="35" y="20" width="50" height="28" rx="4" fill={formData.primary_color} opacity="0.6" />
+                              <ellipse cx="48" cy="34" rx="5" ry="4" fill="white" />
+                              <ellipse cx="72" cy="34" rx="5" ry="4" fill="white" />
+                            </svg>
+                          </div>
+                        )}
+                        <div
+                          className="max-w-[80%] px-3.5 py-2.5 shadow-sm"
+                          style={{
+                            background: msg.type === 'user'
+                              ? `linear-gradient(135deg, ${formData.primary_color} 0%, ${adjustColor(formData.primary_color, -20)} 100%)`
+                              : darkMode ? '#292524' : '#FFFFFF',
+                            color: msg.type === 'user' ? 'white' : (darkMode ? '#FAF9F7' : '#44403C'),
+                            border: msg.type === 'bot' ? `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}` : 'none',
+                            borderRadius: msg.type === 'user'
+                              ? `${formData.widget_border_radius}px ${formData.widget_border_radius}px 4px ${formData.widget_border_radius}px`
+                              : `${formData.widget_border_radius}px ${formData.widget_border_radius}px ${formData.widget_border_radius}px 4px`,
+                            fontSize: `${formData.widget_font_size}px`,
+                            lineHeight: '1.5'
+                          }}
+                        >
+                          <p className="whitespace-pre-wrap">{msg.text}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {previewLoading && (
+                      <div className="flex justify-start items-end gap-2">
+                        <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: `${formData.primary_color}15` }}>
+                          <svg width="14" height="14" viewBox="0 0 120 120" fill="none">
+                            <rect x="35" y="20" width="50" height="28" rx="4" fill={formData.primary_color} opacity="0.6" />
+                            <ellipse cx="48" cy="34" rx="5" ry="4" fill="white" />
+                            <ellipse cx="72" cy="34" rx="5" ry="4" fill="white" />
+                          </svg>
+                        </div>
+                        <div
+                          className="px-4 py-3 shadow-sm"
+                          style={{
+                            backgroundColor: darkMode ? '#292524' : '#FFFFFF',
+                            border: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}`,
+                            borderRadius: `${formData.widget_border_radius}px ${formData.widget_border_radius}px ${formData.widget_border_radius}px 4px`
+                          }}
+                        >
+                          <div className="flex gap-1.5">
+                            <span className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: formData.primary_color, animationDelay: '0ms' }} />
+                            <span className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: formData.primary_color, opacity: 0.7, animationDelay: '150ms' }} />
+                            <span className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: formData.primary_color, opacity: 0.4, animationDelay: '300ms' }} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+
+                  {/* Input area */}
+                  <div
+                    className="p-3"
+                    style={{
+                      backgroundColor: darkMode ? '#292524' : '#FFFFFF',
+                      borderTop: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}`
+                    }}
+                  >
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="text"
+                        value={previewInput}
+                        onChange={(e) => setPreviewInput(e.target.value)}
+                        placeholder="Skriv ett meddelande..."
+                        className="flex-1 px-4 py-2.5 outline-none transition-all"
+                        style={{
+                          backgroundColor: darkMode ? '#1C1917' : '#F5F5F4',
+                          color: darkMode ? '#FAF9F7' : '#1C1917',
+                          border: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}`,
+                          borderRadius: '9999px',
+                          fontSize: `${formData.widget_font_size}px`,
+                          fontFamily: `'${formData.widget_font_family}', system-ui, sans-serif`
+                        }}
+                        disabled={previewLoading}
+                        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handlePreviewSend(e)}
+                      />
+                      <button
+                        type="button"
+                        onClick={handlePreviewSend}
+                        disabled={previewLoading || !previewInput.trim()}
+                        className="w-10 h-10 rounded-full flex items-center justify-center transition-all disabled:opacity-40 hover:scale-105 active:scale-95"
+                        style={{
+                          background: `linear-gradient(135deg, ${formData.primary_color} 0%, ${adjustColor(formData.primary_color, -20)} 100%)`,
+                          boxShadow: `0 2px 8px ${formData.primary_color}40`
+                        }}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 2L11 13" />
+                          <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-center text-xs text-text-tertiary">Testa med riktiga frågor från kunskapsbanken</p>
               </div>
             </div>
 
@@ -817,14 +1012,15 @@ function WidgetPage({ widgetType }) {
 {`<script src="https://cdn.bobot.nu/widget.js"></script>
 <script>
   Bobot.init({
-    widgetKey: '${widget.widget_key}'
+    widgetKey: '${widget.widget_key}',
+    position: '${formData.widget_position}'
   });
 </script>`}
                     </pre>
                     <button
                       type="button"
                       onClick={() => {
-                        navigator.clipboard.writeText(`<script src="https://cdn.bobot.nu/widget.js"></script>\n<script>\n  Bobot.init({\n    widgetKey: '${widget.widget_key}'\n  });\n</script>`)
+                        navigator.clipboard.writeText(`<script src="https://cdn.bobot.nu/widget.js"></script>\n<script>\n  Bobot.init({\n    widgetKey: '${widget.widget_key}',\n    position: '${formData.widget_position}'\n  });\n</script>`)
                         setSuccess('Kod kopierad!')
                         setTimeout(() => setSuccess(''), 2000)
                       }}
@@ -834,150 +1030,27 @@ function WidgetPage({ widgetType }) {
                     </button>
                   </div>
                   <p className="text-xs text-text-tertiary">
-                    Klistra in koden precis före <code className="bg-bg-tertiary px-1 py-0.5 rounded">&lt;/body&gt;</code> på din webbplats
+                    Klistra in koden precis före <code className="bg-bg-tertiary px-1 py-0.5 rounded">&lt;/body&gt;</code> på din webbplats. Positionen ({formData.widget_position === 'bottom-right' ? 'nedre högra' : 'nedre vänstra'} hörnet) är inkluderad.
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="flex justify-end">
+            {/* Save button with inline success message */}
+            <div className="flex items-center justify-end gap-3">
+              {success && (
+                <span className="text-success text-sm animate-fade-in flex items-center gap-1.5">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  {success}
+                </span>
+              )}
               <button type="submit" disabled={saving} className="btn btn-primary">
                 {saving ? 'Sparar...' : 'Spara inställningar'}
               </button>
             </div>
           </form>
-
-          {/* Preview Sidebar */}
-          <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
-            {/* Health Status */}
-            <div className={`rounded-lg p-3 flex items-center gap-3 ${
-              healthStatus?.ollama === 'connected'
-                ? 'bg-success/10 border border-success/20'
-                : 'bg-warning/10 border border-warning/20'
-            }`}>
-              <div className={`w-2.5 h-2.5 rounded-full ${
-                healthStatus?.ollama === 'connected' ? 'bg-success animate-pulse' : 'bg-warning'
-              }`} />
-              <div className="flex-1">
-                <p className={`text-sm font-medium ${
-                  healthStatus?.ollama === 'connected' ? 'text-success' : 'text-warning'
-                }`}>
-                  {healthStatus?.ollama === 'connected'
-                    ? 'AI-modellen är redo'
-                    : healthStatus?.status === 'offline'
-                      ? 'Backend är inte tillgänglig'
-                      : 'AI-modellen är inte ansluten'}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={checkHealth}
-                className="p-1.5 hover:bg-black/5 rounded-md transition-colors"
-                title="Kontrollera status"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-text-primary">Förhandsgranskning</span>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setDarkMode(!darkMode)} className="btn btn-ghost text-xs py-1">
-                  {darkMode ? '☀️' : '🌙'}
-                </button>
-                <button type="button" onClick={resetPreview} className="btn btn-ghost text-xs py-1">
-                  Börja om
-                </button>
-              </div>
-            </div>
-
-            {/* Widget Preview */}
-            <div
-              className="overflow-hidden shadow-xl"
-              style={{
-                backgroundColor: darkMode ? '#1C1917' : '#FFFFFF',
-                borderRadius: `${formData.widget_border_radius}px`,
-                fontFamily: formData.widget_font_family
-              }}
-            >
-              <div className="px-4 py-3" style={{ background: `linear-gradient(135deg, ${formData.primary_color} 0%, ${adjustColor(formData.primary_color, -25)} 100%)` }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="font-semibold text-white text-sm">{formData.display_name || 'Bobot'}</h2>
-                    <p className="text-white/80 text-xs">{formData.subtitle}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="h-64 overflow-y-auto p-3 space-y-2" style={{ backgroundColor: darkMode ? '#1C1917' : '#FAFAF9' }}>
-                {previewMessages.map((msg, i) => (
-                  <div key={i} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div
-                      className="max-w-[85%] px-3 py-2"
-                      style={{
-                        background: msg.type === 'user' ? `linear-gradient(135deg, ${formData.primary_color} 0%, ${adjustColor(formData.primary_color, -15)} 100%)` : darkMode ? '#292524' : '#FFFFFF',
-                        color: msg.type === 'user' ? 'white' : (darkMode ? '#FAFAF9' : '#1C1917'),
-                        border: msg.type === 'bot' ? `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}` : 'none',
-                        borderRadius: `${formData.widget_border_radius}px`,
-                        borderBottomLeftRadius: msg.type === 'bot' ? '4px' : `${formData.widget_border_radius}px`,
-                        borderBottomRightRadius: msg.type === 'user' ? '4px' : `${formData.widget_border_radius}px`,
-                        fontSize: `${formData.widget_font_size}px`
-                      }}
-                    >
-                      <p className="whitespace-pre-wrap">{msg.text}</p>
-                    </div>
-                  </div>
-                ))}
-                {previewLoading && (
-                  <div className="flex justify-start">
-                    <div className="px-3 py-2" style={{ backgroundColor: darkMode ? '#292524' : '#FFFFFF', border: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}`, borderRadius: `${formData.widget_border_radius}px` }}>
-                      <div className="flex gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: darkMode ? '#78716C' : '#A8A29E', animationDelay: '0ms' }} />
-                        <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: darkMode ? '#78716C' : '#A8A29E', animationDelay: '150ms' }} />
-                        <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: darkMode ? '#78716C' : '#A8A29E', animationDelay: '300ms' }} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              <form onSubmit={handlePreviewSend} className="p-2" style={{ backgroundColor: darkMode ? '#292524' : '#FFFFFF', borderTop: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}` }}>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={previewInput}
-                    onChange={(e) => setPreviewInput(e.target.value)}
-                    placeholder="Skriv ett meddelande..."
-                    className="flex-1 px-3 py-2 outline-none text-sm"
-                    style={{
-                      backgroundColor: darkMode ? '#1C1917' : '#F5F5F4',
-                      color: darkMode ? '#FAFAF9' : '#1C1917',
-                      border: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}`,
-                      borderRadius: '9999px',
-                      fontSize: `${formData.widget_font_size}px`,
-                      fontFamily: formData.widget_font_family
-                    }}
-                    disabled={previewLoading}
-                  />
-                  <button type="submit" disabled={previewLoading || !previewInput.trim()} className="w-9 h-9 rounded-full flex items-center justify-center transition-all disabled:opacity-50" style={{ backgroundColor: formData.primary_color }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-                      <line x1="22" y1="2" x2="11" y2="13" />
-                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                    </svg>
-                  </button>
-                </div>
-              </form>
-            </div>
-            <p className="text-center text-xs text-text-tertiary">Testa med riktiga frågor från kunskapsbanken</p>
-          </div>
         </div>
       )}
 
