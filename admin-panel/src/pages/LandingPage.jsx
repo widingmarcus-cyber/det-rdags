@@ -865,7 +865,7 @@ function LandingPage() {
       </nav>
 
       {/* Hanging mascot positioned near login button */}
-      <div className="fixed top-0 right-[90px] z-50"><HangingMascot mousePos={mousePos} isVisible={loginHover} /></div>
+      <div className="fixed top-0 right-[60px] z-50"><HangingMascot mousePos={mousePos} isVisible={loginHover} /></div>
       <PeekingMascot mousePos={mousePos} isVisible={currentSection === 2} />
 
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-10">
@@ -921,7 +921,7 @@ function LandingPage() {
             {/* Dual chat widgets */}
             <div className={`flex flex-col lg:flex-row items-start gap-6 pt-4 transition-all duration-1000 delay-300 ${contentVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
               <ChatWidget messages={customerConvo} label="Kund" startDelay={800} className="hover:scale-[1.02] transition-transform" />
-              <ChatWidget messages={employeeConvo} label="Anställd" startDelay={2500} className="hover:scale-[1.02] transition-transform lg:mt-8" />
+              <ChatWidget messages={employeeConvo} label="Anställd" startDelay={2500} className="hover:scale-[1.02] transition-transform lg:-mt-4" />
             </div>
           </div>
         </div>
