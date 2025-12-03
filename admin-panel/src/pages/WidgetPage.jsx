@@ -628,7 +628,7 @@ function WidgetPage({ widgetType }) {
                     value={formData.display_name}
                     onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
                     className="input w-full"
-                    placeholder="T.ex. Hyresgästservice"
+                    placeholder={isExternal ? "T.ex. Hyresgästservice" : "T.ex. Albert"}
                   />
                   <p className="text-xs text-text-tertiary mt-1">Visas i widgetens header</p>
                 </div>
