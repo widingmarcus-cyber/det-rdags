@@ -4344,28 +4344,32 @@ PRICING_TIERS = {
         "monthly_fee": 1500,
         "startup_fee": 0,  # Free setup for starter
         "max_conversations": 500,
-        "features": ["Grundläggande AI-chatt", "500 konversationer/månad", "E-postsupport", "Standardanalytik", "Gratis uppstart"]
+        "max_knowledge_items": 100,
+        "features": ["Grundläggande AI-chatt", "100 kunskapsartiklar", "500 konversationer/månad", "E-postsupport", "Standardanalytik", "Gratis uppstart"]
     },
     "professional": {
         "name": "Professional",
         "monthly_fee": 3500,
         "startup_fee": 10000,
         "max_conversations": 2000,
-        "features": ["Allt i Starter", "2000 konversationer/månad", "Prioriterad support", "Avancerad analytik", "Anpassad widget"]
+        "max_knowledge_items": 500,
+        "features": ["Allt i Starter", "500 kunskapsartiklar", "2000 konversationer/månad", "Prioriterad support", "Avancerad analytik", "Anpassad widget"]
     },
     "business": {
         "name": "Business",
         "monthly_fee": 6500,
         "startup_fee": 25000,
         "max_conversations": 10000,
-        "features": ["Allt i Professional", "10000 konversationer/månad", "Dedikerad support", "API-åtkomst", "Anpassade integrationer", "Onboarding"]
+        "max_knowledge_items": 2000,
+        "features": ["Allt i Professional", "2000 kunskapsartiklar", "10000 konversationer/månad", "Dedikerad support", "API-åtkomst", "Anpassade integrationer", "Onboarding"]
     },
     "enterprise": {
         "name": "Enterprise",
         "monthly_fee": 10000,
         "startup_fee": 50000,
         "max_conversations": 0,  # 0 = unlimited
-        "features": ["Allt i Business", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling", "Dedikerad onboarding & utbildning"]
+        "max_knowledge_items": 0,  # 0 = unlimited
+        "features": ["Allt i Business", "Obegränsade kunskapsartiklar", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling", "Dedikerad onboarding & utbildning"]
     }
 }
 
@@ -4382,6 +4386,7 @@ def get_pricing_tiers_dict(db: Session) -> dict:
                 "monthly_fee": tier.monthly_fee,
                 "startup_fee": tier.startup_fee,
                 "max_conversations": tier.max_conversations,
+                "max_knowledge_items": tier.max_knowledge_items if hasattr(tier, 'max_knowledge_items') else 0,
                 "features": json.loads(tier.features) if tier.features else []
             }
             for tier in db_tiers
@@ -4623,6 +4628,7 @@ async def init_pricing_tiers(
             monthly_fee=config["monthly_fee"],
             startup_fee=config["startup_fee"],
             max_conversations=config["max_conversations"],
+            max_knowledge_items=config.get("max_knowledge_items", 0),
             features=json.dumps(config["features"]),
             display_order=order
         )

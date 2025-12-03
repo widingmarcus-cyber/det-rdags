@@ -536,6 +536,7 @@ class PricingTier(Base):
     monthly_fee = Column(Float, default=0)  # Monthly fee in SEK
     startup_fee = Column(Float, default=0)  # One-time startup fee in SEK
     max_conversations = Column(Integer, default=0)  # 0 = unlimited
+    max_knowledge_items = Column(Integer, default=0)  # 0 = unlimited
     features = Column(Text, default="[]")  # JSON array of feature descriptions
     is_active = Column(Boolean, default=True)  # Can be disabled
     display_order = Column(Integer, default=0)  # For custom ordering

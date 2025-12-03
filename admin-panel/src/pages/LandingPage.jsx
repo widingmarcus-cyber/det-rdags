@@ -175,6 +175,81 @@ function HangingMascot({ mousePos = { x: 0.5, y: 0.5 }, isVisible = false }) {
   )
 }
 
+// Mascot peeking from bottom left (appears on pricing section)
+function PeekingMascot({ mousePos = { x: 0.5, y: 0.5 }, isVisible = false }) {
+  const pupilOffsetX = (mousePos.x - 0.5) * 6
+  const pupilOffsetY = (mousePos.y - 0.5) * 5
+
+  return (
+    <div className={`fixed bottom-0 left-6 z-50 transition-all duration-700 ease-out ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}>
+      <svg width="100" height="120" viewBox="0 0 60 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Head */}
+        <rect x="8" y="0" width="44" height="24" rx="3" fill="#D97757" />
+
+        {/* Eye sockets */}
+        <ellipse cx="20" cy="12" rx="9" ry="8" fill="#1C1917" />
+        <ellipse cx="40" cy="12" rx="9" ry="8" fill="#1C1917" />
+
+        {/* Inner eye area */}
+        <ellipse cx="20" cy="12" rx="7" ry="6" fill="#292524" />
+        <ellipse cx="40" cy="12" rx="7" ry="6" fill="#292524" />
+
+        {/* Pupils - follow cursor */}
+        <ellipse cx={20 + pupilOffsetX} cy={12 + pupilOffsetY} rx="4" ry="4" fill="#D97757">
+          <animate attributeName="ry" values="4;0.3;4;4;4" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+        </ellipse>
+        <ellipse cx={40 + pupilOffsetX} cy={12 + pupilOffsetY} rx="4" ry="4" fill="#D97757">
+          <animate attributeName="ry" values="4;0.3;4;4;4" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+        </ellipse>
+
+        {/* Eye highlights */}
+        <circle cx={21 + pupilOffsetX * 0.5} cy={10 + pupilOffsetY * 0.5} r="2" fill="#FEF2EE">
+          <animate attributeName="opacity" values="1;0;1;1;1" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+        </circle>
+        <circle cx={41 + pupilOffsetX * 0.5} cy={10 + pupilOffsetY * 0.5} r="2" fill="#FEF2EE">
+          <animate attributeName="opacity" values="1;0;1;1;1" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+        </circle>
+
+        {/* Nose piece */}
+        <rect x="26" y="8" width="8" height="6" rx="1" fill="#78716C" />
+
+        {/* Antenna */}
+        <rect x="28" y="-10" width="4" height="12" rx="2" fill="#78716C" />
+        <circle cx="30" cy="-12" r="5" fill="#4A9D7C">
+          <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite" />
+        </circle>
+
+        {/* Neck */}
+        <rect x="23" y="22" width="14" height="8" rx="2" fill="#78716C" />
+
+        {/* Body/Torso */}
+        <rect x="10" y="28" width="40" height="28" rx="3" fill="#D97757" />
+        <rect x="12" y="30" width="36" height="24" rx="2" fill="#C4613D" />
+
+        {/* Body details */}
+        <rect x="15" y="34" width="12" height="10" rx="1" fill="#1C1917" />
+        <rect x="33" y="34" width="12" height="10" rx="1" fill="#1C1917" />
+
+        {/* Left arm - waving */}
+        <rect x="-2" y="32" width="14" height="5" rx="2" fill="#78716C">
+          <animateTransform attributeName="transform" type="rotate" values="0 10 34;-45 10 34;0 10 34" dur="1.5s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
+        </rect>
+        <rect x="-6" y="28" width="6" height="12" rx="2" fill="#57534E">
+          <animateTransform attributeName="transform" type="rotate" values="0 10 34;-45 10 34;0 10 34" dur="1.5s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
+        </rect>
+
+        {/* Right arm - static */}
+        <rect x="48" y="32" width="14" height="5" rx="2" fill="#78716C" />
+        <rect x="60" y="28" width="6" height="12" rx="2" fill="#57534E" />
+
+        {/* Feet at bottom (cut off by viewport) */}
+        <rect x="12" y="56" width="16" height="16" rx="4" fill="#78716C" />
+        <rect x="32" y="56" width="16" height="16" rx="4" fill="#78716C" />
+      </svg>
+    </div>
+  )
+}
+
 function BobotMini({ className = "" }) {
   return (
     <svg width="28" height="28" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className={`inline-block ${className}`}>
@@ -359,46 +434,37 @@ function formatPrice(price) {
 }
 
 // Pricing card component
-function PricingCard({ tier, isPopular = false }) {
+function PricingCard({ tier }) {
   const isEnterprise = tier.max_conversations === 0
 
   return (
-    <div className={`rounded-2xl p-6 lg:p-8 transition-all duration-300 hover:scale-[1.02] ${
-      isPopular
-        ? 'bg-gradient-to-b from-[#D97757] to-[#c4613d] shadow-xl shadow-[#D97757]/20 relative'
-        : 'bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 shadow-sm'
-    }`}>
-      {isPopular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-stone-900 text-white text-xs font-medium px-3 py-1 rounded-full">
-          Populärast
-        </div>
-      )}
-      <h3 className={`text-xl font-semibold mb-2 ${isPopular ? 'text-white' : 'text-stone-900 dark:text-stone-100'}`}>
+    <div className="rounded-2xl p-6 lg:p-8 transition-all duration-300 hover:scale-[1.02] bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 shadow-sm hover:shadow-lg">
+      <h3 className="text-xl font-semibold mb-2 text-stone-900 dark:text-stone-100">
         {tier.name}
       </h3>
       <div className="mb-4">
         {isEnterprise ? (
-          <span className={`text-3xl font-bold ${isPopular ? 'text-white' : 'text-stone-900 dark:text-stone-100'}`}>
+          <span className="text-3xl font-bold text-stone-900 dark:text-stone-100">
             Offert
           </span>
         ) : (
           <>
-            <span className={`text-3xl font-bold ${isPopular ? 'text-white' : 'text-stone-900 dark:text-stone-100'}`}>
+            <span className="text-3xl font-bold text-stone-900 dark:text-stone-100">
               {formatPrice(tier.monthly_fee)}
             </span>
-            <span className={isPopular ? 'text-white/70' : 'text-stone-500 dark:text-stone-400'}> kr/mån</span>
+            <span className="text-stone-500 dark:text-stone-400"> kr/mån</span>
           </>
         )}
       </div>
       {tier.startup_fee > 0 && (
-        <p className={`text-sm mb-4 ${isPopular ? 'text-white/80' : 'text-stone-500 dark:text-stone-400'}`}>
+        <p className="text-sm mb-4 text-stone-500 dark:text-stone-400">
           + {formatPrice(tier.startup_fee)} kr uppstartsavgift
         </p>
       )}
-      <ul className={`space-y-3 text-sm mb-6 ${isPopular ? 'text-white/90' : 'text-stone-600 dark:text-stone-400'}`}>
+      <ul className="space-y-3 text-sm mb-6 text-stone-600 dark:text-stone-400">
         {tier.features?.map((feature, i) => (
           <li key={i} className="flex items-start gap-2">
-            <svg className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isPopular ? 'text-white' : 'text-[#D97757]'}`} fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
             {feature}
@@ -407,11 +473,7 @@ function PricingCard({ tier, isPopular = false }) {
       </ul>
       <a
         href={`mailto:hej@bobot.nu?subject=${encodeURIComponent(tier.name + '-plan')}`}
-        className={`block w-full text-center py-3 rounded-xl font-medium transition-colors ${
-          isPopular
-            ? 'bg-white text-[#D97757] hover:bg-stone-100'
-            : 'border-2 border-[#D97757] text-[#D97757] hover:bg-[#D97757]/10'
-        }`}
+        className="block w-full text-center py-3 rounded-xl font-medium transition-colors border-2 border-[#D97757] text-[#D97757] hover:bg-[#D97757] hover:text-white"
       >
         {isEnterprise ? 'Kontakta oss' : 'Kom igång'}
       </a>
@@ -605,6 +667,9 @@ function LandingPage() {
         <HangingMascot mousePos={mousePos} isVisible={loginHover} />
       </div>
 
+      {/* Peeking mascot from bottom left - appears on pricing section */}
+      <PeekingMascot mousePos={mousePos} isVisible={currentSection === 2} />
+
       {/* Section navigation dots */}
       <SectionDots currentSection={currentSection} totalSections={totalSections} onNavigate={navigateToSection} />
 
@@ -795,11 +860,10 @@ function LandingPage() {
               orderedTiers.length >= 4 ? 'sm:grid-cols-2 lg:grid-cols-4' :
               'sm:grid-cols-1 max-w-md mx-auto'
             }`}>
-              {orderedTiers.map((tier, index) => (
+              {orderedTiers.map((tier) => (
                 <PricingCard
                   key={tier.key}
                   tier={tier}
-                  isPopular={index === 1 && orderedTiers.length >= 3}
                 />
               ))}
             </div>
