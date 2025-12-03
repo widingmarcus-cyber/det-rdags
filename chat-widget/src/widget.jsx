@@ -685,10 +685,13 @@ function ChatWidget({ config }) {
               <div key={msg.id} className="bobot-msg" style={{
                 marginBottom: 16,
                 display: 'flex',
+                width: '100%',
+                boxSizing: 'border-box',
                 justifyContent: msg.type === 'user' ? (isRTL ? 'flex-start' : 'flex-end') : (isRTL ? 'flex-end' : 'flex-start'),
               }}>
                 <div style={{
                   maxWidth: '85%',
+                  boxSizing: 'border-box',
                   padding: '12px 16px',
                   borderRadius: borderRadius - 4,
                   fontSize: fontSize,

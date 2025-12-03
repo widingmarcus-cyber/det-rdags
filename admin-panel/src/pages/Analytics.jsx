@@ -328,13 +328,13 @@ function Analytics() {
               </div>
             </div>
           ) : (
-            <div className="h-40 flex items-end gap-[3px]">
+            <div className="h-40 flex items-stretch gap-[3px]">
               {analytics.daily_stats.map((day, index) => {
                 const barHeight = maxMessages > 0 ? (day.messages / maxMessages) * 100 : 0
                 return (
                   <div
                     key={index}
-                    className="flex-1 flex flex-col items-center group relative"
+                    className="flex-1 h-full flex flex-col items-center group relative"
                   >
                     {/* Tooltip */}
                     <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-text-primary text-bg-primary text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">

@@ -4487,8 +4487,6 @@ async def get_analytics(
     month_start = today - timedelta(days=29)
     month_start_dt = datetime.combine(month_start, datetime.min.time())
 
-    print(f"[Analytics] Server today: {today}, month_start: {month_start}")
-    print(f"[Analytics] Date range in dict: {list(daily_stats_dict.keys())[:3]} ... {list(daily_stats_dict.keys())[-3:]}")
 
     # Get all conversations for this company in the last 30 days
     conversations = db.query(Conversation).filter(
@@ -4496,7 +4494,6 @@ async def get_analytics(
         Conversation.started_at >= month_start_dt
     ).all()
 
-    print(f"[Analytics] Found {len(conversations)} conversations")
 
     # Count conversations per day
     for conv in conversations:
@@ -4511,7 +4508,6 @@ async def get_analytics(
             Message.conversation_id.in_(conv_ids)
         ).all()
 
-        print(f"[Analytics] Found {len(messages)} messages")
 
         # Count messages per day
         for msg in messages:
@@ -4519,10 +4515,6 @@ async def get_analytics(
                 d = msg.created_at.date().isoformat()
                 if d in daily_stats_dict:
                     daily_stats_dict[d]["messages"] += 1
-
-        # Show days with data
-        days_with_data = {k: v for k, v in daily_stats_dict.items() if v["messages"] > 0}
-        print(f"[Analytics] Days with messages: {days_with_data}")
 
     # Convert to sorted list (always 30 days)
     daily_stats_list = [daily_stats_dict[d] for d in sorted(daily_stats_dict.keys())]
