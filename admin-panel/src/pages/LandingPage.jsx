@@ -302,17 +302,52 @@ function DemoWidget() {
 
     // Greeting
     if (msg.includes('hej') || msg.includes('hejsan') || msg.includes('tjena') || msg.includes('hallå') || msg.includes('god dag')) {
-      return 'Hej! Kul att du vill veta mer om Bobot. Ställ gärna frågor om priser, funktioner, GDPR eller hur det fungerar!'
+      return 'Hej! Kul att du vill veta mer om Bobot. Ställ gärna frågor om priser, paket, funktioner, GDPR eller hur det fungerar!'
     }
 
-    // Pricing
-    if (msg.includes('pris') || msg.includes('kost') || msg.includes('betala') || msg.includes('avgift') || msg.includes('billig') || msg.includes('dyr')) {
-      return 'Våra priser börjar från 1 500 kr/månad. Vi har tre paket: Starter, Professional och Enterprise. Scrolla ner för att se alla paket, eller kontakta oss för en skräddarsydd offert!'
+    // Specific plan questions - Starter
+    if (msg.includes('starter') || (msg.includes('billigast') && msg.includes('paket'))) {
+      return 'Starter-paketet kostar 1 500 kr/månad utan uppstartskostnad. Du får: Grundläggande AI-chatt, 100 kunskapsartiklar, 500 konversationer/månad, e-postsupport, och gratis uppstart. Perfekt för att komma igång!'
+    }
+
+    // Specific plan questions - Professional
+    if (msg.includes('professional') || msg.includes('proffesional') || msg.includes('mellan')) {
+      return 'Professional-paketet kostar 3 500 kr/månad med 10 000 kr i uppstartskostnad. Du får: Allt i Starter plus 500 kunskapsartiklar, 2000 konversationer/månad, prioriterad support och anpassad widget-design.'
+    }
+
+    // Specific plan questions - Business
+    if (msg.includes('business')) {
+      return 'Business-paketet kostar 6 500 kr/månad med 25 000 kr i uppstartskostnad. Du får: Allt i Professional plus 2000 kunskapsartiklar, 10000 konversationer/månad, dedikerad support och API-åtkomst.'
+    }
+
+    // Specific plan questions - Enterprise
+    if (msg.includes('enterprise') || msg.includes('stor') || msg.includes('obegränsad')) {
+      return 'Enterprise-paketet kostar från 10 000 kr/månad med 50 000 kr i uppstartskostnad. Du får: Obegränsade konversationer, SLA-garanti, white-label möjlighet och skräddarsydd utveckling. Kontakta oss för offert!'
+    }
+
+    // General Pricing - detailed
+    if (msg.includes('pris') || msg.includes('kost') || msg.includes('betala') || msg.includes('avgift') || msg.includes('paket')) {
+      return 'Vi har fyra paket:\n\n• Starter: 1 500 kr/mån (gratis uppstart)\n• Professional: 3 500 kr/mån + 10 000 kr uppstart\n• Business: 6 500 kr/mån + 25 000 kr uppstart\n• Enterprise: Från 10 000 kr/mån + 50 000 kr uppstart\n\nFråga mig om ett specifikt paket för mer detaljer!'
+    }
+
+    // Uppstartskostnad / Startup fee
+    if (msg.includes('uppstart') || msg.includes('engång') || msg.includes('startup')) {
+      return 'Uppstartskostnad varierar per paket: Starter har GRATIS uppstart (0 kr), Professional 10 000 kr, Business 25 000 kr, och Enterprise 50 000 kr. Uppstarten inkluderar onboarding, konfiguration och initial support.'
+    }
+
+    // Konversationer / Conversations limit
+    if (msg.includes('konversation') && (msg.includes('gräns') || msg.includes('antal') || msg.includes('max') || msg.includes('hur många'))) {
+      return 'Antal konversationer per månad: Starter 500, Professional 2000, Business 10000, Enterprise obegränsat. En konversation är en chatt-session med en användare, oavsett antal meddelanden.'
+    }
+
+    // Kunskapsartiklar / Knowledge items limit
+    if ((msg.includes('artikel') || msg.includes('kunskap')) && (msg.includes('antal') || msg.includes('max') || msg.includes('hur många'))) {
+      return 'Antal kunskapsartiklar (Q&A-par): Starter 100, Professional 500, Business 2000, Enterprise obegränsat. Du kan när som helst uppgradera för fler artiklar.'
     }
 
     // GDPR & Security
     if (msg.includes('gdpr') || msg.includes('säker') || msg.includes('data') || msg.includes('integritet') || msg.includes('personuppgift')) {
-      return 'Absolut! Bobot är 100% GDPR-kompatibel. All data lagras i Sverige, IP-adresser anonymiseras, och konversationer raderas automatiskt efter din valda tidsperiod (7-30 dagar). Vi har även inbyggt samtyckesstöd i widgeten.'
+      return 'Absolut! Bobot är 100% GDPR-kompatibel. All data lagras i Sverige, IP-adresser anonymiseras automatiskt, och konversationer raderas efter din valda tidsperiod (7-30 dagar). Vi har inbyggt samtyckesstöd och audit-loggning.'
     }
 
     // Languages
@@ -340,6 +375,16 @@ function DemoWidget() {
       return 'Bobot erbjuder: AI-chatbot med egen kunskapsbas, flerspråksstöd (SV/EN/AR), fullständig GDPR-compliance, realtidsstatistik, konversationshistorik, anpassningsbart utseende, snabbknappar för vanliga frågor, och enkel integration med bara två rader kod!'
     }
 
+    // Multiple widgets
+    if (msg.includes('flera') && (msg.includes('widget') || msg.includes('bot') || msg.includes('chatt'))) {
+      return 'Ja! Du kan ha flera widgets - t.ex. en för kundtjänst på hemsidan och en för internt medarbetarstöd. Varje widget kan ha egen kunskapsbas, utseende, välkomstmeddelande och ton.'
+    }
+
+    // Internal widget / Medarbetarstöd
+    if (msg.includes('intern') || msg.includes('medarbetar') || msg.includes('anställd') || msg.includes('personal')) {
+      return 'Bobot har speciellt stöd för intern användning! Du kan skapa en separat widget för medarbetarstöd med egen kunskapsbas för t.ex. HR-frågor, policyer, rutiner - med en mer kollegial ton.'
+    }
+
     // Knowledge base
     if (msg.includes('kunskaps') || msg.includes('faq') || msg.includes('frågor och svar') || msg.includes('träna') || msg.includes('lära')) {
       return 'Du bygger enkelt din kunskapsbas genom att lägga till frågor och svar manuellt, eller importera från Excel, Word, CSV eller direkt från en webbsida. Bobot lär sig från din kunskapsbas och ger svar baserade på ditt innehåll.'
@@ -351,13 +396,13 @@ function DemoWidget() {
     }
 
     // Statistics & Analytics
-    if (msg.includes('statistik') || msg.includes('analys') || msg.includes('rapport') || msg.includes('antal') || msg.includes('mät')) {
-      return 'Bobot ger dig detaljerad statistik: antal konversationer, vanligaste frågorna, obesvarade frågor, nöjdhetsbetyg (tumme upp/ner), svarstider, språkfördelning och tidsanalys. Allt kan exporteras till CSV!'
+    if (msg.includes('statistik') || msg.includes('analys') || msg.includes('rapport') || msg.includes('mät')) {
+      return 'Bobot ger dig detaljerad statistik: antal konversationer, vanligaste frågorna, obesvarade frågor, nöjdhetsbetyg (tumme upp/ner), svarstider och tidsanalys. Allt kan exporteras till CSV!'
     }
 
     // Customization & Branding
     if (msg.includes('anpassa') || msg.includes('design') || msg.includes('färg') || msg.includes('utseende') || msg.includes('brand') || msg.includes('logotyp')) {
-      return 'Widgeten är helt anpassningsbar! Du kan välja primärfärg, typsnitt, teckenstorlek, rundade hörn, position (höger/vänster), logotyp och välkomstmeddelande. Allt med live-förhandsgranskning i adminpanelen.'
+      return 'Widgeten är helt anpassningsbar! Du kan välja primärfärg, bakgrundsfärg, typsnitt, teckenstorlek, rundade hörn, position (höger/vänster) och välkomstmeddelande. Allt med live-förhandsgranskning i adminpanelen.'
     }
 
     // Property Management / Fastighetsbolag
@@ -367,7 +412,7 @@ function DemoWidget() {
 
     // Support & Contact
     if (msg.includes('support') || msg.includes('hjälp') || msg.includes('kontakt') || msg.includes('mail') || msg.includes('telefon')) {
-      return 'Kontakta oss på hej@bobot.nu så hjälper vi dig gärna! Vi erbjuder support via e-post och kan boka in en demo eller onboarding-samtal.'
+      return 'Kontakta oss på hej@bobot.nu så hjälper vi dig gärna! Vi erbjuder e-postsupport i Starter, prioriterad support i Professional och dedikerad support i Business/Enterprise.'
     }
 
     // Time to start
@@ -381,13 +426,33 @@ function DemoWidget() {
     }
 
     // Two-factor authentication
-    if (msg.includes('2fa') || msg.includes('tvåfaktor') || msg.includes('authenticator') || msg.includes('säkerhet') || msg.includes('inloggning')) {
+    if (msg.includes('2fa') || msg.includes('tvåfaktor') || msg.includes('authenticator') || msg.includes('inloggning')) {
       return 'Ja, vi stöder tvåfaktorsautentisering (2FA) via Google Authenticator eller liknande TOTP-appar. Extra säkerhet för ditt adminkonto!'
+    }
+
+    // API
+    if (msg.includes('api') || msg.includes('utvecklar') || msg.includes('integrera')) {
+      return 'API-åtkomst ingår i Business och Enterprise-paketen. Med API:et kan du integrera Bobot direkt i era egna system och applikationer.'
+    }
+
+    // White-label
+    if (msg.includes('white') || msg.includes('label') || msg.includes('egen') && msg.includes('märke')) {
+      return 'White-label (egen branding utan Bobot-logotyp) ingår i Enterprise-paketet. Perfekt för återförsäljare eller om ni vill ha en helt egen lösning.'
+    }
+
+    // SLA
+    if (msg.includes('sla') || msg.includes('garanti') || msg.includes('uptime') || msg.includes('drifttid')) {
+      return 'SLA-garanti med definierade drifttider och supportnivåer ingår i Enterprise-paketet. Kontakta oss för att diskutera era specifika krav!'
     }
 
     // What is Bobot
     if (msg.includes('vad är bobot') || msg.includes('vad gör bobot') || msg.includes('berätta om')) {
       return 'Bobot är en GDPR-säker AI-chatbot för fastighetsbolag. Du bygger enkelt en kunskapsbas med frågor och svar, och widgeten hjälper dina hyresgäster 24/7 på svenska, engelska och arabiska!'
+    }
+
+    // Comparison / Jämförelse
+    if (msg.includes('jämför') || msg.includes('skillnad') || msg.includes('bättre') || msg.includes('annorlunda')) {
+      return 'Bobot skiljer sig genom: All data i Sverige (inte USA), lokal AI utan tredjepartstjänster, specialbyggt för fastighetsbolag med svenska funktioner, och enkel prissättning utan dolda kostnader.'
     }
 
     // Thanks
@@ -400,7 +465,7 @@ function DemoWidget() {
       'Bra fråga! I en riktig Bobot-installation skulle jag söka igenom er kunskapsbas och ge ett precist svar baserat på era egna dokument.',
       'Det kan jag tyvärr inte svara på i demon. Men med den riktiga Bobot kan ni träna mig på precis det ni behöver!',
       'Intressant fråga! Kontakta oss på hej@bobot.nu så berättar vi mer om hur Bobot kan hjälpa er.',
-      'Fråga gärna om priser, funktioner, GDPR, språkstöd eller hur snabbt ni kan komma igång!',
+      'Fråga gärna om våra paket (Starter, Professional, Business, Enterprise), funktioner, GDPR eller hur snabbt ni kan komma igång!',
     ]
     return defaults[Math.floor(Math.random() * defaults.length)]
   }
@@ -911,11 +976,13 @@ function LandingPage() {
 
   const faqs = [
     { q: 'Hur lång tid tar det att komma igång?', a: 'De flesta kunder är igång på under 10 minuter. Ladda upp din kunskapsbank, kopiera koden till din hemsida, och du är redo!' },
-    { q: 'Vilka språk stöds?', a: 'Bobot stöder svenska, engelska och arabiska. Widgeten anpassar sig automatiskt efter användarens webbläsarspråk.' },
     { q: 'Hur fungerar GDPR-efterlevnaden?', a: 'All data lagras på servrar i Sverige. Konversationer anonymiseras automatiskt och raderas enligt dina inställningar (7-30 dagar). Vi samlar aldrig in personuppgifter utan samtycke.' },
-    { q: 'Kan jag anpassa utseendet på chatten?', a: 'Ja! Du kan välja primärfärg, typsnitt, teckenstorlek, rundade hörn och position (höger/vänster). Allt anpassas i adminpanelen med live-förhandsgranskning.' },
-    { q: 'Vad händer om Bobot inte kan svara på en fråga?', a: 'Bobot visar ett anpassningsbart reservmeddelande och loggar frågan i analytics. Du kan sedan lägga till svaret i kunskapsbanken för framtida frågor.' },
-    { q: 'Kan jag byta plan senare?', a: 'Absolut! Du kan uppgradera eller nedgradera när som helst. Kontakta oss så hjälper vi dig.' },
+    { q: 'Kan jag ha flera chatbotar?', a: 'Ja! Du kan skapa separata widgets - t.ex. en för kundtjänst på din hemsida och en för internt medarbetarstöd. Varje widget kan ha egen kunskapsbas, utseende och ton.' },
+    { q: 'Hur importerar jag befintlig FAQ?', a: 'Du kan importera direkt från Excel, Word, CSV eller TXT-filer. Du kan även extrahera Q&A automatiskt från en befintlig webbsida genom att ange URL:en.' },
+    { q: 'Vilken AI-teknik används?', a: 'Bobot drivs av Llama 3.1 via Ollama - en kraftfull open source AI-modell. All AI-behandling sker lokalt på svenska servrar, så ingen data skickas till tredje part.' },
+    { q: 'Vad händer om Bobot inte kan svara?', a: 'Bobot visar ett anpassningsbart reservmeddelande och loggar frågan i analytics. Du kan sedan lägga till svaret i kunskapsbanken för framtida frågor.' },
+    { q: 'Kan jag anpassa utseendet?', a: 'Absolut! Du kan välja primärfärg, bakgrundsfärg, typsnitt, teckenstorlek, rundade hörn och position. Allt anpassas i adminpanelen med live-förhandsgranskning.' },
+    { q: 'Finns det statistik och rapporter?', a: 'Ja, du får detaljerad statistik över antal konversationer, vanligaste frågorna, obesvarade frågor, nöjdhetsbetyg och svarstider. Allt kan exporteras till CSV.' },
   ]
 
   const orderedTiers = pricingTiers ? Object.entries(pricingTiers).map(([key, tier]) => ({ key, ...tier })).sort((a, b) => (a.monthly_fee || 0) - (b.monthly_fee || 0)) : []
@@ -942,7 +1009,7 @@ function LandingPage() {
       </nav>
 
       {/* Hanging mascot positioned near login button */}
-      <div className="fixed top-0 right-[calc(50%-580px)] z-50"><HangingMascot mousePos={mousePos} isVisible={loginHover} /></div>
+      <div className="fixed top-0 right-[calc(50%-620px)] z-50"><HangingMascot mousePos={mousePos} isVisible={loginHover} /></div>
       <PeekingMascot mousePos={mousePos} isVisible={currentSection === 2} />
 
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-10">

@@ -3,28 +3,10 @@ import { AuthContext } from '../App'
 
 const API_BASE = '/api'
 
-const CATEGORIES = [
-  { value: '', label: 'Alla kategorier' },
-  { value: 'hyra', label: 'Hyra' },
-  { value: 'felanmalan', label: 'Felanmälan' },
-  { value: 'kontrakt', label: 'Kontrakt' },
-  { value: 'tvattstuga', label: 'Tvättstuga' },
-  { value: 'parkering', label: 'Parkering' },
-  { value: 'kontakt', label: 'Kontakt' },
-  { value: 'allmant', label: 'Allmänt' }
-]
-
-const LANGUAGES = [
-  { value: '', label: 'Alla språk' },
-  { value: 'sv', label: 'Svenska' },
-  { value: 'en', label: 'English' },
-  { value: 'ar', label: 'العربية' }
-]
-
 const WIDGET_TYPES = [
   { value: '', label: 'Alla widgetar' },
-  { value: 'external', label: 'Extern (kund)' },
-  { value: 'internal', label: 'Intern (anställd)' }
+  { value: 'external', label: 'Kundtjänst' },
+  { value: 'internal', label: 'Medarbetarstöd' }
 ]
 
 function Conversations() {
@@ -35,21 +17,41 @@ function Conversations() {
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
-  const [languageFilter, setLanguageFilter] = useState('')
   const [widgetTypeFilter, setWidgetTypeFilter] = useState('')
   const [error, setError] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [categories, setCategories] = useState([{ value: '', label: 'Alla kategorier' }])
 
   useEffect(() => {
     fetchConversations()
-  }, [categoryFilter, languageFilter, widgetTypeFilter])
+    fetchCategories()
+  }, [])
+
+  useEffect(() => {
+    fetchConversations()
+  }, [categoryFilter, widgetTypeFilter])
+
+  const fetchCategories = async () => {
+    try {
+      const response = await authFetch(`${API_BASE}/categories`)
+      if (response.ok) {
+        const data = await response.json()
+        const categoryOptions = [
+          { value: '', label: 'Alla kategorier' },
+          ...data.map(cat => ({ value: cat.name.toLowerCase(), label: cat.name }))
+        ]
+        setCategories(categoryOptions)
+      }
+    } catch (error) {
+      console.error('Kunde inte hämta kategorier:', error)
+    }
+  }
 
   const fetchConversations = async () => {
     try {
       let url = `${API_BASE}/conversations`
       const params = new URLSearchParams()
       if (categoryFilter) params.append('category', categoryFilter)
-      if (languageFilter) params.append('language', languageFilter)
       if (widgetTypeFilter) params.append('widget_type', widgetTypeFilter)
       if (params.toString()) url += `?${params.toString()}`
 
@@ -67,14 +69,21 @@ function Conversations() {
 
   const fetchConversationDetails = async (conversationId) => {
     setLoadingDetails(true)
+    setError('')
     try {
       const response = await authFetch(`${API_BASE}/conversations/${conversationId}`)
       if (response.ok) {
         const data = await response.json()
         setSelectedConversation(data)
+      } else {
+        const errData = await response.json().catch(() => ({}))
+        setError(errData.detail || `Kunde inte ladda konversation (fel ${response.status})`)
+        setSelectedConversation(null)
       }
     } catch (error) {
       console.error('Kunde inte hämta konversationsdetaljer:', error)
+      setError('Ett fel uppstod vid laddning av konversation. Försök igen.')
+      setSelectedConversation(null)
     } finally {
       setLoadingDetails(false)
     }
@@ -254,17 +263,8 @@ function Conversations() {
           onChange={(e) => setCategoryFilter(e.target.value)}
           className="input w-auto min-w-[150px]"
         >
-          {CATEGORIES.map(cat => (
+          {categories.map(cat => (
             <option key={cat.value} value={cat.value}>{cat.label}</option>
-          ))}
-        </select>
-        <select
-          value={languageFilter}
-          onChange={(e) => setLanguageFilter(e.target.value)}
-          className="input w-auto min-w-[120px]"
-        >
-          {LANGUAGES.map(lang => (
-            <option key={lang.value} value={lang.value}>{lang.label}</option>
           ))}
         </select>
         <select
@@ -335,11 +335,6 @@ function Conversations() {
                       {conv.category}
                     </span>
                   )}
-                  {conv.language && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-bg-secondary text-text-tertiary uppercase">
-                      {conv.language}
-                    </span>
-                  )}
                   {conv.was_helpful !== null && (
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
                       conv.was_helpful
@@ -387,12 +382,6 @@ function Conversations() {
                         <>
                           <span>•</span>
                           <span className="capitalize">{selectedConversation.category}</span>
-                        </>
-                      )}
-                      {selectedConversation.language && (
-                        <>
-                          <span>•</span>
-                          <span className="uppercase">{selectedConversation.language}</span>
                         </>
                       )}
                     </div>

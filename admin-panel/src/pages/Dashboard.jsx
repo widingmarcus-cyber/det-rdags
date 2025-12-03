@@ -325,35 +325,19 @@ function Dashboard() {
           <h2 className="text-lg font-medium text-text-primary mb-4">Snabbåtgärder</h2>
           <div className="space-y-2">
             <Link
-              to="/widget/external"
+              to="/analytics"
               className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all duration-150 group"
             >
-              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+              <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  <circle cx="12" cy="10" r="3" />
-                  <path d="M12 13v2" />
+                  <line x1="18" y1="20" x2="18" y2="10" />
+                  <line x1="12" y1="20" x2="12" y2="4" />
+                  <line x1="6" y1="20" x2="6" y2="14" />
                 </svg>
               </div>
               <div>
-                <p className="font-medium text-text-primary">Kundtjänst</p>
-                <p className="text-sm text-text-secondary">Widget för kunder och besökare</p>
-              </div>
-            </Link>
-            <Link
-              to="/widget/internal"
-              className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all duration-150 group"
-            >
-              <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  <path d="M12 8v4" />
-                  <path d="M12 16h.01" />
-                </svg>
-              </div>
-              <div>
-                <p className="font-medium text-text-primary">Medarbetarstöd</p>
-                <p className="text-sm text-text-secondary">Widget för anställda</p>
+                <p className="font-medium text-text-primary">Se statistik</p>
+                <p className="text-sm text-text-secondary">Detaljerad analys och rapporter</p>
               </div>
             </Link>
             <Link
@@ -366,18 +350,32 @@ function Dashboard() {
                 </svg>
               </div>
               <div>
-                <p className="font-medium text-text-primary">Se konversationer</p>
-                <p className="text-sm text-text-secondary">Granska chatthistorik</p>
+                <p className="font-medium text-text-primary">Granska konversationer</p>
+                <p className="text-sm text-text-secondary">Se chatthistorik och feedback</p>
+              </div>
+            </Link>
+            <Link
+              to="/settings"
+              className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all duration-150 group"
+            >
+              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium text-text-primary">GDPR & Inställningar</p>
+                <p className="text-sm text-text-secondary">Datalagring och företagsinställningar</p>
               </div>
             </Link>
           </div>
         </div>
 
-        {/* Widget Code */}
+        {/* Widgets */}
         <div className="card">
-          <h2 className="text-lg font-medium text-text-primary mb-2">Kom igång</h2>
+          <h2 className="text-lg font-medium text-text-primary mb-2">Dina widgets</h2>
           <p className="text-sm text-text-secondary mb-4">
-            Konfigurera dina widgets och hämta installationskod
+            Hantera dina chatbotar och kunskapsbaser
           </p>
           <div className="space-y-3">
             <Link
@@ -392,7 +390,7 @@ function Dashboard() {
                 </div>
                 <div>
                   <p className="font-medium text-text-primary text-sm">Kundtjänst</p>
-                  <p className="text-xs text-text-secondary">För din webbplats</p>
+                  <p className="text-xs text-text-secondary">För kunder och besökare</p>
                 </div>
               </div>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
@@ -411,7 +409,7 @@ function Dashboard() {
                 </div>
                 <div>
                   <p className="font-medium text-text-primary text-sm">Medarbetarstöd</p>
-                  <p className="text-xs text-text-secondary">För intern användning</p>
+                  <p className="text-xs text-text-secondary">För anställda internt</p>
                 </div>
               </div>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
@@ -420,7 +418,7 @@ function Dashboard() {
             </Link>
           </div>
           <p className="text-xs text-text-tertiary mt-4">
-            Installationskod finns under varje widgets inställningar → Installera-fliken
+            Klicka på en widget för att hantera kunskapsbas, utseende och installationskod
           </p>
         </div>
       </div>
