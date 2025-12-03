@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 
 // Full-size Bobot mascot with eyes that follow cursor
-function BobotMascot({ className = "", size = 160, mousePos = { x: 0.5, y: 0.5 } }) {
+function BobotMascot({ className = "", size = 160, mousePos = { x: 0.5, y: 0.5 }, isWaving = false }) {
   const pupilOffsetX = (mousePos.x - 0.5) * 8
   const pupilOffsetY = (mousePos.y - 0.5) * 6
 
@@ -53,18 +53,28 @@ function BobotMascot({ className = "", size = 160, mousePos = { x: 0.5, y: 0.5 }
       {/* Nose piece */}
       <rect x="56" y="30" width="8" height="8" rx="2" fill="#78716C" />
 
-      {/* Arms with gentle wave */}
+      {/* Left arm - waves when isWaving */}
       <rect x="15" y="62" width="18" height="6" rx="3" fill="#78716C">
-        <animateTransform attributeName="transform" type="rotate" values="0 24 65;-8 24 65;0 24 65" dur="3s" repeatCount="indefinite" />
+        {isWaving ? (
+          <animateTransform attributeName="transform" type="rotate" values="0 24 65;-30 24 65;0 24 65;-30 24 65;0 24 65" dur="0.6s" repeatCount="indefinite" />
+        ) : (
+          <animateTransform attributeName="transform" type="rotate" values="0 24 65;-8 24 65;0 24 65" dur="3s" repeatCount="indefinite" />
+        )}
       </rect>
+      {/* Right arm */}
       <rect x="87" y="62" width="18" height="6" rx="3" fill="#78716C">
         <animateTransform attributeName="transform" type="rotate" values="0 96 65;8 96 65;0 96 65" dur="3s" repeatCount="indefinite" />
       </rect>
 
-      {/* Hands */}
+      {/* Left hand - waves when isWaving */}
       <rect x="10" y="58" width="8" height="14" rx="2" fill="#57534E">
-        <animateTransform attributeName="transform" type="rotate" values="0 14 65;-8 14 65;0 14 65" dur="3s" repeatCount="indefinite" />
+        {isWaving ? (
+          <animateTransform attributeName="transform" type="rotate" values="0 14 65;-30 14 65;0 14 65;-30 14 65;0 14 65" dur="0.6s" repeatCount="indefinite" />
+        ) : (
+          <animateTransform attributeName="transform" type="rotate" values="0 14 65;-8 14 65;0 14 65" dur="3s" repeatCount="indefinite" />
+        )}
       </rect>
+      {/* Right hand */}
       <rect x="102" y="58" width="8" height="14" rx="2" fill="#57534E">
         <animateTransform attributeName="transform" type="rotate" values="0 106 65;8 106 65;0 106 65" dur="3s" repeatCount="indefinite" />
       </rect>
@@ -78,80 +88,77 @@ function BobotMascot({ className = "", size = 160, mousePos = { x: 0.5, y: 0.5 }
   )
 }
 
-// Easter egg: Mini mascot peeking - same design as full mascot, just smaller
-function PeekingMascot({ className = "", mousePos = { x: 0.5, y: 0.5 }, isVisible = false }) {
-  const pupilOffsetX = (mousePos.x - 0.5) * 4
-  const pupilOffsetY = (mousePos.y - 0.5) * 3
+// Easter egg: Just the head dropping from ceiling with initial blinks
+function PeekingHead({ mousePos = { x: 0.5, y: 0.5 }, isVisible = false }) {
+  const [hasFinishedBlinking, setHasFinishedBlinking] = useState(false)
+  const [blinkKey, setBlinkKey] = useState(0)
+
+  // Reset blinking state when visibility changes
+  useEffect(() => {
+    if (isVisible) {
+      setHasFinishedBlinking(false)
+      setBlinkKey(prev => prev + 1)
+      const timer = setTimeout(() => {
+        setHasFinishedBlinking(true)
+      }, 1500) // 3 blinks at 0.5s each
+      return () => clearTimeout(timer)
+    }
+  }, [isVisible])
+
+  const pupilOffsetX = hasFinishedBlinking ? (mousePos.x - 0.5) * 4 : 0
+  const pupilOffsetY = hasFinishedBlinking ? (mousePos.y - 0.5) * 3 : 0
 
   return (
-    <div className={`transition-all duration-500 ease-out ${isVisible ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-8 opacity-0 scale-75'} ${className}`}>
-      <svg width="50" height="50" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* Feet/treads */}
-        <rect x="25" y="95" width="30" height="12" rx="6" fill="#78716C" />
-        <rect x="65" y="95" width="30" height="12" rx="6" fill="#78716C" />
-        <rect x="28" y="97" width="24" height="8" rx="4" fill="#57534E" />
-        <rect x="68" y="97" width="24" height="8" rx="4" fill="#57534E" />
+    <div className={`transition-all duration-500 ease-out ${isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}`}>
+      <svg key={blinkKey} width="50" height="45" viewBox="0 0 60 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* String from ceiling */}
+        <rect x="28" y="0" width="3" height="12" fill="#78716C" />
 
-        {/* Body */}
-        <rect x="30" y="55" width="60" height="42" rx="4" fill="#D97757" />
-        <rect x="33" y="58" width="54" height="36" rx="2" fill="#C4613D" />
-        <rect x="36" y="75" width="20" height="16" rx="2" fill="#1C1917" />
-        <rect x="64" y="75" width="20" height="16" rx="2" fill="#1C1917" />
-
-        {/* Neck */}
-        <rect x="50" y="45" width="20" height="14" rx="2" fill="#78716C" />
+        {/* Antenna */}
+        <rect x="28" y="10" width="3" height="8" rx="1.5" fill="#78716C" />
+        <circle cx="29.5" cy="8" r="4" fill="#4A9D7C">
+          <animate attributeName="opacity" values="1;0.3;1" dur="1s" repeatCount="indefinite" />
+        </circle>
 
         {/* Head */}
-        <rect x="35" y="20" width="50" height="28" rx="4" fill="#D97757" />
+        <rect x="5" y="18" width="50" height="28" rx="4" fill="#D97757" />
 
         {/* Eye sockets */}
-        <ellipse cx="48" cy="34" rx="12" ry="11" fill="#1C1917" />
-        <ellipse cx="72" cy="34" rx="12" ry="11" fill="#1C1917" />
+        <ellipse cx="18" cy="32" rx="10" ry="9" fill="#1C1917" />
+        <ellipse cx="42" cy="32" rx="10" ry="9" fill="#1C1917" />
 
         {/* Inner eye area */}
-        <ellipse cx="48" cy="34" rx="9" ry="8" fill="#292524" />
-        <ellipse cx="72" cy="34" rx="9" ry="8" fill="#292524" />
+        <ellipse cx="18" cy="32" rx="7" ry="6" fill="#292524" />
+        <ellipse cx="42" cy="32" rx="7" ry="6" fill="#292524" />
 
-        {/* Pupils - follow cursor with blink */}
-        <ellipse cx={48 + pupilOffsetX} cy={35 + pupilOffsetY} rx="5" fill="#D97757">
-          <animate attributeName="ry" values="5;0.5;5;5;5" dur="3s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+        {/* Pupils - blink 3 times first, then track cursor */}
+        <ellipse cx={18 + pupilOffsetX} cy={32 + pupilOffsetY} rx="4" fill="#D97757">
+          {!hasFinishedBlinking && (
+            <animate attributeName="ry" values="4;0.3;4;0.3;4;0.3;4" dur="1.5s" fill="freeze" />
+          )}
+          {hasFinishedBlinking && <set attributeName="ry" to="4" />}
         </ellipse>
-        <ellipse cx={72 + pupilOffsetX} cy={35 + pupilOffsetY} rx="5" fill="#D97757">
-          <animate attributeName="ry" values="5;0.5;5;5;5" dur="3s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+        <ellipse cx={42 + pupilOffsetX} cy={32 + pupilOffsetY} rx="4" fill="#D97757">
+          {!hasFinishedBlinking && (
+            <animate attributeName="ry" values="4;0.3;4;0.3;4;0.3;4" dur="1.5s" fill="freeze" />
+          )}
+          {hasFinishedBlinking && <set attributeName="ry" to="4" />}
         </ellipse>
 
         {/* Eye highlights */}
-        <circle cx={50 + pupilOffsetX * 0.5} cy={32 + pupilOffsetY * 0.5} r="2.5" fill="#FEF2EE">
-          <animate attributeName="opacity" values="1;0;1;1;1" dur="3s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+        <circle cx={19 + pupilOffsetX * 0.5} cy={30 + pupilOffsetY * 0.5} r="2" fill="#FEF2EE">
+          {!hasFinishedBlinking && (
+            <animate attributeName="opacity" values="1;0;1;0;1;0;1" dur="1.5s" fill="freeze" />
+          )}
         </circle>
-        <circle cx={74 + pupilOffsetX * 0.5} cy={32 + pupilOffsetY * 0.5} r="2.5" fill="#FEF2EE">
-          <animate attributeName="opacity" values="1;0;1;1;1" dur="3s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+        <circle cx={43 + pupilOffsetX * 0.5} cy={30 + pupilOffsetY * 0.5} r="2" fill="#FEF2EE">
+          {!hasFinishedBlinking && (
+            <animate attributeName="opacity" values="1;0;1;0;1;0;1" dur="1.5s" fill="freeze" />
+          )}
         </circle>
 
         {/* Nose piece */}
-        <rect x="56" y="30" width="8" height="8" rx="2" fill="#78716C" />
-
-        {/* Arms waving */}
-        <rect x="15" y="62" width="18" height="6" rx="3" fill="#78716C">
-          <animateTransform attributeName="transform" type="rotate" values="0 24 65;-15 24 65;0 24 65;10 24 65;0 24 65" dur="1s" repeatCount="indefinite" />
-        </rect>
-        <rect x="87" y="62" width="18" height="6" rx="3" fill="#78716C">
-          <animateTransform attributeName="transform" type="rotate" values="0 96 65;15 96 65;0 96 65;-10 96 65;0 96 65" dur="1s" repeatCount="indefinite" />
-        </rect>
-
-        {/* Hands */}
-        <rect x="10" y="58" width="8" height="14" rx="2" fill="#57534E">
-          <animateTransform attributeName="transform" type="rotate" values="0 14 65;-15 14 65;0 14 65;10 14 65;0 14 65" dur="1s" repeatCount="indefinite" />
-        </rect>
-        <rect x="102" y="58" width="8" height="14" rx="2" fill="#57534E">
-          <animateTransform attributeName="transform" type="rotate" values="0 106 65;15 106 65;0 106 65;-10 106 65;0 106 65" dur="1s" repeatCount="indefinite" />
-        </rect>
-
-        {/* Antenna */}
-        <rect x="58" y="12" width="4" height="10" rx="2" fill="#78716C" />
-        <circle cx="60" cy="10" r="5" fill="#4A9D7C">
-          <animate attributeName="opacity" values="1;0.3;1" dur="0.8s" repeatCount="indefinite" />
-        </circle>
+        <rect x="26" y="28" width="8" height="8" rx="2" fill="#78716C" />
       </svg>
     </div>
   )
@@ -177,7 +184,7 @@ function Sparkle({ delay = 0, size = 4, className = "" }) {
   return (
     <div className={`absolute pointer-events-none ${className}`} style={{ animationDelay: `${delay}ms` }}>
       <svg width={size * 4} height={size * 4} viewBox="0 0 24 24" fill="none" className="animate-sparkle">
-        <path d="M12 0L13.5 10.5L24 12L13.5 13.5L12 24L10.5 13.5L0 12L10.5 10.5L12 0Z" className="fill-[#D97757]/60 dark:fill-[#D97757]/60" />
+        <path d="M12 0L13.5 10.5L24 12L13.5 13.5L12 24L10.5 13.5L0 12L10.5 10.5L12 0Z" className="fill-[#D97757]/60" />
       </svg>
     </div>
   )
@@ -203,23 +210,23 @@ function ThemeToggle({ isDark, onToggle }) {
 // Full-sized chat widget
 function ChatWidget({ messages, label, className = "" }) {
   return (
-    <div className={`w-80 bg-white dark:bg-stone-800 rounded-xl shadow-xl border border-stone-200 dark:border-stone-700 overflow-hidden ${className}`}>
-      <div className="bg-[#D97757] px-4 py-3 flex items-center justify-between">
+    <div className={`w-96 bg-white dark:bg-stone-800 rounded-2xl shadow-xl border border-stone-200 dark:border-stone-700 overflow-hidden ${className}`}>
+      <div className="bg-[#D97757] px-5 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-            <BobotMini className="scale-75" />
+          <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+            <BobotMini className="scale-90" />
           </div>
           <div>
-            <span className="text-white text-sm font-medium block">Bobot</span>
-            <span className="text-white/70 text-xs">Online</span>
+            <span className="text-white font-medium block">Bobot</span>
+            <span className="text-white/70 text-sm">Online</span>
           </div>
         </div>
-        {label && <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">{label}</span>}
+        {label && <span className="bg-white/20 text-white text-sm px-3 py-1 rounded-full">{label}</span>}
       </div>
-      <div className="p-4 space-y-3 bg-stone-50 dark:bg-stone-900 min-h-[80px]">
+      <div className="p-5 space-y-4 bg-stone-50 dark:bg-stone-900 min-h-[120px]">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${
+            <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
               msg.from === 'user'
                 ? 'bg-[#D97757] text-white'
                 : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm'
@@ -229,10 +236,10 @@ function ChatWidget({ messages, label, className = "" }) {
           </div>
         ))}
       </div>
-      <div className="px-4 py-3 border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800">
-        <div className="flex items-center gap-2 text-stone-400 text-sm">
-          <span className="flex-1 bg-stone-100 dark:bg-stone-700 rounded-full px-4 py-2">Skriv ett meddelande...</span>
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+      <div className="px-5 py-4 border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800">
+        <div className="flex items-center gap-3 text-stone-400">
+          <span className="flex-1 bg-stone-100 dark:bg-stone-700 rounded-full px-5 py-3">Skriv ett meddelande...</span>
+          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
           </svg>
         </div>
@@ -245,6 +252,7 @@ function LandingPage() {
   const navigate = useNavigate()
   const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 })
   const [loginHover, setLoginHover] = useState(false)
+  const [ctaHover, setCtaHover] = useState(false)
   const [contentVisible, setContentVisible] = useState(false)
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -285,18 +293,13 @@ function LandingPage() {
   }
 
   const convo1 = [
-    { from: 'user', text: 'Får jag ha hund?' },
-    { from: 'bot', text: 'Ja, husdjur är tillåtna så länge de inte stör.' },
+    { from: 'user', text: 'Får jag ha hund i lägenheten?' },
+    { from: 'bot', text: 'Ja, husdjur är tillåtna i våra fastigheter så länge de inte stör grannar eller skadar lägenheten.' },
   ]
 
   const convo2 = [
-    { from: 'user', text: 'När töms soporna?' },
-    { from: 'bot', text: 'Tisdag och fredag varje vecka.' },
-  ]
-
-  const convo3 = [
     { from: 'user', text: 'Vad är policyn för semester?' },
-    { from: 'bot', text: 'Minst 25 dagar/år. Ansök via HR-portalen.' },
+    { from: 'bot', text: 'Du har rätt till minst 25 semesterdagar per år. Ansök via HR-portalen senast 4 veckor innan.' },
   ]
 
   const sellingPoints = [
@@ -334,8 +337,8 @@ function LandingPage() {
               onMouseEnter={() => setLoginHover(true)}
               onMouseLeave={() => setLoginHover(false)}
             >
-              {/* Easter egg: Mini mascot appears next to login button */}
-              <PeekingMascot mousePos={mousePos} isVisible={loginHover} />
+              {/* Easter egg: Head drops from ceiling next to login */}
+              <PeekingHead mousePos={mousePos} isVisible={loginHover} />
               <button onClick={() => navigate('/login')} className="bg-[#D97757] hover:bg-[#c4613d] text-white text-sm px-5 py-2 rounded-lg font-medium transition-all hover:scale-105 hover:shadow-lg">
                 Logga in
               </button>
@@ -356,7 +359,7 @@ function LandingPage() {
               <div className="absolute -left-8 lg:-left-44 top-1/2 -translate-y-1/2 hidden lg:block">
                 <div className="relative">
                   <div className="absolute inset-0 bg-[#D97757]/20 rounded-full blur-3xl scale-150" />
-                  <BobotMascot size={160} mousePos={mousePos} className="relative z-10 animate-float" />
+                  <BobotMascot size={160} mousePos={mousePos} isWaving={ctaHover} className="relative z-10 animate-float" />
                 </div>
               </div>
 
@@ -391,6 +394,8 @@ function LandingPage() {
                   <a
                     href="mailto:hej@bobot.nu"
                     className="inline-flex items-center gap-2 bg-[#D97757] hover:bg-[#c4613d] text-white px-6 py-3 rounded-xl font-medium transition-all hover:scale-105 hover:shadow-xl shadow-lg shadow-[#D97757]/25"
+                    onMouseEnter={() => setCtaHover(true)}
+                    onMouseLeave={() => setCtaHover(false)}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -401,8 +406,8 @@ function LandingPage() {
               </div>
             </div>
 
-            {/* Right: Demo widgets - full size, stacked */}
-            <div className={`flex flex-col gap-4 transition-all duration-1000 delay-300 ${contentVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
+            {/* Right: 2 full-size demo widgets */}
+            <div className={`flex flex-col gap-6 transition-all duration-1000 delay-300 ${contentVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
               <ChatWidget
                 messages={convo1}
                 label="Kund"
@@ -410,13 +415,8 @@ function LandingPage() {
               />
               <ChatWidget
                 messages={convo2}
-                label="Kund"
-                className="self-end hover:scale-[1.02] transition-transform"
-              />
-              <ChatWidget
-                messages={convo3}
                 label="Anställd"
-                className="self-start hover:scale-[1.02] transition-transform"
+                className="self-end hover:scale-[1.02] transition-transform"
               />
             </div>
           </div>
