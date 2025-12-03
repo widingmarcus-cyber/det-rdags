@@ -39,7 +39,7 @@ function WidgetPage({ widgetType }) {
   const [knowledgeLoading, setKnowledgeLoading] = useState(false)
   const [showKnowledgeModal, setShowKnowledgeModal] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
-  const [knowledgeForm, setKnowledgeForm] = useState({ question: '', answer: '', category: '' })
+  const [knowledgeForm, setKnowledgeForm] = useState({ question: '', answer: '', category: '', widget_scope: 'widget' })
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedItems, setSelectedItems] = useState([])
   const [bulkDeleting, setBulkDeleting] = useState(false)
@@ -272,8 +272,11 @@ function WidgetPage({ widgetType }) {
 
     try {
       const payload = {
-        ...knowledgeForm,
-        widget_id: widget.id
+        question: knowledgeForm.question,
+        answer: knowledgeForm.answer,
+        category: knowledgeForm.category,
+        // Only set widget_id if scope is 'widget', otherwise null for shared
+        widget_id: knowledgeForm.widget_scope === 'widget' ? widget.id : null
       }
 
       let response
@@ -292,7 +295,7 @@ function WidgetPage({ widgetType }) {
       if (response.ok) {
         setShowKnowledgeModal(false)
         setEditingItem(null)
-        setKnowledgeForm({ question: '', answer: '', category: '' })
+        setKnowledgeForm({ question: '', answer: '', category: '', widget_scope: 'widget' })
         fetchKnowledge(widget.id)
         setSuccess(editingItem ? 'Uppdaterad!' : 'Tillagd!')
         setTimeout(() => setSuccess(''), 2000)
@@ -1362,7 +1365,12 @@ function WidgetPage({ widgetType }) {
                       <button
                         onClick={() => {
                           setEditingItem(item)
-                          setKnowledgeForm({ question: item.question, answer: item.answer, category: item.category || '' })
+                          setKnowledgeForm({
+                            question: item.question,
+                            answer: item.answer,
+                            category: item.category || '',
+                            widget_scope: item.widget_id ? 'widget' : 'shared'
+                          })
                           setShowKnowledgeModal(true)
                         }}
                         className="p-2 text-text-tertiary hover:text-accent hover:bg-accent-soft rounded-md"
@@ -1414,6 +1422,39 @@ function WidgetPage({ widgetType }) {
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">Svar</label>
                 <textarea value={knowledgeForm.answer} onChange={(e) => setKnowledgeForm({ ...knowledgeForm, answer: e.target.value })} className="input w-full" rows="4" placeholder="Skriv svaret här..." required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-2">Tillgänglighet</label>
+                <div className="space-y-2">
+                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${knowledgeForm.widget_scope === 'shared' ? 'border-accent bg-accent-soft' : 'border-border-default hover:border-accent/50'}`}>
+                    <input
+                      type="radio"
+                      name="widget_scope"
+                      value="shared"
+                      checked={knowledgeForm.widget_scope === 'shared'}
+                      onChange={() => setKnowledgeForm({ ...knowledgeForm, widget_scope: 'shared' })}
+                      className="w-4 h-4 text-accent"
+                    />
+                    <div>
+                      <p className="font-medium text-text-primary">Delad</p>
+                      <p className="text-xs text-text-tertiary">Visas i både kundtjänst och medarbetarstöd</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${knowledgeForm.widget_scope === 'widget' ? 'border-accent bg-accent-soft' : 'border-border-default hover:border-accent/50'}`}>
+                    <input
+                      type="radio"
+                      name="widget_scope"
+                      value="widget"
+                      checked={knowledgeForm.widget_scope === 'widget'}
+                      onChange={() => setKnowledgeForm({ ...knowledgeForm, widget_scope: 'widget' })}
+                      className="w-4 h-4 text-accent"
+                    />
+                    <div>
+                      <p className="font-medium text-text-primary">Endast {isExternal ? 'kundtjänst' : 'medarbetarstöd'}</p>
+                      <p className="text-xs text-text-tertiary">Visas endast i denna widget</p>
+                    </div>
+                  </label>
+                </div>
               </div>
               <div className="flex justify-end gap-3 pt-4">
                 <button type="button" onClick={() => setShowKnowledgeModal(false)} className="btn btn-ghost">Avbryt</button>
