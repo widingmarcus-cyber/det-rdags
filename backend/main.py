@@ -3,7 +3,7 @@ Bobot Backend API
 En GDPR-säker AI-chatbot för fastighetsbolag
 """
 
-from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks, UploadFile, File, Response, Query
+from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks, UploadFile, File, Response, Query, Form
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, Field, field_validator
