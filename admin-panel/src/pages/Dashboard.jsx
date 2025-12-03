@@ -183,7 +183,7 @@ function Dashboard() {
               <line x1="3" y1="10" x2="21" y2="10" />
             </svg>
           }
-          trend="frågor"
+          trend="konversationer"
         />
         <StatCard
           title="Denna vecka"
@@ -195,7 +195,7 @@ function Dashboard() {
               <line x1="6" y1="20" x2="6" y2="14" />
             </svg>
           }
-          trend="frågor"
+          trend="konversationer"
         />
         <StatCard
           title="Senaste 30 dagar"
@@ -209,7 +209,7 @@ function Dashboard() {
               <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
             </svg>
           }
-          trend="frågor"
+          trend="konversationer"
         />
       </div>
 
@@ -285,7 +285,7 @@ function Dashboard() {
               </div>
             </div>
           </div>
-          {dailyStats.every(d => !d.questions || d.questions === 0) ? (
+          {dailyStats.every(d => !d.messages || d.messages === 0) ? (
             <div className="h-32 flex items-center justify-center">
               <div className="text-center">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary mx-auto mb-2">
@@ -300,22 +300,22 @@ function Dashboard() {
           ) : (
             <div className="h-32 flex items-end gap-1">
               {dailyStats.map((day, i) => {
-                const maxQuestions = Math.max(...dailyStats.map(d => d.questions || 0), 1)
-                const questionHeight = Math.max(((day.questions || 0) / maxQuestions) * 100, 0)
+                const maxMessages = Math.max(...dailyStats.map(d => d.messages || 0), 1)
+                const barHeight = Math.max(((day.messages || 0) / maxMessages) * 100, 0)
                 const date = new Date(day.date)
                 const dayNum = date.getDate()
                 const isWeekend = date.getDay() === 0 || date.getDay() === 6
 
                 return (
-                  <div key={i} className="flex-1 flex flex-col items-center group" title={`${date.toLocaleDateString('sv-SE')}: ${day.questions || 0} konversationer`}>
+                  <div key={i} className="flex-1 flex flex-col items-center group" title={`${date.toLocaleDateString('sv-SE')}: ${day.messages || 0} konversationer`}>
                     <div className="w-full h-24 flex items-end">
                       <div
                         className={`w-full rounded-t transition-all ${
-                          day.questions > 0
+                          day.messages > 0
                             ? 'bg-accent hover:bg-accent/80'
                             : 'bg-border-subtle'
                         }`}
-                        style={{ height: day.questions > 0 ? `${Math.max(questionHeight, 8)}%` : '4px' }}
+                        style={{ height: day.messages > 0 ? `${Math.max(barHeight, 8)}%` : '4px' }}
                       />
                     </div>
                     {chartPeriod === 7 && (
