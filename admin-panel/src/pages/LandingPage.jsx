@@ -502,19 +502,13 @@ function LandingPage() {
               </div>
             </div>
 
-            {/* Right: 2 full-size demo widgets */}
+            {/* Right: Demo widget */}
             <div className={`flex flex-col gap-4 sm:gap-6 pt-4 transition-all duration-1000 delay-300 ${contentVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
               <ChatWidget
                 messages={convo1}
                 label="Kund"
                 startDelay={800}
                 className="self-center lg:self-start hover:scale-[1.02] transition-transform"
-              />
-              <ChatWidget
-                messages={convo2}
-                label="Anställd"
-                startDelay={4000}
-                className="self-center lg:self-end hover:scale-[1.02] transition-transform"
               />
             </div>
           </div>
@@ -523,41 +517,179 @@ function LandingPage() {
 
       {/* How it works section */}
       <section className="px-4 sm:px-6 py-12 sm:py-16 bg-white/50 dark:bg-stone-800/50 border-t border-stone-200 dark:border-stone-700">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <h2 className="text-xl sm:text-2xl font-semibold text-stone-900 dark:text-stone-100 text-center mb-8 sm:mb-12">
             Så fungerar det
           </h2>
-          <div className="grid sm:grid-cols-3 gap-6 sm:gap-8">
-            <HowItWorksStep
-              number={1}
-              title="Bygg din kunskapsbank"
-              description="Lägg till frågor och svar som Bobot ska kunna besvara. Importera enkelt från Excel eller skriv direkt."
-              icon={
-                <svg className="w-8 h-8 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                </svg>
-              }
-            />
-            <HowItWorksStep
-              number={2}
-              title="Integrera på din sida"
-              description="Kopiera en enkel kodrad och klistra in på din hemsida. Klart på under 5 minuter."
-              icon={
-                <svg className="w-8 h-8 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
-                </svg>
-              }
-            />
-            <HowItWorksStep
-              number={3}
-              title="Bobot svarar åt dig"
-              description="Dina kunder och anställda får svar direkt, dygnet runt. Du följer upp via dashboarden."
-              icon={
-                <svg className="w-8 h-8 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-                </svg>
-              }
-            />
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            {/* Left: Demo widget for internal use */}
+            <div className="flex justify-center lg:justify-start order-2 lg:order-1">
+              <ChatWidget
+                messages={convo2}
+                label="Anställd"
+                startDelay={500}
+                className="hover:scale-[1.02] transition-transform"
+              />
+            </div>
+            {/* Right: Steps */}
+            <div className="space-y-6 order-1 lg:order-2">
+              <HowItWorksStep
+                number={1}
+                title="Bygg din kunskapsbank"
+                description="Skriv frågor och svar manuellt eller importera från Excel, Word, CSV eller textfiler."
+                icon={
+                  <svg className="w-8 h-8 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                  </svg>
+                }
+              />
+              <HowItWorksStep
+                number={2}
+                title="Integrera på din sida"
+                description="Kopiera en enkel kodrad och klistra in på din hemsida. Klart på under 5 minuter."
+                icon={
+                  <svg className="w-8 h-8 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
+                  </svg>
+                }
+              />
+              <HowItWorksStep
+                number={3}
+                title="Bobot svarar åt dig"
+                description="Dina kunder och anställda får svar direkt, dygnet runt. Du följer upp via dashboarden."
+                icon={
+                  <svg className="w-8 h-8 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                  </svg>
+                }
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing section */}
+      <section className="px-4 sm:px-6 py-12 sm:py-16 border-t border-stone-200 dark:border-stone-700">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-xl sm:text-2xl font-semibold text-stone-900 dark:text-stone-100 text-center mb-3">
+            Enkel och transparent prissättning
+          </h2>
+          <p className="text-stone-600 dark:text-stone-400 text-center mb-8 sm:mb-12 max-w-2xl mx-auto">
+            Välj det paket som passar din organisation. Alla planer inkluderar obegränsade konversationer.
+          </p>
+          <div className="grid sm:grid-cols-3 gap-6">
+            {/* Starter */}
+            <div className="bg-white dark:bg-stone-800 rounded-2xl p-6 border border-stone-200 dark:border-stone-700 shadow-sm">
+              <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100 mb-2">Starter</h3>
+              <div className="mb-4">
+                <span className="text-3xl font-bold text-stone-900 dark:text-stone-100">990</span>
+                <span className="text-stone-500 dark:text-stone-400"> kr/mån</span>
+              </div>
+              <p className="text-sm text-stone-600 dark:text-stone-400 mb-6">Perfekt för små företag som vill testa.</p>
+              <ul className="space-y-3 text-sm text-stone-600 dark:text-stone-400 mb-6">
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  100 kunskapsartiklar
+                </li>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  1 chattwidget
+                </li>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  E-postsupport
+                </li>
+              </ul>
+              <a href="mailto:hej@bobot.nu?subject=Starter-plan" className="block w-full text-center py-2.5 rounded-xl border-2 border-[#D97757] text-[#D97757] font-medium hover:bg-[#D97757]/10 transition-colors">
+                Kom igång
+              </a>
+            </div>
+
+            {/* Pro - Featured */}
+            <div className="bg-gradient-to-b from-[#D97757] to-[#c4613d] rounded-2xl p-6 shadow-xl relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-stone-900 text-white text-xs font-medium px-3 py-1 rounded-full">
+                Populärast
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Pro</h3>
+              <div className="mb-4">
+                <span className="text-3xl font-bold text-white">2 490</span>
+                <span className="text-white/70"> kr/mån</span>
+              </div>
+              <p className="text-sm text-white/80 mb-6">För växande företag som behöver mer.</p>
+              <ul className="space-y-3 text-sm text-white/90 mb-6">
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  500 kunskapsartiklar
+                </li>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  3 chattwidgets
+                </li>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Prioriterad support
+                </li>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Anpassade färger
+                </li>
+              </ul>
+              <a href="mailto:hej@bobot.nu?subject=Pro-plan" className="block w-full text-center py-2.5 rounded-xl bg-white text-[#D97757] font-medium hover:bg-stone-100 transition-colors">
+                Kom igång
+              </a>
+            </div>
+
+            {/* Enterprise */}
+            <div className="bg-white dark:bg-stone-800 rounded-2xl p-6 border border-stone-200 dark:border-stone-700 shadow-sm">
+              <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100 mb-2">Enterprise</h3>
+              <div className="mb-4">
+                <span className="text-3xl font-bold text-stone-900 dark:text-stone-100">Offert</span>
+              </div>
+              <p className="text-sm text-stone-600 dark:text-stone-400 mb-6">Skräddarsytt för stora organisationer.</p>
+              <ul className="space-y-3 text-sm text-stone-600 dark:text-stone-400 mb-6">
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Obegränsade artiklar
+                </li>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Obegränsade widgets
+                </li>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Dedikerad kontaktperson
+                </li>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  SLA & API-access
+                </li>
+              </ul>
+              <a href="mailto:hej@bobot.nu?subject=Enterprise-förfrågan" className="block w-full text-center py-2.5 rounded-xl border-2 border-[#D97757] text-[#D97757] font-medium hover:bg-[#D97757]/10 transition-colors">
+                Kontakta oss
+              </a>
+            </div>
           </div>
         </div>
       </section>
