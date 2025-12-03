@@ -287,6 +287,194 @@ function ThemeToggle({ isDark, onToggle }) {
   )
 }
 
+// Demo widget floating button for landing page
+function DemoWidget() {
+  const [isOpen, setIsOpen] = useState(false)
+  const [messages, setMessages] = useState([
+    { type: 'bot', text: 'Hej! Jag är Bobot - er AI-medarbetare. Hur kan jag hjälpa dig idag?' }
+  ])
+  const [input, setInput] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+
+  const demoResponses = [
+    'Det låter som en bra fråga! I en riktig implementation skulle jag söka igenom er kunskapsbas för att ge ett precist svar.',
+    'Absolut! Med Bobot kan ni bygga en egen kunskapsbas med era vanligaste frågor och svar.',
+    'Jag kan hjälpa era kunder dygnet runt, på svenska, engelska och arabiska!',
+    'Det här är bara en demo - i den riktiga versionen kan jag svara på allt ni lär mig!',
+    'Bra att du frågar! Kontakta oss på hej@bobot.nu för att komma igång.'
+  ]
+
+  const handleSend = () => {
+    if (!input.trim() || isTyping) return
+    const userMsg = input.trim()
+    setMessages(prev => [...prev, { type: 'user', text: userMsg }])
+    setInput('')
+    setIsTyping(true)
+
+    setTimeout(() => {
+      const response = demoResponses[Math.floor(Math.random() * demoResponses.length)]
+      setMessages(prev => [...prev, { type: 'bot', text: response }])
+      setIsTyping(false)
+    }, 1000 + Math.random() * 1000)
+  }
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+      {/* Chat Window */}
+      {isOpen && (
+        <div className="w-80 sm:w-96 bg-white dark:bg-stone-800 rounded-2xl shadow-2xl border border-stone-200 dark:border-stone-700 overflow-hidden animate-fade-in">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-[#D97757] to-[#C4613D] p-4 flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+              <svg width="24" height="24" viewBox="0 0 48 48" fill="none">
+                <rect x="14" y="8" width="20" height="11" rx="2" fill="#FFFFFF" />
+                <ellipse cx="19" cy="13.5" rx="4" ry="3.5" fill="#1C1917" />
+                <ellipse cx="29" cy="13.5" rx="4" ry="3.5" fill="#1C1917" />
+                <ellipse cx="19" cy="14" rx="2" ry="2" fill="#D97757" />
+                <ellipse cx="29" cy="14" rx="2" ry="2" fill="#D97757" />
+                <rect x="12" y="22" width="24" height="14" rx="2" fill="#FFFFFF" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <div className="font-semibold text-white">Bobot Demo</div>
+              <div className="text-xs text-white/80">din medarbetare</div>
+            </div>
+            <button onClick={() => setIsOpen(false)} className="p-1 hover:bg-white/20 rounded transition-colors">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          {/* Messages */}
+          <div className="h-64 overflow-y-auto p-4 space-y-3 bg-[#FAF8F5] dark:bg-stone-900">
+            {messages.map((msg, i) => (
+              <div key={i} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm ${
+                  msg.type === 'user'
+                    ? 'bg-gradient-to-r from-[#D97757] to-[#C4613D] text-white rounded-br-sm'
+                    : 'bg-[#FEF3EC] dark:bg-stone-700 text-stone-700 dark:text-stone-200 border border-[#E8D5CC] dark:border-stone-600 rounded-bl-sm'
+                }`}>
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="bg-[#FEF3EC] dark:bg-stone-700 px-4 py-3 rounded-2xl rounded-bl-sm border border-[#E8D5CC] dark:border-stone-600">
+                  <div className="flex gap-1">
+                    <span className="w-2 h-2 bg-[#D97757] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-2 h-2 bg-[#D97757] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-2 h-2 bg-[#D97757] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Input */}
+          <div className="p-3 border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                placeholder="Skriv ett meddelande..."
+                className="flex-1 px-4 py-2 bg-stone-100 dark:bg-stone-700 rounded-full text-sm outline-none focus:ring-2 focus:ring-[#D97757] text-stone-700 dark:text-stone-200 placeholder-stone-400"
+              />
+              <button
+                onClick={handleSend}
+                disabled={!input.trim() || isTyping}
+                className="w-10 h-10 bg-gradient-to-r from-[#D97757] to-[#C4613D] rounded-full flex items-center justify-center text-white disabled:opacity-50 hover:scale-105 transition-transform"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z" />
+                </svg>
+              </button>
+            </div>
+            <p className="text-center text-xs text-stone-400 mt-2">Detta är en demo - <a href="mailto:hej@bobot.nu" className="text-[#D97757] hover:underline">kontakta oss</a> för att komma igång!</p>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Button with Mascot */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 ${isOpen ? '' : 'demo-widget-glow'}`}
+        style={{
+          background: 'linear-gradient(135deg, #D97757 0%, #C4613D 100%)',
+        }}
+        aria-label={isOpen ? 'Stäng demo' : 'Testa Bobot'}
+      >
+        {isOpen ? (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        ) : (
+          <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+            {/* Feet */}
+            <rect x="10" y="38" width="12" height="5" rx="2.5" fill="#78716C" />
+            <rect x="26" y="38" width="12" height="5" rx="2.5" fill="#78716C" />
+            <rect x="11.5" y="39" width="9" height="3" rx="1.5" fill="#57534E" />
+            <rect x="27.5" y="39" width="9" height="3" rx="1.5" fill="#57534E" />
+            {/* Body */}
+            <rect x="12" y="22" width="24" height="17" rx="2" fill="#FFFFFF" />
+            <rect x="13.5" y="23.5" width="21" height="14" rx="1" fill="#F5F5F4" />
+            {/* Chest screens */}
+            <rect x="15" y="30" width="8" height="6" rx="1" fill="#1C1917" />
+            <rect x="25" y="30" width="8" height="6" rx="1" fill="#1C1917" />
+            {/* Neck */}
+            <rect x="20" y="18" width="8" height="5" rx="1" fill="#78716C" />
+            {/* Head */}
+            <rect x="14" y="8" width="20" height="11" rx="2" fill="#FFFFFF" />
+            {/* Eyes */}
+            <ellipse cx="19" cy="13.5" rx="4.5" ry="4" fill="#1C1917" />
+            <ellipse cx="29" cy="13.5" rx="4.5" ry="4" fill="#1C1917" />
+            <ellipse cx="19" cy="13.5" rx="3.5" ry="3" fill="#292524" />
+            <ellipse cx="29" cy="13.5" rx="3.5" ry="3" fill="#292524" />
+            {/* Pupils */}
+            <ellipse cx="19" cy="14" rx="2" ry="2" fill="#D97757">
+              <animate attributeName="ry" values="2;0.2;2;2;2" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+            </ellipse>
+            <ellipse cx="29" cy="14" rx="2" ry="2" fill="#D97757">
+              <animate attributeName="ry" values="2;0.2;2;2;2" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+            </ellipse>
+            {/* Eye shine */}
+            <circle cx="20" cy="13" r="1" fill="#FFFFFF">
+              <animate attributeName="opacity" values="1;0;1;1;1" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+            </circle>
+            <circle cx="30" cy="13" r="1" fill="#FFFFFF">
+              <animate attributeName="opacity" values="1;0;1;1;1" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+            </circle>
+            {/* Nose */}
+            <rect x="22.5" y="12" width="3" height="3" rx="1" fill="#78716C" />
+            {/* Arms */}
+            <rect x="5" y="25" width="7" height="2.5" rx="1.2" fill="#78716C" />
+            <rect x="36" y="25" width="7" height="2.5" rx="1.2" fill="#78716C" />
+            {/* Hands */}
+            <rect x="3" y="23" width="3.5" height="6" rx="1" fill="#57534E" />
+            <rect x="41.5" y="23" width="3.5" height="6" rx="1" fill="#57534E" />
+            {/* Antenna */}
+            <rect x="22.5" y="4" width="3" height="5" rx="1" fill="#78716C" />
+            <circle cx="24" cy="3" r="2.5" fill="#4A9D7C">
+              <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite" />
+            </circle>
+          </svg>
+        )}
+      </button>
+
+      {/* Tooltip when closed */}
+      {!isOpen && (
+        <div className="absolute bottom-16 right-0 bg-stone-900 text-white text-sm px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap animate-fade-in">
+          Testa mig!
+          <div className="absolute -bottom-1 right-5 w-2 h-2 bg-stone-900 rotate-45" />
+        </div>
+      )}
+    </div>
+  )
+}
+
 function TypedText({ text, delay = 0, speed = 30, onComplete }) {
   const [displayedText, setDisplayedText] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -854,6 +1042,9 @@ function LandingPage() {
         </footer>
       </section>
 
+      {/* Demo Widget Floating Button */}
+      <DemoWidget />
+
       <style>{`
         html { scroll-behavior: smooth; scroll-snap-type: y mandatory; }
         section { scroll-snap-align: start; scroll-snap-stop: always; }
@@ -863,6 +1054,8 @@ function LandingPage() {
         .animate-sparkle { animation: sparkle 3s ease-in-out infinite; }
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
         .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
+        @keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 15px rgba(217, 119, 87, 0.4), 0 4px 24px rgba(0, 0, 0, 0.15); } 50% { box-shadow: 0 0 25px rgba(217, 119, 87, 0.6), 0 4px 24px rgba(0, 0, 0, 0.15); } }
+        .demo-widget-glow { animation: glow-pulse 2s ease-in-out infinite; }
       `}</style>
     </div>
   )

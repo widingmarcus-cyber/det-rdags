@@ -151,7 +151,7 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode }) 
           </div>
           <div>
             <span className="font-semibold text-text-primary block">Bobot</span>
-            <span className="text-xs text-text-tertiary">AI Assistent</span>
+            <span className="text-xs text-text-tertiary">din medarbetare</span>
           </div>
         </div>
       </div>
