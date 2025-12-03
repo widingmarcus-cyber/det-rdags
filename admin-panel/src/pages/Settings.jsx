@@ -535,39 +535,43 @@ function Settings() {
                     </p>
                   </div>
 
-                  <div className="border border-success/30 bg-success/5 rounded-lg p-4">
+                  <div className="border border-amber-500/30 bg-amber-500/5 rounded-lg p-4">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 bg-success/20 rounded-lg flex items-center justify-center">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success">
+                      <div className="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-500">
                           <circle cx="12" cy="12" r="10" />
                           <path d="M12 8v4l2 2" />
                         </svg>
                       </div>
                       <div>
-                        <p className="font-medium text-text-primary">WCAG 2.2 AA</p>
-                        <p className="text-xs text-success">Uppfyllt</p>
+                        <p className="font-medium text-text-primary">WCAG 2.2</p>
+                        <p className="text-xs text-amber-500">Pågående arbete</p>
                       </div>
                     </div>
                     <p className="text-xs text-text-secondary">
-                      Tillgänglighetskraven enligt DOS-lagen och WCAG 2.2
+                      Arbetar mot WCAG 2.2 AA-nivå och DOS-lagens tillgänglighetskrav
                     </p>
                   </div>
 
-                  <div className="border border-success/30 bg-success/5 rounded-lg p-4">
+                  <div className={`border rounded-lg p-4 ${settings.require_consent ? 'border-success/30 bg-success/5' : 'border-error/30 bg-error/5'}`}>
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 bg-success/20 rounded-lg flex items-center justify-center">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${settings.require_consent ? 'bg-success/20' : 'bg-error/20'}`}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={settings.require_consent ? 'text-success' : 'text-error'}>
                           <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                           <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                         </svg>
                       </div>
                       <div>
                         <p className="font-medium text-text-primary">PuB</p>
-                        <p className="text-xs text-success">Kompatibel</p>
+                        <p className={`text-xs ${settings.require_consent ? 'text-success' : 'text-error'}`}>
+                          {settings.require_consent ? 'Aktiverat' : 'Ej aktiverat'}
+                        </p>
                       </div>
                     </div>
                     <p className="text-xs text-text-secondary">
-                      Svensk personuppgiftsbehandling enligt offentlighetsprincipen
+                      {settings.require_consent
+                        ? 'Samtyckeshantering för personuppgiftsbehandling är aktiverad'
+                        : 'Aktivera samtycke under Integritet-fliken för PuB-kompatibilitet'}
                     </p>
                   </div>
 
