@@ -4483,44 +4483,35 @@ async def get_analytics(
             "unanswered": 0
         }
 
-    # Count messages by day directly from Message table (most accurate)
-    from sqlalchemy import func, cast, Date
+    # Count messages and conversations by day directly from tables
     month_start = today - timedelta(days=29)
+    month_start_dt = datetime.combine(month_start, datetime.min.time())
 
     # Get all conversations for this company in the last 30 days
-    conv_ids = db.query(Conversation.id).filter(
+    conversations = db.query(Conversation).filter(
         Conversation.company_id == company_id,
-        Conversation.started_at >= datetime.combine(month_start, datetime.min.time())
+        Conversation.started_at >= month_start_dt
     ).all()
-    conv_id_list = [c[0] for c in conv_ids]
-
-    if conv_id_list:
-        # Count messages per day
-        daily_messages = db.query(
-            func.date(Message.created_at).label('msg_date'),
-            func.count(Message.id).label('msg_count')
-        ).filter(
-            Message.conversation_id.in_(conv_id_list)
-        ).group_by(func.date(Message.created_at)).all()
-
-        for row in daily_messages:
-            d = row.msg_date.isoformat() if hasattr(row.msg_date, 'isoformat') else str(row.msg_date)
-            if d in daily_stats_dict:
-                daily_stats_dict[d]["messages"] = row.msg_count
 
     # Count conversations per day
-    daily_convs = db.query(
-        func.date(Conversation.started_at).label('conv_date'),
-        func.count(Conversation.id).label('conv_count')
-    ).filter(
-        Conversation.company_id == company_id,
-        Conversation.started_at >= datetime.combine(month_start, datetime.min.time())
-    ).group_by(func.date(Conversation.started_at)).all()
-
-    for row in daily_convs:
-        d = row.conv_date.isoformat() if hasattr(row.conv_date, 'isoformat') else str(row.conv_date)
+    for conv in conversations:
+        d = conv.started_at.date().isoformat()
         if d in daily_stats_dict:
-            daily_stats_dict[d]["conversations"] = row.conv_count
+            daily_stats_dict[d]["conversations"] += 1
+
+    # Get all messages for these conversations
+    if conversations:
+        conv_ids = [c.id for c in conversations]
+        messages = db.query(Message).filter(
+            Message.conversation_id.in_(conv_ids)
+        ).all()
+
+        # Count messages per day
+        for msg in messages:
+            if msg.created_at:
+                d = msg.created_at.date().isoformat()
+                if d in daily_stats_dict:
+                    daily_stats_dict[d]["messages"] += 1
 
     # Convert to sorted list (always 30 days)
     daily_stats_list = [daily_stats_dict[d] for d in sorted(daily_stats_dict.keys())]
