@@ -11,6 +11,10 @@
 - GDPR-compliant with automatic data retention cleanup
 - Real-time analytics and conversation tracking
 - Embeddable chat widget for customer websites
+- Multiple widgets per company with individual settings
+- Knowledge base templates for quick setup
+- Subscription and billing management
+- 2FA authentication for super admins
 
 ## Architecture
 
@@ -52,7 +56,8 @@ bobot/
 │   │   ├── main.jsx            # Entry point
 │   │   ├── index.css           # Tailwind CSS entry
 │   │   ├── components/
-│   │   │   └── Navbar.jsx      # Navigation sidebar
+│   │   │   ├── Navbar.jsx      # Navigation sidebar
+│   │   │   └── ProposalPDF.jsx # PDF generation for proposals
 │   │   └── pages/
 │   │       ├── Login.jsx       # Company login
 │   │       ├── AdminLogin.jsx  # Super admin login
@@ -62,7 +67,11 @@ bobot/
 │   │       ├── Analytics.jsx   # Detailed analytics
 │   │       ├── Settings.jsx    # Company settings
 │   │       ├── Preview.jsx     # Widget preview
-│   │       └── SuperAdmin.jsx  # Multi-tenant management
+│   │       ├── Widgets.jsx     # Widget management list
+│   │       ├── WidgetPage.jsx  # Individual widget editor
+│   │       ├── SuperAdmin.jsx  # Multi-tenant management
+│   │       ├── LandingPage.jsx # Public landing page
+│   │       └── Documentation.jsx # API documentation
 │   ├── package.json
 │   ├── vite.config.js
 │   ├── tailwind.config.js
@@ -165,43 +174,103 @@ npm run dev
 |--------|----------|-------------|
 | POST | `/chat/{company_id}` | Send question, get AI response |
 | POST | `/chat/{company_id}/feedback` | Submit feedback on response |
+| POST | `/chat/widget/{widget_key}` | Chat via widget key |
 | GET | `/widget/{company_id}/config` | Get widget configuration |
+| GET | `/widget/key/{widget_key}/config` | Get config by widget key |
+| GET | `/health` | Health check (DB, Ollama) |
+
+### Authentication
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/login` | Company login |
+| POST | `/auth/admin/login` | Super admin login |
+| POST | `/auth/admin/verify-2fa` | 2FA verification |
 
 ### Authenticated (Company)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/auth/login` | Company login |
 | GET/PUT | `/settings` | Company settings |
 | GET/POST/PUT/DELETE | `/knowledge` | Knowledge base CRUD |
-| POST | `/knowledge/upload` | Upload Excel/Word/CSV |
+| POST | `/knowledge/upload` | Upload Excel/Word/CSV/TXT |
 | POST | `/knowledge/import-url` | Import from URL |
+| POST | `/knowledge/check-similar` | Check for similar Q&A |
+| DELETE | `/knowledge/bulk` | Bulk delete items |
 | GET | `/conversations` | List conversations |
 | GET/DELETE | `/conversations/{id}` | View/delete conversation |
 | GET | `/stats` | Basic statistics |
 | GET | `/analytics` | Detailed analytics |
+| GET | `/my-usage` | Current usage metrics |
+| GET/POST | `/widgets` | List/create widgets |
+| GET/PUT/DELETE | `/widgets/{id}` | Widget CRUD |
+| GET | `/templates` | List knowledge templates |
+| POST | `/templates/{id}/apply` | Apply template |
 | GET | `/export/conversations` | Export as CSV |
 | GET | `/export/knowledge` | Export as CSV/JSON |
+| GET | `/activity-log` | View activity log |
+
+### GDPR Endpoints (Public with session)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/gdpr/{company_id}/consent` | Give/revoke consent |
+| GET | `/gdpr/{company_id}/my-data` | Download user data |
+| DELETE | `/gdpr/{company_id}/my-data` | Request data deletion |
+| GET | `/gdpr/{company_id}/audit-log` | View GDPR audit trail |
 
 ### Super Admin
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/auth/admin/login` | Admin login |
 | GET/POST | `/admin/companies` | List/create companies |
 | DELETE | `/admin/companies/{id}` | Delete company |
 | PUT | `/admin/companies/{id}/toggle` | Enable/disable company |
+| GET | `/admin/system-health` | System health overview |
 | POST | `/admin/gdpr-cleanup` | Manual GDPR cleanup |
+| GET | `/admin/audit-log` | Admin audit log |
+| POST | `/admin/impersonate/{id}` | Impersonate company |
+| GET/PUT | `/admin/companies/{id}/usage` | View/set usage limits |
+| GET/POST | `/admin/pricing-tiers` | Pricing management |
+| GET | `/admin/revenue-dashboard` | Revenue analytics |
+| GET/POST | `/admin/subscriptions` | Subscription management |
+| GET/POST | `/admin/invoices` | Invoice management |
+| GET/POST | `/admin/roadmap` | Roadmap items |
+| GET/POST | `/admin/companies/{id}/notes` | Company notes |
+| GET/POST | `/admin/companies/{id}/documents` | Company documents |
+| GET | `/admin/activity-stream` | Real-time activity |
+| GET | `/admin/ai-insights` | AI-powered insights |
+| GET/POST/DELETE | `/admin/announcements` | Broadcast messages |
+| PUT | `/admin/maintenance-mode` | Toggle maintenance |
 
 ## Database Models
 
 ### Core Tables
 - **Company** - Tenant/customer accounts
-- **CompanySettings** - Per-tenant configuration
-- **KnowledgeItem** - Q&A pairs in knowledge base
+- **CompanySettings** - Per-tenant configuration (colors, messages, GDPR settings)
+- **KnowledgeItem** - Q&A pairs in knowledge base (indexed by category)
 - **Conversation** - Chat sessions with anonymized user data
-- **Message** - Individual messages within conversations
-- **DailyStatistics** - Aggregated analytics (GDPR-safe)
+- **Message** - Individual messages with metadata (language, sources)
+- **Widget** - Individual widget instances per company (internal/external)
+- **DailyStatistics** - Aggregated analytics (GDPR-safe, retained after deletion)
 - **ChatLog** - Legacy logging (for backwards compatibility)
-- **SuperAdmin** - Platform administrators
+
+### Admin & Audit Tables
+- **SuperAdmin** - Platform administrators with 2FA support
+- **AdminAuditLog** - Admin action tracking
+- **GDPRAuditLog** - Data processing audit trail
+- **CompanyActivityLog** - Per-company activity (12-month retention)
+
+### Billing & Subscription Tables
+- **Subscription** - Company subscription info
+- **Invoice** - Invoice history
+- **PricingTier** - Pricing tier definitions
+
+### Additional Tables
+- **CompanyNote** - Internal admin notes per company
+- **CompanyDocument** - Uploaded contracts/agreements
+- **WidgetPerformance** - Hourly widget performance stats
+- **RoadmapItem** - Feature roadmap (editable by admin)
+- **GlobalSettings** - System-wide configuration
+- **PageView** - Landing page analytics
+- **DailyPageStats** - Aggregated page statistics
+- **EmailNotificationQueue** - Pending email notifications
 
 ### Multi-tenancy
 All data is isolated by `company_id`. Every query must filter by tenant.
@@ -316,6 +385,20 @@ When testing:
 2. Add endpoint function in `main.py`
 3. Use `Depends(get_current_company)` for authenticated endpoints
 4. Use `Depends(get_super_admin)` for admin-only endpoints
+
+### Working with Widgets
+- Each company can have multiple widgets (internal/external)
+- Widgets have unique keys for embedding: `/chat/widget/{widget_key}`
+- Widget settings include: appearance, messages, consent, Q&A filtering
+- Widget performance is tracked hourly in `WidgetPerformance` table
+- Edit widget settings in admin panel: Widgets → WidgetPage
+
+### Using Knowledge Templates
+- Templates are stored in `backend/templates/` directory
+- List available templates: GET `/templates`
+- Preview template content: GET `/templates/{id}/preview`
+- Apply template to knowledge base: POST `/templates/{id}/apply`
+- Templates can be filtered by category when applying
 
 ### Database Migrations
 Currently using auto-create via `Base.metadata.create_all()`. For production, consider adding Alembic for proper migrations.
