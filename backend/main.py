@@ -850,7 +850,7 @@ class MessageResponse(BaseModel):
     role: str
     content: str
     created_at: datetime
-    sources: Optional[List[str]] = None
+    sources: Optional[List[dict]] = None  # Knowledge items used for response
     had_answer: bool = True
 
 
