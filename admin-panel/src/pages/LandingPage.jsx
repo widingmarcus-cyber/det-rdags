@@ -335,16 +335,16 @@ function ChatWidget({ messages, label, className = "", startDelay = 0 }) {
             <BobotMini className="scale-50" />
           </div>
           <div>
-            <span className="text-white font-semibold block text-xs">Bobot</span>
-            <span className="text-white/80 text-[10px]">Online</span>
+            <span className="text-white font-semibold block text-sm">Bobot</span>
+            <span className="text-white/80 text-xs">Online</span>
           </div>
         </div>
-        {label && <span className="bg-white/25 text-white font-medium text-[10px] px-2 py-0.5 rounded-full">{label}</span>}
+        {label && <span className="bg-white/25 text-white font-medium text-xs px-2 py-0.5 rounded-full">{label}</span>}
       </div>
-      <div className="p-3 space-y-2 bg-stone-100 dark:bg-stone-900 h-[100px]">
+      <div className="p-3 space-y-2 bg-stone-100 dark:bg-stone-900 h-[150px] overflow-hidden">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'} transition-opacity duration-300 ${visibleMessages.includes(i) ? 'opacity-100' : 'opacity-0'}`}>
-            <div className={`max-w-[85%] rounded-xl px-2.5 py-1.5 text-xs ${msg.from === 'user' ? 'bg-[#D97757] text-white rounded-br-sm' : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm rounded-bl-sm'}`}>
+            <div className={`max-w-[85%] rounded-xl px-2.5 py-1.5 text-sm ${msg.from === 'user' ? 'bg-[#D97757] text-white rounded-br-sm' : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm rounded-bl-sm'}`}>
               <TypedText text={msg.text} delay={i === 0 ? startDelay : 0} speed={msg.from === 'bot' ? 15 : 30} onComplete={i === currentTyping ? handleMessageComplete : undefined} />
             </div>
           </div>
@@ -352,7 +352,7 @@ function ChatWidget({ messages, label, className = "", startDelay = 0 }) {
       </div>
       <div className="px-3 py-2 border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800">
         <div className="flex items-center gap-2 text-stone-400">
-          <span className="flex-1 bg-stone-100 dark:bg-stone-700 rounded-full px-3 py-1.5 text-[10px]">Skriv ett meddelande...</span>
+          <span className="flex-1 bg-stone-100 dark:bg-stone-700 rounded-full px-3 py-1.5 text-xs">Skriv ett meddelande...</span>
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
           </svg>
@@ -593,12 +593,14 @@ function LandingPage() {
 
   const customerConvo = [
     { from: 'user', text: 'Får jag ha hund i lägenheten?' },
-    { from: 'bot', text: 'Ja, husdjur är tillåtna så länge de inte stör grannar eller skadar lägenheten.' },
+    { from: 'bot', text: 'Ja, husdjur är tillåtna så länge de inte stör grannar.' },
+    { from: 'user', text: 'Hur anmäler jag det?' },
+    { from: 'bot', text: 'Fyll i blanketten på Mina Sidor under Husdjur.' },
   ]
 
   const employeeConvo = [
     { from: 'user', text: 'Vad är policyn för semester?' },
-    { from: 'bot', text: 'Du har rätt till 25 semesterdagar per år. Ansök via HR-portalen senast 4 veckor i förväg.' },
+    { from: 'bot', text: 'Du har 25 semesterdagar per år. Ansök via HR-portalen.' },
   ]
 
   const sellingPoints = ['Avlastar medarbetare', 'Alltid tillgänglig', 'Intern kunskapsbank', 'GDPR-säker', 'Träna nyanställda', 'Enkel att integrera', 'Flera språk']
