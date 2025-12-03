@@ -318,14 +318,18 @@ function TypedText({ text, delay = 0, speed = 30, onComplete }) {
 }
 
 function ChatWidget({ messages, label, className = "", startDelay = 0 }) {
-  const [visibleMessages, setVisibleMessages] = useState([])
-  const [currentTyping, setCurrentTyping] = useState(0)
+  const [visibleCount, setVisibleCount] = useState(0)
+  const [typingDone, setTypingDone] = useState([])
 
   useEffect(() => {
-    if (currentTyping < messages.length) setVisibleMessages(prev => [...prev, currentTyping])
-  }, [currentTyping, messages.length])
+    const timer = setTimeout(() => setVisibleCount(1), startDelay)
+    return () => clearTimeout(timer)
+  }, [startDelay])
 
-  const handleMessageComplete = () => setTimeout(() => setCurrentTyping(prev => prev + 1), 300)
+  const handleMessageComplete = (index) => {
+    setTypingDone(prev => [...prev, index])
+    setTimeout(() => setVisibleCount(prev => Math.min(prev + 1, messages.length)), 400)
+  }
 
   return (
     <div className={`w-full max-w-[280px] bg-white dark:bg-stone-800 rounded-2xl shadow-2xl border border-stone-200 dark:border-stone-700 overflow-hidden ${className}`}>
@@ -342,10 +346,10 @@ function ChatWidget({ messages, label, className = "", startDelay = 0 }) {
         {label && <span className="bg-white/25 text-white font-medium text-xs px-2 py-0.5 rounded-full">{label}</span>}
       </div>
       <div className="p-3 space-y-1.5 bg-stone-100 dark:bg-stone-900">
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`} style={{ opacity: visibleMessages.includes(i) ? 1 : 0, transition: 'opacity 0.3s' }}>
+        {messages.slice(0, visibleCount).map((msg, i) => (
+          <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
             <div className={`max-w-[85%] rounded-xl px-2.5 py-1.5 text-sm leading-snug ${msg.from === 'user' ? 'bg-[#D97757] text-white rounded-br-sm' : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm rounded-bl-sm'}`}>
-              <TypedText text={msg.text} delay={i === 0 ? startDelay : 0} speed={msg.from === 'bot' ? 15 : 30} onComplete={i === currentTyping ? handleMessageComplete : undefined} />
+              <TypedText text={msg.text} delay={0} speed={msg.from === 'bot' ? 20 : 25} onComplete={!typingDone.includes(i) ? () => handleMessageComplete(i) : undefined} />
             </div>
           </div>
         ))}
