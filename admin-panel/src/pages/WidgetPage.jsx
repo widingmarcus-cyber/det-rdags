@@ -14,8 +14,6 @@ function WidgetPage({ widgetType }) {
 
   // Settings form
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
     primary_color: '#D97757',
     welcome_message: 'Hej! Hur kan jag hjälpa dig idag?',
     fallback_message: 'Tyvärr kunde jag inte hitta ett svar på din fråga.',
@@ -95,8 +93,6 @@ function WidgetPage({ widgetType }) {
         if (existingWidget) {
           setWidget(existingWidget)
           setFormData({
-            name: existingWidget.name || '',
-            description: existingWidget.description || '',
             primary_color: existingWidget.primary_color || '#D97757',
             welcome_message: existingWidget.welcome_message || 'Hej! Hur kan jag hjälpa dig idag?',
             fallback_message: existingWidget.fallback_message || 'Tyvärr kunde jag inte hitta ett svar.',
@@ -117,7 +113,6 @@ function WidgetPage({ widgetType }) {
   }
 
   const createWidget = async () => {
-    const defaultName = isExternal ? 'Kundwidget' : 'Intern widget'
     const defaultWelcome = isExternal
       ? 'Hej! Hur kan jag hjälpa dig idag?'
       : 'Hej! Hur kan jag hjälpa dig med interna frågor?'
@@ -126,9 +121,8 @@ function WidgetPage({ widgetType }) {
       const response = await authFetch(`${API_BASE}/widgets`, {
         method: 'POST',
         body: JSON.stringify({
-          name: defaultName,
+          name: isExternal ? 'Extern' : 'Intern',  // Internal identifier only
           widget_type: widgetType,
-          description: isExternal ? 'Widget för kundservice' : 'Widget för anställda',
           primary_color: '#D97757',
           welcome_message: defaultWelcome,
           fallback_message: 'Tyvärr kunde jag inte hitta ett svar på din fråga.',
@@ -141,8 +135,6 @@ function WidgetPage({ widgetType }) {
         const newWidget = await response.json()
         setWidget(newWidget)
         setFormData({
-          name: newWidget.name,
-          description: newWidget.description || '',
           primary_color: newWidget.primary_color,
           welcome_message: newWidget.welcome_message,
           fallback_message: newWidget.fallback_message,
@@ -520,16 +512,6 @@ function WidgetPage({ widgetType }) {
           <form onSubmit={handleSaveSettings} className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">Namn</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="input w-full"
-                  placeholder="T.ex. Kundchatt"
-                />
-              </div>
-              <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">Språk</label>
                 <select
                   value={formData.language}
@@ -540,37 +522,7 @@ function WidgetPage({ widgetType }) {
                   <option value="en">English</option>
                   <option value="ar">العربية</option>
                 </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Beskrivning</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="input w-full"
-                rows="2"
-                placeholder="Valfri beskrivning..."
-              />
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">Primärfärg</label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={formData.primary_color}
-                    onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
-                    className="w-10 h-10 rounded cursor-pointer border border-border-subtle"
-                  />
-                  <input
-                    type="text"
-                    value={formData.primary_color}
-                    onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
-                    className="input flex-1"
-                  />
-                </div>
+                <p className="text-xs text-text-tertiary mt-1">Standardspråk för widgeten (anpassas automatiskt efter besökare)</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">Underrubrik</label>
@@ -581,7 +533,27 @@ function WidgetPage({ widgetType }) {
                   className="input w-full"
                   placeholder="Alltid redo att hjälpa"
                 />
+                <p className="text-xs text-text-tertiary mt-1">Visas under företagsnamnet i widgetens header</p>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">Primärfärg</label>
+              <div className="flex gap-2 max-w-xs">
+                <input
+                  type="color"
+                  value={formData.primary_color}
+                  onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
+                  className="w-10 h-10 rounded cursor-pointer border border-border-subtle"
+                />
+                <input
+                  type="text"
+                  value={formData.primary_color}
+                  onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
+                  className="input flex-1"
+                />
+              </div>
+              <p className="text-xs text-text-tertiary mt-1">Accentfärg för knappar och header</p>
             </div>
 
             <div>
@@ -772,7 +744,7 @@ function WidgetPage({ widgetType }) {
                   </svg>
                 </div>
                 <div>
-                  <h2 className="font-semibold text-white">{formData.name || 'Bobot'}</h2>
+                  <h2 className="font-semibold text-white">Bobot</h2>
                   <p className="text-white/80 text-sm">{formData.subtitle}</p>
                 </div>
               </div>

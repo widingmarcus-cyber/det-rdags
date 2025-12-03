@@ -822,6 +822,7 @@ class ConversationResponse(BaseModel):
     was_helpful: Optional[bool] = None
     category: Optional[str] = None  # Auto-detected category
     language: Optional[str] = None  # Detected language
+    widget_type: Optional[str] = None  # external or internal
     messages: Optional[List[MessageResponse]] = None
 
 
@@ -834,6 +835,7 @@ class ConversationListResponse(BaseModel):
     was_helpful: Optional[bool] = None
     category: Optional[str] = None
     language: Optional[str] = None
+    widget_type: Optional[str] = None  # external or internal
     first_message: Optional[str] = None
 
 
@@ -2858,7 +2860,8 @@ async def get_conversations(
     limit: int = Query(50, ge=1, le=500, description="Max items to return"),
     offset: int = Query(0, ge=0, description="Number of items to skip"),
     category: Optional[str] = None,
-    language: Optional[str] = None
+    language: Optional[str] = None,
+    widget_type: Optional[str] = None
 ):
     """Hämta konversationer för inloggat företag"""
     query = db.query(Conversation).filter(
@@ -2873,6 +2876,13 @@ async def get_conversations(
     if language:
         query = query.filter(Conversation.language == language)
 
+    # Filter by widget_type if provided
+    if widget_type:
+        # Join with Widget table to filter by type
+        query = query.join(Widget, Conversation.widget_id == Widget.id).filter(
+            Widget.widget_type == widget_type
+        )
+
     conversations = query.order_by(Conversation.started_at.desc()).offset(offset).limit(limit).all()
 
     result = []
@@ -2883,6 +2893,13 @@ async def get_conversations(
             Message.role == "user"
         ).order_by(Message.created_at.asc()).first()
 
+        # Get widget_type from the related widget
+        conv_widget_type = None
+        if conv.widget_id:
+            widget = db.query(Widget).filter(Widget.id == conv.widget_id).first()
+            if widget:
+                conv_widget_type = widget.widget_type
+
         result.append(ConversationListResponse(
             id=conv.id,
             session_id=conv.session_id,
@@ -2892,6 +2909,7 @@ async def get_conversations(
             was_helpful=conv.was_helpful,
             category=conv.category,
             language=conv.language,
+            widget_type=conv_widget_type,
             first_message=first_msg.content[:100] if first_msg else None
         ))
 
@@ -2929,6 +2947,13 @@ async def get_conversation(
             had_answer=msg.had_answer if msg.had_answer is not None else True
         ))
 
+    # Get widget_type from the related widget
+    conv_widget_type = None
+    if conversation.widget_id:
+        widget = db.query(Widget).filter(Widget.id == conversation.widget_id).first()
+        if widget:
+            conv_widget_type = widget.widget_type
+
     return ConversationResponse(
         id=conversation.id,
         session_id=conversation.session_id,
@@ -2938,6 +2963,7 @@ async def get_conversation(
         was_helpful=conversation.was_helpful,
         category=conversation.category,
         language=conversation.language,
+        widget_type=conv_widget_type,
         messages=message_responses
     )
 
