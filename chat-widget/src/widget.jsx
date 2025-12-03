@@ -690,6 +690,7 @@ function ChatWidget({ config }) {
               }}>
                 <div style={{
                   maxWidth: '85%',
+                  width: 'fit-content',
                   padding: '12px 16px',
                   borderRadius: borderRadius - 4,
                   fontSize: fontSize,
