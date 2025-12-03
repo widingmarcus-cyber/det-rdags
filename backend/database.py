@@ -568,6 +568,83 @@ class EmailNotificationQueue(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class PageView(Base):
+    """Page view tracking for landing pages and external sites"""
+    __tablename__ = "page_views"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Page identification
+    page_url = Column(String, nullable=False, index=True)  # URL of the page
+    page_name = Column(String, default="")  # Friendly name (e.g., "Landing Page", "Pricing")
+
+    # Visit metadata (anonymized for GDPR)
+    visitor_id = Column(String, index=True)  # Hashed anonymous identifier
+    ip_anonymous = Column(String)  # First 3 octets only
+    user_agent = Column(String)  # Browser/device info
+    referrer = Column(String)  # Where they came from
+
+    # Device & location hints
+    device_type = Column(String)  # desktop, mobile, tablet
+    country_code = Column(String)  # Optional geo lookup (2-letter code)
+
+    # Session tracking
+    session_id = Column(String, index=True)  # To group page views in a session
+    is_bounce = Column(Boolean, default=True)  # Did they leave immediately?
+    time_on_page_seconds = Column(Integer)  # How long they stayed
+
+    # UTM parameters for campaign tracking
+    utm_source = Column(String)
+    utm_medium = Column(String)
+    utm_campaign = Column(String)
+    utm_content = Column(String)
+    utm_term = Column(String)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # Composite indexes for analytics queries
+    __table_args__ = (
+        Index('ix_pageview_url_date', 'page_url', 'created_at'),
+        Index('ix_pageview_session', 'session_id'),
+    )
+
+
+class DailyPageStats(Base):
+    """Aggregated daily stats for page views - GDPR-safe retention"""
+    __tablename__ = "daily_page_stats"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(Date, nullable=False, index=True)
+    page_url = Column(String, nullable=False, index=True)
+    page_name = Column(String, default="")
+
+    # Visitor counts
+    total_views = Column(Integer, default=0)
+    unique_visitors = Column(Integer, default=0)
+
+    # Engagement
+    avg_time_on_page = Column(Float, default=0)  # seconds
+    bounce_rate = Column(Float, default=0)  # percentage
+
+    # Device breakdown (JSON: {"desktop": 50, "mobile": 45, "tablet": 5})
+    device_breakdown = Column(Text, default="{}")
+
+    # Top referrers (JSON: {"google.com": 20, "direct": 15, ...})
+    referrer_breakdown = Column(Text, default="{}")
+
+    # UTM campaign breakdown (JSON: {"summer_sale": 10, ...})
+    campaign_breakdown = Column(Text, default="{}")
+
+    # Hourly distribution (JSON: {"9": 5, "10": 8, ...})
+    hourly_breakdown = Column(Text, default="{}")
+
+    # Composite index
+    __table_args__ = (
+        Index('ix_daily_page_stats_date_url', 'date', 'page_url'),
+    )
+
+
 class RoadmapItem(Base):
     """Roadmap items for upcoming features - editable by super admin"""
     __tablename__ = "roadmap_items"

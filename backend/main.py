@@ -25,7 +25,7 @@ from database import (
     CompanySettings, Conversation, Message, DailyStatistics, GDPRAuditLog,
     AdminAuditLog, GlobalSettings, CompanyActivityLog, Subscription, Invoice,
     CompanyNote, CompanyDocument, WidgetPerformance, EmailNotificationQueue,
-    RoadmapItem, PricingTier, Widget
+    RoadmapItem, PricingTier, Widget, PageView, DailyPageStats
 )
 from auth import (
     hash_password, verify_password, create_token, create_2fa_pending_token,
@@ -693,6 +693,45 @@ class WidgetResponse(BaseModel):
     consent_text: str
     created_at: datetime
     knowledge_count: int = 0
+
+
+class PageViewRequest(BaseModel):
+    """Request model for tracking page views"""
+    page_url: str
+    page_name: Optional[str] = ""
+    session_id: Optional[str] = None
+    referrer: Optional[str] = None
+    user_agent: Optional[str] = None
+    utm_source: Optional[str] = None
+    utm_medium: Optional[str] = None
+    utm_campaign: Optional[str] = None
+    utm_content: Optional[str] = None
+    utm_term: Optional[str] = None
+
+
+class PageViewUpdateRequest(BaseModel):
+    """Request to update page view with engagement data"""
+    session_id: str
+    page_url: str
+    time_on_page_seconds: int
+    is_bounce: bool = False
+
+
+class LandingAnalyticsResponse(BaseModel):
+    """Response model for landing page analytics"""
+    total_views: int
+    unique_visitors: int
+    avg_time_on_page: float
+    bounce_rate: float
+    views_today: int
+    views_this_week: int
+    views_this_month: int
+    top_referrers: List[Dict]
+    device_breakdown: Dict
+    hourly_distribution: Dict
+    daily_trend: List[Dict]
+    top_campaigns: List[Dict]
+    pages: List[Dict]
 
 
 class SuperAdminLogin(BaseModel):
@@ -6883,6 +6922,326 @@ async def send_notification(
     db.commit()
 
     return {"message": "Notifikation skickad (placeholder)"}
+
+
+# =============================================================================
+# Landing Page Analytics
+# =============================================================================
+
+def detect_device_type(user_agent: str) -> str:
+    """Detect device type from user agent string"""
+    if not user_agent:
+        return "unknown"
+    ua_lower = user_agent.lower()
+    if any(x in ua_lower for x in ['mobile', 'android', 'iphone', 'ipod']):
+        if 'tablet' in ua_lower or 'ipad' in ua_lower:
+            return "tablet"
+        return "mobile"
+    elif any(x in ua_lower for x in ['ipad', 'tablet']):
+        return "tablet"
+    return "desktop"
+
+
+def anonymize_ip_for_tracking(ip: str) -> str:
+    """Anonymize IP address for GDPR compliance"""
+    if not ip:
+        return "unknown"
+    parts = ip.split(".")
+    if len(parts) >= 3:
+        return f"{parts[0]}.{parts[1]}.{parts[2]}.xxx"
+    return "unknown"
+
+
+@app.post("/track/pageview")
+async def track_pageview(
+    request: Request,
+    data: PageViewRequest,
+    db: Session = Depends(get_db)
+):
+    """Track a page view - publicly accessible for landing page tracking"""
+    try:
+        # Get client IP from request
+        client_ip = request.client.host if request.client else "unknown"
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            client_ip = forwarded.split(",")[0].strip()
+
+        # Create anonymous visitor ID from IP + user agent (hashed)
+        import hashlib
+        visitor_data = f"{client_ip}:{data.user_agent or ''}"
+        visitor_id = hashlib.sha256(visitor_data.encode()).hexdigest()[:16]
+
+        # Generate session ID if not provided
+        session_id = data.session_id or str(uuid.uuid4())
+
+        # Detect device type
+        device_type = detect_device_type(data.user_agent or "")
+
+        # Create page view record
+        page_view = PageView(
+            page_url=data.page_url,
+            page_name=data.page_name or "",
+            visitor_id=visitor_id,
+            ip_anonymous=anonymize_ip_for_tracking(client_ip),
+            user_agent=data.user_agent,
+            referrer=data.referrer,
+            device_type=device_type,
+            session_id=session_id,
+            is_bounce=True,  # Default to bounce, updated on engagement
+            utm_source=data.utm_source,
+            utm_medium=data.utm_medium,
+            utm_campaign=data.utm_campaign,
+            utm_content=data.utm_content,
+            utm_term=data.utm_term
+        )
+        db.add(page_view)
+        db.commit()
+
+        return {
+            "success": True,
+            "session_id": session_id,
+            "visitor_id": visitor_id
+        }
+    except Exception as e:
+        print(f"[Track PageView Error] {e}")
+        # Don't fail the page load if tracking fails
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/track/engagement")
+async def track_engagement(
+    data: PageViewUpdateRequest,
+    db: Session = Depends(get_db)
+):
+    """Update page view with engagement data (time on page, bounce status)"""
+    try:
+        # Find the most recent page view for this session and URL
+        page_view = db.query(PageView).filter(
+            PageView.session_id == data.session_id,
+            PageView.page_url == data.page_url
+        ).order_by(PageView.created_at.desc()).first()
+
+        if page_view:
+            page_view.time_on_page_seconds = data.time_on_page_seconds
+            page_view.is_bounce = data.is_bounce
+            db.commit()
+            return {"success": True, "updated": True}
+
+        return {"success": True, "updated": False}
+    except Exception as e:
+        print(f"[Track Engagement Error] {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/admin/landing-analytics", response_model=LandingAnalyticsResponse)
+async def get_landing_analytics(
+    days: int = Query(30, ge=1, le=365),
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get landing page analytics for super admin"""
+    today = date.today()
+    start_date = today - timedelta(days=days)
+    week_ago = today - timedelta(days=7)
+
+    # Query all page views in the date range
+    page_views = db.query(PageView).filter(
+        PageView.created_at >= datetime.combine(start_date, datetime.min.time())
+    ).all()
+
+    # Total views and unique visitors
+    total_views = len(page_views)
+    unique_visitors = len(set(pv.visitor_id for pv in page_views if pv.visitor_id))
+
+    # Calculate avg time on page (excluding null values)
+    times = [pv.time_on_page_seconds for pv in page_views if pv.time_on_page_seconds]
+    avg_time = sum(times) / len(times) if times else 0
+
+    # Calculate bounce rate
+    bounces = sum(1 for pv in page_views if pv.is_bounce)
+    bounce_rate = (bounces / total_views * 100) if total_views > 0 else 0
+
+    # Views today
+    today_start = datetime.combine(today, datetime.min.time())
+    views_today = sum(1 for pv in page_views if pv.created_at >= today_start)
+
+    # Views this week
+    week_start = datetime.combine(week_ago, datetime.min.time())
+    views_this_week = sum(1 for pv in page_views if pv.created_at >= week_start)
+
+    # Views this month
+    views_this_month = total_views
+
+    # Top referrers
+    referrer_counts = {}
+    for pv in page_views:
+        ref = pv.referrer or "Direct"
+        if ref == "":
+            ref = "Direct"
+        # Extract domain from referrer
+        if ref != "Direct" and "://" in ref:
+            try:
+                from urllib.parse import urlparse
+                ref = urlparse(ref).netloc or "Direct"
+            except:
+                pass
+        referrer_counts[ref] = referrer_counts.get(ref, 0) + 1
+
+    top_referrers = sorted(
+        [{"source": k, "count": v} for k, v in referrer_counts.items()],
+        key=lambda x: x["count"],
+        reverse=True
+    )[:10]
+
+    # Device breakdown
+    device_counts = {}
+    for pv in page_views:
+        device = pv.device_type or "unknown"
+        device_counts[device] = device_counts.get(device, 0) + 1
+
+    # Hourly distribution
+    hourly_counts = {}
+    for pv in page_views:
+        hour = str(pv.created_at.hour)
+        hourly_counts[hour] = hourly_counts.get(hour, 0) + 1
+
+    # Daily trend (last N days)
+    daily_counts = {}
+    for pv in page_views:
+        day = pv.created_at.strftime("%Y-%m-%d")
+        daily_counts[day] = daily_counts.get(day, 0) + 1
+
+    daily_trend = sorted(
+        [{"date": k, "views": v} for k, v in daily_counts.items()],
+        key=lambda x: x["date"]
+    )
+
+    # Top campaigns (UTM)
+    campaign_counts = {}
+    for pv in page_views:
+        if pv.utm_campaign:
+            campaign_counts[pv.utm_campaign] = campaign_counts.get(pv.utm_campaign, 0) + 1
+
+    top_campaigns = sorted(
+        [{"campaign": k, "count": v} for k, v in campaign_counts.items()],
+        key=lambda x: x["count"],
+        reverse=True
+    )[:10]
+
+    # Pages breakdown
+    page_counts = {}
+    for pv in page_views:
+        page_key = pv.page_name or pv.page_url
+        if page_key not in page_counts:
+            page_counts[page_key] = {"views": 0, "unique": set()}
+        page_counts[page_key]["views"] += 1
+        if pv.visitor_id:
+            page_counts[page_key]["unique"].add(pv.visitor_id)
+
+    pages = sorted(
+        [{"page": k, "views": v["views"], "unique_visitors": len(v["unique"])}
+         for k, v in page_counts.items()],
+        key=lambda x: x["views"],
+        reverse=True
+    )[:20]
+
+    return LandingAnalyticsResponse(
+        total_views=total_views,
+        unique_visitors=unique_visitors,
+        avg_time_on_page=round(avg_time, 1),
+        bounce_rate=round(bounce_rate, 1),
+        views_today=views_today,
+        views_this_week=views_this_week,
+        views_this_month=views_this_month,
+        top_referrers=top_referrers,
+        device_breakdown=device_counts,
+        hourly_distribution=hourly_counts,
+        daily_trend=daily_trend,
+        top_campaigns=top_campaigns,
+        pages=pages
+    )
+
+
+@app.get("/track/script.js")
+async def get_tracking_script():
+    """Serve the tracking script for embedding on landing pages"""
+    script = """
+(function() {
+    var TRACKING_URL = window.BOBOT_TRACKING_URL || '';
+    var SESSION_KEY = 'bobot_session_id';
+    var startTime = Date.now();
+    var sessionId = sessionStorage.getItem(SESSION_KEY);
+
+    if (!sessionId) {
+        sessionId = 'sess_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+        sessionStorage.setItem(SESSION_KEY, sessionId);
+    }
+
+    // Get UTM parameters
+    var params = new URLSearchParams(window.location.search);
+    var utmSource = params.get('utm_source');
+    var utmMedium = params.get('utm_medium');
+    var utmCampaign = params.get('utm_campaign');
+    var utmContent = params.get('utm_content');
+    var utmTerm = params.get('utm_term');
+
+    // Track page view
+    function trackPageView() {
+        if (!TRACKING_URL) return;
+
+        fetch(TRACKING_URL + '/track/pageview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                page_url: window.location.href,
+                page_name: document.title,
+                session_id: sessionId,
+                referrer: document.referrer,
+                user_agent: navigator.userAgent,
+                utm_source: utmSource,
+                utm_medium: utmMedium,
+                utm_campaign: utmCampaign,
+                utm_content: utmContent,
+                utm_term: utmTerm
+            })
+        }).catch(function() {});
+    }
+
+    // Track engagement on page unload
+    function trackEngagement() {
+        if (!TRACKING_URL) return;
+
+        var timeOnPage = Math.round((Date.now() - startTime) / 1000);
+        var isBounce = timeOnPage < 10; // Less than 10 seconds = bounce
+
+        navigator.sendBeacon(TRACKING_URL + '/track/engagement', JSON.stringify({
+            session_id: sessionId,
+            page_url: window.location.href,
+            time_on_page_seconds: timeOnPage,
+            is_bounce: isBounce
+        }));
+    }
+
+    // Initialize
+    trackPageView();
+
+    // Track when leaving
+    window.addEventListener('beforeunload', trackEngagement);
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden') {
+            trackEngagement();
+        }
+    });
+})();
+"""
+    return Response(
+        content=script,
+        media_type="application/javascript",
+        headers={
+            "Cache-Control": "public, max-age=3600",
+            "Access-Control-Allow-Origin": "*"
+        }
+    )
 
 
 # =============================================================================
