@@ -4493,6 +4493,8 @@ async def get_analytics(
         Conversation.started_at >= month_start_dt
     ).all()
 
+    print(f"[Analytics Debug] Company: {company_id}, Conversations found: {len(conversations)}")
+
     # Count conversations per day
     for conv in conversations:
         d = conv.started_at.date().isoformat()
@@ -4506,12 +4508,16 @@ async def get_analytics(
             Message.conversation_id.in_(conv_ids)
         ).all()
 
+        print(f"[Analytics Debug] Messages found: {len(messages)} for conv_ids: {conv_ids}")
+
         # Count messages per day
         for msg in messages:
             if msg.created_at:
                 d = msg.created_at.date().isoformat()
                 if d in daily_stats_dict:
                     daily_stats_dict[d]["messages"] += 1
+    else:
+        print(f"[Analytics Debug] No conversations found")
 
     # Convert to sorted list (always 30 days)
     daily_stats_list = [daily_stats_dict[d] for d in sorted(daily_stats_dict.keys())]
