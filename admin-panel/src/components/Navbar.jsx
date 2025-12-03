@@ -87,15 +87,48 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode }) 
       role="complementary"
       aria-label="Sidomeny"
     >
-      {/* Logo */}
+      {/* Logo & Mascot */}
       <div className="p-4 mb-2">
         <div className="flex items-center gap-3 px-3 py-2">
-          <div className="w-9 h-9 bg-gradient-to-br from-accent to-accent-hover rounded-lg flex items-center justify-center shadow-sm" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          {/* Cute Robot Mascot */}
+          <div className="w-10 h-10 relative" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+              {/* Antenna */}
+              <circle cx="24" cy="6" r="3" fill="#D97757"/>
+              <rect x="22" y="6" width="4" height="6" fill="#D97757"/>
+              {/* Head */}
+              <rect x="8" y="12" width="32" height="24" rx="6" fill="url(#mascotGradient)"/>
+              {/* Eyes */}
+              <circle cx="17" cy="24" r="4" fill="white"/>
+              <circle cx="31" cy="24" r="4" fill="white"/>
+              <circle cx="18" cy="24" r="2" fill="#3D2B24"/>
+              <circle cx="32" cy="24" r="2" fill="#3D2B24"/>
+              {/* Eye shine */}
+              <circle cx="18.5" cy="23" r="0.8" fill="white"/>
+              <circle cx="32.5" cy="23" r="0.8" fill="white"/>
+              {/* Cheeks */}
+              <ellipse cx="12" cy="28" rx="2.5" ry="1.5" fill="#E8A87C" opacity="0.6"/>
+              <ellipse cx="36" cy="28" rx="2.5" ry="1.5" fill="#E8A87C" opacity="0.6"/>
+              {/* Mouth */}
+              <path d="M20 30 Q24 34 28 30" stroke="#3D2B24" strokeWidth="2" strokeLinecap="round" fill="none"/>
+              {/* Ears */}
+              <rect x="2" y="20" width="6" height="10" rx="2" fill="#C4613D"/>
+              <rect x="40" y="20" width="6" height="10" rx="2" fill="#C4613D"/>
+              {/* Body hint */}
+              <rect x="16" y="36" width="16" height="8" rx="3" fill="#C4613D"/>
+              {/* Gradient definition */}
+              <defs>
+                <linearGradient id="mascotGradient" x1="8" y1="12" x2="40" y2="36" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#D97757"/>
+                  <stop offset="1" stopColor="#C4613D"/>
+                </linearGradient>
+              </defs>
             </svg>
           </div>
-          <span className="font-semibold text-text-primary">Bobot</span>
+          <div>
+            <span className="font-semibold text-text-primary block">Bobot</span>
+            <span className="text-xs text-text-tertiary">AI Assistent</span>
+          </div>
         </div>
       </div>
 

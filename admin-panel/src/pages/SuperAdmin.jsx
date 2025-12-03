@@ -123,7 +123,13 @@ function SuperAdmin() {
     fetchActivityStream()
     fetchAiInsights()
     fetchAnnouncement()
+    fetchAdminPrefs() // Fetch preferences including dark mode on load
   }, [])
+
+  // Apply dark mode when preferences change
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', adminPrefs.dark_mode)
+  }, [adminPrefs.dark_mode])
 
   useEffect(() => {
     if (activeTab === 'audit') {
@@ -708,19 +714,24 @@ function SuperAdmin() {
   }
 
   const handleToggleDarkMode = async () => {
+    // Optimistically update UI first
+    const newDarkMode = !adminPrefs.dark_mode
+    setAdminPrefs(prev => ({ ...prev, dark_mode: newDarkMode }))
+
     try {
       const response = await adminFetch(`${API_BASE}/admin/preferences`, {
         method: 'PUT',
-        body: JSON.stringify({ dark_mode: !adminPrefs.dark_mode })
+        body: JSON.stringify({ dark_mode: newDarkMode })
       })
-      if (response.ok) {
-        setAdminPrefs(prev => ({ ...prev, dark_mode: !prev.dark_mode }))
-        // Apply dark mode to document
-        document.documentElement.classList.toggle('dark', !adminPrefs.dark_mode)
-        showNotification('Inställningar uppdaterade')
+      if (!response.ok) {
+        // Revert on error
+        setAdminPrefs(prev => ({ ...prev, dark_mode: !newDarkMode }))
+        showNotification('Kunde inte spara inställning', 'error')
       }
     } catch (error) {
       console.error('Failed to toggle dark mode:', error)
+      // Revert on error
+      setAdminPrefs(prev => ({ ...prev, dark_mode: !newDarkMode }))
     }
   }
 
@@ -733,9 +744,13 @@ function SuperAdmin() {
         setShow2FASetup(true)
         setVerifyCode('')
         setTwoFAError('')
+      } else {
+        const data = await response.json().catch(() => ({}))
+        showNotification(data.detail || 'Kunde inte starta 2FA-konfiguration', 'error')
       }
     } catch (error) {
       console.error('Failed to setup 2FA:', error)
+      showNotification('Kunde inte ansluta till servern för 2FA', 'error')
     }
   }
 
@@ -1212,7 +1227,31 @@ function SuperAdmin() {
                 <span className="text-xs text-text-tertiary ml-2">Systemöversikt</span>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              {/* Dark Mode Toggle */}
+              <button
+                onClick={handleToggleDarkMode}
+                className="p-2 rounded-lg hover:bg-bg-secondary transition-colors"
+                title={adminPrefs.dark_mode ? 'Ljust läge' : 'Mörkt läge'}
+              >
+                {adminPrefs.dark_mode ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-secondary">
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-secondary">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                  </svg>
+                )}
+              </button>
               <span className="text-sm text-text-secondary px-2 py-1 bg-warning-soft text-warning rounded-full text-xs font-medium">
                 {adminAuth.username}
               </span>
