@@ -2343,8 +2343,8 @@ async def chat_via_widget_key(
         answer = await query_ollama(prompt)
         response_time = int((time.time() - start_time) * 1000)
 
-        # Check if we had a real answer
-        had_answer = bool(relevant_items) and not is_fallback_response(answer, widget.fallback_message)
+        # Check if we had a real answer (based on whether we found relevant context)
+        had_answer = len(relevant_items) > 0
 
         if not had_answer:
             answer = widget.fallback_message or "Tyvärr kunde jag inte hitta ett svar på din fråga."
