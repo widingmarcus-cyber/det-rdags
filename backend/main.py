@@ -2365,13 +2365,13 @@ async def chat_via_widget_key(
     db.commit()
 
     # Cache the response
-    cache_response(company_id, request.question, language, {
+    set_cached_response(company_id, request.question, {
         "answer": answer,
         "sources": sources,
         "had_answer": had_answer,
         "conversation_id": conversation.reference_id,
         "confidence": 100 if had_answer else 0
-    })
+    }, language)
 
     return ChatResponse(
         answer=answer,
