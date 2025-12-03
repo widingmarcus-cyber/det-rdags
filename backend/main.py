@@ -581,6 +581,7 @@ class CompanyResponse(BaseModel):
     created_at: datetime
     knowledge_count: int = 0
     chat_count: int = 0
+    widget_count: int = 0
     max_conversations_month: int = 0
     current_month_conversations: int = 0
     max_knowledge_items: int = 0
@@ -4503,6 +4504,7 @@ async def list_companies(
     for c in companies:
         knowledge_count = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == c.id).count()
         chat_count = db.query(ChatLog).filter(ChatLog.company_id == c.id).count()
+        widget_count = db.query(Widget).filter(Widget.company_id == c.id).count()
         settings = db.query(CompanySettings).filter(CompanySettings.company_id == c.id).first()
 
         result.append(CompanyResponse(
@@ -4512,6 +4514,7 @@ async def list_companies(
             created_at=c.created_at,
             knowledge_count=knowledge_count,
             chat_count=chat_count,
+            widget_count=widget_count,
             max_conversations_month=settings.max_conversations_month if settings else 0,
             current_month_conversations=settings.current_month_conversations if settings else 0,
             max_knowledge_items=settings.max_knowledge_items if settings else 0,
@@ -4570,7 +4573,8 @@ async def create_company(
         is_active=new_company.is_active,
         created_at=new_company.created_at,
         knowledge_count=0,
-        chat_count=0
+        chat_count=0,
+        widget_count=2  # Default internal + external widgets
     )
 
 
@@ -4921,6 +4925,29 @@ async def get_company_usage(
         "usage_percent": round(usage_percent, 1),
         "usage_reset_date": settings.usage_reset_date.isoformat() if settings.usage_reset_date else None
     }
+
+
+@app.get("/admin/companies/{company_id}/widgets")
+async def get_company_widgets(
+    company_id: str,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get widgets for a company (admin access)"""
+    widgets = db.query(Widget).filter(Widget.company_id == company_id).all()
+
+    return [
+        {
+            "id": w.id,
+            "widget_key": w.widget_key,
+            "name": w.name,
+            "widget_type": w.widget_type,
+            "is_active": w.is_active,
+            "primary_color": w.primary_color,
+            "created_at": w.created_at.isoformat() if w.created_at else None
+        }
+        for w in widgets
+    ]
 
 
 @app.put("/admin/companies/{company_id}/pricing")

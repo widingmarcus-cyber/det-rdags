@@ -21,9 +21,10 @@ function Knowledge() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editItem, setEditItem] = useState(null)
-  const [formData, setFormData] = useState({ question: '', answer: '', category: '' })
+  const [formData, setFormData] = useState({ question: '', answer: '', category: '', widget_id: null })
   const [saving, setSaving] = useState(false)
   const [filterCategory, setFilterCategory] = useState('')
+  const [filterWidget, setFilterWidget] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadResult, setUploadResult] = useState(null)
@@ -48,11 +49,26 @@ function Knowledge() {
   const [applyingTemplate, setApplyingTemplate] = useState(false)
   const [replaceExisting, setReplaceExisting] = useState(false)
   const [selectedCategories, setSelectedCategories] = useState([])
+  // Widget states
+  const [widgets, setWidgets] = useState([])
 
   useEffect(() => {
     fetchKnowledge()
     fetchSettings()
+    fetchWidgets()
   }, [])
+
+  const fetchWidgets = async () => {
+    try {
+      const response = await authFetch(`${API_BASE}/widgets`)
+      if (response.ok) {
+        const data = await response.json()
+        setWidgets(data)
+      }
+    } catch (error) {
+      console.error('Kunde inte hämta widgets:', error)
+    }
+  }
 
   const fetchSettings = async () => {
     try {
@@ -127,7 +143,7 @@ function Knowledge() {
   useEffect(() => {
     if (location.state?.prefillQuestion) {
       setEditItem(null)
-      setFormData({ question: location.state.prefillQuestion, answer: '', category: '' })
+      setFormData({ question: location.state.prefillQuestion, answer: '', category: '', widget_id: null })
       setShowModal(true)
       // Clear the state so it doesn't trigger again on refresh
       window.history.replaceState({}, document.title)
@@ -182,13 +198,13 @@ function Knowledge() {
 
   const handleAdd = () => {
     setEditItem(null)
-    setFormData({ question: '', answer: '', category: '' })
+    setFormData({ question: '', answer: '', category: '', widget_id: filterWidget ? parseInt(filterWidget) : null })
     setShowModal(true)
   }
 
   const handleEdit = (item) => {
     setEditItem(item)
-    setFormData({ question: item.question, answer: item.answer, category: item.category || '' })
+    setFormData({ question: item.question, answer: item.answer, category: item.category || '', widget_id: item.widget_id || null })
     setShowModal(true)
   }
 
@@ -240,10 +256,11 @@ function Knowledge() {
 
   const filteredItems = items.filter(item => {
     const matchesCategory = !filterCategory || item.category === filterCategory
+    const matchesWidget = !filterWidget || (filterWidget === 'shared' ? !item.widget_id : item.widget_id === parseInt(filterWidget))
     const matchesSearch = !searchQuery ||
       item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.answer.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesCategory && matchesSearch
+    return matchesCategory && matchesWidget && matchesSearch
   })
 
   const getCategoryLabel = (value) => {
@@ -737,6 +754,20 @@ function Knowledge() {
             <option key={cat} value={cat}>{cat}</option>
           ))}
         </select>
+        {widgets.length > 0 && (
+          <select
+            value={filterWidget}
+            onChange={(e) => setFilterWidget(e.target.value)}
+            className="input w-48"
+            aria-label="Filtrera efter widget"
+          >
+            <option value="">Alla widgets</option>
+            <option value="shared">Delade (alla widgets)</option>
+            {widgets.map(w => (
+              <option key={w.id} value={w.id}>{w.name}</option>
+            ))}
+          </select>
+        )}
         <button
           onClick={() => setShowCategoryModal(true)}
           className="btn btn-ghost"
@@ -808,7 +839,16 @@ function Knowledge() {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    {item.widget_name ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        {item.widget_name}
+                      </span>
+                    ) : (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                        Delad
+                      </span>
+                    )}
                     {item.category && (
                       <span className="badge badge-accent">
                         {getCategoryLabel(item.category)}
@@ -858,6 +898,24 @@ function Knowledge() {
               </h2>
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-4">
+              {widgets.length > 0 && (
+                <div>
+                  <label className="input-label">Widget</label>
+                  <select
+                    value={formData.widget_id || ''}
+                    onChange={(e) => setFormData({ ...formData, widget_id: e.target.value ? parseInt(e.target.value) : null })}
+                    className="input"
+                  >
+                    <option value="">Delad (tillgänglig för alla widgets)</option>
+                    {widgets.map(w => (
+                      <option key={w.id} value={w.id}>{w.name} ({w.widget_type === 'external' ? 'Extern' : w.widget_type === 'internal' ? 'Intern' : 'Anpassad'})</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-text-tertiary mt-1">
+                    Välj vilken widget denna kunskap ska vara tillgänglig för
+                  </p>
+                </div>
+              )}
               <div>
                 <label className="input-label">Kategori</label>
                 <select

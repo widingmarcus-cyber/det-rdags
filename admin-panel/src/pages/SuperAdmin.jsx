@@ -28,6 +28,7 @@ function SuperAdmin() {
   const [showCompanyDashboard, setShowCompanyDashboard] = useState(null)
   const [companyUsage, setCompanyUsage] = useState(null)
   const [companyActivity, setCompanyActivity] = useState([])
+  const [companyWidgets, setCompanyWidgets] = useState([])
   const [companyLoading, setCompanyLoading] = useState(false)
 
   // Analytics state
@@ -1006,14 +1007,16 @@ function SuperAdmin() {
     setCompanyActivity([])
     setCompanyNotes([])
     setCompanyDocuments([])
+    setCompanyWidgets([])
 
     try {
       // Fetch all data in parallel
-      const [usageRes, activityRes, notesRes, docsRes] = await Promise.all([
+      const [usageRes, activityRes, notesRes, docsRes, widgetsRes] = await Promise.all([
         adminFetch(`${API_BASE}/admin/companies/${company.id}/usage`),
         adminFetch(`${API_BASE}/admin/company-activity/${company.id}?limit=10`),
         adminFetch(`${API_BASE}/admin/companies/${company.id}/notes`),
-        adminFetch(`${API_BASE}/admin/companies/${company.id}/documents`)
+        adminFetch(`${API_BASE}/admin/companies/${company.id}/documents`),
+        adminFetch(`${API_BASE}/admin/companies/${company.id}/widgets`)
       ])
 
       if (usageRes.ok) {
@@ -1034,6 +1037,11 @@ function SuperAdmin() {
       if (docsRes.ok) {
         const docsData = await docsRes.json()
         setCompanyDocuments(docsData.documents || [])
+      }
+
+      if (widgetsRes.ok) {
+        const widgetsData = await widgetsRes.json()
+        setCompanyWidgets(widgetsData || [])
       }
     } catch (error) {
       console.error('Failed to fetch company details:', error)
@@ -1911,6 +1919,7 @@ function SuperAdmin() {
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Företag</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Widgets</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Kunskapsbas</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Konversationer</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Användning</th>
@@ -1961,6 +1970,17 @@ function SuperAdmin() {
                             }`}>
                               {company.is_active ? 'Aktiv' : 'Inaktiv'}
                             </span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-1.5">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary">
+                                <rect x="3" y="3" width="7" height="7" rx="1" />
+                                <rect x="14" y="3" width="7" height="7" rx="1" />
+                                <rect x="14" y="14" width="7" height="7" rx="1" />
+                                <rect x="3" y="14" width="7" height="7" rx="1" />
+                              </svg>
+                              <span className="text-sm font-medium text-text-primary">{company.widget_count || 0}</span>
+                            </div>
                           </td>
                           <td className="px-4 py-4">
                             <div className="text-sm">
@@ -3435,6 +3455,61 @@ function SuperAdmin() {
                           </div>
                         )
                       })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Widgets Section */}
+                {companyWidgets.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-medium text-text-primary mb-3 flex items-center gap-2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="14" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                      </svg>
+                      Widgets ({companyWidgets.length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {companyWidgets.map((widget) => (
+                        <div key={widget.id} className="bg-bg-secondary rounded-xl p-4 flex items-center gap-3">
+                          <div
+                            className="w-10 h-10 rounded-lg flex items-center justify-center text-white flex-shrink-0"
+                            style={{ backgroundColor: widget.primary_color || '#D97757' }}
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-text-primary truncate">{widget.name}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
+                                widget.widget_type === 'external' ? 'bg-blue-100 text-blue-700' :
+                                widget.widget_type === 'internal' ? 'bg-purple-100 text-purple-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {widget.widget_type === 'external' ? 'Extern' :
+                                 widget.widget_type === 'internal' ? 'Intern' : 'Anpassad'}
+                              </span>
+                              <span className={`inline-flex items-center gap-1 text-xs ${
+                                widget.is_active ? 'text-success' : 'text-error'
+                              }`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${
+                                  widget.is_active ? 'bg-success' : 'bg-error'
+                                }`} />
+                                {widget.is_active ? 'Aktiv' : 'Inaktiv'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-text-tertiary font-mono truncate max-w-[100px]" title={widget.widget_key}>
+                              {widget.widget_key?.slice(0, 8)}...
+                            </p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
