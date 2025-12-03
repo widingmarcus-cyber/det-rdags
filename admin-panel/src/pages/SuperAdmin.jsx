@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext } from 'react'
 import { AuthContext } from '../App'
+import { downloadProposalPDF } from '../components/ProposalPDF'
 
 const API_BASE = '/api'
 
@@ -28,6 +29,7 @@ function SuperAdmin() {
   const [showCompanyDashboard, setShowCompanyDashboard] = useState(null)
   const [companyUsage, setCompanyUsage] = useState(null)
   const [companyActivity, setCompanyActivity] = useState([])
+  const [companyWidgets, setCompanyWidgets] = useState([])
   const [companyLoading, setCompanyLoading] = useState(false)
 
   // Analytics state
@@ -105,6 +107,20 @@ function SuperAdmin() {
   const [showDiscountModal, setShowDiscountModal] = useState(null)
   const [discountForm, setDiscountForm] = useState({ discount_percent: 0, discount_end_date: '', discount_note: '' })
 
+  // Landing Page Analytics
+  const [landingAnalytics, setLandingAnalytics] = useState(null)
+  const [landingAnalyticsLoading, setLandingAnalyticsLoading] = useState(false)
+  const [landingAnalyticsDays, setLandingAnalyticsDays] = useState(30)
+
+  // Proposal PDF
+  const [showProposalModal, setShowProposalModal] = useState(null)
+  const [proposalForm, setProposalForm] = useState({
+    contactPerson: '',
+    startDate: '',
+    hostingOption: 'cloud'
+  })
+  const [generatingPDF, setGeneratingPDF] = useState(false)
+
   useEffect(() => {
     fetchCompanies()
     fetchSystemHealth()
@@ -112,7 +128,13 @@ function SuperAdmin() {
     fetchActivityStream()
     fetchAiInsights()
     fetchAnnouncement()
+    fetchAdminPrefs() // Fetch preferences including dark mode on load
   }, [])
+
+  // Apply dark mode when preferences change
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', adminPrefs.dark_mode)
+  }, [adminPrefs.dark_mode])
 
   useEffect(() => {
     if (activeTab === 'audit') {
@@ -120,6 +142,7 @@ function SuperAdmin() {
       fetchAuditActionTypes()
     } else if (activeTab === 'analytics') {
       fetchAnalytics()
+      fetchLandingAnalytics(landingAnalyticsDays)
     } else if (activeTab === 'billing') {
       fetchBilling()
     } else if (activeTab === 'preferences') {
@@ -214,6 +237,21 @@ function SuperAdmin() {
       if (perfRes.ok) setPerformanceStats(await perfRes.json())
     } catch (error) {
       console.error('Failed to fetch analytics:', error)
+    }
+  }
+
+  const fetchLandingAnalytics = async (days = 30) => {
+    setLandingAnalyticsLoading(true)
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/landing-analytics?days=${days}`)
+      if (response.ok) {
+        const data = await response.json()
+        setLandingAnalytics(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch landing analytics:', error)
+    } finally {
+      setLandingAnalyticsLoading(false)
     }
   }
 
@@ -697,19 +735,24 @@ function SuperAdmin() {
   }
 
   const handleToggleDarkMode = async () => {
+    // Optimistically update UI first
+    const newDarkMode = !adminPrefs.dark_mode
+    setAdminPrefs(prev => ({ ...prev, dark_mode: newDarkMode }))
+
     try {
       const response = await adminFetch(`${API_BASE}/admin/preferences`, {
         method: 'PUT',
-        body: JSON.stringify({ dark_mode: !adminPrefs.dark_mode })
+        body: JSON.stringify({ dark_mode: newDarkMode })
       })
-      if (response.ok) {
-        setAdminPrefs(prev => ({ ...prev, dark_mode: !prev.dark_mode }))
-        // Apply dark mode to document
-        document.documentElement.classList.toggle('dark', !adminPrefs.dark_mode)
-        showNotification('Inställningar uppdaterade')
+      if (!response.ok) {
+        // Revert on error
+        setAdminPrefs(prev => ({ ...prev, dark_mode: !newDarkMode }))
+        showNotification('Kunde inte spara inställning', 'error')
       }
     } catch (error) {
       console.error('Failed to toggle dark mode:', error)
+      // Revert on error
+      setAdminPrefs(prev => ({ ...prev, dark_mode: !newDarkMode }))
     }
   }
 
@@ -722,9 +765,13 @@ function SuperAdmin() {
         setShow2FASetup(true)
         setVerifyCode('')
         setTwoFAError('')
+      } else {
+        const data = await response.json().catch(() => ({}))
+        showNotification(data.detail || 'Kunde inte starta 2FA-konfiguration', 'error')
       }
     } catch (error) {
       console.error('Failed to setup 2FA:', error)
+      showNotification('Kunde inte ansluta till servern för 2FA', 'error')
     }
   }
 
@@ -950,6 +997,62 @@ function SuperAdmin() {
     }
   }
 
+  const openProposalModal = (company) => {
+    setShowProposalModal(company)
+    setProposalForm({
+      contactPerson: '',
+      startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 week from now
+      hostingOption: 'cloud'
+    })
+  }
+
+  const handleGenerateProposal = async () => {
+    if (!showProposalModal) return
+
+    setGeneratingPDF(true)
+    try {
+      // Get pricing info for this company
+      const company = showProposalModal
+      const tier = company.pricing_tier || 'starter'
+
+      // Find the pricing tier details
+      let startupFee = 4900
+      let monthlyFee = 990
+      let conversationLimit = 0
+
+      // Try to get from dbPricingTiers if available
+      const tierInfo = dbPricingTiers.find(t => t.tier_key === tier)
+      if (tierInfo) {
+        startupFee = tierInfo.startup_fee || 4900
+        monthlyFee = tierInfo.monthly_fee || 990
+        conversationLimit = tierInfo.max_conversations || 0
+      }
+
+      // Apply discount if any
+      const discount = company.discount_percent || 0
+
+      const fileName = await downloadProposalPDF({
+        customerName: company.name,
+        contactPerson: proposalForm.contactPerson,
+        startDate: proposalForm.startDate,
+        startupFee,
+        monthlyFee: discount > 0 ? Math.round(monthlyFee * (1 - discount / 100)) : monthlyFee,
+        tier: tierInfo?.name || tier.charAt(0).toUpperCase() + tier.slice(1),
+        discount,
+        conversationLimit,
+        hostingOption: proposalForm.hostingOption
+      })
+
+      showNotification(`PDF skapad: ${fileName}`)
+      setShowProposalModal(null)
+    } catch (error) {
+      console.error('PDF generation failed:', error)
+      showNotification('Kunde inte skapa PDF', 'error')
+    } finally {
+      setGeneratingPDF(false)
+    }
+  }
+
   const handleToggleMaintenance = async () => {
     const newEnabled = !maintenanceMode.enabled
     const message = newEnabled ? (prompt('Ange underhållsmeddelande:', 'Systemet är under underhåll. Försök igen senare.') || '') : ''
@@ -1006,14 +1109,16 @@ function SuperAdmin() {
     setCompanyActivity([])
     setCompanyNotes([])
     setCompanyDocuments([])
+    setCompanyWidgets([])
 
     try {
       // Fetch all data in parallel
-      const [usageRes, activityRes, notesRes, docsRes] = await Promise.all([
+      const [usageRes, activityRes, notesRes, docsRes, widgetsRes] = await Promise.all([
         adminFetch(`${API_BASE}/admin/companies/${company.id}/usage`),
         adminFetch(`${API_BASE}/admin/company-activity/${company.id}?limit=10`),
         adminFetch(`${API_BASE}/admin/companies/${company.id}/notes`),
-        adminFetch(`${API_BASE}/admin/companies/${company.id}/documents`)
+        adminFetch(`${API_BASE}/admin/companies/${company.id}/documents`),
+        adminFetch(`${API_BASE}/admin/companies/${company.id}/widgets`)
       ])
 
       if (usageRes.ok) {
@@ -1034,6 +1139,11 @@ function SuperAdmin() {
       if (docsRes.ok) {
         const docsData = await docsRes.json()
         setCompanyDocuments(docsData.documents || [])
+      }
+
+      if (widgetsRes.ok) {
+        const widgetsData = await widgetsRes.json()
+        setCompanyWidgets(widgetsData || [])
       }
     } catch (error) {
       console.error('Failed to fetch company details:', error)
@@ -1138,7 +1248,31 @@ function SuperAdmin() {
                 <span className="text-xs text-text-tertiary ml-2">Systemöversikt</span>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              {/* Dark Mode Toggle */}
+              <button
+                onClick={handleToggleDarkMode}
+                className="p-2 rounded-lg hover:bg-bg-secondary transition-colors"
+                title={adminPrefs.dark_mode ? 'Ljust läge' : 'Mörkt läge'}
+              >
+                {adminPrefs.dark_mode ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-secondary">
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-secondary">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                  </svg>
+                )}
+              </button>
               <span className="text-sm text-text-secondary px-2 py-1 bg-warning-soft text-warning rounded-full text-xs font-medium">
                 {adminAuth.username}
               </span>
@@ -1911,6 +2045,7 @@ function SuperAdmin() {
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Företag</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Widgets</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Kunskapsbas</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Konversationer</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Användning</th>
@@ -1961,6 +2096,17 @@ function SuperAdmin() {
                             }`}>
                               {company.is_active ? 'Aktiv' : 'Inaktiv'}
                             </span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-1.5">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary">
+                                <rect x="3" y="3" width="7" height="7" rx="1" />
+                                <rect x="14" y="3" width="7" height="7" rx="1" />
+                                <rect x="14" y="14" width="7" height="7" rx="1" />
+                                <rect x="3" y="14" width="7" height="7" rx="1" />
+                              </svg>
+                              <span className="text-sm font-medium text-text-primary">{company.widget_count || 0}</span>
+                            </div>
                           </td>
                           <td className="px-4 py-4">
                             <div className="text-sm">
@@ -2734,6 +2880,202 @@ function SuperAdmin() {
               </div>
             )}
 
+            {/* Landing Page Analytics */}
+            <div className="card mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-medium text-text-primary">Landningssida Analytics</h3>
+                  <p className="text-sm text-text-secondary">Besöksstatistik för din landningssida</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={landingAnalyticsDays}
+                    onChange={(e) => {
+                      const days = parseInt(e.target.value)
+                      setLandingAnalyticsDays(days)
+                      fetchLandingAnalytics(days)
+                    }}
+                    className="input-field text-sm py-1 px-2"
+                  >
+                    <option value={7}>7 dagar</option>
+                    <option value={30}>30 dagar</option>
+                    <option value={90}>90 dagar</option>
+                    <option value={365}>1 år</option>
+                  </select>
+                  <button
+                    onClick={() => fetchLandingAnalytics(landingAnalyticsDays)}
+                    className="p-2 text-text-secondary hover:text-text-primary transition-colors"
+                    disabled={landingAnalyticsLoading}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={landingAnalyticsLoading ? 'animate-spin' : ''}>
+                      <path d="M23 4v6h-6" />
+                      <path d="M1 20v-6h6" />
+                      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {landingAnalyticsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+                </div>
+              ) : landingAnalytics ? (
+                <div className="space-y-6">
+                  {/* Key Metrics */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="p-4 bg-bg-secondary rounded-lg">
+                      <p className="text-2xl font-semibold text-text-primary">{landingAnalytics.total_views}</p>
+                      <p className="text-xs text-text-secondary">Totala visningar</p>
+                    </div>
+                    <div className="p-4 bg-bg-secondary rounded-lg">
+                      <p className="text-2xl font-semibold text-text-primary">{landingAnalytics.unique_visitors}</p>
+                      <p className="text-xs text-text-secondary">Unika besökare</p>
+                    </div>
+                    <div className="p-4 bg-bg-secondary rounded-lg">
+                      <p className="text-2xl font-semibold text-text-primary">{landingAnalytics.avg_time_on_page}s</p>
+                      <p className="text-xs text-text-secondary">Snitt tid på sidan</p>
+                    </div>
+                    <div className="p-4 bg-bg-secondary rounded-lg">
+                      <p className={`text-2xl font-semibold ${landingAnalytics.bounce_rate > 70 ? 'text-error' : landingAnalytics.bounce_rate > 50 ? 'text-warning' : 'text-success'}`}>
+                        {landingAnalytics.bounce_rate}%
+                      </p>
+                      <p className="text-xs text-text-secondary">Bounce rate</p>
+                    </div>
+                  </div>
+
+                  {/* Quick Stats */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="p-3 bg-accent-soft rounded-lg text-center">
+                      <p className="text-xl font-semibold text-accent">{landingAnalytics.views_today}</p>
+                      <p className="text-xs text-text-secondary">Idag</p>
+                    </div>
+                    <div className="p-3 bg-success-soft rounded-lg text-center">
+                      <p className="text-xl font-semibold text-success">{landingAnalytics.views_this_week}</p>
+                      <p className="text-xs text-text-secondary">Denna vecka</p>
+                    </div>
+                    <div className="p-3 bg-warning-soft rounded-lg text-center">
+                      <p className="text-xl font-semibold text-warning">{landingAnalytics.views_this_month}</p>
+                      <p className="text-xs text-text-secondary">Perioden</p>
+                    </div>
+                  </div>
+
+                  {/* Daily Trend Chart */}
+                  {landingAnalytics.daily_trend && landingAnalytics.daily_trend.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-text-secondary mb-3">Daglig trend</h4>
+                      <div className="flex items-end gap-1 h-24">
+                        {landingAnalytics.daily_trend.slice(-14).map((day, i) => {
+                          const max = Math.max(...landingAnalytics.daily_trend.map(d => d.views))
+                          const height = max > 0 ? (day.views / max) * 100 : 0
+                          return (
+                            <div key={i} className="flex-1 flex flex-col items-center group">
+                              <div className="relative w-full">
+                                <div
+                                  className="w-full bg-accent/30 hover:bg-accent transition-colors rounded-t cursor-pointer"
+                                  style={{ height: `${Math.max(height, 2)}px` }}
+                                />
+                                <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-bg-elevated rounded shadow-lg text-xs whitespace-nowrap z-10">
+                                  {day.date}: {day.views} visningar
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Two Column Layout */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Device Breakdown */}
+                    <div>
+                      <h4 className="text-sm font-medium text-text-secondary mb-3">Enheter</h4>
+                      <div className="space-y-2">
+                        {Object.entries(landingAnalytics.device_breakdown || {}).map(([device, count]) => {
+                          const total = Object.values(landingAnalytics.device_breakdown).reduce((a, b) => a + b, 0)
+                          const percentage = total > 0 ? Math.round((count / total) * 100) : 0
+                          return (
+                            <div key={device} className="flex items-center gap-3">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
+                                {device === 'desktop' ? (
+                                  <><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></>
+                                ) : device === 'mobile' ? (
+                                  <><rect x="5" y="2" width="14" height="20" rx="2" ry="2" /><line x1="12" y1="18" x2="12.01" y2="18" /></>
+                                ) : (
+                                  <><rect x="4" y="2" width="16" height="20" rx="2" ry="2" /><line x1="12" y1="18" x2="12.01" y2="18" /></>
+                                )}
+                              </svg>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-sm text-text-primary capitalize">{device}</span>
+                                  <span className="text-xs text-text-tertiary">{count} ({percentage}%)</span>
+                                </div>
+                                <div className="w-full h-1.5 bg-bg-tertiary rounded-full overflow-hidden">
+                                  <div className="h-full bg-accent rounded-full" style={{ width: `${percentage}%` }} />
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Top Referrers */}
+                    <div>
+                      <h4 className="text-sm font-medium text-text-secondary mb-3">Trafikkällor</h4>
+                      {landingAnalytics.top_referrers && landingAnalytics.top_referrers.length > 0 ? (
+                        <div className="space-y-2">
+                          {landingAnalytics.top_referrers.slice(0, 5).map((ref, i) => (
+                            <div key={i} className="flex items-center justify-between p-2 bg-bg-secondary rounded">
+                              <span className="text-sm text-text-primary truncate flex-1">{ref.source}</span>
+                              <span className="text-xs text-text-tertiary ml-2">{ref.count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-text-tertiary text-center py-4">Ingen data ännu</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Campaigns */}
+                  {landingAnalytics.top_campaigns && landingAnalytics.top_campaigns.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-text-secondary mb-3">Kampanjer (UTM)</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {landingAnalytics.top_campaigns.map((camp, i) => (
+                          <span key={i} className="px-3 py-1 bg-accent-soft text-accent text-sm rounded-full">
+                            {camp.campaign} ({camp.count})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tracking Script Info */}
+                  <div className="p-4 bg-bg-tertiary rounded-lg border border-border-subtle">
+                    <h4 className="text-sm font-medium text-text-primary mb-2">Spårningskod för landningssidan</h4>
+                    <p className="text-xs text-text-secondary mb-3">Lägg till följande kod på din landningssida för att spåra besök:</p>
+                    <div className="bg-bg-primary rounded p-3 font-mono text-xs text-text-secondary overflow-x-auto">
+                      <code>{`<script>window.BOBOT_TRACKING_URL='${window.location.origin}';</script>`}</code>
+                      <br />
+                      <code>{`<script src="${window.location.origin}/api/track/script.js"></script>`}</code>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto text-text-tertiary mb-3">
+                    <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+                    <path d="M22 12A10 10 0 0 0 12 2v10z" />
+                  </svg>
+                  <p className="text-text-secondary">Ingen data ännu</p>
+                  <p className="text-sm text-text-tertiary mt-1">Lägg till spårningskoden på din landningssida för att börja samla in data</p>
+                </div>
+              )}
+            </div>
+
             {/* Top Companies */}
             {topCompanies.length > 0 && (
               <div className="card">
@@ -3439,6 +3781,61 @@ function SuperAdmin() {
                   </div>
                 )}
 
+                {/* Widgets Section */}
+                {companyWidgets.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-medium text-text-primary mb-3 flex items-center gap-2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="14" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                      </svg>
+                      Widgets ({companyWidgets.length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {companyWidgets.map((widget) => (
+                        <div key={widget.id} className="bg-bg-secondary rounded-xl p-4 flex items-center gap-3">
+                          <div
+                            className="w-10 h-10 rounded-lg flex items-center justify-center text-white flex-shrink-0"
+                            style={{ backgroundColor: widget.primary_color || '#D97757' }}
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-text-primary truncate">{widget.name}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
+                                widget.widget_type === 'external' ? 'bg-blue-100 text-blue-700' :
+                                widget.widget_type === 'internal' ? 'bg-purple-100 text-purple-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {widget.widget_type === 'external' ? 'Extern' :
+                                 widget.widget_type === 'internal' ? 'Intern' : 'Anpassad'}
+                              </span>
+                              <span className={`inline-flex items-center gap-1 text-xs ${
+                                widget.is_active ? 'text-success' : 'text-error'
+                              }`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${
+                                  widget.is_active ? 'bg-success' : 'bg-error'
+                                }`} />
+                                {widget.is_active ? 'Aktiv' : 'Inaktiv'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-text-tertiary font-mono truncate max-w-[100px]" title={widget.widget_key}>
+                              {widget.widget_key?.slice(0, 8)}...
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Recent Activity */}
                 <div className="mb-6">
                   <h3 className="text-sm font-medium text-text-primary mb-3">Senaste aktivitet</h3>
@@ -3661,6 +4058,20 @@ function SuperAdmin() {
                     Exportera
                   </button>
                   <button
+                    onClick={() => { setShowCompanyDashboard(null); openProposalModal(showCompanyDashboard) }}
+                    className="btn btn-secondary"
+                    style={{ background: 'linear-gradient(135deg, #C4633A 0%, #A85230 100%)', borderColor: '#C4633A', color: 'white' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                    Skapa offert
+                  </button>
+                  <button
                     onClick={() => { setShowCompanyDashboard(null); handleToggle(showCompanyDashboard.id) }}
                     className={`btn ${showCompanyDashboard.is_active ? 'btn-ghost text-warning' : 'btn-ghost text-success'}`}
                   >
@@ -3744,6 +4155,126 @@ function SuperAdmin() {
                 disabled={verifying2FA || verifyCode.length !== 6}
               >
                 {verifying2FA ? 'Verifierar...' : 'Verifiera och aktivera'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Generate Proposal PDF Modal */}
+      {showProposalModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle" style={{ background: 'linear-gradient(135deg, #C4633A 0%, #A85230 100%)' }}>
+              <h2 className="text-lg font-semibold text-white flex items-center gap-3">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+                Skapa offert-PDF
+              </h2>
+              <p className="text-sm text-white/80 mt-1">
+                För {showProposalModal.name}
+              </p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Customer Name (readonly) */}
+              <div>
+                <label className="input-label">Kundnamn</label>
+                <input
+                  type="text"
+                  value={showProposalModal.name}
+                  className="input bg-bg-secondary"
+                  disabled
+                />
+              </div>
+
+              {/* Contact Person */}
+              <div>
+                <label className="input-label">Kontaktperson</label>
+                <input
+                  type="text"
+                  value={proposalForm.contactPerson}
+                  onChange={(e) => setProposalForm(prev => ({ ...prev, contactPerson: e.target.value }))}
+                  placeholder="Anna Andersson"
+                  className="input"
+                />
+              </div>
+
+              {/* Start Date */}
+              <div>
+                <label className="input-label">Planerat startdatum</label>
+                <input
+                  type="date"
+                  value={proposalForm.startDate}
+                  onChange={(e) => setProposalForm(prev => ({ ...prev, startDate: e.target.value }))}
+                  className="input"
+                />
+              </div>
+
+              {/* Hosting Option */}
+              <div>
+                <label className="input-label">Hosting-alternativ</label>
+                <select
+                  value={proposalForm.hostingOption}
+                  onChange={(e) => setProposalForm(prev => ({ ...prev, hostingOption: e.target.value }))}
+                  className="input"
+                >
+                  <option value="cloud">Bobot Cloud (hanterad)</option>
+                  <option value="selfhosted">Självhostad</option>
+                </select>
+              </div>
+
+              {/* Pricing Info */}
+              <div className="p-4 rounded-lg" style={{ backgroundColor: '#FDF6F0', border: '1px solid #E8A87C' }}>
+                <h3 className="text-sm font-semibold mb-2" style={{ color: '#3D2B24' }}>Prissättning som inkluderas</h3>
+                <div className="space-y-1 text-sm" style={{ color: '#6B5248' }}>
+                  <div className="flex justify-between">
+                    <span>Prisnivå:</span>
+                    <span className="font-medium">{showProposalModal.pricing_tier || 'Starter'}</span>
+                  </div>
+                  {showProposalModal.discount_percent > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Rabatt:</span>
+                      <span className="font-medium">-{showProposalModal.discount_percent}%</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-border-subtle flex justify-end gap-3">
+              <button
+                onClick={() => setShowProposalModal(null)}
+                className="btn btn-ghost"
+                disabled={generatingPDF}
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleGenerateProposal}
+                disabled={generatingPDF}
+                className="btn"
+                style={{ background: 'linear-gradient(135deg, #C4633A 0%, #A85230 100%)', color: 'white' }}
+              >
+                {generatingPDF ? (
+                  <>
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                    Skapar PDF...
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Ladda ner PDF
+                  </>
+                )}
               </button>
             </div>
           </div>

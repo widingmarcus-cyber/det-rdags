@@ -6,6 +6,7 @@ function Documentation() {
   const sections = [
     { id: 'overview', label: 'Översikt' },
     { id: 'installation', label: 'Installation' },
+    { id: 'widgets', label: 'Widgets' },
     { id: 'tips', label: 'Bästa praxis' },
     { id: 'features', label: 'Funktioner' },
     { id: 'gdpr', label: 'Dataskydd' },
@@ -177,17 +178,24 @@ function Documentation() {
                 <div className="card">
                   <h3 className="font-medium text-text-primary mb-4">Steg 1: Kopiera koden</h3>
                   <p className="text-sm text-text-secondary mb-3">
-                    Gå till <strong>"Förhandsgranskning"</strong> i menyn till vänster. Där hittar du
-                    installationskoden. Klicka på <strong>"Kopiera"</strong>-knappen.
+                    Gå till <strong>"Widgets"</strong> i menyn till vänster. Där hittar du dina widgets och
+                    deras unika widget-nycklar. Klicka på <strong>"Kopiera"</strong>-knappen för den widget du vill använda.
                   </p>
                   <div className="bg-bg-secondary rounded-lg p-4 text-sm text-text-tertiary">
                     Koden ser ut ungefär så här:
                     <pre className="mt-2 text-xs overflow-x-auto">
 {`<script src="https://din-domän.se/widget.js"></script>
 <script>
-  Bobot.init({ companyId: 'ditt-id' });
+  Bobot.init({ widgetKey: 'din-widget-nyckel' });
 </script>`}
                     </pre>
+                  </div>
+                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <p className="text-xs text-text-secondary">
+                      <strong>Flera widgets:</strong> Du kan ha olika widgets för olika användningsområden.
+                      Till exempel en <em>extern widget</em> för kunder och en <em>intern widget</em> för anställda.
+                      Varje widget har sin egen kunskapsbas och inställningar.
+                    </p>
                   </div>
                 </div>
 
@@ -367,6 +375,125 @@ function Documentation() {
                     <p className="text-xs text-text-secondary">
                       <strong>Fungerar det inte?</strong> Prova att rensa webbläsarens cache (Ctrl+Shift+R)
                       eller vänta några minuter om din hemsida använder caching.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {activeSection === 'widgets' && (
+            <section aria-labelledby="widgets-heading">
+              <h2 id="widgets-heading" className="text-xl font-semibold text-text-primary mb-4">Widgets</h2>
+
+              <div className="space-y-6">
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <p className="text-sm text-text-secondary">
+                    Widgets låter dig ha separata chattbotar för olika målgrupper - till exempel
+                    en för kunder och en för anställda - med varsin kunskapsbas och inställningar.
+                  </p>
+                </div>
+
+                <div className="card">
+                  <h3 className="font-medium text-text-primary mb-4">Vad är widgets?</h3>
+                  <p className="text-sm text-text-secondary mb-4">
+                    En widget är en instans av din chattbot med egna inställningar. Varje widget har:
+                  </p>
+                  <ul className="space-y-2 text-sm text-text-secondary">
+                    <li className="flex items-start gap-2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent flex-shrink-0 mt-0.5">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span><strong>Egen kunskapsbas</strong> - Lägg till frågor/svar som bara gäller för denna widget</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent flex-shrink-0 mt-0.5">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span><strong>Egna färger och stil</strong> - Anpassa utseendet för varje målgrupp</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent flex-shrink-0 mt-0.5">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span><strong>Egna meddelanden</strong> - Välkomsttext, fallback-meddelande, etc.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent flex-shrink-0 mt-0.5">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span><strong>Unik widget-nyckel</strong> - För att identifiera widgeten vid installation</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="card">
+                  <h3 className="font-medium text-text-primary mb-4">Widget-typer</h3>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="border border-border-subtle rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Extern</span>
+                        <span className="font-medium text-text-primary">Kundchatt</span>
+                      </div>
+                      <p className="text-sm text-text-secondary">
+                        För hyresgäster och kunder. Installeras på din publika hemsida.
+                        Kunskapsbasen innehåller information om hyra, felanmälan, etc.
+                      </p>
+                    </div>
+                    <div className="border border-border-subtle rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Intern</span>
+                        <span className="font-medium text-text-primary">Internchatt</span>
+                      </div>
+                      <p className="text-sm text-text-secondary">
+                        För anställda. Installeras på ert intranät.
+                        Kunskapsbasen innehåller policyer, rutiner, HR-information, etc.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card">
+                  <h3 className="font-medium text-text-primary mb-4">Skapa en widget</h3>
+                  <ol className="space-y-3 text-sm text-text-secondary">
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-accent-soft text-accent rounded-full flex items-center justify-center text-xs font-medium">1</span>
+                      <span>Gå till <strong>"Widgets"</strong> i menyn till vänster</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-accent-soft text-accent rounded-full flex items-center justify-center text-xs font-medium">2</span>
+                      <span>Klicka på <strong>"Skapa widget"</strong></span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-accent-soft text-accent rounded-full flex items-center justify-center text-xs font-medium">3</span>
+                      <span>Välj namn, typ (extern/intern) och anpassa inställningar</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-accent-soft text-accent rounded-full flex items-center justify-center text-xs font-medium">4</span>
+                      <span>Kopiera widget-nyckeln och använd den i din installation</span>
+                    </li>
+                  </ol>
+                </div>
+
+                <div className="card">
+                  <h3 className="font-medium text-text-primary mb-4">Lägga till kunskap till en widget</h3>
+                  <p className="text-sm text-text-secondary mb-4">
+                    När du lägger till frågor/svar i kunskapsbasen kan du välja vilken widget de ska tillhöra:
+                  </p>
+                  <ul className="space-y-2 text-sm text-text-secondary">
+                    <li className="flex items-start gap-2">
+                      <span className="font-medium text-accent">Delad</span>
+                      <span>- Tillgänglig för alla widgets (standard)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="font-medium text-blue-600 dark:text-blue-400">Widget-specifik</span>
+                      <span>- Endast tillgänglig för den valda widgeten</span>
+                    </li>
+                  </ul>
+                  <div className="mt-4 p-3 bg-accent-soft border border-accent/20 rounded-lg">
+                    <p className="text-xs text-text-secondary">
+                      <strong>Tips:</strong> Gemensam information (t.ex. kontaktuppgifter) kan vara delad,
+                      medan specifik information (t.ex. HR-policyer) bör vara kopplad till rätt widget.
                     </p>
                   </div>
                 </div>

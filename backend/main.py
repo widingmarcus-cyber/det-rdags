@@ -3,7 +3,7 @@ Bobot Backend API
 En GDPR-säker AI-chatbot för fastighetsbolag
 """
 
-from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks, UploadFile, File, Response, Query
+from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks, UploadFile, File, Response, Query, Form
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, Field, field_validator
@@ -25,7 +25,7 @@ from database import (
     CompanySettings, Conversation, Message, DailyStatistics, GDPRAuditLog,
     AdminAuditLog, GlobalSettings, CompanyActivityLog, Subscription, Invoice,
     CompanyNote, CompanyDocument, WidgetPerformance, EmailNotificationQueue,
-    RoadmapItem, PricingTier
+    RoadmapItem, PricingTier, Widget, PageView, DailyPageStats
 )
 from auth import (
     hash_password, verify_password, create_token, create_2fa_pending_token,
@@ -390,6 +390,7 @@ class ChatRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000, description="User question (max 2000 characters)")
     session_id: Optional[str] = None
     language: Optional[str] = None  # Language code from widget (sv, en, ar)
+    widget_key: Optional[str] = None  # Widget key to determine personality (internal/external)
 
     @field_validator('question')
     @classmethod
@@ -548,6 +549,7 @@ class KnowledgeItemCreate(BaseModel):
     question: str = Field(..., min_length=1, max_length=1000, description="Question text (max 1000 characters)")
     answer: str = Field(..., min_length=1, max_length=10000, description="Answer text (max 10000 characters)")
     category: Optional[str] = Field(default="", max_length=100, description="Category (max 100 characters)")
+    widget_id: Optional[int] = Field(default=None, description="Widget ID (null = shared across all widgets)")
 
     @field_validator('question', 'answer')
     @classmethod
@@ -563,6 +565,8 @@ class KnowledgeItemResponse(BaseModel):
     question: str
     answer: str
     category: str
+    widget_id: Optional[int] = None
+    widget_name: Optional[str] = None
 
 
 class CompanyCreate(BaseModel):
@@ -578,6 +582,7 @@ class CompanyResponse(BaseModel):
     created_at: datetime
     knowledge_count: int = 0
     chat_count: int = 0
+    widget_count: int = 0
     max_conversations_month: int = 0
     current_month_conversations: int = 0
     max_knowledge_items: int = 0
@@ -635,6 +640,111 @@ class PricingTierDbUpdate(BaseModel):
     features: Optional[List[str]] = None
     is_active: Optional[bool] = None
     display_order: Optional[int] = None
+
+
+# Widget models for multi-widget support
+class WidgetCreate(BaseModel):
+    name: str
+    widget_type: str = "external"  # external, internal, custom
+    description: Optional[str] = ""
+    primary_color: Optional[str] = "#D97757"
+    welcome_message: Optional[str] = "Hej! Hur kan jag hjälpa dig idag?"
+    fallback_message: Optional[str] = "Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt."
+    subtitle: Optional[str] = "Alltid redo att hjälpa"
+    language: Optional[str] = "sv"
+    # Per-widget contact info
+    display_name: Optional[str] = ""
+    contact_email: Optional[str] = ""
+    contact_phone: Optional[str] = ""
+
+
+class WidgetUpdate(BaseModel):
+    name: Optional[str] = None
+    widget_type: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+    primary_color: Optional[str] = None
+    widget_font_family: Optional[str] = None
+    widget_font_size: Optional[int] = None
+    widget_border_radius: Optional[int] = None
+    widget_position: Optional[str] = None
+    welcome_message: Optional[str] = None
+    fallback_message: Optional[str] = None
+    subtitle: Optional[str] = None
+    language: Optional[str] = None
+    suggested_questions: Optional[str] = None  # JSON array
+    require_consent: Optional[bool] = None
+    consent_text: Optional[str] = None
+    # Per-widget contact info
+    display_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+
+
+class WidgetResponse(BaseModel):
+    id: int
+    widget_key: str
+    name: str
+    widget_type: str
+    description: str
+    is_active: bool
+    primary_color: str
+    widget_font_family: str
+    widget_font_size: int
+    widget_border_radius: int
+    widget_position: str
+    welcome_message: str
+    fallback_message: str
+    subtitle: str
+    language: str
+    suggested_questions: List[str]
+    require_consent: bool
+    consent_text: str
+    created_at: datetime
+    knowledge_count: int = 0
+    # Per-widget contact info
+    display_name: str = ""
+    contact_email: str = ""
+    contact_phone: str = ""
+
+
+class PageViewRequest(BaseModel):
+    """Request model for tracking page views"""
+    page_url: str
+    page_name: Optional[str] = ""
+    session_id: Optional[str] = None
+    referrer: Optional[str] = None
+    user_agent: Optional[str] = None
+    utm_source: Optional[str] = None
+    utm_medium: Optional[str] = None
+    utm_campaign: Optional[str] = None
+    utm_content: Optional[str] = None
+    utm_term: Optional[str] = None
+
+
+class PageViewUpdateRequest(BaseModel):
+    """Request to update page view with engagement data"""
+    session_id: str
+    page_url: str
+    time_on_page_seconds: int
+    is_bounce: bool = False
+
+
+class LandingAnalyticsResponse(BaseModel):
+    """Response model for landing page analytics"""
+    total_views: int
+    unique_visitors: int
+    avg_time_on_page: float
+    bounce_rate: float
+    views_today: int
+    views_this_week: int
+    views_this_month: int
+    top_referrers: List[Dict]
+    device_breakdown: Dict
+    hourly_distribution: Dict
+    daily_trend: List[Dict]
+    top_campaigns: List[Dict]
+    pages: List[Dict]
 
 
 class SuperAdminLogin(BaseModel):
@@ -724,6 +834,7 @@ class ConversationResponse(BaseModel):
     was_helpful: Optional[bool] = None
     category: Optional[str] = None  # Auto-detected category
     language: Optional[str] = None  # Detected language
+    widget_type: Optional[str] = None  # external or internal
     messages: Optional[List[MessageResponse]] = None
 
 
@@ -736,6 +847,7 @@ class ConversationListResponse(BaseModel):
     was_helpful: Optional[bool] = None
     category: Optional[str] = None
     language: Optional[str] = None
+    widget_type: Optional[str] = None  # external or internal
     first_message: Optional[str] = None
 
 
@@ -912,14 +1024,23 @@ def normalize_text(text: str) -> str:
     return text
 
 
-def find_relevant_context(question: str, company_id: str, db: Session, top_k: int = 3, min_score: int = 5) -> List[KnowledgeItem]:
+def find_relevant_context(question: str, company_id: str, db: Session, top_k: int = 3, min_score: int = 5, widget_id: Optional[int] = None) -> List[KnowledgeItem]:
     """Hitta relevanta frågor/svar från kunskapsbasen - fuzzy matching
 
     ANTI-HALLUCINATION: Only returns items with score >= min_score to prevent
     weak matches from being used as context for AI-generated answers.
     A score of 5+ indicates meaningful keyword overlap with the question.
+
+    If widget_id is provided, only returns items that belong to that widget
+    OR items with no widget (shared across all widgets).
     """
-    items = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == company_id).all()
+    # Filter by company and widget
+    query = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == company_id)
+    if widget_id:
+        # Include items for this specific widget OR shared items (widget_id is NULL)
+        from sqlalchemy import or_
+        query = query.filter(or_(KnowledgeItem.widget_id == widget_id, KnowledgeItem.widget_id.is_(None)))
+    items = query.all()
 
     if not items:
         return []  # No knowledge base items at all
@@ -1057,6 +1178,51 @@ def generate_reference_id() -> str:
     return f"BOB-{suffix}"
 
 
+def generate_widget_key(company_id: str, widget_type: str) -> str:
+    """Generate a unique widget key (e.g., demo-external-a1b2c3)"""
+    import random
+    import string
+    chars = string.ascii_lowercase + string.digits
+    suffix = ''.join(random.choices(chars, k=6))
+    return f"{company_id}-{widget_type}-{suffix}"
+
+
+def create_default_widgets(db: Session, company_id: str) -> List[Widget]:
+    """Create default internal and external widgets for a new company"""
+    widgets = []
+
+    # External widget (for customers/tenants)
+    external_widget = Widget(
+        company_id=company_id,
+        widget_key=generate_widget_key(company_id, "external"),
+        name="Kundchatt",
+        widget_type="external",
+        description="Chattbot för hyresgäster och kunder",
+        welcome_message="Hej! Hur kan jag hjälpa dig idag?",
+        fallback_message="Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt.",
+        subtitle="Alltid redo att hjälpa",
+    )
+    db.add(external_widget)
+    widgets.append(external_widget)
+
+    # Internal widget (for employees)
+    internal_widget = Widget(
+        company_id=company_id,
+        widget_key=generate_widget_key(company_id, "internal"),
+        name="Internchatt",
+        widget_type="internal",
+        description="Chattbot för anställda och intern support",
+        welcome_message="Hej kollega! Vad kan jag hjälpa dig med?",
+        fallback_message="Jag hittade inget svar i kunskapsbasen. Kontakta din chef eller HR.",
+        subtitle="Intern support",
+    )
+    db.add(internal_widget)
+    widgets.append(internal_widget)
+
+    db.commit()
+    return widgets
+
+
 def detect_category(text: str) -> str:
     """Auto-detect category based on message content using keywords"""
     text_lower = text.lower()
@@ -1131,11 +1297,13 @@ def get_greeting_response(language: str, company_name: str = None) -> str:
     return responses.get(language, responses["sv"])
 
 
-def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None, category: str = None, has_knowledge_match: bool = False) -> str:
+def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None, category: str = None, has_knowledge_match: bool = False, widget_type: str = "external") -> str:
     """Bygg prompt med kontext - använder specificerat eller detekterat språk
 
     ANTI-HALLUCINATION: This prompt is designed to prevent the AI from inventing information.
     The AI should ONLY answer based on the provided knowledge base items.
+
+    widget_type: "external" (customers/tenants) or "internal" (employees)
     """
     # Use provided language or detect from question
     lang = language if language in ["sv", "en", "ar"] else detect_language(question)
@@ -1174,8 +1342,40 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
     else:
         knowledge = "FACTS: No matching information found.\n"
 
-    # Build a warm, conversational prompt that still prevents hallucination
-    return f"""You are a friendly assistant for {company_name}, a property management company. You help tenants with their questions.
+    # Different personalities based on widget type
+    if widget_type == "internal":
+        # Internal widget - colleague-like, more thoughtful and collaborative
+        return f"""You are a helpful internal assistant for {company_name} - like a knowledgeable colleague who genuinely wants to help their teammates succeed.
+
+PERSONALITY:
+- You're a thoughtful colleague, not a bot. Think of yourself as the team member who always knows where to find information.
+- Be warm and supportive. Show that you understand the daily challenges employees face.
+- When appropriate, add context or helpful tips that might make their job easier.
+- Use a natural, conversational tone - like chatting with a trusted coworker.
+- It's okay to be slightly more detailed than you would be with external customers.
+
+{company_info}
+
+{knowledge}
+
+HOW TO RESPOND:
+- Use ONLY the facts above. Never make up information or policies.
+- Answer thoughtfully in 2-4 sentences. Add relevant context when helpful.
+- If someone seems stressed or frustrated: Show empathy first ("Jag förstår, det kan vara krångligt!" / "I hear you, that can be tricky!").
+- If you know of related information that might help: Briefly mention it.
+- When relevant, you can say things like "Hoppas det hjälper!" or "Säg till om du behöver mer info!"
+- Reply in {target_lang}.
+
+NEVER DO THIS:
+- Don't invent facts, policies, or procedures
+- Don't use "typically", "usually", "vanligtvis" to guess answers
+- Don't pretend to know internal processes you weren't given info about
+- Don't be overly formal or robotic - you're a colleague, not a customer service bot
+
+Colleague's question: {question}"""
+    else:
+        # External widget - warm but concise for customers/tenants
+        return f"""You are a friendly assistant for {company_name}, a property management company. You help tenants with their questions.
 
 PERSONALITY: Warm and helpful, like a friendly neighbor. Professional but not robotic. You genuinely want to help.
 
@@ -1433,10 +1633,13 @@ async def root():
 
 @app.get("/health")
 async def health(db: Session = Depends(get_db)):
-    """Health check endpoint with database connectivity verification"""
+    """Health check endpoint with database and Ollama connectivity verification"""
+    import httpx
+
     health_status = {
         "status": "healthy",
         "database": "unknown",
+        "ollama": "unknown",
         "timestamp": datetime.utcnow().isoformat()
     }
 
@@ -1448,6 +1651,19 @@ async def health(db: Session = Depends(get_db)):
         health_status["status"] = "degraded"
         health_status["database"] = "disconnected"
         health_status["database_error"] = str(e)
+
+    # Check Ollama connectivity
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            response = await client.get(f"{OLLAMA_BASE_URL}/api/tags")
+            if response.status_code == 200:
+                health_status["ollama"] = "connected"
+            else:
+                health_status["ollama"] = "error"
+                health_status["status"] = "degraded"
+    except Exception as e:
+        health_status["ollama"] = "disconnected"
+        health_status["status"] = "degraded"
 
     return health_status
 
@@ -1694,6 +1910,16 @@ async def chat(
     # Hämta inställningar
     settings = get_or_create_settings(db, company_id)
 
+    # Determine widget type (internal vs external) for personalized responses
+    widget_type = "external"  # Default to customer-facing
+    if request.widget_key:
+        widget = db.query(Widget).filter(
+            Widget.widget_key == request.widget_key,
+            Widget.company_id == company_id
+        ).first()
+        if widget:
+            widget_type = widget.widget_type or "external"
+
     # Hantera session
     session_id = request.session_id or str(uuid.uuid4())
 
@@ -1792,7 +2018,7 @@ async def chat(
             response_time = 0
         else:
             # We have knowledge base context - let AI formulate response based on FACTS
-            prompt = build_prompt(request.question, context, settings, language, category, has_knowledge_match=True)
+            prompt = build_prompt(request.question, context, settings, language, category, has_knowledge_match=True, widget_type=widget_type)
             answer = await query_ollama(prompt)
             response_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
 
@@ -1934,6 +2160,517 @@ async def get_widget_config(
         "consent_text": settings.consent_text or "Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.",
         "data_controller_name": settings.data_controller_name or "",
     }
+
+
+@app.get("/widget/key/{widget_key}/config")
+async def get_widget_config_by_key(
+    widget_key: str,
+    db: Session = Depends(get_db)
+):
+    """Hämta widget-konfiguration via widget_key (publik endpoint för ny widget-modell)"""
+    widget = db.query(Widget).filter(Widget.widget_key == widget_key).first()
+    if not widget or not widget.is_active:
+        raise HTTPException(status_code=404, detail="Widget finns inte")
+
+    company = db.query(Company).filter(Company.id == widget.company_id).first()
+    if not company or not company.is_active:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    settings = get_or_create_settings(db, widget.company_id)
+
+    # Parse suggested questions JSON
+    suggested_questions = []
+    if widget.suggested_questions:
+        try:
+            suggested_questions = json.loads(widget.suggested_questions)
+        except json.JSONDecodeError:
+            suggested_questions = []
+
+    return {
+        "widget_id": widget.id,
+        "widget_key": widget.widget_key,
+        "widget_type": widget.widget_type,
+        "widget_name": widget.name,
+        "company_name": settings.company_name or company.name,
+        "welcome_message": widget.welcome_message or "",
+        "fallback_message": widget.fallback_message or "",
+        "subtitle": widget.subtitle or "Alltid redo att hjälpa",
+        "primary_color": widget.primary_color or "#D97757",
+        "contact_email": settings.contact_email or "",
+        "contact_phone": settings.contact_phone or "",
+        # Widget Typography & Style
+        "font_family": widget.widget_font_family or "Inter",
+        "font_size": widget.widget_font_size or 14,
+        "border_radius": widget.widget_border_radius or 16,
+        "position": widget.widget_position or "bottom-right",
+        # Quick Reply Suggestions
+        "suggested_questions": suggested_questions,
+        # PuB/GDPR Compliance
+        "privacy_policy_url": settings.privacy_policy_url or "",
+        "require_consent": widget.require_consent if widget.require_consent is not None else True,
+        "consent_text": widget.consent_text or "Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.",
+        "data_controller_name": settings.data_controller_name or "",
+    }
+
+
+@app.post("/chat/widget/{widget_key}", response_model=ChatResponse)
+async def chat_via_widget_key(
+    widget_key: str,
+    request: ChatRequest,
+    req: Request,
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    """Chatta med AI via widget_key - ny endpoint för multi-widget support"""
+    # Look up widget
+    widget = db.query(Widget).filter(Widget.widget_key == widget_key).first()
+    if not widget or not widget.is_active:
+        raise HTTPException(status_code=404, detail="Widget finns inte")
+
+    company = db.query(Company).filter(Company.id == widget.company_id).first()
+    if not company or not company.is_active:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    company_id = company.id
+
+    # Check maintenance mode
+    maintenance_enabled, maintenance_msg = is_maintenance_mode(db)
+    if maintenance_enabled:
+        raise HTTPException(
+            status_code=503,
+            detail=maintenance_msg or "Systemet är under underhåll. Försök igen senare."
+        )
+
+    # Rate limiting
+    client_ip = req.client.host if req.client else "unknown"
+    allowed, current_count, reset_time = check_rate_limit(request.session_id, client_ip)
+
+    response.headers["X-RateLimit-Limit"] = str(RATE_LIMIT_MAX_REQUESTS)
+    response.headers["X-RateLimit-Remaining"] = str(max(0, RATE_LIMIT_MAX_REQUESTS - current_count))
+    response.headers["X-RateLimit-Reset"] = str(reset_time)
+
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="Du skickar meddelanden för snabbt. Vänta en stund och försök igen."
+        )
+
+    # Check usage limits
+    allowed, limit_msg = check_usage_limit(db, company_id)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=limit_msg)
+
+    # Determine language
+    language = request.language if request.language in ["sv", "en", "ar"] else detect_language(request.question)
+
+    # Check cache
+    cache_key = f"{widget_key}:{request.question}:{language}"
+    cached = get_cached_response(company_id, request.question, language)
+    if cached:
+        session_id = request.session_id or str(uuid.uuid4())
+        return ChatResponse(
+            answer=cached["answer"],
+            sources=cached.get("sources", []),
+            session_id=session_id,
+            conversation_id=cached.get("conversation_id", "BOB-CACHE"),
+            had_answer=cached.get("had_answer", True),
+            confidence=cached.get("confidence", 100)
+        )
+
+    # Handle session
+    session_id = request.session_id or str(uuid.uuid4())
+
+    # Auto-detect category
+    category = detect_category(request.question)
+
+    # Get company settings (needed for usage tracking and prompts)
+    settings = get_or_create_settings(db, company_id)
+
+    # Find or create conversation
+    conversation = db.query(Conversation).filter(
+        Conversation.session_id == session_id,
+        Conversation.company_id == company_id,
+        Conversation.widget_id == widget.id
+    ).first()
+
+    if not conversation:
+        client_ip = req.client.host if req.client else None
+        user_agent = req.headers.get("user-agent", "")
+        reference_id = generate_reference_id()
+
+        conversation = Conversation(
+            company_id=company_id,
+            widget_id=widget.id,
+            session_id=session_id,
+            reference_id=reference_id,
+            user_ip_anonymous=anonymize_ip(client_ip) if client_ip else None,
+            user_agent_anonymous=anonymize_user_agent(user_agent),
+            category=category,
+            language=language
+        )
+        db.add(conversation)
+        db.commit()
+        db.refresh(conversation)
+
+        # Increment monthly usage counter for new conversations
+        if settings.max_conversations_month > 0:
+            settings.current_month_conversations = (settings.current_month_conversations or 0) + 1
+            db.commit()
+
+    # Save user message
+    user_message = Message(
+        conversation_id=conversation.id,
+        role="user",
+        content=request.question
+    )
+    db.add(user_message)
+    conversation.message_count += 1
+
+    # Check if this is just a greeting (no actual question)
+    if is_greeting(request.question):
+        # Respond warmly to greetings without hitting the knowledge base
+        answer = get_greeting_response(language, settings.company_name)
+        response_time = 0
+        had_answer = True
+        relevant_items = []
+    else:
+        # Find relevant context from widget-specific knowledge base
+        start_time = time.time()
+        relevant_items = find_relevant_context(request.question, company_id, db, widget_id=widget.id)
+
+        # Build prompt and get AI response
+        prompt = build_prompt(request.question, relevant_items, settings=settings, language=language, widget_type=widget.widget_type)
+        answer = await query_ollama(prompt)
+        response_time = int((time.time() - start_time) * 1000)
+
+        # Check if we had a real answer (based on whether we found relevant context)
+        had_answer = len(relevant_items) > 0
+
+        if not had_answer:
+            answer = widget.fallback_message or "Tyvärr kunde jag inte hitta ett svar på din fråga."
+
+    # Save bot message
+    # sources_detail for database storage (richer info), sources for API response (List[str])
+    sources_detail = [{"question": item.question, "category": item.category} for item in relevant_items[:3]]
+    sources = [item.question for item in relevant_items[:3]]
+    bot_message = Message(
+        conversation_id=conversation.id,
+        role="bot",
+        content=answer,
+        sources=json.dumps(sources_detail),
+        had_answer=had_answer,
+        response_time_ms=response_time
+    )
+    db.add(bot_message)
+    conversation.message_count += 1
+
+    db.commit()
+
+    # Cache the response
+    set_cached_response(company_id, request.question, {
+        "answer": answer,
+        "sources": sources,
+        "had_answer": had_answer,
+        "conversation_id": conversation.reference_id,
+        "confidence": 100 if had_answer else 0
+    }, language)
+
+    return ChatResponse(
+        answer=answer,
+        sources=sources,
+        session_id=session_id,
+        conversation_id=conversation.reference_id,
+        had_answer=had_answer,
+        confidence=100 if had_answer else 0
+    )
+
+
+@app.get("/public/pricing-tiers")
+async def get_public_pricing_tiers(db: Session = Depends(get_db)):
+    """Get pricing tiers for public display (landing page)"""
+    return get_pricing_tiers_dict(db)
+
+
+# =============================================================================
+# Widget Management Endpoints (Autentiserade)
+# =============================================================================
+
+@app.get("/widgets", response_model=List[WidgetResponse])
+async def list_widgets(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Lista alla widgets för inloggat företag"""
+    widgets = db.query(Widget).filter(Widget.company_id == current["company_id"]).all()
+
+    result = []
+    for w in widgets:
+        knowledge_count = db.query(KnowledgeItem).filter(
+            KnowledgeItem.widget_id == w.id
+        ).count()
+
+        suggested_questions = []
+        if w.suggested_questions:
+            try:
+                suggested_questions = json.loads(w.suggested_questions)
+            except json.JSONDecodeError:
+                suggested_questions = []
+
+        result.append(WidgetResponse(
+            id=w.id,
+            widget_key=w.widget_key,
+            name=w.name,
+            widget_type=w.widget_type,
+            description=w.description or "",
+            is_active=w.is_active,
+            primary_color=w.primary_color or "#D97757",
+            widget_font_family=w.widget_font_family or "Inter",
+            widget_font_size=w.widget_font_size or 14,
+            widget_border_radius=w.widget_border_radius or 16,
+            widget_position=w.widget_position or "bottom-right",
+            welcome_message=w.welcome_message or "",
+            fallback_message=w.fallback_message or "",
+            subtitle=w.subtitle or "",
+            language=w.language or "sv",
+            suggested_questions=suggested_questions,
+            require_consent=w.require_consent if w.require_consent is not None else True,
+            consent_text=w.consent_text or "",
+            created_at=w.created_at,
+            knowledge_count=knowledge_count,
+            display_name=w.display_name or "",
+            contact_email=w.contact_email or "",
+            contact_phone=w.contact_phone or ""
+        ))
+
+    return result
+
+
+@app.post("/widgets", response_model=WidgetResponse)
+async def create_widget(
+    widget: WidgetCreate,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Skapa ny widget för inloggat företag"""
+    company_id = current["company_id"]
+
+    new_widget = Widget(
+        company_id=company_id,
+        widget_key=generate_widget_key(company_id, widget.widget_type),
+        name=widget.name,
+        widget_type=widget.widget_type,
+        description=widget.description or "",
+        primary_color=widget.primary_color or "#D97757",
+        welcome_message=widget.welcome_message,
+        fallback_message=widget.fallback_message,
+        subtitle=widget.subtitle,
+        language=widget.language,
+        display_name=widget.display_name or "",
+        contact_email=widget.contact_email or "",
+        contact_phone=widget.contact_phone or ""
+    )
+    db.add(new_widget)
+    db.commit()
+    db.refresh(new_widget)
+
+    # Log activity
+    log_company_activity(
+        db, company_id, "widget_create",
+        description=f"Skapade ny widget: {widget.name}",
+        details={"widget_id": new_widget.id, "widget_type": widget.widget_type}
+    )
+
+    return WidgetResponse(
+        id=new_widget.id,
+        widget_key=new_widget.widget_key,
+        name=new_widget.name,
+        widget_type=new_widget.widget_type,
+        description=new_widget.description or "",
+        is_active=new_widget.is_active,
+        primary_color=new_widget.primary_color or "#D97757",
+        widget_font_family=new_widget.widget_font_family or "Inter",
+        widget_font_size=new_widget.widget_font_size or 14,
+        widget_border_radius=new_widget.widget_border_radius or 16,
+        widget_position=new_widget.widget_position or "bottom-right",
+        welcome_message=new_widget.welcome_message or "",
+        fallback_message=new_widget.fallback_message or "",
+        subtitle=new_widget.subtitle or "",
+        language=new_widget.language or "sv",
+        suggested_questions=[],
+        require_consent=new_widget.require_consent if new_widget.require_consent is not None else True,
+        consent_text=new_widget.consent_text or "",
+        created_at=new_widget.created_at,
+        knowledge_count=0,
+        display_name=new_widget.display_name or "",
+        contact_email=new_widget.contact_email or "",
+        contact_phone=new_widget.contact_phone or ""
+    )
+
+
+@app.get("/widgets/{widget_id}", response_model=WidgetResponse)
+async def get_widget(
+    widget_id: int,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Hämta specifik widget"""
+    widget = db.query(Widget).filter(
+        Widget.id == widget_id,
+        Widget.company_id == current["company_id"]
+    ).first()
+
+    if not widget:
+        raise HTTPException(status_code=404, detail="Widget finns inte")
+
+    knowledge_count = db.query(KnowledgeItem).filter(
+        KnowledgeItem.widget_id == widget.id
+    ).count()
+
+    suggested_questions = []
+    if widget.suggested_questions:
+        try:
+            suggested_questions = json.loads(widget.suggested_questions)
+        except json.JSONDecodeError:
+            suggested_questions = []
+
+    return WidgetResponse(
+        id=widget.id,
+        widget_key=widget.widget_key,
+        name=widget.name,
+        widget_type=widget.widget_type,
+        description=widget.description or "",
+        is_active=widget.is_active,
+        primary_color=widget.primary_color or "#D97757",
+        widget_font_family=widget.widget_font_family or "Inter",
+        widget_font_size=widget.widget_font_size or 14,
+        widget_border_radius=widget.widget_border_radius or 16,
+        widget_position=widget.widget_position or "bottom-right",
+        welcome_message=widget.welcome_message or "",
+        fallback_message=widget.fallback_message or "",
+        subtitle=widget.subtitle or "",
+        language=widget.language or "sv",
+        suggested_questions=suggested_questions,
+        require_consent=widget.require_consent if widget.require_consent is not None else True,
+        consent_text=widget.consent_text or "",
+        created_at=widget.created_at,
+        knowledge_count=knowledge_count,
+        display_name=widget.display_name or "",
+        contact_email=widget.contact_email or "",
+        contact_phone=widget.contact_phone or ""
+    )
+
+
+@app.put("/widgets/{widget_id}", response_model=WidgetResponse)
+async def update_widget(
+    widget_id: int,
+    update: WidgetUpdate,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Uppdatera widget"""
+    widget = db.query(Widget).filter(
+        Widget.id == widget_id,
+        Widget.company_id == current["company_id"]
+    ).first()
+
+    if not widget:
+        raise HTTPException(status_code=404, detail="Widget finns inte")
+
+    # Update fields if provided
+    update_data = update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(widget, field, value)
+
+    db.commit()
+    db.refresh(widget)
+
+    # Log activity
+    log_company_activity(
+        db, current["company_id"], "widget_update",
+        description=f"Uppdaterade widget: {widget.name}",
+        details={"widget_id": widget.id, "updated_fields": list(update_data.keys())}
+    )
+
+    knowledge_count = db.query(KnowledgeItem).filter(
+        KnowledgeItem.widget_id == widget.id
+    ).count()
+
+    suggested_questions = []
+    if widget.suggested_questions:
+        try:
+            suggested_questions = json.loads(widget.suggested_questions)
+        except json.JSONDecodeError:
+            suggested_questions = []
+
+    return WidgetResponse(
+        id=widget.id,
+        widget_key=widget.widget_key,
+        name=widget.name,
+        widget_type=widget.widget_type,
+        description=widget.description or "",
+        is_active=widget.is_active,
+        primary_color=widget.primary_color or "#D97757",
+        widget_font_family=widget.widget_font_family or "Inter",
+        widget_font_size=widget.widget_font_size or 14,
+        widget_border_radius=widget.widget_border_radius or 16,
+        widget_position=widget.widget_position or "bottom-right",
+        welcome_message=widget.welcome_message or "",
+        fallback_message=widget.fallback_message or "",
+        subtitle=widget.subtitle or "",
+        language=widget.language or "sv",
+        suggested_questions=suggested_questions,
+        require_consent=widget.require_consent if widget.require_consent is not None else True,
+        consent_text=widget.consent_text or "",
+        created_at=widget.created_at,
+        knowledge_count=knowledge_count,
+        display_name=widget.display_name or "",
+        contact_email=widget.contact_email or "",
+        contact_phone=widget.contact_phone or ""
+    )
+
+
+@app.delete("/widgets/{widget_id}")
+async def delete_widget(
+    widget_id: int,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Ta bort widget"""
+    widget = db.query(Widget).filter(
+        Widget.id == widget_id,
+        Widget.company_id == current["company_id"]
+    ).first()
+
+    if not widget:
+        raise HTTPException(status_code=404, detail="Widget finns inte")
+
+    # Check if this is the last widget
+    widget_count = db.query(Widget).filter(
+        Widget.company_id == current["company_id"]
+    ).count()
+
+    if widget_count <= 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Du måste ha minst en widget. Skapa en ny widget innan du tar bort denna."
+        )
+
+    widget_name = widget.name
+
+    # Delete associated knowledge items
+    db.query(KnowledgeItem).filter(KnowledgeItem.widget_id == widget_id).delete()
+
+    db.delete(widget)
+    db.commit()
+
+    # Log activity
+    log_company_activity(
+        db, current["company_id"], "widget_delete",
+        description=f"Raderade widget: {widget_name}",
+        details={"widget_id": widget_id}
+    )
+
+    return {"message": f"Widget '{widget_name}' har tagits bort"}
 
 
 # =============================================================================
@@ -2181,7 +2918,8 @@ async def get_conversations(
     limit: int = Query(50, ge=1, le=500, description="Max items to return"),
     offset: int = Query(0, ge=0, description="Number of items to skip"),
     category: Optional[str] = None,
-    language: Optional[str] = None
+    language: Optional[str] = None,
+    widget_type: Optional[str] = None
 ):
     """Hämta konversationer för inloggat företag"""
     query = db.query(Conversation).filter(
@@ -2196,6 +2934,13 @@ async def get_conversations(
     if language:
         query = query.filter(Conversation.language == language)
 
+    # Filter by widget_type if provided
+    if widget_type:
+        # Join with Widget table to filter by type
+        query = query.join(Widget, Conversation.widget_id == Widget.id).filter(
+            Widget.widget_type == widget_type
+        )
+
     conversations = query.order_by(Conversation.started_at.desc()).offset(offset).limit(limit).all()
 
     result = []
@@ -2206,6 +2951,13 @@ async def get_conversations(
             Message.role == "user"
         ).order_by(Message.created_at.asc()).first()
 
+        # Get widget_type from the related widget
+        conv_widget_type = None
+        if conv.widget_id:
+            widget = db.query(Widget).filter(Widget.id == conv.widget_id).first()
+            if widget:
+                conv_widget_type = widget.widget_type
+
         result.append(ConversationListResponse(
             id=conv.id,
             session_id=conv.session_id,
@@ -2215,6 +2967,7 @@ async def get_conversations(
             was_helpful=conv.was_helpful,
             category=conv.category,
             language=conv.language,
+            widget_type=conv_widget_type,
             first_message=first_msg.content[:100] if first_msg else None
         ))
 
@@ -2252,6 +3005,13 @@ async def get_conversation(
             had_answer=msg.had_answer if msg.had_answer is not None else True
         ))
 
+    # Get widget_type from the related widget
+    conv_widget_type = None
+    if conversation.widget_id:
+        widget = db.query(Widget).filter(Widget.id == conversation.widget_id).first()
+        if widget:
+            conv_widget_type = widget.widget_type
+
     return ConversationResponse(
         id=conversation.id,
         session_id=conversation.session_id,
@@ -2261,6 +3021,7 @@ async def get_conversation(
         was_helpful=conversation.was_helpful,
         category=conversation.category,
         language=conversation.language,
+        widget_type=conv_widget_type,
         messages=message_responses
     )
 
@@ -2325,18 +3086,33 @@ async def delete_all_conversations(
 @app.get("/knowledge", response_model=List[KnowledgeItemResponse])
 async def get_knowledge(
     current: dict = Depends(get_current_company),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    widget_id: Optional[int] = Query(None, description="Filter by widget ID")
 ):
     """Hämta kunskapsbas för inloggat företag"""
-    items = db.query(KnowledgeItem).filter(
+    query = db.query(KnowledgeItem).filter(
         KnowledgeItem.company_id == current["company_id"]
-    ).all()
+    )
+
+    if widget_id is not None:
+        query = query.filter(KnowledgeItem.widget_id == widget_id)
+
+    items = query.all()
+
+    # Get widget names for display
+    widget_ids = set(i.widget_id for i in items if i.widget_id)
+    widgets = {}
+    if widget_ids:
+        widget_objs = db.query(Widget).filter(Widget.id.in_(widget_ids)).all()
+        widgets = {w.id: w.name for w in widget_objs}
 
     return [KnowledgeItemResponse(
         id=i.id,
         question=i.question,
         answer=i.answer,
-        category=i.category or ""
+        category=i.category or "",
+        widget_id=i.widget_id,
+        widget_name=widgets.get(i.widget_id) if i.widget_id else None
     ) for i in items]
 
 
@@ -2352,8 +3128,20 @@ async def add_knowledge(
     if not allowed:
         raise HTTPException(status_code=429, detail=msg)
 
+    # Validate widget_id belongs to company if provided
+    widget_name = None
+    if item.widget_id:
+        widget = db.query(Widget).filter(
+            Widget.id == item.widget_id,
+            Widget.company_id == current["company_id"]
+        ).first()
+        if not widget:
+            raise HTTPException(status_code=400, detail="Widget finns inte eller tillhör inte ditt företag")
+        widget_name = widget.name
+
     new_item = KnowledgeItem(
         company_id=current["company_id"],
+        widget_id=item.widget_id,
         question=item.question,
         answer=item.answer,
         category=item.category or ""
@@ -2372,7 +3160,9 @@ async def add_knowledge(
         id=new_item.id,
         question=new_item.question,
         answer=new_item.answer,
-        category=new_item.category or ""
+        category=new_item.category or "",
+        widget_id=new_item.widget_id,
+        widget_name=widget_name
     )
 
 
@@ -2392,9 +3182,21 @@ async def update_knowledge(
     if not db_item:
         raise HTTPException(status_code=404, detail="Finns inte")
 
+    # Validate widget_id belongs to company if provided
+    widget_name = None
+    if item.widget_id:
+        widget = db.query(Widget).filter(
+            Widget.id == item.widget_id,
+            Widget.company_id == current["company_id"]
+        ).first()
+        if not widget:
+            raise HTTPException(status_code=400, detail="Widget finns inte eller tillhör inte ditt företag")
+        widget_name = widget.name
+
     db_item.question = item.question
     db_item.answer = item.answer
     db_item.category = item.category or ""
+    db_item.widget_id = item.widget_id
     db.commit()
 
     # Log activity
@@ -2407,7 +3209,9 @@ async def update_knowledge(
         id=db_item.id,
         question=db_item.question,
         answer=db_item.answer,
-        category=db_item.category or ""
+        category=db_item.category or "",
+        widget_id=db_item.widget_id,
+        widget_name=widget_name
     )
 
 
@@ -2509,6 +3313,7 @@ class UploadResponse(BaseModel):
 
 class URLImportRequest(BaseModel):
     url: str
+    widget_id: Optional[int] = None
 
 
 # Security limits for imports
@@ -2758,6 +3563,7 @@ Example format:
 @app.post("/knowledge/upload", response_model=UploadResponse)
 async def upload_knowledge_file(
     file: UploadFile = File(...),
+    widget_id: Optional[int] = Form(None),
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db)
 ):
@@ -2850,7 +3656,8 @@ async def upload_knowledge_file(
             company_id=current["company_id"],
             question=item["question"],
             answer=item["answer"],
-            category=item.get("category", "allmant")
+            category=item.get("category", "allmant"),
+            widget_id=widget_id  # Assign to specific widget
         )
         db.add(new_item)
         db.flush()
@@ -2858,7 +3665,8 @@ async def upload_knowledge_file(
             id=new_item.id,
             question=new_item.question,
             answer=new_item.answer,
-            category=new_item.category or ""
+            category=new_item.category or "",
+            widget_id=new_item.widget_id
         ))
 
     db.commit()
@@ -2931,7 +3739,8 @@ async def import_knowledge_from_url(
             company_id=current["company_id"],
             question=item["question"],
             answer=item["answer"],
-            category=item.get("category", "allmant")
+            category=item.get("category", "allmant"),
+            widget_id=request.widget_id  # Assign to specific widget
         )
         db.add(new_item)
         db.flush()
@@ -2939,7 +3748,8 @@ async def import_knowledge_from_url(
             id=new_item.id,
             question=new_item.question,
             answer=new_item.answer,
-            category=new_item.category or ""
+            category=new_item.category or "",
+            widget_id=new_item.widget_id
         ))
 
     db.commit()
@@ -3868,6 +4678,7 @@ async def list_companies(
     for c in companies:
         knowledge_count = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == c.id).count()
         chat_count = db.query(ChatLog).filter(ChatLog.company_id == c.id).count()
+        widget_count = db.query(Widget).filter(Widget.company_id == c.id).count()
         settings = db.query(CompanySettings).filter(CompanySettings.company_id == c.id).first()
 
         result.append(CompanyResponse(
@@ -3877,6 +4688,7 @@ async def list_companies(
             created_at=c.created_at,
             knowledge_count=knowledge_count,
             chat_count=chat_count,
+            widget_count=widget_count,
             max_conversations_month=settings.max_conversations_month if settings else 0,
             current_month_conversations=settings.current_month_conversations if settings else 0,
             max_knowledge_items=settings.max_knowledge_items if settings else 0,
@@ -3919,6 +4731,9 @@ async def create_company(
     db.add(settings)
     db.commit()
 
+    # Skapa standardwidgets (intern + extern)
+    create_default_widgets(db, company.id)
+
     # Log admin action
     log_admin_action(
         db, admin["username"], "create_company",
@@ -3932,7 +4747,8 @@ async def create_company(
         is_active=new_company.is_active,
         created_at=new_company.created_at,
         knowledge_count=0,
-        chat_count=0
+        chat_count=0,
+        widget_count=2  # Default internal + external widgets
     )
 
 
@@ -4285,6 +5101,29 @@ async def get_company_usage(
     }
 
 
+@app.get("/admin/companies/{company_id}/widgets")
+async def get_company_widgets(
+    company_id: str,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get widgets for a company (admin access)"""
+    widgets = db.query(Widget).filter(Widget.company_id == company_id).all()
+
+    return [
+        {
+            "id": w.id,
+            "widget_key": w.widget_key,
+            "name": w.name,
+            "widget_type": w.widget_type,
+            "is_active": w.is_active,
+            "primary_color": w.primary_color,
+            "created_at": w.created_at.isoformat() if w.created_at else None
+        }
+        for w in widgets
+    ]
+
+
 @app.put("/admin/companies/{company_id}/pricing")
 async def update_company_pricing(
     company_id: str,
@@ -4338,48 +5177,57 @@ PRICING_TIERS = {
         "monthly_fee": 1500,
         "startup_fee": 0,  # Free setup for starter
         "max_conversations": 500,
-        "features": ["Grundläggande AI-chatt", "500 konversationer/månad", "E-postsupport", "Standardanalytik", "Gratis uppstart"]
+        "max_knowledge_items": 100,
+        "features": ["Grundläggande AI-chatt", "100 kunskapsartiklar", "500 konversationer/månad", "E-postsupport", "Standardanalytik", "Gratis uppstart"]
     },
     "professional": {
         "name": "Professional",
         "monthly_fee": 3500,
         "startup_fee": 10000,
         "max_conversations": 2000,
-        "features": ["Allt i Starter", "2000 konversationer/månad", "Prioriterad support", "Avancerad analytik", "Anpassad widget"]
+        "max_knowledge_items": 500,
+        "features": ["Allt i Starter", "500 kunskapsartiklar", "2000 konversationer/månad", "Prioriterad support", "Avancerad analytik", "Anpassad widget"]
     },
     "business": {
         "name": "Business",
         "monthly_fee": 6500,
         "startup_fee": 25000,
         "max_conversations": 10000,
-        "features": ["Allt i Professional", "10000 konversationer/månad", "Dedikerad support", "API-åtkomst", "Anpassade integrationer", "Onboarding"]
+        "max_knowledge_items": 2000,
+        "features": ["Allt i Professional", "2000 kunskapsartiklar", "10000 konversationer/månad", "Dedikerad support", "API-åtkomst", "Anpassade integrationer", "Onboarding"]
     },
     "enterprise": {
         "name": "Enterprise",
         "monthly_fee": 10000,
         "startup_fee": 50000,
         "max_conversations": 0,  # 0 = unlimited
-        "features": ["Allt i Business", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling", "Dedikerad onboarding & utbildning"]
+        "max_knowledge_items": 0,  # 0 = unlimited
+        "features": ["Allt i Business", "Obegränsade kunskapsartiklar", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling", "Dedikerad onboarding & utbildning"]
     }
 }
 
 
 def get_pricing_tiers_dict(db: Session) -> dict:
     """Helper to get pricing tiers from database or fallback to defaults"""
-    db_tiers = db.query(PricingTier).filter(PricingTier.is_active == True).order_by(PricingTier.display_order).all()
+    try:
+        db_tiers = db.query(PricingTier).filter(PricingTier.is_active == True).order_by(PricingTier.display_order).all()
 
-    if db_tiers:
-        return {
-            tier.tier_key: {
-                "id": tier.id,
-                "name": tier.name,
-                "monthly_fee": tier.monthly_fee,
-                "startup_fee": tier.startup_fee,
-                "max_conversations": tier.max_conversations,
-                "features": json.loads(tier.features) if tier.features else []
+        if db_tiers:
+            return {
+                tier.tier_key: {
+                    "id": tier.id,
+                    "name": tier.name,
+                    "monthly_fee": tier.monthly_fee,
+                    "startup_fee": tier.startup_fee,
+                    "max_conversations": tier.max_conversations,
+                    "max_knowledge_items": tier.max_knowledge_items if hasattr(tier, 'max_knowledge_items') else 0,
+                    "features": json.loads(tier.features) if tier.features else []
+                }
+                for tier in db_tiers
             }
-            for tier in db_tiers
-        }
+    except Exception as e:
+        # Log error but don't fail - fallback to defaults
+        print(f"Warning: Could not fetch pricing tiers from database: {e}")
 
     # Fallback to hardcoded defaults
     return PRICING_TIERS
@@ -4617,6 +5465,7 @@ async def init_pricing_tiers(
             monthly_fee=config["monthly_fee"],
             startup_fee=config["startup_fee"],
             max_conversations=config["max_conversations"],
+            max_knowledge_items=config.get("max_knowledge_items", 0),
             features=json.dumps(config["features"]),
             display_order=order
         )
@@ -6212,6 +7061,326 @@ async def send_notification(
     db.commit()
 
     return {"message": "Notifikation skickad (placeholder)"}
+
+
+# =============================================================================
+# Landing Page Analytics
+# =============================================================================
+
+def detect_device_type(user_agent: str) -> str:
+    """Detect device type from user agent string"""
+    if not user_agent:
+        return "unknown"
+    ua_lower = user_agent.lower()
+    if any(x in ua_lower for x in ['mobile', 'android', 'iphone', 'ipod']):
+        if 'tablet' in ua_lower or 'ipad' in ua_lower:
+            return "tablet"
+        return "mobile"
+    elif any(x in ua_lower for x in ['ipad', 'tablet']):
+        return "tablet"
+    return "desktop"
+
+
+def anonymize_ip_for_tracking(ip: str) -> str:
+    """Anonymize IP address for GDPR compliance"""
+    if not ip:
+        return "unknown"
+    parts = ip.split(".")
+    if len(parts) >= 3:
+        return f"{parts[0]}.{parts[1]}.{parts[2]}.xxx"
+    return "unknown"
+
+
+@app.post("/track/pageview")
+async def track_pageview(
+    request: Request,
+    data: PageViewRequest,
+    db: Session = Depends(get_db)
+):
+    """Track a page view - publicly accessible for landing page tracking"""
+    try:
+        # Get client IP from request
+        client_ip = request.client.host if request.client else "unknown"
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            client_ip = forwarded.split(",")[0].strip()
+
+        # Create anonymous visitor ID from IP + user agent (hashed)
+        import hashlib
+        visitor_data = f"{client_ip}:{data.user_agent or ''}"
+        visitor_id = hashlib.sha256(visitor_data.encode()).hexdigest()[:16]
+
+        # Generate session ID if not provided
+        session_id = data.session_id or str(uuid.uuid4())
+
+        # Detect device type
+        device_type = detect_device_type(data.user_agent or "")
+
+        # Create page view record
+        page_view = PageView(
+            page_url=data.page_url,
+            page_name=data.page_name or "",
+            visitor_id=visitor_id,
+            ip_anonymous=anonymize_ip_for_tracking(client_ip),
+            user_agent=data.user_agent,
+            referrer=data.referrer,
+            device_type=device_type,
+            session_id=session_id,
+            is_bounce=True,  # Default to bounce, updated on engagement
+            utm_source=data.utm_source,
+            utm_medium=data.utm_medium,
+            utm_campaign=data.utm_campaign,
+            utm_content=data.utm_content,
+            utm_term=data.utm_term
+        )
+        db.add(page_view)
+        db.commit()
+
+        return {
+            "success": True,
+            "session_id": session_id,
+            "visitor_id": visitor_id
+        }
+    except Exception as e:
+        print(f"[Track PageView Error] {e}")
+        # Don't fail the page load if tracking fails
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/track/engagement")
+async def track_engagement(
+    data: PageViewUpdateRequest,
+    db: Session = Depends(get_db)
+):
+    """Update page view with engagement data (time on page, bounce status)"""
+    try:
+        # Find the most recent page view for this session and URL
+        page_view = db.query(PageView).filter(
+            PageView.session_id == data.session_id,
+            PageView.page_url == data.page_url
+        ).order_by(PageView.created_at.desc()).first()
+
+        if page_view:
+            page_view.time_on_page_seconds = data.time_on_page_seconds
+            page_view.is_bounce = data.is_bounce
+            db.commit()
+            return {"success": True, "updated": True}
+
+        return {"success": True, "updated": False}
+    except Exception as e:
+        print(f"[Track Engagement Error] {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/admin/landing-analytics", response_model=LandingAnalyticsResponse)
+async def get_landing_analytics(
+    days: int = Query(30, ge=1, le=365),
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get landing page analytics for super admin"""
+    today = date.today()
+    start_date = today - timedelta(days=days)
+    week_ago = today - timedelta(days=7)
+
+    # Query all page views in the date range
+    page_views = db.query(PageView).filter(
+        PageView.created_at >= datetime.combine(start_date, datetime.min.time())
+    ).all()
+
+    # Total views and unique visitors
+    total_views = len(page_views)
+    unique_visitors = len(set(pv.visitor_id for pv in page_views if pv.visitor_id))
+
+    # Calculate avg time on page (excluding null values)
+    times = [pv.time_on_page_seconds for pv in page_views if pv.time_on_page_seconds]
+    avg_time = sum(times) / len(times) if times else 0
+
+    # Calculate bounce rate
+    bounces = sum(1 for pv in page_views if pv.is_bounce)
+    bounce_rate = (bounces / total_views * 100) if total_views > 0 else 0
+
+    # Views today
+    today_start = datetime.combine(today, datetime.min.time())
+    views_today = sum(1 for pv in page_views if pv.created_at >= today_start)
+
+    # Views this week
+    week_start = datetime.combine(week_ago, datetime.min.time())
+    views_this_week = sum(1 for pv in page_views if pv.created_at >= week_start)
+
+    # Views this month
+    views_this_month = total_views
+
+    # Top referrers
+    referrer_counts = {}
+    for pv in page_views:
+        ref = pv.referrer or "Direct"
+        if ref == "":
+            ref = "Direct"
+        # Extract domain from referrer
+        if ref != "Direct" and "://" in ref:
+            try:
+                from urllib.parse import urlparse
+                ref = urlparse(ref).netloc or "Direct"
+            except:
+                pass
+        referrer_counts[ref] = referrer_counts.get(ref, 0) + 1
+
+    top_referrers = sorted(
+        [{"source": k, "count": v} for k, v in referrer_counts.items()],
+        key=lambda x: x["count"],
+        reverse=True
+    )[:10]
+
+    # Device breakdown
+    device_counts = {}
+    for pv in page_views:
+        device = pv.device_type or "unknown"
+        device_counts[device] = device_counts.get(device, 0) + 1
+
+    # Hourly distribution
+    hourly_counts = {}
+    for pv in page_views:
+        hour = str(pv.created_at.hour)
+        hourly_counts[hour] = hourly_counts.get(hour, 0) + 1
+
+    # Daily trend (last N days)
+    daily_counts = {}
+    for pv in page_views:
+        day = pv.created_at.strftime("%Y-%m-%d")
+        daily_counts[day] = daily_counts.get(day, 0) + 1
+
+    daily_trend = sorted(
+        [{"date": k, "views": v} for k, v in daily_counts.items()],
+        key=lambda x: x["date"]
+    )
+
+    # Top campaigns (UTM)
+    campaign_counts = {}
+    for pv in page_views:
+        if pv.utm_campaign:
+            campaign_counts[pv.utm_campaign] = campaign_counts.get(pv.utm_campaign, 0) + 1
+
+    top_campaigns = sorted(
+        [{"campaign": k, "count": v} for k, v in campaign_counts.items()],
+        key=lambda x: x["count"],
+        reverse=True
+    )[:10]
+
+    # Pages breakdown
+    page_counts = {}
+    for pv in page_views:
+        page_key = pv.page_name or pv.page_url
+        if page_key not in page_counts:
+            page_counts[page_key] = {"views": 0, "unique": set()}
+        page_counts[page_key]["views"] += 1
+        if pv.visitor_id:
+            page_counts[page_key]["unique"].add(pv.visitor_id)
+
+    pages = sorted(
+        [{"page": k, "views": v["views"], "unique_visitors": len(v["unique"])}
+         for k, v in page_counts.items()],
+        key=lambda x: x["views"],
+        reverse=True
+    )[:20]
+
+    return LandingAnalyticsResponse(
+        total_views=total_views,
+        unique_visitors=unique_visitors,
+        avg_time_on_page=round(avg_time, 1),
+        bounce_rate=round(bounce_rate, 1),
+        views_today=views_today,
+        views_this_week=views_this_week,
+        views_this_month=views_this_month,
+        top_referrers=top_referrers,
+        device_breakdown=device_counts,
+        hourly_distribution=hourly_counts,
+        daily_trend=daily_trend,
+        top_campaigns=top_campaigns,
+        pages=pages
+    )
+
+
+@app.get("/track/script.js")
+async def get_tracking_script():
+    """Serve the tracking script for embedding on landing pages"""
+    script = """
+(function() {
+    var TRACKING_URL = window.BOBOT_TRACKING_URL || '';
+    var SESSION_KEY = 'bobot_session_id';
+    var startTime = Date.now();
+    var sessionId = sessionStorage.getItem(SESSION_KEY);
+
+    if (!sessionId) {
+        sessionId = 'sess_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+        sessionStorage.setItem(SESSION_KEY, sessionId);
+    }
+
+    // Get UTM parameters
+    var params = new URLSearchParams(window.location.search);
+    var utmSource = params.get('utm_source');
+    var utmMedium = params.get('utm_medium');
+    var utmCampaign = params.get('utm_campaign');
+    var utmContent = params.get('utm_content');
+    var utmTerm = params.get('utm_term');
+
+    // Track page view
+    function trackPageView() {
+        if (!TRACKING_URL) return;
+
+        fetch(TRACKING_URL + '/track/pageview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                page_url: window.location.href,
+                page_name: document.title,
+                session_id: sessionId,
+                referrer: document.referrer,
+                user_agent: navigator.userAgent,
+                utm_source: utmSource,
+                utm_medium: utmMedium,
+                utm_campaign: utmCampaign,
+                utm_content: utmContent,
+                utm_term: utmTerm
+            })
+        }).catch(function() {});
+    }
+
+    // Track engagement on page unload
+    function trackEngagement() {
+        if (!TRACKING_URL) return;
+
+        var timeOnPage = Math.round((Date.now() - startTime) / 1000);
+        var isBounce = timeOnPage < 10; // Less than 10 seconds = bounce
+
+        navigator.sendBeacon(TRACKING_URL + '/track/engagement', JSON.stringify({
+            session_id: sessionId,
+            page_url: window.location.href,
+            time_on_page_seconds: timeOnPage,
+            is_bounce: isBounce
+        }));
+    }
+
+    // Initialize
+    trackPageView();
+
+    // Track when leaving
+    window.addEventListener('beforeunload', trackEngagement);
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden') {
+            trackEngagement();
+        }
+    });
+})();
+"""
+    return Response(
+        content=script,
+        media_type="application/javascript",
+        headers={
+            "Cache-Control": "public, max-age=3600",
+            "Access-Control-Allow-Origin": "*"
+        }
+    )
 
 
 # =============================================================================

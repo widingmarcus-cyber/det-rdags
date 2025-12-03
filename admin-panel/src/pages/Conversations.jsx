@@ -21,6 +21,12 @@ const LANGUAGES = [
   { value: 'ar', label: 'العربية' }
 ]
 
+const WIDGET_TYPES = [
+  { value: '', label: 'Alla widgetar' },
+  { value: 'external', label: 'Extern (kund)' },
+  { value: 'internal', label: 'Intern (anställd)' }
+]
+
 function Conversations() {
   const { authFetch } = useContext(AuthContext)
   const [conversations, setConversations] = useState([])
@@ -30,12 +36,13 @@ function Conversations() {
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [languageFilter, setLanguageFilter] = useState('')
+  const [widgetTypeFilter, setWidgetTypeFilter] = useState('')
   const [error, setError] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     fetchConversations()
-  }, [categoryFilter, languageFilter])
+  }, [categoryFilter, languageFilter, widgetTypeFilter])
 
   const fetchConversations = async () => {
     try {
@@ -43,6 +50,7 @@ function Conversations() {
       const params = new URLSearchParams()
       if (categoryFilter) params.append('category', categoryFilter)
       if (languageFilter) params.append('language', languageFilter)
+      if (widgetTypeFilter) params.append('widget_type', widgetTypeFilter)
       if (params.toString()) url += `?${params.toString()}`
 
       const response = await authFetch(url)
@@ -259,6 +267,15 @@ function Conversations() {
             <option key={lang.value} value={lang.value}>{lang.label}</option>
           ))}
         </select>
+        <select
+          value={widgetTypeFilter}
+          onChange={(e) => setWidgetTypeFilter(e.target.value)}
+          className="input w-auto min-w-[150px]"
+        >
+          {WIDGET_TYPES.map(wt => (
+            <option key={wt.value} value={wt.value}>{wt.label}</option>
+          ))}
+        </select>
       </div>
 
       {loading ? (
@@ -301,6 +318,15 @@ function Conversations() {
                   {conv.first_message || 'Tom konversation'}
                 </p>
                 <div className="flex items-center gap-2 flex-wrap">
+                  {conv.widget_type && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      conv.widget_type === 'external'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                        : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                    }`}>
+                      {conv.widget_type === 'external' ? 'Extern' : 'Intern'}
+                    </span>
+                  )}
                   <span className="text-xs text-text-tertiary">
                     {conv.message_count} meddelanden
                   </span>
@@ -343,6 +369,15 @@ function Conversations() {
                       <span className="text-sm font-mono text-accent bg-accent-soft px-2 py-0.5 rounded">
                         {selectedConversation.reference_id}
                       </span>
+                      {selectedConversation.widget_type && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          selectedConversation.widget_type === 'external'
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                            : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                        }`}>
+                          {selectedConversation.widget_type === 'external' ? 'Extern widget' : 'Intern widget'}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-text-tertiary">
                       <span>{formatDate(selectedConversation.started_at)}</span>

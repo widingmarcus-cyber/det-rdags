@@ -3,8 +3,7 @@ import { useState, useEffect, createContext } from 'react'
 import LandingPage from './pages/LandingPage'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
-import Knowledge from './pages/Knowledge'
-import Preview from './pages/Preview'
+import WidgetPage from './pages/WidgetPage'
 import Settings from './pages/Settings'
 import Conversations from './pages/Conversations'
 import Analytics from './pages/Analytics'
@@ -273,12 +272,16 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/knowledge" element={<Knowledge />} />
+            <Route path="/widget/external" element={<WidgetPage widgetType="external" />} />
+            <Route path="/widget/internal" element={<WidgetPage widgetType="internal" />} />
             <Route path="/conversations" element={<Conversations />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/preview" element={<Preview />} />
             <Route path="/documentation" element={<Documentation />} />
+            {/* Legacy routes redirect */}
+            <Route path="/widgets" element={<Navigate to="/widget/external" replace />} />
+            <Route path="/preview" element={<Navigate to="/widget/external" replace />} />
+            <Route path="/knowledge" element={<Navigate to="/widget/external" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
