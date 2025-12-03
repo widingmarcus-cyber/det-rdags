@@ -596,15 +596,15 @@ function LandingPage() {
   }
 
   const customerConvo = [
-    { from: 'user', text: 'Får jag ha hund?' },
-    { from: 'bot', text: 'Ja, så länge de inte stör.' },
-    { from: 'user', text: 'Hur anmäler jag?' },
-    { from: 'bot', text: 'På Mina Sidor under Husdjur.' },
+    { from: 'user', text: 'Hej! Får man ha hund i lägenheten?' },
+    { from: 'bot', text: 'Hej! Ja, husdjur är välkomna hos oss 🐕 De får bara inte störa grannarna.' },
+    { from: 'user', text: 'Vad kul! Hur gör jag för att anmäla?' },
+    { from: 'bot', text: 'Enkelt! Gå till Mina Sidor och fyll i formuläret under Husdjur. Lycka till!' },
   ]
 
   const employeeConvo = [
-    { from: 'user', text: 'Hur många semesterdagar?' },
-    { from: 'bot', text: '25 dagar. Ansök via HR-portalen.' },
+    { from: 'user', text: 'Hej, hur många semesterdagar har jag kvar?' },
+    { from: 'bot', text: 'Hej! Du har 25 dagar totalt i år. Vill du ansöka så gör du det via HR-portalen minst 4 veckor innan 😊' },
   ]
 
   const sellingPoints = ['Avlastar medarbetare', 'Alltid tillgänglig', 'Intern kunskapsbank', 'GDPR-säker', 'Träna nyanställda', 'Enkel att integrera', 'Flera språk']
