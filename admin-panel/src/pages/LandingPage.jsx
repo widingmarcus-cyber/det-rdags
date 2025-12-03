@@ -236,9 +236,11 @@ function PeekingMascot({ mousePos = { x: 0.5, y: 0.5 }, isVisible = false }) {
         <rect x="60" y="28" width="6" height="12" rx="2" fill="#57534E">
           <animateTransform attributeName="transform" type="rotate" values="0 50 34;-45 50 34;0 50 34" dur="1.5s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
         </rect>
-        {/* Feet */}
-        <rect x="12" y="56" width="16" height="16" rx="4" fill="#78716C" />
-        <rect x="32" y="56" width="16" height="16" rx="4" fill="#78716C" />
+        {/* Feet - matching main mascot style */}
+        <rect x="10" y="56" width="18" height="8" rx="4" fill="#78716C" />
+        <rect x="32" y="56" width="18" height="8" rx="4" fill="#78716C" />
+        <rect x="12" y="57" width="14" height="5" rx="3" fill="#57534E" />
+        <rect x="34" y="57" width="14" height="5" rx="3" fill="#57534E" />
       </svg>
     </div>
   )
@@ -519,12 +521,32 @@ function LandingPage() {
 
   const totalSections = 4
 
+  // Fallback pricing tiers if API fails
+  const fallbackPricingTiers = {
+    starter: { name: "Starter", monthly_fee: 1500, startup_fee: 0, max_conversations: 500, features: ["Grundläggande AI-chatt", "100 kunskapsartiklar", "500 konversationer/månad", "E-postsupport", "Gratis uppstart"] },
+    professional: { name: "Professional", monthly_fee: 3500, startup_fee: 10000, max_conversations: 2000, features: ["Allt i Starter", "500 kunskapsartiklar", "2000 konversationer/månad", "Prioriterad support", "Anpassad widget"] },
+    business: { name: "Business", monthly_fee: 6500, startup_fee: 25000, max_conversations: 10000, features: ["Allt i Professional", "2000 kunskapsartiklar", "10000 konversationer/månad", "Dedikerad support", "API-åtkomst"] },
+    enterprise: { name: "Enterprise", monthly_fee: 10000, startup_fee: 50000, max_conversations: 0, features: ["Allt i Business", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling"] }
+  }
+
   useEffect(() => {
     const fetchPricing = async () => {
       try {
         const response = await fetch(`${API_URL}/public/pricing-tiers`)
-        if (response.ok) setPricingTiers(await response.json())
-      } catch (error) { console.error('Failed to fetch pricing:', error) }
+        if (response.ok) {
+          const data = await response.json()
+          if (data && Object.keys(data).length > 0) {
+            setPricingTiers(data)
+          } else {
+            setPricingTiers(fallbackPricingTiers)
+          }
+        } else {
+          setPricingTiers(fallbackPricingTiers)
+        }
+      } catch (error) {
+        console.error('Failed to fetch pricing:', error)
+        setPricingTiers(fallbackPricingTiers)
+      }
     }
     fetchPricing()
   }, [])
@@ -727,16 +749,17 @@ function LandingPage() {
             ))}
           </div>
 
-          {/* Code animation */}
+          {/* Code animation with platform compatibility */}
           <div ref={codeRef} className="max-w-xl mx-auto">
             <p className="text-center text-sm text-stone-500 dark:text-stone-400 mb-4">Så enkelt är det att integrera:</p>
             <CodeAnimation isVisible={codeVisible} />
-          </div>
-
-          <div className="mt-12 text-center">
-            <p className="text-sm text-stone-500 dark:text-stone-400 mb-6">Fungerar med alla webbplattformar</p>
-            <div className="flex flex-wrap justify-center gap-8 items-center opacity-60">
-              {['WordPress', 'Wix', 'Squarespace', 'Shopify', 'Webflow'].map(p => <span key={p} className="text-lg font-semibold text-stone-400">{p}</span>)}
+            <div className="mt-6 flex flex-wrap justify-center gap-2">
+              {['WordPress', 'Wix', 'Squarespace', 'Shopify', 'Webflow'].map(p => (
+                <span key={p} className="inline-flex items-center gap-1.5 text-xs bg-stone-100 dark:bg-stone-700 text-stone-500 dark:text-stone-400 px-3 py-1.5 rounded-full">
+                  <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                  {p}
+                </span>
+              ))}
             </div>
           </div>
         </div>

@@ -5119,21 +5119,25 @@ PRICING_TIERS = {
 
 def get_pricing_tiers_dict(db: Session) -> dict:
     """Helper to get pricing tiers from database or fallback to defaults"""
-    db_tiers = db.query(PricingTier).filter(PricingTier.is_active == True).order_by(PricingTier.display_order).all()
+    try:
+        db_tiers = db.query(PricingTier).filter(PricingTier.is_active == True).order_by(PricingTier.display_order).all()
 
-    if db_tiers:
-        return {
-            tier.tier_key: {
-                "id": tier.id,
-                "name": tier.name,
-                "monthly_fee": tier.monthly_fee,
-                "startup_fee": tier.startup_fee,
-                "max_conversations": tier.max_conversations,
-                "max_knowledge_items": tier.max_knowledge_items if hasattr(tier, 'max_knowledge_items') else 0,
-                "features": json.loads(tier.features) if tier.features else []
+        if db_tiers:
+            return {
+                tier.tier_key: {
+                    "id": tier.id,
+                    "name": tier.name,
+                    "monthly_fee": tier.monthly_fee,
+                    "startup_fee": tier.startup_fee,
+                    "max_conversations": tier.max_conversations,
+                    "max_knowledge_items": tier.max_knowledge_items if hasattr(tier, 'max_knowledge_items') else 0,
+                    "features": json.loads(tier.features) if tier.features else []
+                }
+                for tier in db_tiers
             }
-            for tier in db_tiers
-        }
+    except Exception as e:
+        # Log error but don't fail - fallback to defaults
+        print(f"Warning: Could not fetch pricing tiers from database: {e}")
 
     # Fallback to hardcoded defaults
     return PRICING_TIERS
