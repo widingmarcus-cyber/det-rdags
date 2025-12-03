@@ -53,10 +53,10 @@ function BobotMascot({ className = "", size = 160, mousePos = { x: 0.5, y: 0.5 }
       {/* Nose piece */}
       <rect x="56" y="30" width="8" height="8" rx="2" fill="#78716C" />
 
-      {/* Left arm - waves when isWaving */}
+      {/* Left arm - waves smoothly up and down when isWaving */}
       <rect x="15" y="62" width="18" height="6" rx="3" fill="#78716C">
         {isWaving ? (
-          <animateTransform attributeName="transform" type="rotate" values="0 24 65;-30 24 65;0 24 65;-30 24 65;0 24 65" dur="0.6s" repeatCount="indefinite" />
+          <animateTransform attributeName="transform" type="rotate" values="0 33 65;-70 33 65;0 33 65" dur="0.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
         ) : (
           <animateTransform attributeName="transform" type="rotate" values="0 24 65;-8 24 65;0 24 65" dur="3s" repeatCount="indefinite" />
         )}
@@ -66,10 +66,10 @@ function BobotMascot({ className = "", size = 160, mousePos = { x: 0.5, y: 0.5 }
         <animateTransform attributeName="transform" type="rotate" values="0 96 65;8 96 65;0 96 65" dur="3s" repeatCount="indefinite" />
       </rect>
 
-      {/* Left hand - waves when isWaving */}
+      {/* Left hand - waves smoothly up and down when isWaving */}
       <rect x="10" y="58" width="8" height="14" rx="2" fill="#57534E">
         {isWaving ? (
-          <animateTransform attributeName="transform" type="rotate" values="0 14 65;-30 14 65;0 14 65;-30 14 65;0 14 65" dur="0.6s" repeatCount="indefinite" />
+          <animateTransform attributeName="transform" type="rotate" values="0 14 65;-70 14 65;0 14 65" dur="0.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
         ) : (
           <animateTransform attributeName="transform" type="rotate" values="0 14 65;-8 14 65;0 14 65" dur="3s" repeatCount="indefinite" />
         )}
@@ -88,8 +88,8 @@ function BobotMascot({ className = "", size = 160, mousePos = { x: 0.5, y: 0.5 }
   )
 }
 
-// Easter egg: Just the head dropping from ceiling with initial blinks
-function PeekingHead({ mousePos = { x: 0.5, y: 0.5 }, isVisible = false }) {
+// Easter egg: Upside down mascot hanging from ceiling with arms
+function HangingMascot({ mousePos = { x: 0.5, y: 0.5 }, isVisible = false }) {
   const [hasFinishedBlinking, setHasFinishedBlinking] = useState(false)
   const [blinkKey, setBlinkKey] = useState(0)
 
@@ -105,60 +105,77 @@ function PeekingHead({ mousePos = { x: 0.5, y: 0.5 }, isVisible = false }) {
     }
   }, [isVisible])
 
-  const pupilOffsetX = hasFinishedBlinking ? (mousePos.x - 0.5) * 4 : 0
-  const pupilOffsetY = hasFinishedBlinking ? (mousePos.y - 0.5) * 3 : 0
+  // Invert Y for upside down tracking
+  const pupilOffsetX = hasFinishedBlinking ? (mousePos.x - 0.5) * 5 : 0
+  const pupilOffsetY = hasFinishedBlinking ? -(mousePos.y - 0.5) * 4 : 0
 
   return (
     <div className={`transition-all duration-500 ease-out ${isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}`}>
-      <svg key={blinkKey} width="50" height="45" viewBox="0 0 60 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* String from ceiling */}
-        <rect x="28" y="0" width="3" height="12" fill="#78716C" />
+      <svg key={blinkKey} width="75" height="90" viewBox="0 0 60 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Arms reaching up to hold ceiling */}
+        <rect x="8" y="0" width="5" height="18" rx="2" fill="#78716C" />
+        <rect x="47" y="0" width="5" height="18" rx="2" fill="#78716C" />
 
-        {/* Antenna */}
-        <rect x="28" y="10" width="3" height="8" rx="1.5" fill="#78716C" />
-        <circle cx="29.5" cy="8" r="4" fill="#4A9D7C">
-          <animate attributeName="opacity" values="1;0.3;1" dur="1s" repeatCount="indefinite" />
-        </circle>
+        {/* Hands gripping ceiling */}
+        <rect x="5" y="0" width="11" height="6" rx="2" fill="#57534E" />
+        <rect x="44" y="0" width="11" height="6" rx="2" fill="#57534E" />
 
-        {/* Head */}
-        <rect x="5" y="18" width="50" height="28" rx="4" fill="#D97757" />
+        {/* Body/Torso (upside down) */}
+        <rect x="10" y="16" width="40" height="28" rx="3" fill="#D97757" />
+        <rect x="12" y="18" width="36" height="24" rx="2" fill="#C4613D" />
 
-        {/* Eye sockets */}
-        <ellipse cx="18" cy="32" rx="10" ry="9" fill="#1C1917" />
-        <ellipse cx="42" cy="32" rx="10" ry="9" fill="#1C1917" />
+        {/* Body details */}
+        <rect x="15" y="20" width="12" height="10" rx="1" fill="#1C1917" />
+        <rect x="33" y="20" width="12" height="10" rx="1" fill="#1C1917" />
+
+        {/* Neck */}
+        <rect x="23" y="42" width="14" height="8" rx="2" fill="#78716C" />
+
+        {/* Head (upside down - eyes at bottom) */}
+        <rect x="8" y="48" width="44" height="20" rx="3" fill="#D97757" />
+
+        {/* Eye sockets - positioned lower since upside down */}
+        <ellipse cx="20" cy="58" rx="8" ry="7" fill="#1C1917" />
+        <ellipse cx="40" cy="58" rx="8" ry="7" fill="#1C1917" />
 
         {/* Inner eye area */}
-        <ellipse cx="18" cy="32" rx="7" ry="6" fill="#292524" />
-        <ellipse cx="42" cy="32" rx="7" ry="6" fill="#292524" />
+        <ellipse cx="20" cy="58" rx="6" ry="5" fill="#292524" />
+        <ellipse cx="40" cy="58" rx="6" ry="5" fill="#292524" />
 
         {/* Pupils - blink 3 times first, then track cursor */}
-        <ellipse cx={18 + pupilOffsetX} cy={32 + pupilOffsetY} rx="4" fill="#D97757">
+        <ellipse cx={20 + pupilOffsetX} cy={58 + pupilOffsetY} rx="3" fill="#D97757">
           {!hasFinishedBlinking && (
-            <animate attributeName="ry" values="4;0.3;4;0.3;4;0.3;4" dur="1.5s" fill="freeze" />
+            <animate attributeName="ry" values="3;0.2;3;0.2;3;0.2;3" dur="1.5s" fill="freeze" />
           )}
-          {hasFinishedBlinking && <set attributeName="ry" to="4" />}
+          {hasFinishedBlinking && <set attributeName="ry" to="3" />}
         </ellipse>
-        <ellipse cx={42 + pupilOffsetX} cy={32 + pupilOffsetY} rx="4" fill="#D97757">
+        <ellipse cx={40 + pupilOffsetX} cy={58 + pupilOffsetY} rx="3" fill="#D97757">
           {!hasFinishedBlinking && (
-            <animate attributeName="ry" values="4;0.3;4;0.3;4;0.3;4" dur="1.5s" fill="freeze" />
+            <animate attributeName="ry" values="3;0.2;3;0.2;3;0.2;3" dur="1.5s" fill="freeze" />
           )}
-          {hasFinishedBlinking && <set attributeName="ry" to="4" />}
+          {hasFinishedBlinking && <set attributeName="ry" to="3" />}
         </ellipse>
 
         {/* Eye highlights */}
-        <circle cx={19 + pupilOffsetX * 0.5} cy={30 + pupilOffsetY * 0.5} r="2" fill="#FEF2EE">
+        <circle cx={21 + pupilOffsetX * 0.5} cy={56 + pupilOffsetY * 0.5} r="1.5" fill="#FEF2EE">
           {!hasFinishedBlinking && (
             <animate attributeName="opacity" values="1;0;1;0;1;0;1" dur="1.5s" fill="freeze" />
           )}
         </circle>
-        <circle cx={43 + pupilOffsetX * 0.5} cy={30 + pupilOffsetY * 0.5} r="2" fill="#FEF2EE">
+        <circle cx={41 + pupilOffsetX * 0.5} cy={56 + pupilOffsetY * 0.5} r="1.5" fill="#FEF2EE">
           {!hasFinishedBlinking && (
             <animate attributeName="opacity" values="1;0;1;0;1;0;1" dur="1.5s" fill="freeze" />
           )}
         </circle>
 
         {/* Nose piece */}
-        <rect x="26" y="28" width="8" height="8" rx="2" fill="#78716C" />
+        <rect x="26" y="54" width="8" height="6" rx="1" fill="#78716C" />
+
+        {/* Antenna pointing DOWN (at bottom since upside down) */}
+        <rect x="28" y="68" width="4" height="8" rx="2" fill="#78716C" />
+        <circle cx="30" cy="78" r="4" fill="#4A9D7C">
+          <animate attributeName="opacity" values="1;0.3;1" dur="1s" repeatCount="indefinite" />
+        </circle>
       </svg>
     </div>
   )
@@ -333,15 +350,15 @@ function LandingPage() {
           <div className="flex items-center gap-3">
             <ThemeToggle isDark={isDark} onToggle={toggleTheme} />
             <div
-              className="flex items-center gap-2"
+              className="flex items-center gap-3"
               onMouseEnter={() => setLoginHover(true)}
               onMouseLeave={() => setLoginHover(false)}
             >
-              {/* Easter egg: Head drops from ceiling next to login */}
-              <PeekingHead mousePos={mousePos} isVisible={loginHover} />
               <button onClick={() => navigate('/login')} className="bg-[#D97757] hover:bg-[#c4613d] text-white text-sm px-5 py-2 rounded-lg font-medium transition-all hover:scale-105 hover:shadow-lg">
                 Logga in
               </button>
+              {/* Easter egg: Upside down mascot hanging from ceiling to the right */}
+              <HangingMascot mousePos={mousePos} isVisible={loginHover} />
             </div>
           </div>
         </div>
