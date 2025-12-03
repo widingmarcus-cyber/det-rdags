@@ -1297,13 +1297,14 @@ def get_greeting_response(language: str, company_name: str = None) -> str:
     return responses.get(language, responses["sv"])
 
 
-def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None, category: str = None, has_knowledge_match: bool = False, widget_type: str = "external") -> str:
+def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None, category: str = None, has_knowledge_match: bool = False, widget_type: str = "external", widget = None) -> str:
     """Bygg prompt med kontext - använder specificerat eller detekterat språk
 
     ANTI-HALLUCINATION: This prompt is designed to prevent the AI from inventing information.
     The AI should ONLY answer based on the provided knowledge base items.
 
     widget_type: "external" (customers/tenants) or "internal" (employees)
+    widget: Optional Widget object with contact info that overrides company settings
     """
     # Use provided language or detect from question
     lang = language if language in ["sv", "en", "ar"] else detect_language(question)
@@ -1314,13 +1315,22 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
 
     company_name = settings.company_name if settings else "the company"
 
+    # Use widget display_name if available
+    if widget and widget.display_name:
+        company_name = widget.display_name
+
     # Build company facts section (bilingual labels for better matching)
+    # Widget contact info takes priority over company settings
     company_facts = []
     if settings:
-        if settings.contact_email:
-            company_facts.append(f"Email/E-post: {settings.contact_email}")
-        if settings.contact_phone:
-            company_facts.append(f"Phone/Telefon: {settings.contact_phone}")
+        # Email: widget contact_email > settings contact_email
+        contact_email = (widget.contact_email if widget and widget.contact_email else None) or settings.contact_email
+        contact_phone = (widget.contact_phone if widget and widget.contact_phone else None) or settings.contact_phone
+
+        if contact_email:
+            company_facts.append(f"Email/E-post: {contact_email}")
+        if contact_phone:
+            company_facts.append(f"Phone/Telefon: {contact_phone}")
         if settings.data_controller_name:
             gdpr_contact = f"GDPR-ansvarig (personuppgiftsansvarig/dataskyddsansvarig): {settings.data_controller_name}"
             if settings.data_controller_email:
@@ -2338,8 +2348,8 @@ async def chat_via_widget_key(
         start_time = time.time()
         relevant_items = find_relevant_context(request.question, company_id, db, widget_id=widget.id)
 
-        # Build prompt and get AI response
-        prompt = build_prompt(request.question, relevant_items, settings=settings, language=language, widget_type=widget.widget_type)
+        # Build prompt and get AI response (pass widget for contact info override)
+        prompt = build_prompt(request.question, relevant_items, settings=settings, language=language, widget_type=widget.widget_type, widget=widget)
         answer = await query_ollama(prompt)
         response_time = int((time.time() - start_time) * 1000)
 

@@ -622,7 +622,7 @@ function WidgetPage({ widgetType }) {
               <p className="text-sm text-text-secondary mb-4">Visas i widgetens header och fallback-meddelanden</p>
               <div className="grid md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1">Visningsnamn</label>
+                  <label className="block text-sm font-medium text-text-primary mb-1">Namn</label>
                   <input
                     type="text"
                     value={formData.display_name}
