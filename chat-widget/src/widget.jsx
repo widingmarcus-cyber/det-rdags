@@ -679,7 +679,7 @@ function ChatWidget({ config }) {
 
           {/* Messages */}
           <div style={{
-            flex: 1, overflowY: 'auto', padding: 16, background: theme.bg,
+            flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: 16, background: theme.bg,
           }}>
             {messages.map((msg, i) => (
               <div key={msg.id} className="bobot-msg" style={{
