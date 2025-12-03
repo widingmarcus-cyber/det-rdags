@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext } from 'react'
 import { AuthContext } from '../App'
+import { downloadProposalPDF } from '../components/ProposalPDF'
 
 const API_BASE = '/api'
 
@@ -105,6 +106,15 @@ function SuperAdmin() {
   // Company Discounts
   const [showDiscountModal, setShowDiscountModal] = useState(null)
   const [discountForm, setDiscountForm] = useState({ discount_percent: 0, discount_end_date: '', discount_note: '' })
+
+  // Proposal PDF
+  const [showProposalModal, setShowProposalModal] = useState(null)
+  const [proposalForm, setProposalForm] = useState({
+    contactPerson: '',
+    startDate: '',
+    hostingOption: 'cloud'
+  })
+  const [generatingPDF, setGeneratingPDF] = useState(false)
 
   useEffect(() => {
     fetchCompanies()
@@ -948,6 +958,62 @@ function SuperAdmin() {
     } catch (error) {
       console.error('Export failed:', error)
       showNotification('Kunde inte exportera data', 'error')
+    }
+  }
+
+  const openProposalModal = (company) => {
+    setShowProposalModal(company)
+    setProposalForm({
+      contactPerson: '',
+      startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 week from now
+      hostingOption: 'cloud'
+    })
+  }
+
+  const handleGenerateProposal = async () => {
+    if (!showProposalModal) return
+
+    setGeneratingPDF(true)
+    try {
+      // Get pricing info for this company
+      const company = showProposalModal
+      const tier = company.pricing_tier || 'starter'
+
+      // Find the pricing tier details
+      let startupFee = 4900
+      let monthlyFee = 990
+      let conversationLimit = 0
+
+      // Try to get from dbPricingTiers if available
+      const tierInfo = dbPricingTiers.find(t => t.tier_key === tier)
+      if (tierInfo) {
+        startupFee = tierInfo.startup_fee || 4900
+        monthlyFee = tierInfo.monthly_fee || 990
+        conversationLimit = tierInfo.max_conversations || 0
+      }
+
+      // Apply discount if any
+      const discount = company.discount_percent || 0
+
+      const fileName = await downloadProposalPDF({
+        customerName: company.name,
+        contactPerson: proposalForm.contactPerson,
+        startDate: proposalForm.startDate,
+        startupFee,
+        monthlyFee: discount > 0 ? Math.round(monthlyFee * (1 - discount / 100)) : monthlyFee,
+        tier: tierInfo?.name || tier.charAt(0).toUpperCase() + tier.slice(1),
+        discount,
+        conversationLimit,
+        hostingOption: proposalForm.hostingOption
+      })
+
+      showNotification(`PDF skapad: ${fileName}`)
+      setShowProposalModal(null)
+    } catch (error) {
+      console.error('PDF generation failed:', error)
+      showNotification('Kunde inte skapa PDF', 'error')
+    } finally {
+      setGeneratingPDF(false)
     }
   }
 
@@ -3736,6 +3802,20 @@ function SuperAdmin() {
                     Exportera
                   </button>
                   <button
+                    onClick={() => { setShowCompanyDashboard(null); openProposalModal(showCompanyDashboard) }}
+                    className="btn btn-secondary"
+                    style={{ background: 'linear-gradient(135deg, #C4633A 0%, #A85230 100%)', borderColor: '#C4633A', color: 'white' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                    Skapa offert
+                  </button>
+                  <button
                     onClick={() => { setShowCompanyDashboard(null); handleToggle(showCompanyDashboard.id) }}
                     className={`btn ${showCompanyDashboard.is_active ? 'btn-ghost text-warning' : 'btn-ghost text-success'}`}
                   >
@@ -3819,6 +3899,126 @@ function SuperAdmin() {
                 disabled={verifying2FA || verifyCode.length !== 6}
               >
                 {verifying2FA ? 'Verifierar...' : 'Verifiera och aktivera'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Generate Proposal PDF Modal */}
+      {showProposalModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle" style={{ background: 'linear-gradient(135deg, #C4633A 0%, #A85230 100%)' }}>
+              <h2 className="text-lg font-semibold text-white flex items-center gap-3">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+                Skapa offert-PDF
+              </h2>
+              <p className="text-sm text-white/80 mt-1">
+                För {showProposalModal.name}
+              </p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Customer Name (readonly) */}
+              <div>
+                <label className="input-label">Kundnamn</label>
+                <input
+                  type="text"
+                  value={showProposalModal.name}
+                  className="input bg-bg-secondary"
+                  disabled
+                />
+              </div>
+
+              {/* Contact Person */}
+              <div>
+                <label className="input-label">Kontaktperson</label>
+                <input
+                  type="text"
+                  value={proposalForm.contactPerson}
+                  onChange={(e) => setProposalForm(prev => ({ ...prev, contactPerson: e.target.value }))}
+                  placeholder="Anna Andersson"
+                  className="input"
+                />
+              </div>
+
+              {/* Start Date */}
+              <div>
+                <label className="input-label">Planerat startdatum</label>
+                <input
+                  type="date"
+                  value={proposalForm.startDate}
+                  onChange={(e) => setProposalForm(prev => ({ ...prev, startDate: e.target.value }))}
+                  className="input"
+                />
+              </div>
+
+              {/* Hosting Option */}
+              <div>
+                <label className="input-label">Hosting-alternativ</label>
+                <select
+                  value={proposalForm.hostingOption}
+                  onChange={(e) => setProposalForm(prev => ({ ...prev, hostingOption: e.target.value }))}
+                  className="input"
+                >
+                  <option value="cloud">Bobot Cloud (hanterad)</option>
+                  <option value="selfhosted">Självhostad</option>
+                </select>
+              </div>
+
+              {/* Pricing Info */}
+              <div className="p-4 rounded-lg" style={{ backgroundColor: '#FDF6F0', border: '1px solid #E8A87C' }}>
+                <h3 className="text-sm font-semibold mb-2" style={{ color: '#3D2B24' }}>Prissättning som inkluderas</h3>
+                <div className="space-y-1 text-sm" style={{ color: '#6B5248' }}>
+                  <div className="flex justify-between">
+                    <span>Prisnivå:</span>
+                    <span className="font-medium">{showProposalModal.pricing_tier || 'Starter'}</span>
+                  </div>
+                  {showProposalModal.discount_percent > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Rabatt:</span>
+                      <span className="font-medium">-{showProposalModal.discount_percent}%</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-border-subtle flex justify-end gap-3">
+              <button
+                onClick={() => setShowProposalModal(null)}
+                className="btn btn-ghost"
+                disabled={generatingPDF}
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleGenerateProposal}
+                disabled={generatingPDF}
+                className="btn"
+                style={{ background: 'linear-gradient(135deg, #C4633A 0%, #A85230 100%)', color: 'white' }}
+              >
+                {generatingPDF ? (
+                  <>
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                    Skapar PDF...
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Ladda ner PDF
+                  </>
+                )}
               </button>
             </div>
           </div>
