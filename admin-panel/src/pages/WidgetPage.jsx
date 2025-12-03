@@ -30,7 +30,19 @@ function WidgetPage({ widgetType }) {
   const [editingItem, setEditingItem] = useState(null)
   const [knowledgeForm, setKnowledgeForm] = useState({ question: '', answer: '', category: '' })
   const [searchQuery, setSearchQuery] = useState('')
-  const [categories] = useState(['Hyra & Betalning', 'Felanmälan', 'Tvättstuga', 'Parkering', 'Kontrakt & Uppsägning', 'Allmänt'])
+
+  // Categories state
+  const [categories, setCategories] = useState([])
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [editingCategory, setEditingCategory] = useState(null)
+  const [newCategoryName, setNewCategoryName] = useState('')
+
+  // Import state
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importUrl, setImportUrl] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(null)
+  const fileInputRef = useRef(null)
 
   // Preview state
   const [previewMessages, setPreviewMessages] = useState([])
@@ -49,7 +61,28 @@ function WidgetPage({ widgetType }) {
   // Fetch or create widget
   useEffect(() => {
     fetchWidget()
+    fetchCategories()
   }, [widgetType])
+
+  const fetchCategories = async () => {
+    try {
+      const response = await authFetch(`${API_BASE}/categories`)
+      if (response.ok) {
+        const data = await response.json()
+        setCategories(data)
+      }
+    } catch (e) {
+      // If endpoint doesn't exist, use defaults
+      setCategories([
+        { id: 1, name: 'Hyra & Betalning' },
+        { id: 2, name: 'Felanmälan' },
+        { id: 3, name: 'Tvättstuga' },
+        { id: 4, name: 'Parkering' },
+        { id: 5, name: 'Kontrakt & Uppsägning' },
+        { id: 6, name: 'Allmänt' }
+      ])
+    }
+  }
 
   const fetchWidget = async () => {
     setLoading(true)
@@ -73,7 +106,6 @@ function WidgetPage({ widgetType }) {
           fetchKnowledge(existingWidget.id)
           setPreviewMessages([{ type: 'bot', text: existingWidget.welcome_message || 'Hej! Hur kan jag hjälpa dig idag?' }])
         } else {
-          // Create widget if it doesn't exist
           await createWidget()
         }
       }
@@ -161,8 +193,10 @@ function WidgetPage({ widgetType }) {
       const response = await authFetch(`${API_BASE}/knowledge`)
       if (response.ok) {
         const items = await response.json()
-        // Filter to only show items for this widget or shared items
-        const filtered = items.filter(item => item.widget_id === widgetId || !item.widget_id)
+        // Filter to only show items for this widget or shared items, sorted by newest first
+        const filtered = items
+          .filter(item => item.widget_id === widgetId || !item.widget_id)
+          .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
         setKnowledgeItems(filtered)
       }
     } catch (e) {
@@ -198,6 +232,8 @@ function WidgetPage({ widgetType }) {
       setEditingItem(null)
       setKnowledgeForm({ question: '', answer: '', category: '' })
       fetchKnowledge(widget.id)
+      setSuccess(editingItem ? 'Uppdaterad!' : 'Tillagd!')
+      setTimeout(() => setSuccess(''), 2000)
     } catch (e) {
       console.error('Kunde inte spara:', e)
     }
@@ -211,6 +247,117 @@ function WidgetPage({ widgetType }) {
       fetchKnowledge(widget.id)
     } catch (e) {
       console.error('Kunde inte ta bort:', e)
+    }
+  }
+
+  // Category functions
+  const handleSaveCategory = async () => {
+    if (!newCategoryName.trim()) return
+
+    try {
+      if (editingCategory) {
+        await authFetch(`${API_BASE}/categories/${editingCategory.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ name: newCategoryName })
+        })
+      } else {
+        await authFetch(`${API_BASE}/categories`, {
+          method: 'POST',
+          body: JSON.stringify({ name: newCategoryName })
+        })
+      }
+      fetchCategories()
+      setShowCategoryModal(false)
+      setEditingCategory(null)
+      setNewCategoryName('')
+    } catch (e) {
+      // Fallback - add to local state
+      if (!editingCategory) {
+        setCategories(prev => [...prev, { id: Date.now(), name: newCategoryName }])
+      } else {
+        setCategories(prev => prev.map(c => c.id === editingCategory.id ? { ...c, name: newCategoryName } : c))
+      }
+      setShowCategoryModal(false)
+      setEditingCategory(null)
+      setNewCategoryName('')
+    }
+  }
+
+  const handleDeleteCategory = async (cat) => {
+    if (!confirm(`Ta bort kategorin "${cat.name}"?`)) return
+
+    try {
+      await authFetch(`${API_BASE}/categories/${cat.id}`, { method: 'DELETE' })
+      fetchCategories()
+    } catch (e) {
+      // Fallback - remove from local state
+      setCategories(prev => prev.filter(c => c.id !== cat.id))
+    }
+  }
+
+  // Import functions
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !widget) return
+
+    setImporting(true)
+    setUploadProgress('Laddar upp...')
+
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('widget_id', widget.id.toString())
+
+    try {
+      const response = await authFetch(`${API_BASE}/knowledge/upload`, {
+        method: 'POST',
+        body: formData
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSuccess(`Importerade ${data.imported || data.count || 'flera'} poster!`)
+        fetchKnowledge(widget.id)
+        setShowImportModal(false)
+      } else {
+        const err = await response.json()
+        setError(err.detail || 'Import misslyckades')
+      }
+    } catch (e) {
+      setError('Kunde inte importera: ' + e.message)
+    } finally {
+      setImporting(false)
+      setUploadProgress(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const handleUrlImport = async () => {
+    if (!importUrl.trim() || !widget) return
+
+    setImporting(true)
+    setUploadProgress('Hämtar från URL...')
+
+    try {
+      const response = await authFetch(`${API_BASE}/knowledge/import-url`, {
+        method: 'POST',
+        body: JSON.stringify({ url: importUrl, widget_id: widget.id })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSuccess(`Importerade ${data.imported || data.count || 'flera'} poster!`)
+        fetchKnowledge(widget.id)
+        setShowImportModal(false)
+        setImportUrl('')
+      } else {
+        const err = await response.json()
+        setError(err.detail || 'Import misslyckades')
+      }
+    } catch (e) {
+      setError('Kunde inte importera: ' + e.message)
+    } finally {
+      setImporting(false)
+      setUploadProgress(null)
     }
   }
 
@@ -257,6 +404,13 @@ function WidgetPage({ widgetType }) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [previewMessages])
+
+  // Format date
+  const formatDate = (dateStr) => {
+    if (!dateStr) return ''
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('sv-SE', { year: 'numeric', month: 'short', day: 'numeric' })
+  }
 
   const tabs = [
     { id: 'settings', label: 'Inställningar', icon: 'settings' },
@@ -307,8 +461,9 @@ function WidgetPage({ widgetType }) {
 
       {/* Messages */}
       {error && (
-        <div className="bg-error-soft border border-error text-error px-4 py-3 rounded-lg mb-4">
+        <div className="bg-error-soft border border-error text-error px-4 py-3 rounded-lg mb-4 flex items-center justify-between">
           {error}
+          <button onClick={() => setError('')} className="text-error hover:text-error/80">&times;</button>
         </div>
       )}
       {success && (
@@ -359,7 +514,7 @@ function WidgetPage({ widgetType }) {
         </nav>
       </div>
 
-      {/* Tab Content */}
+      {/* Settings Tab */}
       {activeTab === 'settings' && (
         <div className="card p-6">
           <form onSubmit={handleSaveSettings} className="space-y-6">
@@ -461,10 +616,11 @@ function WidgetPage({ widgetType }) {
         </div>
       )}
 
+      {/* Knowledge Tab */}
       {activeTab === 'knowledge' && (
         <div>
-          {/* Knowledge header */}
-          <div className="flex items-center justify-between mb-4">
+          {/* Action bar */}
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div className="relative flex-1 max-w-md">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary">
                 <circle cx="11" cy="11" r="8" />
@@ -478,20 +634,36 @@ function WidgetPage({ widgetType }) {
                 className="input pl-10 w-full"
               />
             </div>
-            <button
-              onClick={() => {
-                setEditingItem(null)
-                setKnowledgeForm({ question: '', answer: '', category: '' })
-                setShowKnowledgeModal(true)
-              }}
-              className="btn btn-primary"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              Lägg till
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => setShowCategoryModal(true)} className="btn btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />
+                </svg>
+                Kategorier
+              </button>
+              <button onClick={() => setShowImportModal(true)} className="btn btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                Importera
+              </button>
+              <button
+                onClick={() => {
+                  setEditingItem(null)
+                  setKnowledgeForm({ question: '', answer: '', category: '' })
+                  setShowKnowledgeModal(true)
+                }}
+                className="btn btn-primary"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Lägg till
+              </button>
+            </div>
           </div>
 
           {/* Knowledge list */}
@@ -506,7 +678,15 @@ function WidgetPage({ widgetType }) {
                 </svg>
               </div>
               <h3 className="text-lg font-medium text-text-primary">Ingen kunskapsbank ännu</h3>
-              <p className="text-text-secondary mt-2">Lägg till frågor och svar för att träna din {isExternal ? 'kundwidget' : 'interna widget'}</p>
+              <p className="text-text-secondary mt-2 mb-4">Lägg till frågor och svar för att träna din {isExternal ? 'kundwidget' : 'interna widget'}</p>
+              <div className="flex justify-center gap-3">
+                <button onClick={() => setShowImportModal(true)} className="btn btn-secondary">
+                  Importera data
+                </button>
+                <button onClick={() => setShowKnowledgeModal(true)} className="btn btn-primary">
+                  Lägg till manuellt
+                </button>
+              </div>
             </div>
           ) : (
             <div className="space-y-3">
@@ -514,7 +694,7 @@ function WidgetPage({ widgetType }) {
                 <div key={item.id} className="card group hover:border-accent/30 transition-colors">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
                         {item.widget_id ? (
                           <span className={`text-xs px-2 py-0.5 rounded-full ${isExternal ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200' : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'}`}>
                             Endast denna widget
@@ -526,6 +706,9 @@ function WidgetPage({ widgetType }) {
                         )}
                         {item.category && (
                           <span className="badge badge-accent">{item.category}</span>
+                        )}
+                        {item.created_at && (
+                          <span className="text-xs text-text-tertiary ml-auto">{formatDate(item.created_at)}</span>
                         )}
                       </div>
                       <h3 className="font-medium text-text-primary">{item.question}</h3>
@@ -565,14 +748,12 @@ function WidgetPage({ widgetType }) {
         </div>
       )}
 
+      {/* Preview Tab */}
       {activeTab === 'preview' && (
         <div className="max-w-md mx-auto">
           <div className="flex items-center justify-between mb-4">
             <div className="flex gap-2">
-              <button
-                onClick={() => setDarkMode(!darkMode)}
-                className="btn btn-secondary text-sm"
-              >
+              <button onClick={() => setDarkMode(!darkMode)} className="btn btn-secondary text-sm">
                 {darkMode ? 'Ljust läge' : 'Mörkt läge'}
               </button>
               <button onClick={resetPreview} className="btn btn-secondary text-sm">
@@ -582,15 +763,8 @@ function WidgetPage({ widgetType }) {
           </div>
 
           {/* Widget preview */}
-          <div
-            className="rounded-2xl overflow-hidden shadow-2xl"
-            style={{ backgroundColor: darkMode ? '#1C1917' : '#FFFFFF' }}
-          >
-            {/* Header */}
-            <div
-              className="px-5 py-4"
-              style={{ background: `linear-gradient(135deg, ${formData.primary_color} 0%, ${adjustColor(formData.primary_color, -25)} 100%)` }}
-            >
+          <div className="rounded-2xl overflow-hidden shadow-2xl" style={{ backgroundColor: darkMode ? '#1C1917' : '#FFFFFF' }}>
+            <div className="px-5 py-4" style={{ background: `linear-gradient(135deg, ${formData.primary_color} 0%, ${adjustColor(formData.primary_color, -25)} 100%)` }}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
@@ -604,19 +778,13 @@ function WidgetPage({ widgetType }) {
               </div>
             </div>
 
-            {/* Messages */}
-            <div
-              className="h-80 overflow-y-auto p-4 space-y-3"
-              style={{ backgroundColor: darkMode ? '#1C1917' : '#FAFAF9' }}
-            >
+            <div className="h-80 overflow-y-auto p-4 space-y-3" style={{ backgroundColor: darkMode ? '#1C1917' : '#FAFAF9' }}>
               {previewMessages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div
                     className="max-w-[85%] px-4 py-2.5 rounded-2xl"
                     style={{
-                      background: msg.type === 'user'
-                        ? `linear-gradient(135deg, ${formData.primary_color} 0%, ${adjustColor(formData.primary_color, -15)} 100%)`
-                        : darkMode ? '#292524' : '#FFFFFF',
+                      background: msg.type === 'user' ? `linear-gradient(135deg, ${formData.primary_color} 0%, ${adjustColor(formData.primary_color, -15)} 100%)` : darkMode ? '#292524' : '#FFFFFF',
                       color: msg.type === 'user' ? 'white' : (darkMode ? '#FAFAF9' : '#1C1917'),
                       border: msg.type === 'bot' ? `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}` : 'none',
                       borderBottomLeftRadius: msg.type === 'bot' ? '4px' : '16px',
@@ -624,21 +792,13 @@ function WidgetPage({ widgetType }) {
                     }}
                   >
                     <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
-                    {msg.hadAnswer === false && (
-                      <p className="text-xs mt-1 text-amber-500">Kunde inte hitta exakt svar</p>
-                    )}
+                    {msg.hadAnswer === false && <p className="text-xs mt-1 text-amber-500">Kunde inte hitta exakt svar</p>}
                   </div>
                 </div>
               ))}
               {previewLoading && (
                 <div className="flex justify-start">
-                  <div
-                    className="px-4 py-3 rounded-2xl"
-                    style={{
-                      backgroundColor: darkMode ? '#292524' : '#FFFFFF',
-                      border: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}`
-                    }}
-                  >
+                  <div className="px-4 py-3 rounded-2xl" style={{ backgroundColor: darkMode ? '#292524' : '#FFFFFF', border: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}` }}>
                     <div className="flex gap-1.5">
                       <span className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: darkMode ? '#78716C' : '#A8A29E', animationDelay: '0ms' }} />
                       <span className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: darkMode ? '#78716C' : '#A8A29E', animationDelay: '150ms' }} />
@@ -650,15 +810,7 @@ function WidgetPage({ widgetType }) {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
-            <form
-              onSubmit={handlePreviewSend}
-              className="p-3"
-              style={{
-                backgroundColor: darkMode ? '#292524' : '#FFFFFF',
-                borderTop: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}`
-              }}
-            >
+            <form onSubmit={handlePreviewSend} className="p-3" style={{ backgroundColor: darkMode ? '#292524' : '#FFFFFF', borderTop: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}` }}>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -666,19 +818,10 @@ function WidgetPage({ widgetType }) {
                   onChange={(e) => setPreviewInput(e.target.value)}
                   placeholder="Skriv ett meddelande..."
                   className="flex-1 px-4 py-2.5 rounded-full outline-none text-sm"
-                  style={{
-                    backgroundColor: darkMode ? '#1C1917' : '#F5F5F4',
-                    color: darkMode ? '#FAFAF9' : '#1C1917',
-                    border: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}`
-                  }}
+                  style={{ backgroundColor: darkMode ? '#1C1917' : '#F5F5F4', color: darkMode ? '#FAFAF9' : '#1C1917', border: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}` }}
                   disabled={previewLoading}
                 />
-                <button
-                  type="submit"
-                  disabled={previewLoading || !previewInput.trim()}
-                  className="w-10 h-10 rounded-full flex items-center justify-center transition-all disabled:opacity-50"
-                  style={{ backgroundColor: formData.primary_color }}
-                >
+                <button type="submit" disabled={previewLoading || !previewInput.trim()} className="w-10 h-10 rounded-full flex items-center justify-center transition-all disabled:opacity-50" style={{ backgroundColor: formData.primary_color }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
                     <line x1="22" y1="2" x2="11" y2="13" />
                     <polygon points="22 2 15 22 11 13 2 9 22 2" />
@@ -687,71 +830,142 @@ function WidgetPage({ widgetType }) {
               </div>
             </form>
           </div>
-
-          <p className="text-center text-sm text-text-tertiary mt-4">
-            Testa din widget med riktiga frågor från kunskapsbanken
-          </p>
+          <p className="text-center text-sm text-text-tertiary mt-4">Testa din widget med riktiga frågor från kunskapsbanken</p>
         </div>
       )}
 
       {/* Knowledge Modal */}
       {showKnowledgeModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-bg-tertiary rounded-xl shadow-lg w-full max-w-lg">
+          <div className="bg-bg-primary rounded-xl shadow-lg w-full max-w-lg">
             <div className="p-6 border-b border-border-subtle">
-              <h2 className="text-lg font-semibold text-text-primary">
-                {editingItem ? 'Redigera fråga' : 'Lägg till fråga'}
-              </h2>
+              <h2 className="text-lg font-semibold text-text-primary">{editingItem ? 'Redigera fråga' : 'Lägg till fråga'}</h2>
             </div>
             <form onSubmit={handleSaveKnowledge} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">Kategori</label>
-                <select
-                  value={knowledgeForm.category}
-                  onChange={(e) => setKnowledgeForm({ ...knowledgeForm, category: e.target.value })}
-                  className="input w-full"
-                >
+                <select value={knowledgeForm.category} onChange={(e) => setKnowledgeForm({ ...knowledgeForm, category: e.target.value })} className="input w-full">
                   <option value="">Välj kategori (valfritt)</option>
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
+                  {categories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">Fråga</label>
-                <input
-                  type="text"
-                  value={knowledgeForm.question}
-                  onChange={(e) => setKnowledgeForm({ ...knowledgeForm, question: e.target.value })}
-                  className="input w-full"
-                  placeholder="T.ex. Hur säger jag upp min lägenhet?"
-                  required
-                />
+                <input type="text" value={knowledgeForm.question} onChange={(e) => setKnowledgeForm({ ...knowledgeForm, question: e.target.value })} className="input w-full" placeholder="T.ex. Hur säger jag upp min lägenhet?" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1">Svar</label>
-                <textarea
-                  value={knowledgeForm.answer}
-                  onChange={(e) => setKnowledgeForm({ ...knowledgeForm, answer: e.target.value })}
-                  className="input w-full"
-                  rows="4"
-                  placeholder="Skriv svaret här..."
-                  required
-                />
+                <textarea value={knowledgeForm.answer} onChange={(e) => setKnowledgeForm({ ...knowledgeForm, answer: e.target.value })} className="input w-full" rows="4" placeholder="Skriv svaret här..." required />
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowKnowledgeModal(false)}
-                  className="btn btn-ghost"
-                >
-                  Avbryt
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Spara
-                </button>
+                <button type="button" onClick={() => setShowKnowledgeModal(false)} className="btn btn-ghost">Avbryt</button>
+                <button type="submit" className="btn btn-primary">Spara</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Category Modal */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-bg-primary rounded-xl shadow-lg w-full max-w-md">
+            <div className="p-6 border-b border-border-subtle flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-text-primary">Hantera kategorier</h2>
+              <button onClick={() => { setShowCategoryModal(false); setEditingCategory(null); setNewCategoryName('') }} className="text-text-tertiary hover:text-text-primary">&times;</button>
+            </div>
+            <div className="p-6">
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder={editingCategory ? 'Nytt namn...' : 'Ny kategori...'}
+                  className="input flex-1"
+                />
+                <button onClick={handleSaveCategory} disabled={!newCategoryName.trim()} className="btn btn-primary">
+                  {editingCategory ? 'Uppdatera' : 'Lägg till'}
+                </button>
+              </div>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {categories.map(cat => (
+                  <div key={cat.id} className="flex items-center justify-between p-3 bg-bg-secondary rounded-lg group">
+                    <span className="text-text-primary">{cat.name}</span>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => { setEditingCategory(cat); setNewCategoryName(cat.name) }} className="p-1 text-text-tertiary hover:text-accent">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                      </button>
+                      <button onClick={() => handleDeleteCategory(cat)} className="p-1 text-text-tertiary hover:text-error">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-bg-primary rounded-xl shadow-lg w-full max-w-lg">
+            <div className="p-6 border-b border-border-subtle flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-text-primary">Importera kunskapsbank</h2>
+              <button onClick={() => { setShowImportModal(false); setImportUrl('') }} className="text-text-tertiary hover:text-text-primary">&times;</button>
+            </div>
+            <div className="p-6 space-y-6">
+              {/* File upload */}
+              <div>
+                <h3 className="font-medium text-text-primary mb-2">Ladda upp fil</h3>
+                <p className="text-sm text-text-secondary mb-3">Stöder Excel (.xlsx), Word (.docx), PDF, CSV och TXT</p>
+                <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.docx,.doc,.pdf,.csv,.txt" onChange={handleFileUpload} className="hidden" id="file-upload" />
+                <label htmlFor="file-upload" className="btn btn-secondary w-full cursor-pointer flex items-center justify-center gap-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                  Välj fil
+                </label>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-subtle"></div></div>
+                <div className="relative flex justify-center text-sm"><span className="px-2 bg-bg-primary text-text-tertiary">eller</span></div>
+              </div>
+
+              {/* URL import */}
+              <div>
+                <h3 className="font-medium text-text-primary mb-2">Importera från URL</h3>
+                <p className="text-sm text-text-secondary mb-3">Hämta frågor och svar från en webbsida</p>
+                <div className="flex gap-2">
+                  <input type="url" value={importUrl} onChange={(e) => setImportUrl(e.target.value)} placeholder="https://example.com/faq" className="input flex-1" />
+                  <button onClick={handleUrlImport} disabled={!importUrl.trim() || importing} className="btn btn-primary">
+                    {importing ? 'Importerar...' : 'Hämta'}
+                  </button>
+                </div>
+              </div>
+
+              {uploadProgress && (
+                <div className="bg-accent-soft border border-accent/20 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="animate-spin w-5 h-5 border-2 border-accent border-t-transparent rounded-full" />
+                    <span className="text-sm text-accent">{uploadProgress}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-bg-secondary rounded-lg p-4">
+                <h4 className="text-sm font-medium text-text-primary mb-2">Tips för Excel/CSV</h4>
+                <ul className="text-xs text-text-secondary space-y-1">
+                  <li>• Kolumn A: Fråga</li>
+                  <li>• Kolumn B: Svar</li>
+                  <li>• Kolumn C: Kategori (valfritt)</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -759,7 +973,6 @@ function WidgetPage({ widgetType }) {
   )
 }
 
-// Helper to darken/lighten color
 function adjustColor(hex, amount) {
   if (!hex) return '#C4613D'
   const num = parseInt(hex.replace('#', ''), 16)
