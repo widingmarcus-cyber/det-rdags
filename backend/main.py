@@ -2350,12 +2350,14 @@ async def chat_via_widget_key(
             answer = widget.fallback_message or "Tyvärr kunde jag inte hitta ett svar på din fråga."
 
     # Save bot message
-    sources = [{"question": item.question, "category": item.category} for item in relevant_items[:3]]
+    # sources_detail for database storage (richer info), sources for API response (List[str])
+    sources_detail = [{"question": item.question, "category": item.category} for item in relevant_items[:3]]
+    sources = [item.question for item in relevant_items[:3]]
     bot_message = Message(
         conversation_id=conversation.id,
         role="bot",
         content=answer,
-        sources=json.dumps(sources),
+        sources=json.dumps(sources_detail),
         had_answer=had_answer,
         response_time_ms=response_time
     )
