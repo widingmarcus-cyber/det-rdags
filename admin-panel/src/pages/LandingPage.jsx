@@ -57,10 +57,10 @@ function BobotMascot({ className = "", size = 160, mousePos = { x: 0.5, y: 0.5 }
       <rect x="15" y="62" width="18" height="6" rx="3" fill="#78716C">
         <animateTransform attributeName="transform" type="rotate" values="0 24 65;-8 24 65;0 24 65" dur="3s" repeatCount="indefinite" />
       </rect>
-      {/* Right arm - waves when isWaving */}
+      {/* Right arm - waves when isWaving (goes above shoulder) */}
       <rect x="87" y="62" width="18" height="6" rx="3" fill="#78716C">
         {isWaving ? (
-          <animateTransform attributeName="transform" type="rotate" values="0 87 65;70 87 65;0 87 65" dur="0.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
+          <animateTransform attributeName="transform" type="rotate" values="0 87 65;-50 87 65;0 87 65" dur="1.2s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
         ) : (
           <animateTransform attributeName="transform" type="rotate" values="0 96 65;8 96 65;0 96 65" dur="3s" repeatCount="indefinite" />
         )}
@@ -73,7 +73,7 @@ function BobotMascot({ className = "", size = 160, mousePos = { x: 0.5, y: 0.5 }
       {/* Right hand - waves with arm when isWaving (same pivot point as arm) */}
       <rect x="102" y="58" width="8" height="14" rx="2" fill="#57534E">
         {isWaving ? (
-          <animateTransform attributeName="transform" type="rotate" values="0 87 65;70 87 65;0 87 65" dur="0.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
+          <animateTransform attributeName="transform" type="rotate" values="0 87 65;-50 87 65;0 87 65" dur="1.2s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
         ) : (
           <animateTransform attributeName="transform" type="rotate" values="0 106 65;8 106 65;0 106 65" dur="3s" repeatCount="indefinite" />
         )}
@@ -312,12 +312,14 @@ function LandingPage() {
   ]
 
   const sellingPoints = [
-    'Avlastar kundtjänst',
+    'Avlastar medarbetare',
     'Alltid tillgänglig',
     'Intern kunskapsbank',
     'GDPR-säker',
     'Träna nyanställda',
-    'Spar tid',
+    'Enkel att integrera',
+    'Flerspråkigt stöd',
+    'Självlärande AI',
   ]
 
   return (
@@ -349,12 +351,15 @@ function LandingPage() {
               <button onClick={() => navigate('/login')} className="bg-[#D97757] hover:bg-[#c4613d] text-white text-sm px-5 py-2 rounded-lg font-medium transition-all hover:scale-105 hover:shadow-lg">
                 Logga in
               </button>
-              {/* Easter egg: Upside down mascot hanging from ceiling to the right */}
-              <HangingMascot mousePos={mousePos} isVisible={loginHover} />
             </div>
           </div>
         </div>
       </nav>
+
+      {/* Easter egg: Upside down mascot hanging from ceiling - fixed at top right */}
+      <div className="fixed top-0 right-6 z-50">
+        <HangingMascot mousePos={mousePos} isVisible={loginHover} />
+      </div>
 
       {/* Main content */}
       <main className="flex-1 px-6 flex items-center relative overflow-hidden">
@@ -416,7 +421,7 @@ function LandingPage() {
             </div>
 
             {/* Right: 2 full-size demo widgets */}
-            <div className={`flex flex-col gap-6 transition-all duration-1000 delay-300 ${contentVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
+            <div className={`flex flex-col gap-6 pt-4 transition-all duration-1000 delay-300 ${contentVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
               <ChatWidget
                 messages={convo1}
                 label="Kund"
