@@ -323,34 +323,34 @@ function ChatWidget({ messages, label, className = "", startDelay = 0, compact =
   const handleMessageComplete = () => setTimeout(() => setCurrentTyping(prev => prev + 1), 300)
 
   return (
-    <div className={`w-full ${compact ? 'max-w-80' : 'max-w-96'} bg-white dark:bg-stone-800 rounded-2xl shadow-xl border border-stone-200 dark:border-stone-700 overflow-hidden ${className}`}>
-      <div className={`bg-[#D97757] ${compact ? 'px-3 py-2' : 'px-4 sm:px-5 py-3 sm:py-4'} flex items-center justify-between`}>
-        <div className="flex items-center gap-2">
-          <div className={`${compact ? 'w-7 h-7' : 'w-8 h-8 sm:w-10 sm:h-10'} bg-white/20 rounded-full flex items-center justify-center`}>
-            <BobotMini className={compact ? 'scale-60' : 'scale-75 sm:scale-90'} />
+    <div className={`w-full ${compact ? 'max-w-xs' : 'max-w-sm'} bg-white dark:bg-stone-800 rounded-2xl shadow-2xl border border-stone-200 dark:border-stone-700 overflow-hidden ${className}`}>
+      <div className={`bg-[#D97757] ${compact ? 'px-4 py-3' : 'px-5 py-4'} flex items-center justify-between`}>
+        <div className="flex items-center gap-3">
+          <div className={`${compact ? 'w-9 h-9' : 'w-10 h-10'} bg-white/20 rounded-full flex items-center justify-center`}>
+            <BobotMini className="scale-75" />
           </div>
           <div>
-            <span className={`text-white font-medium block ${compact ? 'text-xs' : 'text-sm sm:text-base'}`}>Bobot</span>
-            <span className={`text-white/70 ${compact ? 'text-[10px]' : 'text-xs sm:text-sm'}`}>Online</span>
+            <span className={`text-white font-semibold block ${compact ? 'text-sm' : 'text-base'}`}>Bobot</span>
+            <span className={`text-white/80 ${compact ? 'text-xs' : 'text-sm'}`}>Online</span>
           </div>
         </div>
-        {label && <span className={`bg-white/20 text-white ${compact ? 'text-[10px] px-2 py-0.5' : 'text-xs sm:text-sm px-2 sm:px-3 py-1'} rounded-full`}>{label}</span>}
+        {label && <span className={`bg-white/25 text-white font-medium ${compact ? 'text-xs px-2.5 py-1' : 'text-sm px-3 py-1'} rounded-full`}>{label}</span>}
       </div>
-      <div className={`${compact ? 'p-3 space-y-2 min-h-[80px]' : 'p-4 sm:p-5 space-y-3 sm:space-y-4 min-h-[100px] sm:min-h-[120px]'} bg-stone-50 dark:bg-stone-900`}>
+      <div className={`${compact ? 'p-4 space-y-3 min-h-[100px]' : 'p-5 space-y-4 min-h-[120px]'} bg-stone-100 dark:bg-stone-900`}>
         {messages.map((msg, i) => (
           visibleMessages.includes(i) && (
             <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] rounded-2xl ${compact ? 'px-2.5 py-1.5 text-xs' : 'px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base'} ${msg.from === 'user' ? 'bg-[#D97757] text-white' : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm'}`}>
+              <div className={`max-w-[85%] rounded-2xl ${compact ? 'px-3.5 py-2 text-sm' : 'px-4 py-2.5 text-base'} ${msg.from === 'user' ? 'bg-[#D97757] text-white rounded-br-md' : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm rounded-bl-md'}`}>
                 <TypedText text={msg.text} delay={i === 0 ? startDelay : 0} speed={msg.from === 'bot' ? 20 : 40} onComplete={i === currentTyping ? handleMessageComplete : undefined} />
               </div>
             </div>
           )
         ))}
       </div>
-      <div className={`${compact ? 'px-3 py-2' : 'px-4 sm:px-5 py-3 sm:py-4'} border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800`}>
-        <div className="flex items-center gap-2 text-stone-400">
-          <span className={`flex-1 bg-stone-100 dark:bg-stone-700 rounded-full ${compact ? 'px-3 py-1.5 text-xs' : 'px-4 sm:px-5 py-2 sm:py-3 text-sm sm:text-base'}`}>Skriv ett meddelande...</span>
-          <svg className={compact ? 'w-4 h-4' : 'w-5 h-5 sm:w-6 sm:h-6'} fill="currentColor" viewBox="0 0 20 20">
+      <div className={`${compact ? 'px-4 py-3' : 'px-5 py-4'} border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800`}>
+        <div className="flex items-center gap-3 text-stone-400">
+          <span className={`flex-1 bg-stone-100 dark:bg-stone-700 rounded-full ${compact ? 'px-4 py-2 text-sm' : 'px-5 py-2.5 text-base'}`}>Skriv ett meddelande...</span>
+          <svg className={compact ? 'w-5 h-5' : 'w-6 h-6'} fill="currentColor" viewBox="0 0 20 20">
             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
           </svg>
         </div>
@@ -407,9 +407,6 @@ function PricingCard({ tier }) {
           </li>
         ))}
       </ul>
-      <a href={`mailto:hej@bobot.nu?subject=${encodeURIComponent(tier.name + '-plan')}`} className="block w-full text-center py-3 rounded-xl font-medium transition-colors border-2 border-[#D97757] text-[#D97757] hover:bg-[#D97757] hover:text-white">
-        {isEnterprise ? 'Kontakta oss' : 'Kom igång'}
-      </a>
     </div>
   )
 }
@@ -763,7 +760,6 @@ function LandingPage() {
             </div>
           </div>
         </div>
-        <ScrollIndicator onClick={() => navigateToSection(2)} />
       </section>
 
       {/* SECTION 3: Pricing */}
@@ -781,7 +777,6 @@ function LandingPage() {
             <div className="flex justify-center"><div className="animate-pulse text-stone-400">Laddar priser...</div></div>
           )}
         </div>
-        <ScrollIndicator onClick={() => navigateToSection(3)} />
       </section>
 
       {/* SECTION 4: FAQ + Footer */}
