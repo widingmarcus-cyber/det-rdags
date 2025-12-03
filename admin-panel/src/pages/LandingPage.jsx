@@ -344,7 +344,7 @@ function ChatWidget({ messages, label, className = "", startDelay = 0 }) {
       <div className="p-3 space-y-1.5 bg-stone-100 dark:bg-stone-900 h-[180px] overflow-hidden">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'} transition-opacity duration-300 ${visibleMessages.includes(i) ? 'opacity-100' : 'opacity-0'}`}>
-            <div className={`max-w-[85%] rounded-xl px-2.5 py-1.5 text-sm ${msg.from === 'user' ? 'bg-[#D97757] text-white rounded-br-sm' : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm rounded-bl-sm'}`}>
+            <div className={`max-w-[85%] rounded-xl px-2.5 py-1 text-sm ${msg.from === 'user' ? 'bg-[#D97757] text-white rounded-br-sm' : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm rounded-bl-sm'}`}>
               <TypedText text={msg.text} delay={i === 0 ? startDelay : 0} speed={msg.from === 'bot' ? 15 : 30} onComplete={i === currentTyping ? handleMessageComplete : undefined} />
             </div>
           </div>
@@ -592,10 +592,10 @@ function LandingPage() {
   }
 
   const customerConvo = [
-    { from: 'user', text: 'Får jag ha hund i lägenheten?' },
-    { from: 'bot', text: 'Ja, husdjur är tillåtna så länge de inte stör grannar.' },
-    { from: 'user', text: 'Hur anmäler jag det?' },
-    { from: 'bot', text: 'Fyll i blanketten på Mina Sidor under Husdjur.' },
+    { from: 'user', text: 'Får jag ha hund?' },
+    { from: 'bot', text: 'Ja, så länge de inte stör grannar.' },
+    { from: 'user', text: 'Hur anmäler jag?' },
+    { from: 'bot', text: 'Via Mina Sidor under Husdjur.' },
   ]
 
   const employeeConvo = [
