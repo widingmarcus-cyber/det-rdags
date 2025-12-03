@@ -913,10 +913,10 @@ function WidgetPage({ widgetType }) {
                           role="switch"
                           aria-checked={formData.start_expanded}
                           onClick={() => setFormData({ ...formData, start_expanded: !formData.start_expanded })}
-                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 ${formData.start_expanded ? 'bg-accent' : 'bg-stone-400 dark:bg-stone-600'}`}
+                          className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 ${formData.start_expanded ? 'bg-accent' : 'bg-stone-400 dark:bg-stone-600'}`}
                         >
                           <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${formData.start_expanded ? 'translate-x-5' : 'translate-x-0.5'}`}
+                            className={`pointer-events-none block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${formData.start_expanded ? 'translate-x-5' : 'translate-x-0.5'}`}
                           />
                         </button>
                         <div>
