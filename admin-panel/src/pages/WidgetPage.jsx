@@ -90,9 +90,9 @@ function WidgetPage({ widgetType }) {
     checkHealth()
   }, [widgetType])
 
-  // Recheck health when preview tab is active
+  // Recheck health when settings tab is active (since preview is shown there)
   useEffect(() => {
-    if (activeTab === 'preview') {
+    if (activeTab === 'settings') {
       checkHealth()
     }
   }, [activeTab])
@@ -510,8 +510,7 @@ function WidgetPage({ widgetType }) {
 
   const tabs = [
     { id: 'settings', label: 'Inställningar', icon: 'settings' },
-    { id: 'knowledge', label: 'Kunskapsbank', icon: 'book', count: knowledgeItems.length },
-    { id: 'preview', label: 'Förhandsgranska', icon: 'eye' }
+    { id: 'knowledge', label: 'Kunskapsbank', icon: 'book', count: knowledgeItems.length }
   ]
 
   if (loading) {
@@ -595,12 +594,6 @@ function WidgetPage({ widgetType }) {
                   <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
                 </svg>
               )}
-              {tab.icon === 'eye' && (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              )}
               {tab.label}
               {tab.count !== undefined && (
                 <span className="bg-bg-tertiary text-text-tertiary text-xs px-2 py-0.5 rounded-full">{tab.count}</span>
@@ -612,7 +605,8 @@ function WidgetPage({ widgetType }) {
 
       {/* Settings Tab */}
       {activeTab === 'settings' && (
-        <div className="space-y-6">
+        <div className="grid lg:grid-cols-[1fr,380px] gap-6">
+          {/* Settings Form */}
           <form onSubmit={handleSaveSettings} className="space-y-6">
             {/* Contact Info Section */}
             <div className="card p-6">
@@ -668,31 +662,16 @@ function WidgetPage({ widgetType }) {
                 Meddelanden
               </h3>
               <div className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-1">Språk</label>
-                    <select
-                      value={formData.language}
-                      onChange={(e) => setFormData({ ...formData, language: e.target.value })}
-                      className="input w-full"
-                    >
-                      <option value="sv">Svenska</option>
-                      <option value="en">English</option>
-                      <option value="ar">العربية</option>
-                    </select>
-                    <p className="text-xs text-text-tertiary mt-1">Standardspråk (anpassas efter besökare)</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-1">Underrubrik</label>
-                    <input
-                      type="text"
-                      value={formData.subtitle}
-                      onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
-                      className="input w-full"
-                      placeholder="Alltid redo att hjälpa"
-                    />
-                    <p className="text-xs text-text-tertiary mt-1">Visas under namnet i headern</p>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">Underrubrik</label>
+                  <input
+                    type="text"
+                    value={formData.subtitle}
+                    onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
+                    className="input w-full"
+                    placeholder="Alltid redo att hjälpa"
+                  />
+                  <p className="text-xs text-text-tertiary mt-1">Visas under namnet i headern</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-1">Välkomstmeddelande</label>
@@ -821,12 +800,184 @@ function WidgetPage({ widgetType }) {
               </div>
             </div>
 
+            {/* Widget Embed Code Section */}
+            <div className="card p-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="16 18 22 12 16 6" />
+                  <polyline points="8 6 2 12 8 18" />
+                </svg>
+                Installera widget
+              </h3>
+              <p className="text-sm text-text-secondary mb-4">Kopiera koden nedan och klistra in den på din webbplats</p>
+              {widget?.widget_key && (
+                <div className="space-y-3">
+                  <div className="relative">
+                    <pre className="bg-bg-secondary border border-border-subtle rounded-lg p-4 text-xs text-text-primary overflow-x-auto font-mono whitespace-pre-wrap">
+{`<script src="https://cdn.bobot.nu/widget.js"></script>
+<script>
+  Bobot.init({
+    widgetKey: '${widget.widget_key}'
+  });
+</script>`}
+                    </pre>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`<script src="https://cdn.bobot.nu/widget.js"></script>\n<script>\n  Bobot.init({\n    widgetKey: '${widget.widget_key}'\n  });\n</script>`)
+                        setSuccess('Kod kopierad!')
+                        setTimeout(() => setSuccess(''), 2000)
+                      }}
+                      className="absolute top-2 right-2 btn btn-ghost text-xs py-1 px-2"
+                    >
+                      Kopiera
+                    </button>
+                  </div>
+                  <p className="text-xs text-text-tertiary">
+                    Klistra in koden precis före <code className="bg-bg-tertiary px-1 py-0.5 rounded">&lt;/body&gt;</code> på din webbplats
+                  </p>
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end">
               <button type="submit" disabled={saving} className="btn btn-primary">
                 {saving ? 'Sparar...' : 'Spara inställningar'}
               </button>
             </div>
           </form>
+
+          {/* Preview Sidebar */}
+          <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+            {/* Health Status */}
+            <div className={`rounded-lg p-3 flex items-center gap-3 ${
+              healthStatus?.ollama === 'connected'
+                ? 'bg-success/10 border border-success/20'
+                : 'bg-warning/10 border border-warning/20'
+            }`}>
+              <div className={`w-2.5 h-2.5 rounded-full ${
+                healthStatus?.ollama === 'connected' ? 'bg-success animate-pulse' : 'bg-warning'
+              }`} />
+              <div className="flex-1">
+                <p className={`text-sm font-medium ${
+                  healthStatus?.ollama === 'connected' ? 'text-success' : 'text-warning'
+                }`}>
+                  {healthStatus?.ollama === 'connected'
+                    ? 'AI-modellen är redo'
+                    : healthStatus?.status === 'offline'
+                      ? 'Backend är inte tillgänglig'
+                      : 'AI-modellen är inte ansluten'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={checkHealth}
+                className="p-1.5 hover:bg-black/5 rounded-md transition-colors"
+                title="Kontrollera status"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-text-primary">Förhandsgranskning</span>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setDarkMode(!darkMode)} className="btn btn-ghost text-xs py-1">
+                  {darkMode ? '☀️' : '🌙'}
+                </button>
+                <button type="button" onClick={resetPreview} className="btn btn-ghost text-xs py-1">
+                  Börja om
+                </button>
+              </div>
+            </div>
+
+            {/* Widget Preview */}
+            <div
+              className="overflow-hidden shadow-xl"
+              style={{
+                backgroundColor: darkMode ? '#1C1917' : '#FFFFFF',
+                borderRadius: `${formData.widget_border_radius}px`,
+                fontFamily: formData.widget_font_family
+              }}
+            >
+              <div className="px-4 py-3" style={{ background: `linear-gradient(135deg, ${formData.primary_color} 0%, ${adjustColor(formData.primary_color, -25)} 100%)` }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-white text-sm">{formData.display_name || 'Bobot'}</h2>
+                    <p className="text-white/80 text-xs">{formData.subtitle}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="h-64 overflow-y-auto p-3 space-y-2" style={{ backgroundColor: darkMode ? '#1C1917' : '#FAFAF9' }}>
+                {previewMessages.map((msg, i) => (
+                  <div key={i} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div
+                      className="max-w-[85%] px-3 py-2"
+                      style={{
+                        background: msg.type === 'user' ? `linear-gradient(135deg, ${formData.primary_color} 0%, ${adjustColor(formData.primary_color, -15)} 100%)` : darkMode ? '#292524' : '#FFFFFF',
+                        color: msg.type === 'user' ? 'white' : (darkMode ? '#FAFAF9' : '#1C1917'),
+                        border: msg.type === 'bot' ? `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}` : 'none',
+                        borderRadius: `${formData.widget_border_radius}px`,
+                        borderBottomLeftRadius: msg.type === 'bot' ? '4px' : `${formData.widget_border_radius}px`,
+                        borderBottomRightRadius: msg.type === 'user' ? '4px' : `${formData.widget_border_radius}px`,
+                        fontSize: `${formData.widget_font_size}px`
+                      }}
+                    >
+                      <p className="whitespace-pre-wrap">{msg.text}</p>
+                    </div>
+                  </div>
+                ))}
+                {previewLoading && (
+                  <div className="flex justify-start">
+                    <div className="px-3 py-2" style={{ backgroundColor: darkMode ? '#292524' : '#FFFFFF', border: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}`, borderRadius: `${formData.widget_border_radius}px` }}>
+                      <div className="flex gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: darkMode ? '#78716C' : '#A8A29E', animationDelay: '0ms' }} />
+                        <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: darkMode ? '#78716C' : '#A8A29E', animationDelay: '150ms' }} />
+                        <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: darkMode ? '#78716C' : '#A8A29E', animationDelay: '300ms' }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              <form onSubmit={handlePreviewSend} className="p-2" style={{ backgroundColor: darkMode ? '#292524' : '#FFFFFF', borderTop: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}` }}>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={previewInput}
+                    onChange={(e) => setPreviewInput(e.target.value)}
+                    placeholder="Skriv ett meddelande..."
+                    className="flex-1 px-3 py-2 outline-none text-sm"
+                    style={{
+                      backgroundColor: darkMode ? '#1C1917' : '#F5F5F4',
+                      color: darkMode ? '#FAFAF9' : '#1C1917',
+                      border: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}`,
+                      borderRadius: '9999px',
+                      fontSize: `${formData.widget_font_size}px`,
+                      fontFamily: formData.widget_font_family
+                    }}
+                    disabled={previewLoading}
+                  />
+                  <button type="submit" disabled={previewLoading || !previewInput.trim()} className="w-9 h-9 rounded-full flex items-center justify-center transition-all disabled:opacity-50" style={{ backgroundColor: formData.primary_color }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                  </button>
+                </div>
+              </form>
+            </div>
+            <p className="text-center text-xs text-text-tertiary">Testa med riktiga frågor från kunskapsbanken</p>
+          </div>
         </div>
       )}
 
@@ -999,144 +1150,6 @@ function WidgetPage({ widgetType }) {
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {/* Preview Tab */}
-      {activeTab === 'preview' && (
-        <div className="max-w-md mx-auto">
-          {/* Health Status */}
-          <div className={`rounded-lg p-3 mb-4 flex items-center gap-3 ${
-            healthStatus?.ollama === 'connected'
-              ? 'bg-success/10 border border-success/20'
-              : 'bg-warning/10 border border-warning/20'
-          }`}>
-            <div className={`w-2.5 h-2.5 rounded-full ${
-              healthStatus?.ollama === 'connected' ? 'bg-success animate-pulse' : 'bg-warning'
-            }`} />
-            <div className="flex-1">
-              <p className={`text-sm font-medium ${
-                healthStatus?.ollama === 'connected' ? 'text-success' : 'text-warning'
-              }`}>
-                {healthStatus?.ollama === 'connected'
-                  ? 'AI-modellen är redo'
-                  : healthStatus?.status === 'offline'
-                    ? 'Backend-servern är inte tillgänglig'
-                    : 'AI-modellen (Ollama) är inte ansluten'}
-              </p>
-              {healthStatus?.ollama !== 'connected' && (
-                <p className="text-xs text-text-tertiary mt-0.5">
-                  Kör: docker-compose up -d && docker exec -it bobot-ollama-1 ollama pull llama3.1
-                </p>
-              )}
-            </div>
-            <button
-              onClick={checkHealth}
-              className="p-1.5 hover:bg-black/5 rounded-md transition-colors"
-              title="Kontrollera status"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex gap-2">
-              <button onClick={() => setDarkMode(!darkMode)} className="btn btn-secondary text-sm">
-                {darkMode ? 'Ljust läge' : 'Mörkt läge'}
-              </button>
-              <button onClick={resetPreview} className="btn btn-secondary text-sm">
-                Börja om
-              </button>
-            </div>
-          </div>
-
-          {/* Widget preview */}
-          <div
-            className="overflow-hidden shadow-2xl"
-            style={{
-              backgroundColor: darkMode ? '#1C1917' : '#FFFFFF',
-              borderRadius: `${formData.widget_border_radius}px`,
-              fontFamily: formData.widget_font_family
-            }}
-          >
-            <div className="px-5 py-4" style={{ background: `linear-gradient(135deg, ${formData.primary_color} 0%, ${adjustColor(formData.primary_color, -25)} 100%)` }}>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="font-semibold text-white">{formData.display_name || 'Bobot'}</h2>
-                  <p className="text-white/80 text-sm">{formData.subtitle}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="h-80 overflow-y-auto p-4 space-y-3" style={{ backgroundColor: darkMode ? '#1C1917' : '#FAFAF9' }}>
-              {previewMessages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div
-                    className="max-w-[85%] px-4 py-2.5"
-                    style={{
-                      background: msg.type === 'user' ? `linear-gradient(135deg, ${formData.primary_color} 0%, ${adjustColor(formData.primary_color, -15)} 100%)` : darkMode ? '#292524' : '#FFFFFF',
-                      color: msg.type === 'user' ? 'white' : (darkMode ? '#FAFAF9' : '#1C1917'),
-                      border: msg.type === 'bot' ? `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}` : 'none',
-                      borderRadius: `${formData.widget_border_radius}px`,
-                      borderBottomLeftRadius: msg.type === 'bot' ? '4px' : `${formData.widget_border_radius}px`,
-                      borderBottomRightRadius: msg.type === 'user' ? '4px' : `${formData.widget_border_radius}px`,
-                      fontSize: `${formData.widget_font_size}px`
-                    }}
-                  >
-                    <p className="whitespace-pre-wrap">{msg.text}</p>
-                    {msg.hadAnswer === false && <p className="text-xs mt-1 text-amber-500">Kunde inte hitta exakt svar</p>}
-                  </div>
-                </div>
-              ))}
-              {previewLoading && (
-                <div className="flex justify-start">
-                  <div className="px-4 py-3" style={{ backgroundColor: darkMode ? '#292524' : '#FFFFFF', border: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}`, borderRadius: `${formData.widget_border_radius}px` }}>
-                    <div className="flex gap-1.5">
-                      <span className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: darkMode ? '#78716C' : '#A8A29E', animationDelay: '0ms' }} />
-                      <span className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: darkMode ? '#78716C' : '#A8A29E', animationDelay: '150ms' }} />
-                      <span className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: darkMode ? '#78716C' : '#A8A29E', animationDelay: '300ms' }} />
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            <form onSubmit={handlePreviewSend} className="p-3" style={{ backgroundColor: darkMode ? '#292524' : '#FFFFFF', borderTop: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}` }}>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={previewInput}
-                  onChange={(e) => setPreviewInput(e.target.value)}
-                  placeholder="Skriv ett meddelande..."
-                  className="flex-1 px-4 py-2.5 outline-none"
-                  style={{
-                    backgroundColor: darkMode ? '#1C1917' : '#F5F5F4',
-                    color: darkMode ? '#FAFAF9' : '#1C1917',
-                    border: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}`,
-                    borderRadius: '9999px',
-                    fontSize: `${formData.widget_font_size}px`,
-                    fontFamily: formData.widget_font_family
-                  }}
-                  disabled={previewLoading}
-                />
-                <button type="submit" disabled={previewLoading || !previewInput.trim()} className="w-10 h-10 rounded-full flex items-center justify-center transition-all disabled:opacity-50" style={{ backgroundColor: formData.primary_color }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-                    <line x1="22" y1="2" x2="11" y2="13" />
-                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                  </svg>
-                </button>
-              </div>
-            </form>
-          </div>
-          <p className="text-center text-sm text-text-tertiary mt-4">Testa din widget med riktiga frågor från kunskapsbanken</p>
         </div>
       )}
 
