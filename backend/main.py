@@ -4224,27 +4224,56 @@ async def get_stats(
 ):
     """Hämta enkel statistik för inloggat företag"""
     company_id = current["company_id"]
+    today = date.today()
+    week_ago = today - timedelta(days=7)
+    month_ago = today - timedelta(days=30)
 
-    total = db.query(ChatLog).filter(ChatLog.company_id == company_id).count()
+    # Knowledge items count
     knowledge = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == company_id).count()
 
-    today = datetime.utcnow().date()
-    today_count = db.query(ChatLog).filter(
-        ChatLog.company_id == company_id,
-        func.date(ChatLog.created_at) == today
-    ).count()
+    # Get all daily statistics for this company
+    all_stats = db.query(DailyStatistics).filter(
+        DailyStatistics.company_id == company_id
+    ).all()
 
-    week_ago = datetime.utcnow() - timedelta(days=7)
-    week_count = db.query(ChatLog).filter(
-        ChatLog.company_id == company_id,
-        ChatLog.created_at >= week_ago
-    ).count()
+    # Total conversations from historical data
+    total = sum(s.total_conversations for s in all_stats)
 
-    month_ago = datetime.utcnow() - timedelta(days=30)
-    month_count = db.query(ChatLog).filter(
-        ChatLog.company_id == company_id,
-        ChatLog.created_at >= month_ago
-    ).count()
+    # Add active conversations not yet in daily stats
+    active_convs = db.query(Conversation).filter(
+        Conversation.company_id == company_id
+    ).all()
+    total += len(active_convs)
+
+    # Today's stats from DailyStatistics
+    today_stats = db.query(DailyStatistics).filter(
+        DailyStatistics.company_id == company_id,
+        DailyStatistics.date == today
+    ).first()
+    today_count = today_stats.total_conversations if today_stats else 0
+    # Add today's active conversations
+    today_convs = [c for c in active_convs if c.started_at.date() == today]
+    today_count += len(today_convs)
+
+    # This week's stats
+    week_stats = db.query(DailyStatistics).filter(
+        DailyStatistics.company_id == company_id,
+        DailyStatistics.date >= week_ago
+    ).all()
+    week_count = sum(s.total_conversations for s in week_stats)
+    # Add this week's active conversations
+    week_convs = [c for c in active_convs if c.started_at.date() >= week_ago]
+    week_count += len(week_convs)
+
+    # This month's stats
+    month_stats = db.query(DailyStatistics).filter(
+        DailyStatistics.company_id == company_id,
+        DailyStatistics.date >= month_ago
+    ).all()
+    month_count = sum(s.total_conversations for s in month_stats)
+    # Add this month's active conversations
+    month_convs = [c for c in active_convs if c.started_at.date() >= month_ago]
+    month_count += len(month_convs)
 
     return StatsResponse(
         total_questions=total,
