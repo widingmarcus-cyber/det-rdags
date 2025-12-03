@@ -79,6 +79,56 @@ class Company(Base):
     settings = relationship("CompanySettings", back_populates="company", uselist=False, cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="company", cascade="all, delete-orphan")
     statistics = relationship("DailyStatistics", back_populates="company", cascade="all, delete-orphan")
+    widgets = relationship("Widget", back_populates="company", cascade="all, delete-orphan")
+
+
+class Widget(Base):
+    """Individual widget instance for a company (internal/external use cases)"""
+    __tablename__ = "widgets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False, index=True)
+    widget_key = Column(String, unique=True, nullable=False, index=True)  # Unique identifier for API calls
+
+    # Widget identity
+    name = Column(String, nullable=False)  # Display name (e.g., "Kundchat", "Internchatt")
+    widget_type = Column(String, default="external")  # external, internal, custom
+    description = Column(Text, default="")  # Optional description
+
+    # Status
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Widget-specific appearance
+    primary_color = Column(String, default="#D97757")
+    widget_font_family = Column(String, default="Inter")
+    widget_font_size = Column(Integer, default=14)
+    widget_border_radius = Column(Integer, default=16)
+    widget_position = Column(String, default="bottom-right")  # bottom-right, bottom-left
+
+    # Widget-specific messages
+    welcome_message = Column(Text, default="Hej! Hur kan jag hjälpa dig idag?")
+    fallback_message = Column(Text, default="Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt.")
+    subtitle = Column(String, default="Alltid redo att hjälpa")
+
+    # Widget-specific settings
+    language = Column(String, default="sv")  # sv, en, ar
+    suggested_questions = Column(Text, default="")  # JSON array
+
+    # GDPR/Consent for this widget
+    require_consent = Column(Boolean, default=True)
+    consent_text = Column(Text, default="Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.")
+
+    # Relations
+    company = relationship("Company", back_populates="widgets")
+    knowledge_items = relationship("KnowledgeItem", back_populates="widget")
+    conversations = relationship("Conversation", back_populates="widget")
+
+    # Composite index
+    __table_args__ = (
+        Index('ix_widget_company_type', 'company_id', 'widget_type'),
+    )
 
 
 class CompanySettings(Base):
@@ -147,6 +197,7 @@ class KnowledgeItem(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(String, ForeignKey("companies.id"), nullable=False, index=True)
+    widget_id = Column(Integer, ForeignKey("widgets.id"), nullable=True, index=True)  # Null = available to all widgets
     question = Column(Text, nullable=False)
     answer = Column(Text, nullable=False)
     category = Column(String, default="", index=True)  # Kategori för filtrering
@@ -155,10 +206,12 @@ class KnowledgeItem(Base):
 
     # Relations
     company = relationship("Company", back_populates="knowledge_items")
+    widget = relationship("Widget", back_populates="knowledge_items")
 
     # Composite index for common queries
     __table_args__ = (
         Index('ix_knowledge_company_category', 'company_id', 'category'),
+        Index('ix_knowledge_widget', 'widget_id'),
     )
 
 
@@ -182,6 +235,7 @@ class Conversation(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(String, ForeignKey("companies.id"), nullable=False, index=True)
+    widget_id = Column(Integer, ForeignKey("widgets.id"), nullable=True, index=True)  # Which widget was used
     session_id = Column(String, index=True)  # För att gruppera meddelanden från samma session
     reference_id = Column(String, index=True)  # Short readable ID (e.g., "BOB-A1B2")
 
@@ -204,12 +258,14 @@ class Conversation(Base):
 
     # Relations
     company = relationship("Company", back_populates="conversations")
+    widget = relationship("Widget", back_populates="conversations")
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
 
     # Composite indexes for common queries
     __table_args__ = (
         Index('ix_conversation_company_started', 'company_id', 'started_at'),
         Index('ix_conversation_company_category', 'company_id', 'category'),
+        Index('ix_conversation_widget', 'widget_id'),
     )
 
 
