@@ -485,7 +485,7 @@ function Conversations() {
                         {msg.sources && msg.sources.length > 0 && (
                           <div className="mt-2 pt-2 border-t border-border-subtle">
                             <p className="text-xs text-text-tertiary">
-                              Källor: {msg.sources.join(', ')}
+                              Källor: {msg.sources.map(s => typeof s === 'string' ? s : s.question).join(', ')}
                             </p>
                           </div>
                         )}
