@@ -1,11 +1,12 @@
 import { useState, useEffect, useContext } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { AuthContext } from '../App'
 
 const API_BASE = '/api'
 
 function Dashboard() {
   const { auth, authFetch } = useContext(AuthContext)
+  const navigate = useNavigate()
   const [stats, setStats] = useState({
     totalQuestions: 0,
     totalKnowledge: 0,
@@ -17,6 +18,8 @@ function Dashboard() {
   const [dailyStats, setDailyStats] = useState([])
   const [loading, setLoading] = useState(true)
   const [usage, setUsage] = useState(null)
+  const [analytics, setAnalytics] = useState(null)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     fetchStats()
@@ -51,9 +54,114 @@ function Dashboard() {
       if (response.ok) {
         const data = await response.json()
         setDailyStats(data.daily_stats || [])
+        setAnalytics(data)
       }
     } catch (error) {
       console.error('Kunde inte hämta analytics:', error)
+    }
+  }
+
+  const handleExportKPIReport = () => {
+    if (!analytics) return
+    setExporting(true)
+
+    try {
+      const today = new Date().toLocaleDateString('sv-SE')
+      const satisfactionRate = analytics.feedback_stats
+        ? ((analytics.feedback_stats.helpful || 0) /
+            Math.max((analytics.feedback_stats.helpful || 0) + (analytics.feedback_stats.not_helpful || 0), 1) * 100).toFixed(1)
+        : 0
+
+      const reportData = [
+        ['KPI-RAPPORT - BOBOT CHATTSTATISTIK'],
+        ['Genererad:', today],
+        [''],
+        ['=== ÖVERSIKT ==='],
+        ['Nyckeltal', 'Värde', 'Beskrivning'],
+        ['Totala konversationer', analytics.total_conversations, 'Antal unika chattsamtal sedan start'],
+        ['Totalt meddelanden', analytics.total_messages, 'Alla meddelanden (frågor + svar)'],
+        ['Svarsfrekvens', `${analytics.answer_rate?.toFixed(1) || 0}%`, 'Andel frågor som AI kunde besvara'],
+        ['Svarstid (snitt)', `${(analytics.avg_response_time_ms / 1000).toFixed(1)}s`, 'Genomsnittlig tid för AI-svar'],
+        ['Nöjdhetsgrad', `${satisfactionRate}%`, 'Andel positiv feedback (👍)'],
+        [''],
+        ['=== AKTIVITET ==='],
+        ['Period', 'Konversationer', 'Meddelanden'],
+        ['Idag', analytics.conversations_today, analytics.messages_today],
+        ['Senaste 7 dagarna', analytics.conversations_week, analytics.messages_week],
+        [''],
+        ['=== FRÅGEANALYS ==='],
+        ['Typ', 'Antal', 'Andel'],
+        ['Besvarade frågor', analytics.total_answered, `${((analytics.total_answered / Math.max(analytics.total_answered + analytics.total_unanswered, 1)) * 100).toFixed(1)}%`],
+        ['Obesvarade frågor', analytics.total_unanswered, `${((analytics.total_unanswered / Math.max(analytics.total_answered + analytics.total_unanswered, 1)) * 100).toFixed(1)}%`],
+        [''],
+        ['=== ANVÄNDARFEEDBACK ==='],
+        ['Typ', 'Antal'],
+        ['Positiv (👍)', analytics.feedback_stats?.helpful || 0],
+        ['Negativ (👎)', analytics.feedback_stats?.not_helpful || 0],
+        ['Ingen feedback', analytics.feedback_stats?.no_feedback || 0],
+        [''],
+        ['=== SPRÅKFÖRDELNING ==='],
+        ['Språk', 'Antal', 'Andel'],
+      ]
+
+      const langNames = { sv: 'Svenska', en: 'English', ar: 'العربية' }
+      const langTotal = Object.values(analytics.language_stats || {}).reduce((a, b) => a + b, 0) || 1
+      Object.entries(analytics.language_stats || {}).forEach(([lang, count]) => {
+        reportData.push([langNames[lang] || lang, count, `${((count / langTotal) * 100).toFixed(1)}%`])
+      })
+
+      reportData.push([''])
+      reportData.push(['=== KATEGORIER ==='])
+      reportData.push(['Kategori', 'Antal frågor'])
+      Object.entries(analytics.category_stats || {})
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([cat, count]) => {
+          reportData.push([cat, count])
+        })
+
+      reportData.push([''])
+      reportData.push(['=== AKTIVITET PER TIMME ==='])
+      reportData.push(['Timme', 'Antal konversationer'])
+      Object.entries(analytics.hourly_stats || {})
+        .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+        .forEach(([hour, count]) => {
+          reportData.push([`${hour}:00`, count])
+        })
+
+      if (analytics.top_unanswered && analytics.top_unanswered.length > 0) {
+        reportData.push([''])
+        reportData.push(['=== VANLIGASTE OBESVARADE FRÅGOR ==='])
+        reportData.push(['Dessa frågor saknas i kunskapsbasen:'])
+        analytics.top_unanswered.forEach((q, i) => {
+          reportData.push([`${i + 1}. ${q}`])
+        })
+      }
+
+      const csv = reportData.map(row =>
+        row.map(cell => {
+          const str = String(cell ?? '')
+          if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`
+          }
+          return str
+        }).join(',')
+      ).join('\n')
+
+      const BOM = '\uFEFF'
+      const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `KPI-rapport-${today}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      a.remove()
+    } catch (error) {
+      console.error('KPI export failed:', error)
+      alert('Export misslyckades: ' + error.message)
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -246,58 +354,6 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Recent Activity */}
-      <div className="card mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-text-primary">Senaste aktivitet</h2>
-          <Link to="/analytics" className="text-sm text-accent hover:underline">
-            Se all statistik →
-          </Link>
-        </div>
-        {dailyStats.length === 0 || dailyStats.every(d => !d.messages && !d.conversations) ? (
-          <div className="py-8 text-center">
-            <div className="w-12 h-12 bg-bg-secondary rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-            </div>
-            <p className="text-text-secondary text-sm">Inga konversationer ännu</p>
-            <p className="text-text-tertiary text-xs mt-1">Aktivitet visas här när kunder börjar chatta</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {dailyStats.slice(-7).reverse().map((day, i) => {
-              const date = new Date(day.date)
-              const isToday = new Date().toDateString() === date.toDateString()
-              const count = day.messages || day.conversations || 0
-              return (
-                <div key={i} className="flex items-center justify-between py-2 border-b border-border-subtle last:border-0">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-medium ${isToday ? 'bg-accent text-white' : 'bg-bg-secondary text-text-secondary'}`}>
-                      {date.getDate()}
-                    </div>
-                    <div>
-                      <p className="text-sm text-text-primary">
-                        {isToday ? 'Idag' : date.toLocaleDateString('sv-SE', { weekday: 'long' })}
-                      </p>
-                      <p className="text-xs text-text-tertiary">
-                        {date.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={`text-lg font-semibold ${count > 0 ? 'text-text-primary' : 'text-text-tertiary'}`}>
-                      {count}
-                    </p>
-                    <p className="text-xs text-text-tertiary">konversationer</p>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
       {/* Actions Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quick Actions */}
@@ -320,25 +376,32 @@ function Dashboard() {
                 <p className="text-sm text-text-secondary">Detaljerad analys och rapporter</p>
               </div>
             </Link>
-            <Link
-              to="/analytics"
-              state={{ downloadKpi: true }}
-              className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all duration-150 group"
+            <button
+              onClick={handleExportKPIReport}
+              disabled={exporting || !analytics}
+              className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all duration-150 group w-full text-left disabled:opacity-50"
             >
               <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="16" y1="13" x2="8" y2="13" />
-                  <line x1="16" y1="17" x2="8" y2="17" />
-                  <polyline points="10 9 9 9 8 9" />
-                </svg>
+                {exporting ? (
+                  <svg className="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                    <path d="M12 2a10 10 0 0 1 10 10" />
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                  </svg>
+                )}
               </div>
               <div>
-                <p className="font-medium text-text-primary">KPI-rapport</p>
+                <p className="font-medium text-text-primary">{exporting ? 'Exporterar...' : 'KPI-rapport'}</p>
                 <p className="text-sm text-text-secondary">Ladda ner sammanställd statistik</p>
               </div>
-            </Link>
+            </button>
             <Link
               to="/conversations"
               className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all duration-150 group"
@@ -355,6 +418,7 @@ function Dashboard() {
             </Link>
             <Link
               to="/settings"
+              state={{ tab: 'privacy' }}
               className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all duration-150 group"
             >
               <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
@@ -363,8 +427,8 @@ function Dashboard() {
                 </svg>
               </div>
               <div>
-                <p className="font-medium text-text-primary">GDPR & Inställningar</p>
-                <p className="text-sm text-text-secondary">Datalagring och företagsinställningar</p>
+                <p className="font-medium text-text-primary">GDPR & Integritet</p>
+                <p className="text-sm text-text-secondary">Datalagring och sekretesspolicy</p>
               </div>
             </Link>
           </div>

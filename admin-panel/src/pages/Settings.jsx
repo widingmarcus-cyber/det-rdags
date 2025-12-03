@@ -1,11 +1,13 @@
 import { useState, useEffect, useContext } from 'react'
+import { useLocation } from 'react-router-dom'
 import { AuthContext } from '../App'
 
 const API_BASE = '/api'
 
 function Settings() {
   const { auth, authFetch } = useContext(AuthContext)
-  const [activeTab, setActiveTab] = useState('notifications')
+  const location = useLocation()
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'notifications')
   const [settings, setSettings] = useState({
     company_name: '',
     data_retention_days: 30,
