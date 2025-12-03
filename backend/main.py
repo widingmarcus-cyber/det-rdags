@@ -4514,8 +4514,14 @@ async def get_analytics(
         for msg in messages:
             if msg.created_at:
                 d = msg.created_at.date().isoformat()
-                if d in daily_stats_dict:
+                in_dict = d in daily_stats_dict
+                print(f"[Analytics Debug] Message {msg.id} date: {d}, in dict: {in_dict}")
+                if in_dict:
                     daily_stats_dict[d]["messages"] += 1
+
+        # Print final daily stats with any data
+        non_zero = [(k, v) for k, v in daily_stats_dict.items() if v["messages"] > 0 or v["conversations"] > 0]
+        print(f"[Analytics Debug] Days with data: {non_zero}")
     else:
         print(f"[Analytics Debug] No conversations found")
 
