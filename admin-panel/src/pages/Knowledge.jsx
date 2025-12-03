@@ -901,6 +901,7 @@ function Knowledge() {
               <div>
                 <label className="input-label">Tillgänglighet</label>
                 <div className="space-y-2">
+                  {/* Shared option */}
                   <label className="flex items-center gap-3 p-3 rounded-lg border border-border-subtle hover:border-accent/50 cursor-pointer transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/5">
                     <input
                       type="radio"
@@ -911,45 +912,59 @@ function Knowledge() {
                     />
                     <div className="flex-1">
                       <span className="text-sm font-medium text-text-primary">Delad</span>
-                      <p className="text-xs text-text-tertiary">Tillgänglig för både intern och extern widget</p>
+                      <p className="text-xs text-text-tertiary">Tillgänglig för både kundtjänst och medarbetarstöd</p>
                     </div>
                     <div className="flex gap-1">
-                      <span className="px-1.5 py-0.5 text-xs rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">Extern</span>
-                      <span className="px-1.5 py-0.5 text-xs rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">Intern</span>
+                      <span className="px-1.5 py-0.5 text-xs rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">Kundtjänst</span>
+                      <span className="px-1.5 py-0.5 text-xs rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">Medarbetare</span>
                     </div>
                   </label>
-                  {widgets.filter(w => w.widget_type === 'external').map(w => (
-                    <label key={w.id} className="flex items-center gap-3 p-3 rounded-lg border border-border-subtle hover:border-accent/50 cursor-pointer transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/5">
-                      <input
-                        type="radio"
-                        name="widget_scope"
-                        checked={formData.widget_id === w.id}
-                        onChange={() => setFormData({ ...formData, widget_id: w.id })}
-                        className="w-4 h-4 text-accent accent-accent"
-                      />
-                      <div className="flex-1">
-                        <span className="text-sm font-medium text-text-primary">Endast extern widget</span>
-                        <p className="text-xs text-text-tertiary">Endast tillgänglig för kunder på hemsidan</p>
-                      </div>
-                      <span className="px-1.5 py-0.5 text-xs rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">Extern</span>
-                    </label>
-                  ))}
-                  {widgets.filter(w => w.widget_type === 'internal').map(w => (
-                    <label key={w.id} className="flex items-center gap-3 p-3 rounded-lg border border-border-subtle hover:border-accent/50 cursor-pointer transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/5">
-                      <input
-                        type="radio"
-                        name="widget_scope"
-                        checked={formData.widget_id === w.id}
-                        onChange={() => setFormData({ ...formData, widget_id: w.id })}
-                        className="w-4 h-4 text-accent accent-accent"
-                      />
-                      <div className="flex-1">
-                        <span className="text-sm font-medium text-text-primary">Endast intern widget</span>
-                        <p className="text-xs text-text-tertiary">Endast tillgänglig för medarbetare</p>
-                      </div>
-                      <span className="px-1.5 py-0.5 text-xs rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">Intern</span>
-                    </label>
-                  ))}
+                  {/* External only option */}
+                  {(() => {
+                    const externalWidget = widgets.find(w => w.widget_type === 'external')
+                    return (
+                      <label className={`flex items-center gap-3 p-3 rounded-lg border border-border-subtle cursor-pointer transition-colors ${externalWidget ? 'hover:border-accent/50 has-[:checked]:border-accent has-[:checked]:bg-accent/5' : 'opacity-50 cursor-not-allowed'}`}>
+                        <input
+                          type="radio"
+                          name="widget_scope"
+                          checked={externalWidget && formData.widget_id === externalWidget.id}
+                          onChange={() => externalWidget && setFormData({ ...formData, widget_id: externalWidget.id })}
+                          disabled={!externalWidget}
+                          className="w-4 h-4 text-accent accent-accent"
+                        />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium text-text-primary">Endast kundtjänst</span>
+                          <p className="text-xs text-text-tertiary">
+                            {externalWidget ? 'Endast för kunder på hemsidan' : 'Besök Kundtjänst-sidan för att aktivera'}
+                          </p>
+                        </div>
+                        <span className="px-1.5 py-0.5 text-xs rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">Kundtjänst</span>
+                      </label>
+                    )
+                  })()}
+                  {/* Internal only option */}
+                  {(() => {
+                    const internalWidget = widgets.find(w => w.widget_type === 'internal')
+                    return (
+                      <label className={`flex items-center gap-3 p-3 rounded-lg border border-border-subtle cursor-pointer transition-colors ${internalWidget ? 'hover:border-accent/50 has-[:checked]:border-accent has-[:checked]:bg-accent/5' : 'opacity-50 cursor-not-allowed'}`}>
+                        <input
+                          type="radio"
+                          name="widget_scope"
+                          checked={internalWidget && formData.widget_id === internalWidget.id}
+                          onChange={() => internalWidget && setFormData({ ...formData, widget_id: internalWidget.id })}
+                          disabled={!internalWidget}
+                          className="w-4 h-4 text-accent accent-accent"
+                        />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium text-text-primary">Endast medarbetarstöd</span>
+                          <p className="text-xs text-text-tertiary">
+                            {internalWidget ? 'Endast för anställda internt' : 'Besök Medarbetarstöd-sidan för att aktivera'}
+                          </p>
+                        </div>
+                        <span className="px-1.5 py-0.5 text-xs rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">Medarbetare</span>
+                      </label>
+                    )
+                  })()}
                 </div>
               </div>
               <div>
