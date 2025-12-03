@@ -652,6 +652,10 @@ class WidgetCreate(BaseModel):
     fallback_message: Optional[str] = "Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt."
     subtitle: Optional[str] = "Alltid redo att hjälpa"
     language: Optional[str] = "sv"
+    # Per-widget contact info
+    display_name: Optional[str] = ""
+    contact_email: Optional[str] = ""
+    contact_phone: Optional[str] = ""
 
 
 class WidgetUpdate(BaseModel):
@@ -671,6 +675,10 @@ class WidgetUpdate(BaseModel):
     suggested_questions: Optional[str] = None  # JSON array
     require_consent: Optional[bool] = None
     consent_text: Optional[str] = None
+    # Per-widget contact info
+    display_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
 
 
 class WidgetResponse(BaseModel):
@@ -694,6 +702,10 @@ class WidgetResponse(BaseModel):
     consent_text: str
     created_at: datetime
     knowledge_count: int = 0
+    # Per-widget contact info
+    display_name: str = ""
+    contact_email: str = ""
+    contact_phone: str = ""
 
 
 class PageViewRequest(BaseModel):
@@ -1621,10 +1633,13 @@ async def root():
 
 @app.get("/health")
 async def health(db: Session = Depends(get_db)):
-    """Health check endpoint with database connectivity verification"""
+    """Health check endpoint with database and Ollama connectivity verification"""
+    import httpx
+
     health_status = {
         "status": "healthy",
         "database": "unknown",
+        "ollama": "unknown",
         "timestamp": datetime.utcnow().isoformat()
     }
 
@@ -1636,6 +1651,19 @@ async def health(db: Session = Depends(get_db)):
         health_status["status"] = "degraded"
         health_status["database"] = "disconnected"
         health_status["database_error"] = str(e)
+
+    # Check Ollama connectivity
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            response = await client.get(f"{OLLAMA_BASE_URL}/api/tags")
+            if response.status_code == 200:
+                health_status["ollama"] = "connected"
+            else:
+                health_status["ollama"] = "error"
+                health_status["status"] = "degraded"
+    except Exception as e:
+        health_status["ollama"] = "disconnected"
+        health_status["status"] = "degraded"
 
     return health_status
 
@@ -2393,7 +2421,10 @@ async def list_widgets(
             require_consent=w.require_consent if w.require_consent is not None else True,
             consent_text=w.consent_text or "",
             created_at=w.created_at,
-            knowledge_count=knowledge_count
+            knowledge_count=knowledge_count,
+            display_name=w.display_name or "",
+            contact_email=w.contact_email or "",
+            contact_phone=w.contact_phone or ""
         ))
 
     return result
@@ -2418,7 +2449,10 @@ async def create_widget(
         welcome_message=widget.welcome_message,
         fallback_message=widget.fallback_message,
         subtitle=widget.subtitle,
-        language=widget.language
+        language=widget.language,
+        display_name=widget.display_name or "",
+        contact_email=widget.contact_email or "",
+        contact_phone=widget.contact_phone or ""
     )
     db.add(new_widget)
     db.commit()
@@ -2451,7 +2485,10 @@ async def create_widget(
         require_consent=new_widget.require_consent if new_widget.require_consent is not None else True,
         consent_text=new_widget.consent_text or "",
         created_at=new_widget.created_at,
-        knowledge_count=0
+        knowledge_count=0,
+        display_name=new_widget.display_name or "",
+        contact_email=new_widget.contact_email or "",
+        contact_phone=new_widget.contact_phone or ""
     )
 
 
@@ -2501,7 +2538,10 @@ async def get_widget(
         require_consent=widget.require_consent if widget.require_consent is not None else True,
         consent_text=widget.consent_text or "",
         created_at=widget.created_at,
-        knowledge_count=knowledge_count
+        knowledge_count=knowledge_count,
+        display_name=widget.display_name or "",
+        contact_email=widget.contact_email or "",
+        contact_phone=widget.contact_phone or ""
     )
 
 
@@ -2567,7 +2607,10 @@ async def update_widget(
         require_consent=widget.require_consent if widget.require_consent is not None else True,
         consent_text=widget.consent_text or "",
         created_at=widget.created_at,
-        knowledge_count=knowledge_count
+        knowledge_count=knowledge_count,
+        display_name=widget.display_name or "",
+        contact_email=widget.contact_email or "",
+        contact_phone=widget.contact_phone or ""
     )
 
 

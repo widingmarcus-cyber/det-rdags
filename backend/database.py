@@ -91,9 +91,14 @@ class Widget(Base):
     widget_key = Column(String, unique=True, nullable=False, index=True)  # Unique identifier for API calls
 
     # Widget identity
-    name = Column(String, nullable=False)  # Display name (e.g., "Kundchat", "Internchatt")
+    name = Column(String, nullable=False)  # Internal name (e.g., "Kundchat", "Internchatt")
     widget_type = Column(String, default="external")  # external, internal, custom
     description = Column(Text, default="")  # Optional description
+
+    # Per-widget contact info (displayed in fallback messages)
+    display_name = Column(String, default="")  # Name shown in widget header
+    contact_email = Column(String, default="")
+    contact_phone = Column(String, default="")
 
     # Status
     is_active = Column(Boolean, default=True)
