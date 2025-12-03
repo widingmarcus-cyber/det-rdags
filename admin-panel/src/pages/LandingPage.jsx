@@ -336,15 +336,17 @@ function ChatWidget({ messages, label, className = "", startDelay = 0, compact =
         </div>
         {label && <span className={`bg-white/25 text-white font-medium ${compact ? 'text-xs px-2.5 py-1' : 'text-sm px-3 py-1'} rounded-full`}>{label}</span>}
       </div>
-      <div className={`${compact ? 'p-4 space-y-3 min-h-[100px]' : 'p-5 space-y-4 min-h-[120px]'} bg-stone-100 dark:bg-stone-900`}>
+      <div className={`${compact ? 'p-4 space-y-3' : 'p-5 space-y-4'} bg-stone-100 dark:bg-stone-900`}>
         {messages.map((msg, i) => (
-          visibleMessages.includes(i) && (
-            <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] rounded-2xl ${compact ? 'px-3.5 py-2 text-sm' : 'px-4 py-2.5 text-base'} ${msg.from === 'user' ? 'bg-[#D97757] text-white rounded-br-md' : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm rounded-bl-md'}`}>
+          <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'} ${visibleMessages.includes(i) ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`max-w-[85%] rounded-2xl ${compact ? 'px-3.5 py-2 text-sm' : 'px-4 py-2.5 text-base'} ${msg.from === 'user' ? 'bg-[#D97757] text-white rounded-br-md' : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm rounded-bl-md'}`}>
+              {visibleMessages.includes(i) ? (
                 <TypedText text={msg.text} delay={i === 0 ? startDelay : 0} speed={msg.from === 'bot' ? 20 : 40} onComplete={i === currentTyping ? handleMessageComplete : undefined} />
-              </div>
+              ) : (
+                <span className="invisible">{msg.text}</span>
+              )}
             </div>
-          )
+          </div>
         ))}
       </div>
       <div className={`${compact ? 'px-4 py-3' : 'px-5 py-4'} border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800`}>
