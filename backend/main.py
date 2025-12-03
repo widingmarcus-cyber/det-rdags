@@ -2335,7 +2335,7 @@ async def chat_via_widget_key(
 
         # Build prompt and get AI response
         prompt = build_prompt(request.question, relevant_items, settings=settings, language=language, widget_type=widget.widget_type)
-        answer = await get_ai_response(prompt)
+        answer = await query_ollama(prompt)
         response_time = int((time.time() - start_time) * 1000)
 
         # Check if we had a real answer

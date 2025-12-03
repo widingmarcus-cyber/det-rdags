@@ -260,26 +260,33 @@ function WidgetPage({ widgetType }) {
         widget_id: widget.id
       }
 
+      let response
       if (editingItem) {
-        await authFetch(`${API_BASE}/knowledge/${editingItem.id}`, {
+        response = await authFetch(`${API_BASE}/knowledge/${editingItem.id}`, {
           method: 'PUT',
           body: JSON.stringify(payload)
         })
       } else {
-        await authFetch(`${API_BASE}/knowledge`, {
+        response = await authFetch(`${API_BASE}/knowledge`, {
           method: 'POST',
           body: JSON.stringify(payload)
         })
       }
 
-      setShowKnowledgeModal(false)
-      setEditingItem(null)
-      setKnowledgeForm({ question: '', answer: '', category: '' })
-      fetchKnowledge(widget.id)
-      setSuccess(editingItem ? 'Uppdaterad!' : 'Tillagd!')
-      setTimeout(() => setSuccess(''), 2000)
+      if (response.ok) {
+        setShowKnowledgeModal(false)
+        setEditingItem(null)
+        setKnowledgeForm({ question: '', answer: '', category: '' })
+        fetchKnowledge(widget.id)
+        setSuccess(editingItem ? 'Uppdaterad!' : 'Tillagd!')
+        setTimeout(() => setSuccess(''), 2000)
+      } else {
+        const err = await response.json()
+        setError(err.detail || 'Kunde inte spara kunskapspost')
+      }
     } catch (e) {
       console.error('Kunde inte spara:', e)
+      setError('Ett fel uppstod: ' + e.message)
     }
   }
 
