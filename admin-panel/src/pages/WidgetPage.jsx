@@ -28,6 +28,8 @@ function WidgetPage({ widgetType }) {
   const [editingItem, setEditingItem] = useState(null)
   const [knowledgeForm, setKnowledgeForm] = useState({ question: '', answer: '', category: '' })
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedItems, setSelectedItems] = useState([])
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   // Categories state
   const [categories, setCategories] = useState([])
@@ -106,7 +108,8 @@ function WidgetPage({ widgetType }) {
         }
       }
     } catch (e) {
-      setError('Kunde inte hämta widget: ' + e.message)
+      console.error('Widget fetch error:', e)
+      setError('Kunde inte hämta widget. Kontrollera att backend-servern körs på port 8000.')
     } finally {
       setLoading(false)
     }
@@ -239,6 +242,46 @@ function WidgetPage({ widgetType }) {
       fetchKnowledge(widget.id)
     } catch (e) {
       console.error('Kunde inte ta bort:', e)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedItems.length === 0) return
+    if (!confirm(`Är du säker på att du vill ta bort ${selectedItems.length} poster?`)) return
+
+    setBulkDeleting(true)
+    try {
+      const response = await authFetch(`${API_BASE}/knowledge/bulk`, {
+        method: 'DELETE',
+        body: JSON.stringify({ item_ids: selectedItems })
+      })
+      if (response.ok) {
+        setSelectedItems([])
+        fetchKnowledge(widget.id)
+        setSuccess(`${selectedItems.length} poster borttagna`)
+      }
+    } catch (e) {
+      console.error('Kunde inte ta bort:', e)
+      setError('Kunde inte ta bort posterna')
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
+
+  const toggleSelectItem = (itemId) => {
+    setSelectedItems(prev =>
+      prev.includes(itemId)
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    )
+  }
+
+  const toggleSelectAll = () => {
+    const filteredIds = filteredKnowledge.map(item => item.id)
+    if (selectedItems.length === filteredIds.length) {
+      setSelectedItems([])
+    } else {
+      setSelectedItems(filteredIds)
     }
   }
 
@@ -383,7 +426,12 @@ function WidgetPage({ widgetType }) {
         setPreviewMessages(prev => [...prev, { type: 'bot', text: 'Kunde inte få svar just nu.', error: true }])
       }
     } catch (e) {
-      setPreviewMessages(prev => [...prev, { type: 'bot', text: 'Anslutningsfel.', error: true }])
+      console.error('Preview chat error:', e)
+      setPreviewMessages(prev => [...prev, {
+        type: 'bot',
+        text: 'Anslutningsfel. Kontrollera att backend-servern och Ollama körs.',
+        error: true
+      }])
     } finally {
       setPreviewLoading(false)
     }
@@ -593,18 +641,50 @@ function WidgetPage({ widgetType }) {
         <div>
           {/* Action bar */}
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-            <div className="relative flex-1 max-w-md">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Sök frågor och svar..."
-                className="input pl-10 w-full"
-              />
+            <div className="flex items-center gap-4 flex-1">
+              {filteredKnowledge.length > 0 && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.length === filteredKnowledge.length && filteredKnowledge.length > 0}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 rounded border-border-subtle text-accent focus:ring-accent"
+                  />
+                  <span className="text-sm text-text-secondary">Välj alla</span>
+                </label>
+              )}
+              {selectedItems.length > 0 && (
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  className="btn btn-ghost text-error hover:bg-error-soft text-sm py-1.5"
+                >
+                  {bulkDeleting ? (
+                    <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                  )}
+                  Ta bort ({selectedItems.length})
+                </button>
+              )}
+              <div className="relative flex-1 max-w-md">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Sök frågor och svar..."
+                  className="input pl-10 w-full"
+                />
+              </div>
             </div>
             <div className="flex gap-2">
               <button onClick={() => setShowCategoryModal(true)} className="btn btn-secondary">
@@ -663,9 +743,16 @@ function WidgetPage({ widgetType }) {
           ) : (
             <div className="space-y-3">
               {filteredKnowledge.map(item => (
-                <div key={item.id} className="card group hover:border-accent/30 transition-colors">
+                <div key={item.id} className={`card group hover:border-accent/30 transition-colors ${selectedItems.includes(item.id) ? 'border-accent bg-accent-soft/30' : ''}`}>
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.includes(item.id)}
+                        onChange={() => toggleSelectItem(item.id)}
+                        className="w-4 h-4 mt-1 rounded border-border-subtle text-accent focus:ring-accent cursor-pointer"
+                      />
+                      <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         {item.widget_id ? (
                           <span className={`text-xs px-2 py-0.5 rounded-full ${isExternal ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200' : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'}`}>
@@ -685,6 +772,7 @@ function WidgetPage({ widgetType }) {
                       </div>
                       <h3 className="font-medium text-text-primary">{item.question}</h3>
                       <p className="text-text-secondary mt-2 text-sm line-clamp-2">{item.answer}</p>
+                      </div>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button

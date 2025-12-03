@@ -3255,6 +3255,7 @@ class UploadResponse(BaseModel):
 
 class URLImportRequest(BaseModel):
     url: str
+    widget_id: Optional[int] = None
 
 
 # Security limits for imports
@@ -3504,6 +3505,7 @@ Example format:
 @app.post("/knowledge/upload", response_model=UploadResponse)
 async def upload_knowledge_file(
     file: UploadFile = File(...),
+    widget_id: Optional[int] = Form(None),
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db)
 ):
@@ -3596,7 +3598,8 @@ async def upload_knowledge_file(
             company_id=current["company_id"],
             question=item["question"],
             answer=item["answer"],
-            category=item.get("category", "allmant")
+            category=item.get("category", "allmant"),
+            widget_id=widget_id  # Assign to specific widget
         )
         db.add(new_item)
         db.flush()
@@ -3604,7 +3607,8 @@ async def upload_knowledge_file(
             id=new_item.id,
             question=new_item.question,
             answer=new_item.answer,
-            category=new_item.category or ""
+            category=new_item.category or "",
+            widget_id=new_item.widget_id
         ))
 
     db.commit()
@@ -3677,7 +3681,8 @@ async def import_knowledge_from_url(
             company_id=current["company_id"],
             question=item["question"],
             answer=item["answer"],
-            category=item.get("category", "allmant")
+            category=item.get("category", "allmant"),
+            widget_id=request.widget_id  # Assign to specific widget
         )
         db.add(new_item)
         db.flush()
@@ -3685,7 +3690,8 @@ async def import_knowledge_from_url(
             id=new_item.id,
             question=new_item.question,
             answer=new_item.answer,
-            category=new_item.category or ""
+            category=new_item.category or "",
+            widget_id=new_item.widget_id
         ))
 
     db.commit()
