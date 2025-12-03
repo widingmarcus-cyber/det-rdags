@@ -80,6 +80,7 @@ class Company(Base):
     conversations = relationship("Conversation", back_populates="company", cascade="all, delete-orphan")
     statistics = relationship("DailyStatistics", back_populates="company", cascade="all, delete-orphan")
     widgets = relationship("Widget", back_populates="company", cascade="all, delete-orphan")
+    categories = relationship("Category", back_populates="company", cascade="all, delete-orphan")
 
 
 class Widget(Base):
@@ -221,6 +222,23 @@ class KnowledgeItem(Base):
     __table_args__ = (
         Index('ix_knowledge_company_category', 'company_id', 'category'),
         Index('ix_knowledge_widget', 'widget_id'),
+    )
+
+
+class Category(Base):
+    """Kategorier för kunskapsbasen"""
+    __tablename__ = "categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relations
+    company = relationship("Company", back_populates="categories")
+
+    __table_args__ = (
+        Index('ix_category_company_name', 'company_id', 'name', unique=True),
     )
 
 

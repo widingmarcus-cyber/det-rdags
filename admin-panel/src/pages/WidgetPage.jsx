@@ -467,11 +467,18 @@ function WidgetPage({ widgetType }) {
     }
   }
 
-  const filteredKnowledge = knowledgeItems.filter(item =>
-    !searchQuery ||
-    item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.answer.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredKnowledge = knowledgeItems
+    .filter(item =>
+      !searchQuery ||
+      item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.answer.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      // Sort by newest first (created_at descending)
+      const dateA = a.created_at ? new Date(a.created_at) : new Date(0)
+      const dateB = b.created_at ? new Date(b.created_at) : new Date(0)
+      return dateB - dateA
+    })
 
   // Preview functions
   const handlePreviewSend = async (e) => {
@@ -1175,15 +1182,25 @@ function WidgetPage({ widgetType }) {
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-4 flex-1">
               {filteredKnowledge.length > 0 && (
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedItems.length === filteredKnowledge.length && filteredKnowledge.length > 0}
-                    onChange={toggleSelectAll}
-                    className="w-4 h-4 rounded border-border-subtle text-accent focus:ring-accent"
-                  />
-                  <span className="text-sm text-text-secondary">Välj alla</span>
-                </label>
+                <button
+                  onClick={toggleSelectAll}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    selectedItems.length === filteredKnowledge.length && filteredKnowledge.length > 0
+                      ? 'bg-accent text-white'
+                      : 'bg-bg-secondary text-text-secondary hover:bg-accent-soft hover:text-accent'
+                  }`}
+                >
+                  {selectedItems.length === filteredKnowledge.length && filteredKnowledge.length > 0 ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    </svg>
+                  )}
+                  Välj alla
+                </button>
               )}
               {selectedItems.length > 0 && (
                 <button
@@ -1277,14 +1294,7 @@ function WidgetPage({ widgetType }) {
               {filteredKnowledge.map(item => (
                 <div key={item.id} className={`card group hover:border-accent/30 transition-colors ${selectedItems.includes(item.id) ? 'border-accent bg-accent-soft/30' : ''}`}>
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <input
-                        type="checkbox"
-                        checked={selectedItems.includes(item.id)}
-                        onChange={() => toggleSelectItem(item.id)}
-                        className="w-4 h-4 mt-1 rounded border-border-subtle text-accent focus:ring-accent cursor-pointer"
-                      />
-                      <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         {item.widget_id ? (
                           <span className={`text-xs px-2 py-0.5 rounded-full ${isExternal ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200' : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'}`}>
@@ -1304,7 +1314,6 @@ function WidgetPage({ widgetType }) {
                       </div>
                       <h3 className="font-medium text-text-primary">{item.question}</h3>
                       <p className="text-text-secondary mt-2 text-sm line-clamp-2">{item.answer}</p>
-                      </div>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button

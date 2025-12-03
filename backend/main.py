@@ -25,7 +25,7 @@ from database import (
     CompanySettings, Conversation, Message, DailyStatistics, GDPRAuditLog,
     AdminAuditLog, GlobalSettings, CompanyActivityLog, Subscription, Invoice,
     CompanyNote, CompanyDocument, WidgetPerformance, EmailNotificationQueue,
-    RoadmapItem, PricingTier, Widget, PageView, DailyPageStats
+    RoadmapItem, PricingTier, Widget, PageView, DailyPageStats, Category
 )
 from auth import (
     hash_password, verify_password, create_token, create_2fa_pending_token,
@@ -568,6 +568,22 @@ class KnowledgeItemResponse(BaseModel):
     category: str
     widget_id: Optional[int] = None
     widget_name: Optional[str] = None
+
+
+class CategoryCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100, description="Category name")
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Kategorinamn kan inte vara tomt')
+        return v.strip()
+
+
+class CategoryResponse(BaseModel):
+    id: int
+    name: str
 
 
 class CompanyCreate(BaseModel):
@@ -3365,6 +3381,118 @@ async def check_similar_questions(
     # Sort by similarity descending
     similar.sort(key=lambda x: x.similarity, reverse=True)
     return similar[:5]  # Return top 5 similar
+
+
+# =============================================================================
+# Category Endpoints
+# =============================================================================
+
+
+@app.get("/categories", response_model=List[CategoryResponse])
+async def get_categories(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Hämta alla kategorier för företaget"""
+    categories = db.query(Category).filter(
+        Category.company_id == current["company_id"]
+    ).order_by(Category.name).all()
+
+    return [CategoryResponse(id=c.id, name=c.name) for c in categories]
+
+
+@app.post("/categories", response_model=CategoryResponse)
+async def create_category(
+    category: CategoryCreate,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Skapa en ny kategori"""
+    # Check if category already exists
+    existing = db.query(Category).filter(
+        Category.company_id == current["company_id"],
+        Category.name == category.name
+    ).first()
+
+    if existing:
+        raise HTTPException(status_code=400, detail="Kategorin finns redan")
+
+    new_category = Category(
+        company_id=current["company_id"],
+        name=category.name
+    )
+    db.add(new_category)
+    db.commit()
+    db.refresh(new_category)
+
+    return CategoryResponse(id=new_category.id, name=new_category.name)
+
+
+@app.put("/categories/{category_id}", response_model=CategoryResponse)
+async def update_category(
+    category_id: int,
+    category: CategoryCreate,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Uppdatera en kategori"""
+    existing = db.query(Category).filter(
+        Category.id == category_id,
+        Category.company_id == current["company_id"]
+    ).first()
+
+    if not existing:
+        raise HTTPException(status_code=404, detail="Kategorin hittades inte")
+
+    # Check if new name already exists (excluding current category)
+    duplicate = db.query(Category).filter(
+        Category.company_id == current["company_id"],
+        Category.name == category.name,
+        Category.id != category_id
+    ).first()
+
+    if duplicate:
+        raise HTTPException(status_code=400, detail="En kategori med det namnet finns redan")
+
+    # Update knowledge items with old category name to new name
+    old_name = existing.name
+    db.query(KnowledgeItem).filter(
+        KnowledgeItem.company_id == current["company_id"],
+        KnowledgeItem.category == old_name
+    ).update({KnowledgeItem.category: category.name})
+
+    existing.name = category.name
+    db.commit()
+    db.refresh(existing)
+
+    return CategoryResponse(id=existing.id, name=existing.name)
+
+
+@app.delete("/categories/{category_id}")
+async def delete_category(
+    category_id: int,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Ta bort en kategori"""
+    existing = db.query(Category).filter(
+        Category.id == category_id,
+        Category.company_id == current["company_id"]
+    ).first()
+
+    if not existing:
+        raise HTTPException(status_code=404, detail="Kategorin hittades inte")
+
+    # Clear category from knowledge items
+    db.query(KnowledgeItem).filter(
+        KnowledgeItem.company_id == current["company_id"],
+        KnowledgeItem.category == existing.name
+    ).update({KnowledgeItem.category: ""})
+
+    db.delete(existing)
+    db.commit()
+
+    return {"message": "Kategorin borttagen"}
 
 
 class UploadResponse(BaseModel):
