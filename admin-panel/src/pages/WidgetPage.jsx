@@ -15,6 +15,8 @@ function WidgetPage({ widgetType }) {
   // Settings form
   const [formData, setFormData] = useState({
     primary_color: '#D97757',
+    secondary_color: '#FEF3EC',
+    background_color: '#FAF8F5',
     welcome_message: 'Hej! Hur kan jag hjälpa dig idag?',
     fallback_message: 'Tyvärr kunde jag inte hitta ett svar på din fråga.',
     subtitle: 'Alltid redo att hjälpa',
@@ -129,6 +131,8 @@ function WidgetPage({ widgetType }) {
           setWidget(existingWidget)
           setFormData({
             primary_color: existingWidget.primary_color || '#D97757',
+            secondary_color: existingWidget.secondary_color || '#FEF3EC',
+            background_color: existingWidget.background_color || '#FAF8F5',
             welcome_message: existingWidget.welcome_message || 'Hej! Hur kan jag hjälpa dig idag?',
             fallback_message: existingWidget.fallback_message || 'Tyvärr kunde jag inte hitta ett svar.',
             subtitle: existingWidget.subtitle || 'Alltid redo att hjälpa',
@@ -169,6 +173,8 @@ function WidgetPage({ widgetType }) {
           name: isExternal ? 'Extern' : 'Intern',  // Internal identifier only
           widget_type: widgetType,
           primary_color: '#D97757',
+          secondary_color: '#FEF3EC',
+          background_color: '#FAF8F5',
           welcome_message: defaultWelcome,
           fallback_message: 'Tyvärr kunde jag inte hitta ett svar på din fråga.',
           subtitle: 'Alltid redo att hjälpa',
@@ -181,6 +187,8 @@ function WidgetPage({ widgetType }) {
         setWidget(newWidget)
         setFormData({
           primary_color: newWidget.primary_color,
+          secondary_color: newWidget.secondary_color || '#FEF3EC',
+          background_color: newWidget.background_color || '#FAF8F5',
           welcome_message: newWidget.welcome_message,
           fallback_message: newWidget.fallback_message,
           subtitle: newWidget.subtitle,
@@ -707,23 +715,62 @@ function WidgetPage({ widgetType }) {
                   Utseende
                 </h3>
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-1">Primärfärg</label>
-                    <div className="flex gap-2 max-w-xs">
-                      <input
-                        type="color"
-                        value={formData.primary_color}
-                        onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
-                        className="w-10 h-10 rounded cursor-pointer border border-border-subtle"
-                      />
-                      <input
-                        type="text"
-                        value={formData.primary_color}
-                        onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
-                        className="input flex-1"
-                      />
+                  {/* Color Settings */}
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">Primärfärg</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={formData.primary_color}
+                          onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
+                          className="w-10 h-10 rounded cursor-pointer border border-border-subtle"
+                        />
+                        <input
+                          type="text"
+                          value={formData.primary_color}
+                          onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
+                          className="input flex-1"
+                        />
+                      </div>
+                      <p className="text-xs text-text-tertiary mt-1">Knappar, header & dina meddelanden</p>
                     </div>
-                    <p className="text-xs text-text-tertiary mt-1">Accentfärg för knappar och header</p>
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">Sekundärfärg</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={formData.secondary_color}
+                          onChange={(e) => setFormData({ ...formData, secondary_color: e.target.value })}
+                          className="w-10 h-10 rounded cursor-pointer border border-border-subtle"
+                        />
+                        <input
+                          type="text"
+                          value={formData.secondary_color}
+                          onChange={(e) => setFormData({ ...formData, secondary_color: e.target.value })}
+                          className="input flex-1"
+                        />
+                      </div>
+                      <p className="text-xs text-text-tertiary mt-1">AI-botens meddelandebubblor</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-1">Bakgrundsfärg</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={formData.background_color}
+                          onChange={(e) => setFormData({ ...formData, background_color: e.target.value })}
+                          className="w-10 h-10 rounded cursor-pointer border border-border-subtle"
+                        />
+                        <input
+                          type="text"
+                          value={formData.background_color}
+                          onChange={(e) => setFormData({ ...formData, background_color: e.target.value })}
+                          className="input flex-1"
+                        />
+                      </div>
+                      <p className="text-xs text-text-tertiary mt-1">Chattområdets bakgrund</p>
+                    </div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4">
@@ -885,8 +932,8 @@ function WidgetPage({ widgetType }) {
                   <div
                     className="h-64 overflow-y-auto p-4 space-y-3"
                     style={{
-                      backgroundColor: darkMode ? '#1C1917' : '#FAF9F7',
-                      backgroundImage: darkMode ? 'none' : 'radial-gradient(circle at 100% 0%, rgba(217, 119, 87, 0.03) 0%, transparent 50%)'
+                      backgroundColor: darkMode ? '#1C1917' : formData.background_color,
+                      backgroundImage: darkMode ? 'none' : `radial-gradient(circle at 100% 0%, ${formData.primary_color}08 0%, transparent 50%)`
                     }}
                   >
                     {previewMessages.map((msg, i) => (
@@ -905,9 +952,9 @@ function WidgetPage({ widgetType }) {
                           style={{
                             background: msg.type === 'user'
                               ? `linear-gradient(135deg, ${formData.primary_color} 0%, ${adjustColor(formData.primary_color, -20)} 100%)`
-                              : darkMode ? '#292524' : '#FFFFFF',
+                              : darkMode ? '#292524' : formData.secondary_color,
                             color: msg.type === 'user' ? 'white' : (darkMode ? '#FAF9F7' : '#44403C'),
-                            border: msg.type === 'bot' ? `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}` : 'none',
+                            border: msg.type === 'bot' ? `1px solid ${darkMode ? '#3D3835' : adjustColor(formData.secondary_color, -15)}` : 'none',
                             borderRadius: msg.type === 'user'
                               ? `${formData.widget_border_radius}px ${formData.widget_border_radius}px 4px ${formData.widget_border_radius}px`
                               : `${formData.widget_border_radius}px ${formData.widget_border_radius}px ${formData.widget_border_radius}px 4px`,
@@ -931,8 +978,8 @@ function WidgetPage({ widgetType }) {
                         <div
                           className="px-4 py-3 shadow-sm"
                           style={{
-                            backgroundColor: darkMode ? '#292524' : '#FFFFFF',
-                            border: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}`,
+                            backgroundColor: darkMode ? '#292524' : formData.secondary_color,
+                            border: `1px solid ${darkMode ? '#3D3835' : adjustColor(formData.secondary_color, -15)}`,
                             borderRadius: `${formData.widget_border_radius}px ${formData.widget_border_radius}px ${formData.widget_border_radius}px 4px`
                           }}
                         >
@@ -963,9 +1010,9 @@ function WidgetPage({ widgetType }) {
                         placeholder="Skriv ett meddelande..."
                         className="flex-1 px-4 py-2.5 outline-none transition-all"
                         style={{
-                          backgroundColor: darkMode ? '#1C1917' : '#F5F5F4',
+                          backgroundColor: darkMode ? '#1C1917' : formData.background_color,
                           color: darkMode ? '#FAF9F7' : '#1C1917',
-                          border: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}`,
+                          border: `1px solid ${darkMode ? '#3D3835' : adjustColor(formData.background_color, -20)}`,
                           borderRadius: '9999px',
                           fontSize: `${formData.widget_font_size}px`,
                           fontFamily: `'${formData.widget_font_family}', system-ui, sans-serif`
