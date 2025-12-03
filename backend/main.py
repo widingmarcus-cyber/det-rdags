@@ -2283,6 +2283,9 @@ async def chat_via_widget_key(
     # Auto-detect category
     category = detect_category(request.question)
 
+    # Get company settings (needed for usage tracking and prompts)
+    settings = get_or_create_settings(db, company_id)
+
     # Find or create conversation
     conversation = db.query(Conversation).filter(
         Conversation.session_id == session_id,
@@ -2309,6 +2312,11 @@ async def chat_via_widget_key(
         db.commit()
         db.refresh(conversation)
 
+        # Increment monthly usage counter for new conversations
+        if settings.max_conversations_month > 0:
+            settings.current_month_conversations = (settings.current_month_conversations or 0) + 1
+            db.commit()
+
     # Save user message
     user_message = Message(
         conversation_id=conversation.id,
@@ -2317,9 +2325,6 @@ async def chat_via_widget_key(
     )
     db.add(user_message)
     conversation.message_count += 1
-
-    # Get company settings for building the prompt
-    settings = get_or_create_settings(db, company_id)
 
     # Check if this is just a greeting (no actual question)
     if is_greeting(request.question):
@@ -2356,9 +2361,6 @@ async def chat_via_widget_key(
     )
     db.add(bot_message)
     conversation.message_count += 1
-
-    # Update usage counter
-    increment_usage_counter(db, company_id)
 
     db.commit()
 
