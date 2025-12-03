@@ -544,12 +544,12 @@ function Settings() {
                         </svg>
                       </div>
                       <div>
-                        <p className="font-medium text-text-primary">WCAG 2.2</p>
-                        <p className="text-xs text-amber-500">Pågående arbete</p>
+                        <p className="font-medium text-text-primary">Tillgänglighet</p>
+                        <p className="text-xs text-amber-500">Nivå A (arbetar mot AA)</p>
                       </div>
                     </div>
                     <p className="text-xs text-text-secondary">
-                      Arbetar mot WCAG 2.2 AA-nivå och DOS-lagens tillgänglighetskrav
+                      Grundläggande WCAG 2.1 A uppfyllt. Arbetar mot AA-nivå enligt DOS-lagen.
                     </p>
                   </div>
 

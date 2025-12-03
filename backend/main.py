@@ -3084,7 +3084,10 @@ async def get_conversation(
 
     message_responses = []
     for msg in messages:
-        sources = json.loads(msg.sources) if msg.sources else None
+        try:
+            sources = json.loads(msg.sources) if msg.sources else None
+        except (json.JSONDecodeError, TypeError):
+            sources = None
         message_responses.append(MessageResponse(
             id=msg.id,
             role=msg.role,
