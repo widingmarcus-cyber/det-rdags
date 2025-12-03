@@ -341,7 +341,7 @@ function ChatWidget({ messages, label, className = "", startDelay = 0 }) {
         </div>
         {label && <span className="bg-white/25 text-white font-medium text-[10px] px-2 py-0.5 rounded-full">{label}</span>}
       </div>
-      <div className="p-3 space-y-2 bg-stone-100 dark:bg-stone-900">
+      <div className="p-3 space-y-2 bg-stone-100 dark:bg-stone-900 h-[100px]">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'} transition-opacity duration-300 ${visibleMessages.includes(i) ? 'opacity-100' : 'opacity-0'}`}>
             <div className={`max-w-[85%] rounded-xl px-2.5 py-1.5 text-xs ${msg.from === 'user' ? 'bg-[#D97757] text-white rounded-br-sm' : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm rounded-bl-sm'}`}>
@@ -711,7 +711,7 @@ function LandingPage() {
             </div>
 
             {/* Dual chat widgets */}
-            <div className={`flex flex-col lg:flex-row gap-6 pt-4 transition-all duration-1000 delay-300 ${contentVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
+            <div className={`flex flex-col lg:flex-row items-start gap-6 pt-4 transition-all duration-1000 delay-300 ${contentVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
               <ChatWidget messages={customerConvo} label="Kund" startDelay={800} className="hover:scale-[1.02] transition-transform" />
               <ChatWidget messages={employeeConvo} label="Anställd" startDelay={2500} className="hover:scale-[1.02] transition-transform lg:mt-8" />
             </div>
