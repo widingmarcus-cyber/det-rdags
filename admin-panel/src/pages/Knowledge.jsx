@@ -908,7 +908,7 @@ function Knowledge() {
                   >
                     <option value="">Delad (tillgänglig för alla widgets)</option>
                     {widgets.map(w => (
-                      <option key={w.id} value={w.id}>{w.name} ({w.widget_type === 'external' ? 'Extern' : w.widget_type === 'internal' ? 'Intern' : 'Anpassad'})</option>
+                      <option key={w.id} value={w.id}>{w.name} ({w.widget_type === 'external' ? 'Extern' : 'Intern'})</option>
                     ))}
                   </select>
                   <p className="text-xs text-text-tertiary mt-1">

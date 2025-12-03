@@ -174,7 +174,6 @@ function Widgets() {
     switch (type) {
       case 'external': return 'Extern (kunder)'
       case 'internal': return 'Intern (anställda)'
-      case 'custom': return 'Anpassad'
       default: return type
     }
   }
@@ -183,7 +182,7 @@ function Widgets() {
     switch (type) {
       case 'external': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
       case 'internal': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+      default: return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
     }
   }
 
@@ -231,9 +230,10 @@ function Widgets() {
             <line x1="12" y1="8" x2="12.01" y2="8" />
           </svg>
           <div className="text-sm text-blue-800 dark:text-blue-200">
-            <p className="font-medium mb-1">Olika widgets för olika målgrupper</p>
+            <p className="font-medium mb-1">Två typer av widgets</p>
             <p className="text-blue-700 dark:text-blue-300">
-              Skapa separata widgets för t.ex. kundservice (extern) och intern support (anställda).
+              <strong>Extern:</strong> För kunder på er hemsida med kundrelaterad kunskapsbank.<br/>
+              <strong>Intern:</strong> För anställda med intern kunskapsbank (policyer, rutiner, etc.).<br/>
               Varje widget har sin egen kunskapsbas och kan anpassas med egna färger och meddelanden.
             </p>
           </div>
@@ -414,8 +414,10 @@ function Widgets() {
                     >
                       <option value="external">Extern (för kunder)</option>
                       <option value="internal">Intern (för anställda)</option>
-                      <option value="custom">Anpassad</option>
                     </select>
+                    <p className="text-xs text-text-tertiary mt-1">
+                      Varje widgettyp har sin egen kunskapsbank.
+                    </p>
                   </div>
 
                   <div>
@@ -559,8 +561,10 @@ function Widgets() {
                     >
                       <option value="external">Extern (för kunder)</option>
                       <option value="internal">Intern (för anställda)</option>
-                      <option value="custom">Anpassad</option>
                     </select>
+                    <p className="text-xs text-text-tertiary mt-1">
+                      Varje widgettyp har sin egen kunskapsbank.
+                    </p>
                   </div>
 
                   <div>
