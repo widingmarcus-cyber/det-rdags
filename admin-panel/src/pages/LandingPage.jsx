@@ -53,30 +53,30 @@ function BobotMascot({ className = "", size = 160, mousePos = { x: 0.5, y: 0.5 }
       {/* Nose piece */}
       <rect x="56" y="30" width="8" height="8" rx="2" fill="#78716C" />
 
-      {/* Left arm - waves smoothly up and down when isWaving */}
+      {/* Left arm - idle animation only */}
       <rect x="15" y="62" width="18" height="6" rx="3" fill="#78716C">
-        {isWaving ? (
-          <animateTransform attributeName="transform" type="rotate" values="0 33 65;-70 33 65;0 33 65" dur="0.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
-        ) : (
-          <animateTransform attributeName="transform" type="rotate" values="0 24 65;-8 24 65;0 24 65" dur="3s" repeatCount="indefinite" />
-        )}
+        <animateTransform attributeName="transform" type="rotate" values="0 24 65;-8 24 65;0 24 65" dur="3s" repeatCount="indefinite" />
       </rect>
-      {/* Right arm */}
+      {/* Right arm - waves when isWaving */}
       <rect x="87" y="62" width="18" height="6" rx="3" fill="#78716C">
-        <animateTransform attributeName="transform" type="rotate" values="0 96 65;8 96 65;0 96 65" dur="3s" repeatCount="indefinite" />
+        {isWaving ? (
+          <animateTransform attributeName="transform" type="rotate" values="0 87 65;70 87 65;0 87 65" dur="0.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
+        ) : (
+          <animateTransform attributeName="transform" type="rotate" values="0 96 65;8 96 65;0 96 65" dur="3s" repeatCount="indefinite" />
+        )}
       </rect>
 
-      {/* Left hand - waves smoothly up and down when isWaving */}
+      {/* Left hand - idle animation only */}
       <rect x="10" y="58" width="8" height="14" rx="2" fill="#57534E">
-        {isWaving ? (
-          <animateTransform attributeName="transform" type="rotate" values="0 14 65;-70 14 65;0 14 65" dur="0.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
-        ) : (
-          <animateTransform attributeName="transform" type="rotate" values="0 14 65;-8 14 65;0 14 65" dur="3s" repeatCount="indefinite" />
-        )}
+        <animateTransform attributeName="transform" type="rotate" values="0 14 65;-8 14 65;0 14 65" dur="3s" repeatCount="indefinite" />
       </rect>
-      {/* Right hand */}
+      {/* Right hand - waves with arm when isWaving (same pivot point as arm) */}
       <rect x="102" y="58" width="8" height="14" rx="2" fill="#57534E">
-        <animateTransform attributeName="transform" type="rotate" values="0 106 65;8 106 65;0 106 65" dur="3s" repeatCount="indefinite" />
+        {isWaving ? (
+          <animateTransform attributeName="transform" type="rotate" values="0 87 65;70 87 65;0 87 65" dur="0.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
+        ) : (
+          <animateTransform attributeName="transform" type="rotate" values="0 106 65;8 106 65;0 106 65" dur="3s" repeatCount="indefinite" />
+        )}
       </rect>
 
       {/* Antenna */}
@@ -88,7 +88,7 @@ function BobotMascot({ className = "", size = 160, mousePos = { x: 0.5, y: 0.5 }
   )
 }
 
-// Easter egg: Upside down mascot hanging from ceiling with arms
+// Easter egg: Upside down mascot hanging from ceiling (torso connects to top)
 function HangingMascot({ mousePos = { x: 0.5, y: 0.5 }, isVisible = false }) {
   const [hasFinishedBlinking, setHasFinishedBlinking] = useState(false)
   const [blinkKey, setBlinkKey] = useState(0)
@@ -106,74 +106,66 @@ function HangingMascot({ mousePos = { x: 0.5, y: 0.5 }, isVisible = false }) {
   }, [isVisible])
 
   // Invert Y for upside down tracking
-  const pupilOffsetX = hasFinishedBlinking ? (mousePos.x - 0.5) * 5 : 0
-  const pupilOffsetY = hasFinishedBlinking ? -(mousePos.y - 0.5) * 4 : 0
+  const pupilOffsetX = hasFinishedBlinking ? (mousePos.x - 0.5) * 6 : 0
+  const pupilOffsetY = hasFinishedBlinking ? -(mousePos.y - 0.5) * 5 : 0
 
   return (
     <div className={`transition-all duration-500 ease-out ${isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}`}>
-      <svg key={blinkKey} width="75" height="90" viewBox="0 0 60 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* Arms reaching up to hold ceiling */}
-        <rect x="8" y="0" width="5" height="18" rx="2" fill="#78716C" />
-        <rect x="47" y="0" width="5" height="18" rx="2" fill="#78716C" />
-
-        {/* Hands gripping ceiling */}
-        <rect x="5" y="0" width="11" height="6" rx="2" fill="#57534E" />
-        <rect x="44" y="0" width="11" height="6" rx="2" fill="#57534E" />
-
-        {/* Body/Torso (upside down) */}
-        <rect x="10" y="16" width="40" height="28" rx="3" fill="#D97757" />
-        <rect x="12" y="18" width="36" height="24" rx="2" fill="#C4613D" />
+      <svg key={blinkKey} width="112" height="140" viewBox="0 0 60 75" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Body/Torso - connects directly to top (y=0) */}
+        <rect x="10" y="0" width="40" height="28" rx="0" fill="#D97757" />
+        <rect x="12" y="2" width="36" height="24" rx="2" fill="#C4613D" />
 
         {/* Body details */}
-        <rect x="15" y="20" width="12" height="10" rx="1" fill="#1C1917" />
-        <rect x="33" y="20" width="12" height="10" rx="1" fill="#1C1917" />
+        <rect x="15" y="4" width="12" height="10" rx="1" fill="#1C1917" />
+        <rect x="33" y="4" width="12" height="10" rx="1" fill="#1C1917" />
 
         {/* Neck */}
-        <rect x="23" y="42" width="14" height="8" rx="2" fill="#78716C" />
+        <rect x="23" y="26" width="14" height="8" rx="2" fill="#78716C" />
 
         {/* Head (upside down - eyes at bottom) */}
-        <rect x="8" y="48" width="44" height="20" rx="3" fill="#D97757" />
+        <rect x="8" y="32" width="44" height="22" rx="3" fill="#D97757" />
 
-        {/* Eye sockets - positioned lower since upside down */}
-        <ellipse cx="20" cy="58" rx="8" ry="7" fill="#1C1917" />
-        <ellipse cx="40" cy="58" rx="8" ry="7" fill="#1C1917" />
+        {/* Eye sockets */}
+        <ellipse cx="20" cy="44" rx="9" ry="8" fill="#1C1917" />
+        <ellipse cx="40" cy="44" rx="9" ry="8" fill="#1C1917" />
 
         {/* Inner eye area */}
-        <ellipse cx="20" cy="58" rx="6" ry="5" fill="#292524" />
-        <ellipse cx="40" cy="58" rx="6" ry="5" fill="#292524" />
+        <ellipse cx="20" cy="44" rx="7" ry="6" fill="#292524" />
+        <ellipse cx="40" cy="44" rx="7" ry="6" fill="#292524" />
 
         {/* Pupils - blink 3 times first, then track cursor */}
-        <ellipse cx={20 + pupilOffsetX} cy={58 + pupilOffsetY} rx="3" fill="#D97757">
+        <ellipse cx={20 + pupilOffsetX} cy={44 + pupilOffsetY} rx="4" fill="#D97757">
           {!hasFinishedBlinking && (
-            <animate attributeName="ry" values="3;0.2;3;0.2;3;0.2;3" dur="1.5s" fill="freeze" />
+            <animate attributeName="ry" values="4;0.2;4;0.2;4;0.2;4" dur="1.5s" fill="freeze" />
           )}
-          {hasFinishedBlinking && <set attributeName="ry" to="3" />}
+          {hasFinishedBlinking && <set attributeName="ry" to="4" />}
         </ellipse>
-        <ellipse cx={40 + pupilOffsetX} cy={58 + pupilOffsetY} rx="3" fill="#D97757">
+        <ellipse cx={40 + pupilOffsetX} cy={44 + pupilOffsetY} rx="4" fill="#D97757">
           {!hasFinishedBlinking && (
-            <animate attributeName="ry" values="3;0.2;3;0.2;3;0.2;3" dur="1.5s" fill="freeze" />
+            <animate attributeName="ry" values="4;0.2;4;0.2;4;0.2;4" dur="1.5s" fill="freeze" />
           )}
-          {hasFinishedBlinking && <set attributeName="ry" to="3" />}
+          {hasFinishedBlinking && <set attributeName="ry" to="4" />}
         </ellipse>
 
         {/* Eye highlights */}
-        <circle cx={21 + pupilOffsetX * 0.5} cy={56 + pupilOffsetY * 0.5} r="1.5" fill="#FEF2EE">
+        <circle cx={21 + pupilOffsetX * 0.5} cy={42 + pupilOffsetY * 0.5} r="2" fill="#FEF2EE">
           {!hasFinishedBlinking && (
             <animate attributeName="opacity" values="1;0;1;0;1;0;1" dur="1.5s" fill="freeze" />
           )}
         </circle>
-        <circle cx={41 + pupilOffsetX * 0.5} cy={56 + pupilOffsetY * 0.5} r="1.5" fill="#FEF2EE">
+        <circle cx={41 + pupilOffsetX * 0.5} cy={42 + pupilOffsetY * 0.5} r="2" fill="#FEF2EE">
           {!hasFinishedBlinking && (
             <animate attributeName="opacity" values="1;0;1;0;1;0;1" dur="1.5s" fill="freeze" />
           )}
         </circle>
 
         {/* Nose piece */}
-        <rect x="26" y="54" width="8" height="6" rx="1" fill="#78716C" />
+        <rect x="26" y="40" width="8" height="6" rx="1" fill="#78716C" />
 
         {/* Antenna pointing DOWN (at bottom since upside down) */}
-        <rect x="28" y="68" width="4" height="8" rx="2" fill="#78716C" />
-        <circle cx="30" cy="78" r="4" fill="#4A9D7C">
+        <rect x="28" y="54" width="4" height="10" rx="2" fill="#78716C" />
+        <circle cx="30" cy="68" r="5" fill="#4A9D7C">
           <animate attributeName="opacity" values="1;0.3;1" dur="1s" repeatCount="indefinite" />
         </circle>
       </svg>
