@@ -30,7 +30,8 @@ function WidgetPage({ widgetType }) {
     widget_font_family: 'Inter',
     widget_font_size: 14,
     widget_border_radius: 16,
-    widget_position: 'bottom-right'
+    widget_position: 'bottom-right',
+    start_expanded: false  // Start widget open instead of as floating button
   })
 
   // Knowledge state
@@ -147,7 +148,8 @@ function WidgetPage({ widgetType }) {
             widget_font_family: existingWidget.widget_font_family || 'Inter',
             widget_font_size: existingWidget.widget_font_size || 14,
             widget_border_radius: existingWidget.widget_border_radius || 16,
-            widget_position: existingWidget.widget_position || 'bottom-right'
+            widget_position: existingWidget.widget_position || 'bottom-right',
+            start_expanded: existingWidget.start_expanded || false
           })
           fetchKnowledge(existingWidget.id)
           setPreviewMessages([{ type: 'bot', text: existingWidget.welcome_message || 'Hej! Hur kan jag hjälpa dig idag?' }])
@@ -203,7 +205,8 @@ function WidgetPage({ widgetType }) {
           widget_font_family: newWidget.widget_font_family || 'Inter',
           widget_font_size: newWidget.widget_font_size || 14,
           widget_border_radius: newWidget.widget_border_radius || 16,
-          widget_position: newWidget.widget_position || 'bottom-right'
+          widget_position: newWidget.widget_position || 'bottom-right',
+          start_expanded: newWidget.start_expanded || false
         })
         setPreviewMessages([{ type: 'bot', text: newWidget.welcome_message }])
       }
@@ -887,6 +890,20 @@ function WidgetPage({ widgetType }) {
                         <option value="bottom-left">Nedre vänstra hörnet</option>
                       </select>
                     </div>
+                    <div className="col-span-2">
+                      <label className="flex items-center gap-3 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={formData.start_expanded}
+                          onChange={(e) => setFormData({ ...formData, start_expanded: e.target.checked })}
+                          className="w-5 h-5 rounded border-border-subtle text-accent focus:ring-accent cursor-pointer"
+                        />
+                        <div>
+                          <span className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors">Starta öppen</span>
+                          <p className="text-xs text-text-tertiary">Widgeten öppnas direkt istället för att visa en flytande knapp</p>
+                        </div>
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1108,14 +1125,16 @@ function WidgetPage({ widgetType }) {
 <script>
   Bobot.init({
     widgetKey: '${widget.widget_key}',
-    position: '${formData.widget_position}'
+    position: '${formData.widget_position}'${formData.start_expanded ? `,
+    startExpanded: true` : ''}
   });
 </script>`}
                     </pre>
                     <button
                       type="button"
                       onClick={() => {
-                        navigator.clipboard.writeText(`<script src="https://cdn.bobot.nu/widget.js"></script>\n<script>\n  Bobot.init({\n    widgetKey: '${widget.widget_key}',\n    position: '${formData.widget_position}'\n  });\n</script>`)
+                        const expandedOption = formData.start_expanded ? `,\n    startExpanded: true` : ''
+                        navigator.clipboard.writeText(`<script src="https://cdn.bobot.nu/widget.js"></script>\n<script>\n  Bobot.init({\n    widgetKey: '${widget.widget_key}',\n    position: '${formData.widget_position}'${expandedOption}\n  });\n</script>`)
                         setSuccess('Kod kopierad!')
                         setTimeout(() => setSuccess(''), 2000)
                       }}
@@ -1125,7 +1144,7 @@ function WidgetPage({ widgetType }) {
                     </button>
                   </div>
                   <p className="text-xs text-text-tertiary">
-                    Klistra in koden precis före <code className="bg-bg-tertiary px-1 py-0.5 rounded">&lt;/body&gt;</code> på din webbplats. Positionen ({formData.widget_position === 'bottom-right' ? 'nedre högra' : 'nedre vänstra'} hörnet) är inkluderad.
+                    Klistra in koden precis före <code className="bg-bg-tertiary px-1 py-0.5 rounded">&lt;/body&gt;</code> på din webbplats. Positionen ({formData.widget_position === 'bottom-right' ? 'nedre högra' : 'nedre vänstra'} hörnet){formData.start_expanded ? ' och automatisk öppning' : ''} är inkluderad.
                   </p>
                 </div>
               )}

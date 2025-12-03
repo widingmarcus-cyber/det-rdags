@@ -107,6 +107,8 @@ class Widget(Base):
 
     # Widget-specific appearance
     primary_color = Column(String, default="#D97757")
+    secondary_color = Column(String, default="#FEF3EC")  # AI message background
+    background_color = Column(String, default="#FAF8F5")  # Widget background
     widget_font_family = Column(String, default="Inter")
     widget_font_size = Column(Integer, default=14)
     widget_border_radius = Column(Integer, default=16)
@@ -120,6 +122,7 @@ class Widget(Base):
     # Widget-specific settings
     language = Column(String, default="sv")  # sv, en, ar
     tone = Column(String, default="")  # professional, collegial, casual - empty means use widget_type default
+    start_expanded = Column(Boolean, default=False)  # Start widget open instead of as floating button
     suggested_questions = Column(Text, default="")  # JSON array
 
     # GDPR/Consent for this widget
@@ -690,6 +693,40 @@ class PricingTier(Base):
 def create_tables():
     """Skapa alla tabeller"""
     Base.metadata.create_all(bind=engine)
+
+
+def run_migrations():
+    """Run database migrations for new columns on existing tables"""
+    from sqlalchemy import text, inspect
+
+    with engine.connect() as conn:
+        inspector = inspect(engine)
+
+        # Check if widgets table exists
+        if 'widgets' in inspector.get_table_names():
+            existing_columns = [col['name'] for col in inspector.get_columns('widgets')]
+
+            # Add tone column if missing
+            if 'tone' not in existing_columns:
+                conn.execute(text("ALTER TABLE widgets ADD COLUMN tone VARCHAR DEFAULT ''"))
+                print("[Migration] Added 'tone' column to widgets table")
+
+            # Add secondary_color column if missing
+            if 'secondary_color' not in existing_columns:
+                conn.execute(text("ALTER TABLE widgets ADD COLUMN secondary_color VARCHAR DEFAULT '#FEF3EC'"))
+                print("[Migration] Added 'secondary_color' column to widgets table")
+
+            # Add background_color column if missing
+            if 'background_color' not in existing_columns:
+                conn.execute(text("ALTER TABLE widgets ADD COLUMN background_color VARCHAR DEFAULT '#FAF8F5'"))
+                print("[Migration] Added 'background_color' column to widgets table")
+
+            # Add start_expanded column if missing
+            if 'start_expanded' not in existing_columns:
+                conn.execute(text("ALTER TABLE widgets ADD COLUMN start_expanded BOOLEAN DEFAULT 0"))
+                print("[Migration] Added 'start_expanded' column to widgets table")
+
+            conn.commit()
 
 
 def get_db():

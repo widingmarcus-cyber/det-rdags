@@ -21,7 +21,7 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
 from database import (
-    create_tables, get_db, Company, KnowledgeItem, ChatLog, SuperAdmin,
+    create_tables, run_migrations, get_db, Company, KnowledgeItem, ChatLog, SuperAdmin,
     CompanySettings, Conversation, Message, DailyStatistics, GDPRAuditLog,
     AdminAuditLog, GlobalSettings, CompanyActivityLog, Subscription, Invoice,
     CompanyNote, CompanyDocument, WidgetPerformance, EmailNotificationQueue,
@@ -153,6 +153,7 @@ async def lifespan(app: FastAPI):
 
     # Startup
     create_tables()
+    run_migrations()  # Add new columns to existing tables
     init_demo_data()
 
     # Start background tasks
@@ -648,11 +649,14 @@ class WidgetCreate(BaseModel):
     widget_type: str = "external"  # external, internal, custom
     description: Optional[str] = ""
     primary_color: Optional[str] = "#D97757"
+    secondary_color: Optional[str] = "#FEF3EC"  # AI message background
+    background_color: Optional[str] = "#FAF8F5"  # Widget background
     welcome_message: Optional[str] = "Hej! Hur kan jag hjälpa dig idag?"
     fallback_message: Optional[str] = "Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt."
     subtitle: Optional[str] = "Alltid redo att hjälpa"
     language: Optional[str] = "sv"
     tone: Optional[str] = ""  # professional, collegial, casual - empty means use widget_type default
+    start_expanded: Optional[bool] = False  # Start widget open instead of as floating button
     # Per-widget contact info
     display_name: Optional[str] = ""
     contact_email: Optional[str] = ""
@@ -665,6 +669,8 @@ class WidgetUpdate(BaseModel):
     description: Optional[str] = None
     is_active: Optional[bool] = None
     primary_color: Optional[str] = None
+    secondary_color: Optional[str] = None  # AI message background
+    background_color: Optional[str] = None  # Widget background
     widget_font_family: Optional[str] = None
     widget_font_size: Optional[int] = None
     widget_border_radius: Optional[int] = None
@@ -674,6 +680,7 @@ class WidgetUpdate(BaseModel):
     subtitle: Optional[str] = None
     language: Optional[str] = None
     tone: Optional[str] = None  # professional, collegial, casual
+    start_expanded: Optional[bool] = None  # Start widget open instead of as floating button
     suggested_questions: Optional[str] = None  # JSON array
     require_consent: Optional[bool] = None
     consent_text: Optional[str] = None
@@ -691,6 +698,8 @@ class WidgetResponse(BaseModel):
     description: str
     is_active: bool
     primary_color: str
+    secondary_color: str = "#FEF3EC"  # AI message background
+    background_color: str = "#FAF8F5"  # Widget background
     widget_font_family: str
     widget_font_size: int
     widget_border_radius: int
@@ -700,6 +709,7 @@ class WidgetResponse(BaseModel):
     subtitle: str
     language: str
     tone: str = ""
+    start_expanded: bool = False  # Start widget open instead of as floating button
     suggested_questions: List[str]
     require_consent: bool
     consent_text: str

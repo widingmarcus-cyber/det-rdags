@@ -284,7 +284,7 @@ const injectStyles = (fontFamily, borderRadius) => {
 }
 
 function ChatWidget({ config }) {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(config.startExpanded || false)
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -871,6 +871,7 @@ function ChatWidget({ config }) {
           color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center',
           justifyContent: 'center', boxShadow: theme.shadow,
           transition: 'transform 0.2s',
+          overflow: 'hidden',
         }}
         onMouseEnter={(e) => e.target.style.transform = 'scale(1.08)'}
         onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
@@ -881,8 +882,55 @@ function ChatWidget({ config }) {
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         ) : (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+          /* Mini Bobot Mascot - matching landing page style */
+          <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+            {/* Feet */}
+            <rect x="10" y="38" width="12" height="5" rx="2.5" fill="#78716C" />
+            <rect x="26" y="38" width="12" height="5" rx="2.5" fill="#78716C" />
+            <rect x="11.5" y="39" width="9" height="3" rx="1.5" fill="#57534E" />
+            <rect x="27.5" y="39" width="9" height="3" rx="1.5" fill="#57534E" />
+            {/* Body */}
+            <rect x="12" y="22" width="24" height="17" rx="2" fill="#FFFFFF" />
+            <rect x="13.5" y="23.5" width="21" height="14" rx="1" fill="#F5F5F4" />
+            {/* Chest screens */}
+            <rect x="15" y="30" width="8" height="6" rx="1" fill="#1C1917" />
+            <rect x="25" y="30" width="8" height="6" rx="1" fill="#1C1917" />
+            {/* Neck */}
+            <rect x="20" y="18" width="8" height="5" rx="1" fill="#78716C" />
+            {/* Head */}
+            <rect x="14" y="8" width="20" height="11" rx="2" fill="#FFFFFF" />
+            {/* Eyes - dark screens */}
+            <ellipse cx="19" cy="13.5" rx="4.5" ry="4" fill="#1C1917" />
+            <ellipse cx="29" cy="13.5" rx="4.5" ry="4" fill="#1C1917" />
+            <ellipse cx="19" cy="13.5" rx="3.5" ry="3" fill="#292524" />
+            <ellipse cx="29" cy="13.5" rx="3.5" ry="3" fill="#292524" />
+            {/* Pupils - use primary color */}
+            <ellipse cx="19" cy="14" rx="2" ry="2" fill={primaryColor}>
+              <animate attributeName="ry" values="2;0.2;2;2;2" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+            </ellipse>
+            <ellipse cx="29" cy="14" rx="2" ry="2" fill={primaryColor}>
+              <animate attributeName="ry" values="2;0.2;2;2;2" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+            </ellipse>
+            {/* Eye shine */}
+            <circle cx="20" cy="13" r="1" fill="#FFFFFF">
+              <animate attributeName="opacity" values="1;0;1;1;1" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+            </circle>
+            <circle cx="30" cy="13" r="1" fill="#FFFFFF">
+              <animate attributeName="opacity" values="1;0;1;1;1" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+            </circle>
+            {/* Nose */}
+            <rect x="22.5" y="12" width="3" height="3" rx="1" fill="#78716C" />
+            {/* Arms */}
+            <rect x="5" y="25" width="7" height="2.5" rx="1.2" fill="#78716C" />
+            <rect x="36" y="25" width="7" height="2.5" rx="1.2" fill="#78716C" />
+            {/* Hands */}
+            <rect x="3" y="23" width="3.5" height="6" rx="1" fill="#57534E" />
+            <rect x="41.5" y="23" width="3.5" height="6" rx="1" fill="#57534E" />
+            {/* Antenna */}
+            <rect x="22.5" y="4" width="3" height="5" rx="1" fill="#78716C" />
+            <circle cx="24" cy="3" r="2.5" fill="#4A9D7C">
+              <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite" />
+            </circle>
           </svg>
         )}
       </button>
