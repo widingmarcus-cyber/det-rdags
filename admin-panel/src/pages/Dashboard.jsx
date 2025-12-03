@@ -164,7 +164,7 @@ function Dashboard() {
           }
         />
         <StatCard
-          title="Totalt frågor"
+          title="Totala konversationer"
           value={stats.totalQuestions}
           icon={
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -325,48 +325,49 @@ function Dashboard() {
           <h2 className="text-lg font-medium text-text-primary mb-4">Snabbåtgärder</h2>
           <div className="space-y-2">
             <Link
-              to="/knowledge"
+              to="/widget/external"
               className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all duration-150 group"
             >
-              <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="10" r="3" />
+                  <path d="M12 13v2" />
                 </svg>
               </div>
               <div>
-                <p className="font-medium text-text-primary">Lägg till fråga/svar</p>
-                <p className="text-sm text-text-secondary">Utöka din kunskapsbas</p>
+                <p className="font-medium text-text-primary">Kundtjänst</p>
+                <p className="text-sm text-text-secondary">Widget för kunder och besökare</p>
               </div>
             </Link>
             <Link
-              to="/preview"
+              to="/widget/internal"
               className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all duration-150 group"
             >
-              <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+              <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  <path d="M12 8v4" />
+                  <path d="M12 16h.01" />
                 </svg>
               </div>
               <div>
-                <p className="font-medium text-text-primary">Förhandsgranska chatbot</p>
-                <p className="text-sm text-text-secondary">Testa hur den fungerar</p>
+                <p className="font-medium text-text-primary">Medarbetarstöd</p>
+                <p className="text-sm text-text-secondary">Widget för anställda</p>
               </div>
             </Link>
             <Link
-              to="/settings"
+              to="/conversations"
               className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all duration-150 group"
             >
               <div className="w-10 h-10 bg-accent-soft rounded-lg flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
               </div>
               <div>
-                <p className="font-medium text-text-primary">Inställningar</p>
-                <p className="text-sm text-text-secondary">Anpassa din chatbot</p>
+                <p className="font-medium text-text-primary">Se konversationer</p>
+                <p className="text-sm text-text-secondary">Granska chatthistorik</p>
               </div>
             </Link>
           </div>
@@ -374,30 +375,53 @@ function Dashboard() {
 
         {/* Widget Code */}
         <div className="card">
-          <h2 className="text-lg font-medium text-text-primary mb-2">Widget-kod</h2>
+          <h2 className="text-lg font-medium text-text-primary mb-2">Kom igång</h2>
           <p className="text-sm text-text-secondary mb-4">
-            Klistra in på din hemsida för att aktivera chatboten
+            Konfigurera dina widgets och hämta installationskod
           </p>
-          <div className="bg-[#1C1917] text-[#F5F5F4] p-4 rounded-lg text-sm font-mono overflow-x-auto">
-            <pre className="whitespace-pre-wrap">{`<script src="https://cdn.bobot.nu/widget.js"></script>
-<script>
-  Bobot.init({
-    companyId: "${auth.companyId}"
-  });
-</script>`}</pre>
+          <div className="space-y-3">
+            <Link
+              to="/widget/external"
+              className="flex items-center justify-between p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-600 dark:text-blue-400">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-medium text-text-primary text-sm">Kundtjänst</p>
+                  <p className="text-xs text-text-secondary">För din webbplats</p>
+                </div>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </Link>
+            <Link
+              to="/widget/internal"
+              className="flex items-center justify-between p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-600 dark:text-green-400">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-medium text-text-primary text-sm">Medarbetarstöd</p>
+                  <p className="text-xs text-text-secondary">För intern användning</p>
+                </div>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </Link>
           </div>
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(`<script src="https://cdn.bobot.nu/widget.js"></script>\n<script>\n  Bobot.init({\n    companyId: "${auth.companyId}"\n  });\n</script>`)
-            }}
-            className="btn btn-primary mt-4"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-            </svg>
-            Kopiera kod
-          </button>
+          <p className="text-xs text-text-tertiary mt-4">
+            Installationskod finns under varje widgets inställningar → Installera-fliken
+          </p>
         </div>
       </div>
     </div>

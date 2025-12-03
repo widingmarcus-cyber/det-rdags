@@ -3,11 +3,11 @@ import { NavLink } from 'react-router-dom'
 function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode }) {
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: 'chart' },
-    { to: '/widget/external', label: 'Extern Widget', icon: 'external' },
-    { to: '/widget/internal', label: 'Intern Widget', icon: 'internal' },
+    { to: '/widget/external', label: 'Kundtjänst', icon: 'external' },
+    { to: '/widget/internal', label: 'Medarbetarstöd', icon: 'internal' },
     { to: '/conversations', label: 'Konversationer', icon: 'messages' },
     { to: '/analytics', label: 'Statistik', icon: 'analytics' },
-    { to: '/settings', label: 'Inställningar', icon: 'settings' },
+    { to: '/settings', label: 'Företagsinställningar', icon: 'settings' },
     { to: '/documentation', label: 'Dokumentation', icon: 'docs' },
   ]
 

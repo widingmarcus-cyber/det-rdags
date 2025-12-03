@@ -5,32 +5,19 @@ const API_BASE = '/api'
 
 function Settings() {
   const { auth, authFetch } = useContext(AuthContext)
-  const [activeTab, setActiveTab] = useState('general')
+  const [activeTab, setActiveTab] = useState('notifications')
   const [settings, setSettings] = useState({
     company_name: '',
-    welcome_message: 'Hej! Hur kan jag hjälpa dig idag?',
-    fallback_message: 'Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt.',
-    subtitle: 'Alltid redo att hjälpa',
-    primary_color: '#D97757',
-    contact_email: '',
-    contact_phone: '',
     data_retention_days: 30,
     notify_unanswered: false,
     notification_email: '',
-    custom_categories: '',
+    contact_email: '', // Still needed for notification fallback
     // PuB/GDPR Compliance
     privacy_policy_url: '',
     require_consent: true,
     consent_text: 'Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.',
     data_controller_name: '',
     data_controller_email: '',
-    // Widget Typography & Style
-    widget_font_family: 'Inter',
-    widget_font_size: 14,
-    widget_border_radius: 16,
-    widget_position: 'bottom-right',
-    // Quick Reply Suggestions
-    suggested_questions: '',
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -38,12 +25,10 @@ function Settings() {
   const [copied, setCopied] = useState(false)
 
   const tabs = [
-    { id: 'general', label: 'Allmänt', icon: 'building' },
     { id: 'notifications', label: 'Notiser', icon: 'bell' },
     { id: 'privacy', label: 'Integritet', icon: 'shield' },
     { id: 'compliance', label: 'Compliance', icon: 'badge' },
     { id: 'activity', label: 'Aktivitet', icon: 'clock' },
-    { id: 'install', label: 'Installation', icon: 'code' },
   ]
 
   const [activityLogs, setActivityLogs] = useState([])
@@ -183,8 +168,8 @@ function Settings() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Inställningar</h1>
-          <p className="text-text-secondary mt-1">Hantera företagsinställningar och GDPR</p>
+          <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Företagsinställningar</h1>
+          <p className="text-text-secondary mt-1">Hantera GDPR, notiser och compliance</p>
         </div>
         <div className="flex items-center gap-3">
           {saved && (
@@ -229,51 +214,6 @@ function Settings() {
 
         {/* Content Area */}
         <div className="flex-1 min-w-0">
-          {/* General Tab */}
-          {activeTab === 'general' && (
-            <div className="card animate-fade-in">
-              <h2 className="text-lg font-medium text-text-primary mb-6">Företagsinformation</h2>
-              <div className="space-y-5">
-                <div>
-                  <label className="input-label">Företagsnamn</label>
-                  <input
-                    type="text"
-                    value={settings.company_name}
-                    onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
-                    placeholder="T.ex. Bostadsbolaget AB"
-                    className="input"
-                  />
-                  <p className="text-xs text-text-tertiary mt-1">Visas i widgetens header</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="input-label">E-post för kontakt</label>
-                    <input
-                      type="email"
-                      value={settings.contact_email}
-                      onChange={(e) => setSettings({ ...settings, contact_email: e.target.value })}
-                      placeholder="kundtjanst@foretag.se"
-                      className="input"
-                    />
-                  </div>
-                  <div>
-                    <label className="input-label">Telefon för kontakt</label>
-                    <input
-                      type="tel"
-                      value={settings.contact_phone}
-                      onChange={(e) => setSettings({ ...settings, contact_phone: e.target.value })}
-                      placeholder="08-123 456 78"
-                      className="input"
-                    />
-                  </div>
-                </div>
-                <p className="text-xs text-text-tertiary">
-                  Kontaktuppgifterna visas när chatboten inte kan svara på en fråga
-                </p>
-              </div>
-            </div>
-          )}
-
           {/* Notifications Tab */}
           {activeTab === 'notifications' && (
             <div className="card animate-fade-in">
