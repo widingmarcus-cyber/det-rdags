@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AuthContext } from '../App'
 
 const API_BASE = '/api'
@@ -9,8 +10,16 @@ const WIDGET_TYPES = [
   { value: 'internal', label: 'Medarbetarstöd' }
 ]
 
+const FEEDBACK_TYPES = [
+  { value: '', label: 'All feedback' },
+  { value: 'helpful', label: '👍 Hjälpsam' },
+  { value: 'not_helpful', label: '👎 Ej hjälpsam' },
+  { value: 'none', label: 'Ingen feedback' }
+]
+
 function Conversations() {
   const { authFetch } = useContext(AuthContext)
+  const [searchParams, setSearchParams] = useSearchParams()
   const [conversations, setConversations] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedConversation, setSelectedConversation] = useState(null)
@@ -18,6 +27,7 @@ function Conversations() {
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [widgetTypeFilter, setWidgetTypeFilter] = useState('')
+  const [feedbackFilter, setFeedbackFilter] = useState(searchParams.get('feedback') || '')
   const [error, setError] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [categories, setCategories] = useState([{ value: '', label: 'Alla kategorier' }])
@@ -25,11 +35,22 @@ function Conversations() {
   useEffect(() => {
     fetchConversations()
     fetchCategories()
+    // Read feedback filter from URL on mount
+    const urlFeedback = searchParams.get('feedback')
+    if (urlFeedback) {
+      setFeedbackFilter(urlFeedback)
+    }
   }, [])
 
   useEffect(() => {
     fetchConversations()
-  }, [categoryFilter, widgetTypeFilter])
+    // Update URL when feedback filter changes
+    if (feedbackFilter) {
+      setSearchParams({ feedback: feedbackFilter })
+    } else {
+      setSearchParams({})
+    }
+  }, [categoryFilter, widgetTypeFilter, feedbackFilter])
 
   const fetchCategories = async () => {
     try {
@@ -53,6 +74,7 @@ function Conversations() {
       const params = new URLSearchParams()
       if (categoryFilter) params.append('category', categoryFilter)
       if (widgetTypeFilter) params.append('widget_type', widgetTypeFilter)
+      if (feedbackFilter) params.append('feedback', feedbackFilter)
       if (params.toString()) url += `?${params.toString()}`
 
       const response = await authFetch(url)
@@ -276,7 +298,46 @@ function Conversations() {
             <option key={wt.value} value={wt.value}>{wt.label}</option>
           ))}
         </select>
+        <select
+          value={feedbackFilter}
+          onChange={(e) => setFeedbackFilter(e.target.value)}
+          className={`input w-auto min-w-[150px] ${
+            feedbackFilter === 'helpful' ? 'border-success text-success' :
+            feedbackFilter === 'not_helpful' ? 'border-error text-error' : ''
+          }`}
+        >
+          {FEEDBACK_TYPES.map(fb => (
+            <option key={fb.value} value={fb.value}>{fb.label}</option>
+          ))}
+        </select>
       </div>
+
+      {/* Active filter indicator */}
+      {feedbackFilter && (
+        <div className={`mb-4 px-4 py-2 rounded-lg flex items-center justify-between ${
+          feedbackFilter === 'helpful' ? 'bg-success/10 border border-success/20' :
+          feedbackFilter === 'not_helpful' ? 'bg-error/10 border border-error/20' :
+          'bg-bg-secondary'
+        }`}>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">
+              {feedbackFilter === 'helpful' ? '👍' : feedbackFilter === 'not_helpful' ? '👎' : '🤷'}
+            </span>
+            <span className="text-sm text-text-primary">
+              Visar konversationer med {feedbackFilter === 'helpful' ? 'positiv' : feedbackFilter === 'not_helpful' ? 'negativ' : 'ingen'} feedback
+            </span>
+          </div>
+          <button
+            onClick={() => setFeedbackFilter('')}
+            className="text-text-tertiary hover:text-text-primary transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-12">

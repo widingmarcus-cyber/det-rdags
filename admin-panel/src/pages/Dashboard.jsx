@@ -264,10 +264,7 @@ function Dashboard() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-4 text-xs text-text-tertiary">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-accent"></span> Frågor
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-success"></span> Besvarade
+                  <span className="w-2.5 h-2.5 rounded-sm bg-accent"></span> Konversationer
                 </span>
               </div>
               <div className="flex rounded-lg bg-bg-secondary p-1">
@@ -288,29 +285,34 @@ function Dashboard() {
               </div>
             </div>
           </div>
-          <div className="h-40 flex items-end gap-2">
+          <div className="h-32 flex items-end gap-1">
             {dailyStats.map((day, i) => {
               const maxQuestions = Math.max(...dailyStats.map(d => d.questions || 0), 1)
-              const questionHeight = ((day.questions || 0) / maxQuestions) * 100
-              const answeredHeight = ((day.answered || 0) / maxQuestions) * 100
+              const questionHeight = Math.max(((day.questions || 0) / maxQuestions) * 100, 0)
               const date = new Date(day.date)
-              const dayName = date.toLocaleDateString('sv-SE', { weekday: 'short' })
+              const dayNum = date.getDate()
+              const isWeekend = date.getDay() === 0 || date.getDay() === 6
 
               return (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full flex items-end gap-1 h-32">
+                <div key={i} className="flex-1 flex flex-col items-center group" title={`${date.toLocaleDateString('sv-SE')}: ${day.questions || 0} konversationer`}>
+                  <div className="w-full h-24 flex items-end">
                     <div
-                      className="flex-1 bg-accent/20 rounded-t transition-all hover:bg-accent/30"
-                      style={{ height: `${questionHeight}%`, minHeight: day.questions ? '4px' : '0' }}
-                      title={`${day.questions || 0} frågor`}
-                    />
-                    <div
-                      className="flex-1 bg-success/30 rounded-t transition-all hover:bg-success/40"
-                      style={{ height: `${answeredHeight}%`, minHeight: day.answered ? '4px' : '0' }}
-                      title={`${day.answered || 0} besvarade`}
+                      className={`w-full rounded-t transition-all ${
+                        day.questions > 0
+                          ? 'bg-accent hover:bg-accent/80'
+                          : 'bg-bg-secondary'
+                      }`}
+                      style={{ height: day.questions > 0 ? `${Math.max(questionHeight, 4)}%` : '2px' }}
                     />
                   </div>
-                  <span className="text-xs text-text-tertiary capitalize">{dayName}</span>
+                  {chartPeriod === 7 && (
+                    <span className={`text-xs mt-1 ${isWeekend ? 'text-text-tertiary' : 'text-text-secondary'}`}>
+                      {date.toLocaleDateString('sv-SE', { weekday: 'short' })}
+                    </span>
+                  )}
+                  {chartPeriod === 30 && i % 5 === 0 && (
+                    <span className="text-xs text-text-tertiary mt-1">{dayNum}</span>
+                  )}
                 </div>
               )
             })}

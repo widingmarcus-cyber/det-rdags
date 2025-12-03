@@ -1009,7 +1009,7 @@ function LandingPage() {
       </nav>
 
       {/* Hanging mascot positioned near login button */}
-      <div className="fixed top-0 right-[calc(50%-620px)] z-50"><HangingMascot mousePos={mousePos} isVisible={loginHover} /></div>
+      <div className="fixed top-0 right-[calc(50%-770px)] z-50"><HangingMascot mousePos={mousePos} isVisible={loginHover} /></div>
       <PeekingMascot mousePos={mousePos} isVisible={currentSection === 2} />
 
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-10">

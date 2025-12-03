@@ -2998,7 +2998,8 @@ async def get_conversations(
     offset: int = Query(0, ge=0, description="Number of items to skip"),
     category: Optional[str] = None,
     language: Optional[str] = None,
-    widget_type: Optional[str] = None
+    widget_type: Optional[str] = None,
+    feedback: Optional[str] = None
 ):
     """Hämta konversationer för inloggat företag"""
     query = db.query(Conversation).filter(
@@ -3012,6 +3013,15 @@ async def get_conversations(
     # Filter by language if provided
     if language:
         query = query.filter(Conversation.language == language)
+
+    # Filter by feedback if provided
+    if feedback:
+        if feedback == "helpful":
+            query = query.filter(Conversation.was_helpful == True)
+        elif feedback == "not_helpful":
+            query = query.filter(Conversation.was_helpful == False)
+        elif feedback == "none":
+            query = query.filter(Conversation.was_helpful == None)
 
     # Filter by widget_type if provided
     if widget_type:
