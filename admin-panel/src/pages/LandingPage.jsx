@@ -341,7 +341,7 @@ function ChatWidget({ messages, label, className = "", startDelay = 0 }) {
         </div>
         {label && <span className="bg-white/25 text-white font-medium text-xs px-2 py-0.5 rounded-full">{label}</span>}
       </div>
-      <div className="p-3 space-y-2 bg-stone-100 dark:bg-stone-900 h-[150px] overflow-hidden">
+      <div className="p-3 space-y-1.5 bg-stone-100 dark:bg-stone-900 h-[180px] overflow-hidden">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'} transition-opacity duration-300 ${visibleMessages.includes(i) ? 'opacity-100' : 'opacity-0'}`}>
             <div className={`max-w-[85%] rounded-xl px-2.5 py-1.5 text-sm ${msg.from === 'user' ? 'bg-[#D97757] text-white rounded-br-sm' : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm rounded-bl-sm'}`}>
