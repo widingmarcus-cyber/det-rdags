@@ -191,8 +191,15 @@ function PeekingMascot({ mousePos = { x: 0.5, y: 0.5 }, isVisible = false }) {
 
   return (
     <div className={`fixed bottom-0 left-6 z-50 transition-all duration-700 ease-out ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}>
-      <svg width="100" height="120" viewBox="0 0 60 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg width="100" height="140" viewBox="-8 -18 76 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Antenna */}
+        <rect x="28" y="-10" width="4" height="12" rx="2" fill="#78716C" />
+        <circle cx="30" cy="-12" r="5" fill="#4A9D7C">
+          <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite" />
+        </circle>
+        {/* Head */}
         <rect x="8" y="0" width="44" height="24" rx="3" fill="#D97757" />
+        {/* Eyes */}
         <ellipse cx="20" cy="12" rx="9" ry="8" fill="#1C1917" />
         <ellipse cx="40" cy="12" rx="9" ry="8" fill="#1C1917" />
         <ellipse cx="20" cy="12" rx="7" ry="6" fill="#292524" />
@@ -209,24 +216,27 @@ function PeekingMascot({ mousePos = { x: 0.5, y: 0.5 }, isVisible = false }) {
         <circle cx={41 + pupilOffsetX * 0.5} cy={10 + pupilOffsetY * 0.5} r="2" fill="#FEF2EE">
           <animate attributeName="opacity" values="1;0;1;1;1" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
         </circle>
+        {/* Nose */}
         <rect x="26" y="8" width="8" height="6" rx="1" fill="#78716C" />
-        <rect x="28" y="-10" width="4" height="12" rx="2" fill="#78716C" />
-        <circle cx="30" cy="-12" r="5" fill="#4A9D7C">
-          <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite" />
-        </circle>
+        {/* Neck */}
         <rect x="23" y="22" width="14" height="8" rx="2" fill="#78716C" />
+        {/* Body */}
         <rect x="10" y="28" width="40" height="28" rx="3" fill="#D97757" />
         <rect x="12" y="30" width="36" height="24" rx="2" fill="#C4613D" />
+        {/* Body lights */}
         <rect x="15" y="34" width="12" height="10" rx="1" fill="#1C1917" />
         <rect x="33" y="34" width="12" height="10" rx="1" fill="#1C1917" />
-        <rect x="-2" y="32" width="14" height="5" rx="2" fill="#78716C">
-          <animateTransform attributeName="transform" type="rotate" values="0 10 34;-45 10 34;0 10 34" dur="1.5s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
+        {/* Left arm (static) */}
+        <rect x="-2" y="32" width="14" height="5" rx="2" fill="#78716C" />
+        <rect x="-6" y="28" width="6" height="12" rx="2" fill="#57534E" />
+        {/* Right arm (waving) */}
+        <rect x="48" y="32" width="14" height="5" rx="2" fill="#78716C">
+          <animateTransform attributeName="transform" type="rotate" values="0 50 34;-45 50 34;0 50 34" dur="1.5s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
         </rect>
-        <rect x="-6" y="28" width="6" height="12" rx="2" fill="#57534E">
-          <animateTransform attributeName="transform" type="rotate" values="0 10 34;-45 10 34;0 10 34" dur="1.5s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
+        <rect x="60" y="28" width="6" height="12" rx="2" fill="#57534E">
+          <animateTransform attributeName="transform" type="rotate" values="0 50 34;-45 50 34;0 50 34" dur="1.5s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1" />
         </rect>
-        <rect x="48" y="32" width="14" height="5" rx="2" fill="#78716C" />
-        <rect x="60" y="28" width="6" height="12" rx="2" fill="#57534E" />
+        {/* Feet */}
         <rect x="12" y="56" width="16" height="16" rx="4" fill="#78716C" />
         <rect x="32" y="56" width="16" height="16" rx="4" fill="#78716C" />
       </svg>
@@ -765,7 +775,7 @@ function LandingPage() {
             ))}
           </div>
 
-          <div className="mt-12 text-center">
+          <div className="mt-12 mb-8 text-center">
             <p className="text-stone-600 dark:text-stone-400 mb-4">Hittar du inte svaret på din fråga?</p>
             <a href="mailto:hej@bobot.nu" className="inline-flex items-center gap-2 bg-[#D97757] hover:bg-[#c4613d] text-white px-6 py-3 rounded-xl font-medium transition-all hover:scale-105">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
@@ -783,7 +793,7 @@ function LandingPage() {
                   <BobotMini />
                   <span className="text-lg font-semibold text-stone-900 dark:text-stone-100">Bobot</span>
                 </div>
-                <p className="text-sm text-stone-500 dark:text-stone-400">AI-chatbot för fastighetsbolag och organisationer. GDPR-kompatibel och enkel att integrera.</p>
+                <p className="text-sm text-stone-500 dark:text-stone-400">AI-driven kundservice och intern kunskapsassistent. GDPR-säker och enkel att integrera.</p>
               </div>
               <div>
                 <h4 className="font-semibold text-stone-900 dark:text-stone-100 mb-4">Produkt</h4>
@@ -797,7 +807,6 @@ function LandingPage() {
                 <h4 className="font-semibold text-stone-900 dark:text-stone-100 mb-4">Kontakt</h4>
                 <ul className="space-y-2 text-sm text-stone-500 dark:text-stone-400">
                   <li><a href="mailto:hej@bobot.nu" className="hover:text-[#D97757] transition-colors">hej@bobot.nu</a></li>
-                  <li><span>Stockholm, Sverige</span></li>
                 </ul>
               </div>
             </div>
