@@ -3106,10 +3106,10 @@ async def get_conversation(
 
     return ConversationResponse(
         id=conversation.id,
-        session_id=conversation.session_id,
+        session_id=conversation.session_id or f"session-{conversation.id}",
         reference_id=conversation.reference_id or f"BOB-{conversation.id:04d}",
         started_at=conversation.started_at,
-        message_count=conversation.message_count,
+        message_count=conversation.message_count or 0,
         was_helpful=conversation.was_helpful,
         category=conversation.category,
         language=conversation.language,
