@@ -679,19 +679,23 @@ function ChatWidget({ config }) {
 
           {/* Messages */}
           <div style={{
-            flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: 16, background: theme.bg,
+            flex: 1, overflowY: 'auto', overflow: 'hidden', padding: 16, background: theme.bg,
+            width: '100%', boxSizing: 'border-box', minWidth: 0,
           }}>
             {messages.map((msg, i) => (
               <div key={msg.id} className="bobot-msg" style={{
                 marginBottom: 16,
                 display: 'flex',
                 width: '100%',
+                maxWidth: '100%',
                 boxSizing: 'border-box',
+                minWidth: 0,
                 justifyContent: msg.type === 'user' ? (isRTL ? 'flex-start' : 'flex-end') : (isRTL ? 'flex-end' : 'flex-start'),
               }}>
                 <div style={{
                   maxWidth: '85%',
                   boxSizing: 'border-box',
+                  overflow: 'hidden',
                   padding: '12px 16px',
                   borderRadius: borderRadius - 4,
                   fontSize: fontSize,
