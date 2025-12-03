@@ -708,9 +708,9 @@ function LandingPage() {
             </div>
 
             {/* Dual chat widgets */}
-            <div className={`flex flex-col lg:flex-row gap-4 pt-4 transition-all duration-1000 delay-300 ${contentVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-              <ChatWidget messages={customerConvo} label="Kund" startDelay={800} compact className="hover:scale-[1.02] transition-transform" />
-              <ChatWidget messages={employeeConvo} label="Anställd" startDelay={2500} compact className="hover:scale-[1.02] transition-transform lg:mt-12" />
+            <div className={`flex flex-col lg:flex-row gap-6 pt-4 transition-all duration-1000 delay-300 ${contentVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
+              <ChatWidget messages={customerConvo} label="Kund" startDelay={800} className="hover:scale-[1.02] transition-transform" />
+              <ChatWidget messages={employeeConvo} label="Anställd" startDelay={2500} className="hover:scale-[1.02] transition-transform lg:mt-8" />
             </div>
           </div>
         </div>
