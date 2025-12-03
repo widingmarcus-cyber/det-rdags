@@ -2318,20 +2318,31 @@ async def chat_via_widget_key(
     db.add(user_message)
     conversation.message_count += 1
 
-    # Find relevant context from widget-specific knowledge base
-    start_time = time.time()
-    relevant_items = find_relevant_context(request.question, company_id, db, widget_id=widget.id)
+    # Get company settings for building the prompt
+    settings = get_or_create_settings(db, company_id)
 
-    # Build prompt and get AI response
-    prompt = build_prompt(request.question, relevant_items, language)
-    answer = await get_ai_response(prompt)
-    response_time = int((time.time() - start_time) * 1000)
+    # Check if this is just a greeting (no actual question)
+    if is_greeting(request.question):
+        # Respond warmly to greetings without hitting the knowledge base
+        answer = get_greeting_response(language, settings.company_name)
+        response_time = 0
+        had_answer = True
+        relevant_items = []
+    else:
+        # Find relevant context from widget-specific knowledge base
+        start_time = time.time()
+        relevant_items = find_relevant_context(request.question, company_id, db, widget_id=widget.id)
 
-    # Check if we had a real answer
-    had_answer = bool(relevant_items) and not is_fallback_response(answer, widget.fallback_message)
+        # Build prompt and get AI response
+        prompt = build_prompt(request.question, relevant_items, settings=settings, language=language, widget_type=widget.widget_type)
+        answer = await get_ai_response(prompt)
+        response_time = int((time.time() - start_time) * 1000)
 
-    if not had_answer:
-        answer = widget.fallback_message or "Tyvärr kunde jag inte hitta ett svar på din fråga."
+        # Check if we had a real answer
+        had_answer = bool(relevant_items) and not is_fallback_response(answer, widget.fallback_message)
+
+        if not had_answer:
+            answer = widget.fallback_message or "Tyvärr kunde jag inte hitta ett svar på din fråga."
 
     # Save bot message
     sources = [{"question": item.question, "category": item.category} for item in relevant_items[:3]]
