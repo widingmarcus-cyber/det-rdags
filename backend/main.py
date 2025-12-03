@@ -1936,6 +1936,12 @@ async def get_widget_config(
     }
 
 
+@app.get("/public/pricing-tiers")
+async def get_public_pricing_tiers(db: Session = Depends(get_db)):
+    """Get pricing tiers for public display (landing page)"""
+    return get_pricing_tiers_dict(db)
+
+
 # =============================================================================
 # Settings Endpoints (Autentiserade)
 # =============================================================================

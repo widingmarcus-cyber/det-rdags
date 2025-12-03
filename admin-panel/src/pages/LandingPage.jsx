@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
 // Full-size Bobot mascot with eyes that follow cursor
 function BobotMascot({ className = "", size = 160, mousePos = { x: 0.5, y: 0.5 }, isWaving = false }) {
   const pupilOffsetX = (mousePos.x - 0.5) * 8
@@ -316,18 +318,103 @@ function ChatWidget({ messages, label, className = "", startDelay = 0 }) {
   )
 }
 
-// How it works step component
-function HowItWorksStep({ number, title, description, icon }) {
+// Scroll indicator arrow
+function ScrollIndicator({ onClick }) {
   return (
-    <div className="flex flex-col items-center text-center p-6">
-      <div className="w-16 h-16 bg-[#D97757]/10 dark:bg-[#D97757]/20 rounded-2xl flex items-center justify-center mb-4">
-        {icon}
+    <button
+      onClick={onClick}
+      className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-stone-400 dark:text-stone-500 hover:text-[#D97757] transition-colors animate-bounce cursor-pointer z-20"
+    >
+      <span className="text-sm font-medium">Scrolla ner</span>
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+      </svg>
+    </button>
+  )
+}
+
+// Section navigation dots
+function SectionDots({ currentSection, totalSections, onNavigate }) {
+  return (
+    <div className="fixed right-6 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-3">
+      {Array.from({ length: totalSections }).map((_, i) => (
+        <button
+          key={i}
+          onClick={() => onNavigate(i)}
+          className={`w-3 h-3 rounded-full transition-all duration-300 ${
+            currentSection === i
+              ? 'bg-[#D97757] scale-125'
+              : 'bg-stone-300 dark:bg-stone-600 hover:bg-stone-400 dark:hover:bg-stone-500'
+          }`}
+          aria-label={`Gå till sektion ${i + 1}`}
+        />
+      ))}
+    </div>
+  )
+}
+
+// Format price with spaces for thousands
+function formatPrice(price) {
+  return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+}
+
+// Pricing card component
+function PricingCard({ tier, isPopular = false }) {
+  const isEnterprise = tier.max_conversations === 0
+
+  return (
+    <div className={`rounded-2xl p-6 lg:p-8 transition-all duration-300 hover:scale-[1.02] ${
+      isPopular
+        ? 'bg-gradient-to-b from-[#D97757] to-[#c4613d] shadow-xl shadow-[#D97757]/20 relative'
+        : 'bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 shadow-sm'
+    }`}>
+      {isPopular && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-stone-900 text-white text-xs font-medium px-3 py-1 rounded-full">
+          Populärast
+        </div>
+      )}
+      <h3 className={`text-xl font-semibold mb-2 ${isPopular ? 'text-white' : 'text-stone-900 dark:text-stone-100'}`}>
+        {tier.name}
+      </h3>
+      <div className="mb-4">
+        {isEnterprise ? (
+          <span className={`text-3xl font-bold ${isPopular ? 'text-white' : 'text-stone-900 dark:text-stone-100'}`}>
+            Offert
+          </span>
+        ) : (
+          <>
+            <span className={`text-3xl font-bold ${isPopular ? 'text-white' : 'text-stone-900 dark:text-stone-100'}`}>
+              {formatPrice(tier.monthly_fee)}
+            </span>
+            <span className={isPopular ? 'text-white/70' : 'text-stone-500 dark:text-stone-400'}> kr/mån</span>
+          </>
+        )}
       </div>
-      <div className="w-8 h-8 bg-[#D97757] text-white rounded-full flex items-center justify-center text-sm font-bold mb-3">
-        {number}
-      </div>
-      <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100 mb-2">{title}</h3>
-      <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">{description}</p>
+      {tier.startup_fee > 0 && (
+        <p className={`text-sm mb-4 ${isPopular ? 'text-white/80' : 'text-stone-500 dark:text-stone-400'}`}>
+          + {formatPrice(tier.startup_fee)} kr uppstartsavgift
+        </p>
+      )}
+      <ul className={`space-y-3 text-sm mb-6 ${isPopular ? 'text-white/90' : 'text-stone-600 dark:text-stone-400'}`}>
+        {tier.features?.map((feature, i) => (
+          <li key={i} className="flex items-start gap-2">
+            <svg className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isPopular ? 'text-white' : 'text-[#D97757]'}`} fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+            {feature}
+          </li>
+        ))}
+      </ul>
+      <a
+        href={`mailto:hej@bobot.nu?subject=${encodeURIComponent(tier.name + '-plan')}`}
+        className={`block w-full text-center py-3 rounded-xl font-medium transition-colors ${
+          isPopular
+            ? 'bg-white text-[#D97757] hover:bg-stone-100'
+            : 'border-2 border-[#D97757] text-[#D97757] hover:bg-[#D97757]/10'
+        }`}
+      >
+        {isEnterprise ? 'Kontakta oss' : 'Kom igång'}
+      </a>
     </div>
   )
 }
@@ -338,6 +425,8 @@ function LandingPage() {
   const [loginHover, setLoginHover] = useState(false)
   const [ctaHover, setCtaHover] = useState(false)
   const [contentVisible, setContentVisible] = useState(false)
+  const [currentSection, setCurrentSection] = useState(0)
+  const [pricingTiers, setPricingTiers] = useState(null)
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
       return document.documentElement.classList.contains('dark')
@@ -345,6 +434,26 @@ function LandingPage() {
     return false
   })
   const containerRef = useRef(null)
+  const sectionsRef = useRef([])
+  const isScrollingRef = useRef(false)
+
+  const totalSections = 3
+
+  // Fetch pricing tiers from API
+  useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        const response = await fetch(`${API_URL}/public/pricing-tiers`)
+        if (response.ok) {
+          const data = await response.json()
+          setPricingTiers(data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch pricing:', error)
+      }
+    }
+    fetchPricing()
+  }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => setContentVisible(true), 300)
@@ -364,6 +473,36 @@ function LandingPage() {
     return () => window.removeEventListener('mousemove', handleMouseMove)
   }, [])
 
+  // Handle scroll snap sections
+  useEffect(() => {
+    const handleScroll = () => {
+      if (isScrollingRef.current) return
+
+      const scrollY = window.scrollY
+      const windowHeight = window.innerHeight
+      const newSection = Math.round(scrollY / windowHeight)
+
+      if (newSection !== currentSection && newSection >= 0 && newSection < totalSections) {
+        setCurrentSection(newSection)
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [currentSection])
+
+  const navigateToSection = (index) => {
+    isScrollingRef.current = true
+    setCurrentSection(index)
+    window.scrollTo({
+      top: index * window.innerHeight,
+      behavior: 'smooth'
+    })
+    setTimeout(() => {
+      isScrollingRef.current = false
+    }, 800)
+  }
+
   const toggleTheme = () => {
     const newDark = !isDark
     setIsDark(newDark)
@@ -381,11 +520,6 @@ function LandingPage() {
     { from: 'bot', text: 'Ja, husdjur är tillåtna i våra fastigheter så länge de inte stör grannar eller skadar lägenheten.' },
   ]
 
-  const convo2 = [
-    { from: 'user', text: 'Vad är policyn för semester?' },
-    { from: 'bot', text: 'Du har rätt till minst 25 semesterdagar per år. Ansök via HR-portalen senast 4 veckor innan.' },
-  ]
-
   const sellingPoints = [
     'Avlastar medarbetare',
     'Alltid tillgänglig',
@@ -397,22 +531,57 @@ function LandingPage() {
     'Självlärande AI',
   ]
 
+  // How it works steps with detailed content
+  const howItWorksSteps = [
+    {
+      number: 1,
+      title: 'Bygg din kunskapsbank',
+      description: 'Ladda upp befintliga dokument som Word, Excel, PDF eller CSV. Du kan också skriva frågor och svar manuellt, eller importera direkt från en webbsida. Bobot lär sig automatiskt och blir smartare med tiden.',
+      icon: (
+        <svg className="w-12 h-12 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+        </svg>
+      ),
+      features: ['Word, Excel, PDF, CSV', 'Manuell inmatning', 'URL-import', 'Automatisk inlärning']
+    },
+    {
+      number: 2,
+      title: 'Integrera på din sida',
+      description: 'Kopiera en enda rad JavaScript-kod och klistra in på din hemsida. Widgeten anpassar sig automatiskt efter ditt varumärke med färger och logotyp. Fungerar med alla webbplattformar.',
+      icon: (
+        <svg className="w-12 h-12 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
+        </svg>
+      ),
+      features: ['En rad kod', 'Anpassningsbara färger', 'Alla webbplattformar', 'WordPress, Wix, m.fl.']
+    },
+    {
+      number: 3,
+      title: 'Bobot svarar åt dig',
+      description: 'Dina kunder och anställda får svar direkt, dygnet runt på alla språk. Följ upp via dashboarden med detaljerad statistik och analys. Se vilka frågor som ställs mest och förbättra kontinuerligt.',
+      icon: (
+        <svg className="w-12 h-12 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+        </svg>
+      ),
+      features: ['24/7 tillgänglighet', 'Flerspråkigt stöd', 'Realtidsstatistik', 'Kontinuerlig förbättring']
+    }
+  ]
+
+  // Get tiers in display order for pricing section
+  const orderedTiers = pricingTiers ?
+    Object.entries(pricingTiers)
+      .map(([key, tier]) => ({ key, ...tier }))
+      .sort((a, b) => (a.monthly_fee || 0) - (b.monthly_fee || 0))
+    : []
+
   return (
-    <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-stone-50 via-orange-50/30 to-stone-50 dark:from-stone-900 dark:via-stone-800 dark:to-stone-900 flex flex-col relative overflow-x-hidden">
+    <div ref={containerRef} className="bg-gradient-to-br from-stone-50 via-orange-50/30 to-stone-50 dark:from-stone-900 dark:via-stone-800 dark:to-stone-900 relative">
 
-      {/* Sparkles - visible in both light and dark mode */}
-      <Sparkle delay={0} size={3} className="top-20 left-[10%]" />
-      <Sparkle delay={500} size={4} className="top-32 right-[15%]" />
-      <Sparkle delay={1000} size={2} className="top-48 left-[25%]" />
-      <Sparkle delay={1500} size={3} className="bottom-32 right-[20%]" />
-      <Sparkle delay={800} size={3} className="top-40 right-[40%]" />
-      <Sparkle delay={1200} size={2} className="bottom-48 left-[15%]" />
-      <Sparkle delay={300} size={3} className="top-60 left-[45%]" />
-
-      {/* Navigation */}
-      <nav className="px-6 py-3 shrink-0 relative z-20">
+      {/* Fixed Navigation */}
+      <nav className="fixed top-0 left-0 right-0 px-6 py-3 z-50 bg-white/80 dark:bg-stone-900/80 backdrop-blur-lg border-b border-stone-200/50 dark:border-stone-700/50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigateToSection(0)}>
             <BobotMini />
             <span className="text-xl font-semibold text-stone-900 dark:text-stone-100 tracking-tight">Bobot</span>
           </div>
@@ -431,13 +600,30 @@ function LandingPage() {
         </div>
       </nav>
 
-      {/* Easter egg: Upside down mascot hanging from ceiling - fixed at top right */}
+      {/* Easter egg: Upside down mascot hanging from ceiling */}
       <div className="fixed top-0 right-6 z-50">
         <HangingMascot mousePos={mousePos} isVisible={loginHover} />
       </div>
 
-      {/* Main content */}
-      <main className="flex-1 px-4 sm:px-6 py-8 lg:py-0 lg:flex lg:items-center relative">
+      {/* Section navigation dots */}
+      <SectionDots currentSection={currentSection} totalSections={totalSections} onNavigate={navigateToSection} />
+
+      {/* Sparkles - visible in both light and dark mode */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-10">
+        <Sparkle delay={0} size={3} className="top-20 left-[10%]" />
+        <Sparkle delay={500} size={4} className="top-32 right-[15%]" />
+        <Sparkle delay={1000} size={2} className="top-48 left-[25%]" />
+        <Sparkle delay={1500} size={3} className="bottom-32 right-[20%]" />
+        <Sparkle delay={800} size={3} className="top-40 right-[40%]" />
+        <Sparkle delay={1200} size={2} className="bottom-48 left-[15%]" />
+        <Sparkle delay={300} size={3} className="top-60 left-[45%]" />
+      </div>
+
+      {/* SECTION 1: Hero - Din nya medarbetare */}
+      <section
+        ref={el => sectionsRef.current[0] = el}
+        className="min-h-screen flex flex-col justify-center px-4 sm:px-6 pt-20 relative"
+      >
         <div className="max-w-7xl mx-auto w-full">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
 
@@ -458,18 +644,18 @@ function LandingPage() {
               </div>
 
               <div className="lg:pl-4">
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-stone-900 dark:text-stone-100 tracking-tight leading-tight mb-3 sm:mb-4 text-center lg:text-left">
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-stone-900 dark:text-stone-100 tracking-tight leading-tight mb-4 sm:mb-6 text-center lg:text-left">
                   Din nya medarbetare, som alltid är där
                 </h1>
-                <p className="text-stone-600 dark:text-stone-400 mb-4 sm:mb-6 leading-relaxed text-center lg:text-left text-sm sm:text-base">
+                <p className="text-lg text-stone-600 dark:text-stone-400 mb-6 sm:mb-8 leading-relaxed text-center lg:text-left">
                   Bobot svarar på frågor från kunder och anställda. Direkt, dygnet runt.
                 </p>
 
                 {/* All selling points in one compact section */}
-                <div className="flex flex-wrap justify-center lg:justify-start gap-x-3 sm:gap-x-4 gap-y-2 text-xs sm:text-sm text-stone-500 dark:text-stone-400 mb-6 sm:mb-8">
+                <div className="flex flex-wrap justify-center lg:justify-start gap-x-4 gap-y-2 text-sm text-stone-500 dark:text-stone-400 mb-8 sm:mb-10">
                   {sellingPoints.map(point => (
-                    <span key={point} className="flex items-center gap-1 sm:gap-1.5">
-                      <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
+                    <span key={point} className="flex items-center gap-1.5">
+                      <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                       {point}
@@ -478,21 +664,21 @@ function LandingPage() {
                 </div>
 
                 {/* CTA Section */}
-                <div className="p-4 sm:p-6 bg-gradient-to-br from-[#D97757]/10 to-[#D97757]/5 dark:from-[#D97757]/20 dark:to-[#D97757]/10 rounded-2xl border border-[#D97757]/20">
-                  <h3 className="text-base sm:text-lg font-semibold text-stone-900 dark:text-stone-100 mb-2 text-center lg:text-left">
+                <div className="p-6 sm:p-8 bg-gradient-to-br from-[#D97757]/10 to-[#D97757]/5 dark:from-[#D97757]/20 dark:to-[#D97757]/10 rounded-2xl border border-[#D97757]/20">
+                  <h3 className="text-lg sm:text-xl font-semibold text-stone-900 dark:text-stone-100 mb-2 text-center lg:text-left">
                     Vill du veta mer?
                   </h3>
-                  <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-400 mb-3 sm:mb-4 text-center lg:text-left">
+                  <p className="text-sm sm:text-base text-stone-600 dark:text-stone-400 mb-4 text-center lg:text-left">
                     Boka en gratis demo och se hur Bobot kan hjälpa er organisation.
                   </p>
                   <div className="flex justify-center lg:justify-start">
                     <a
                       href="mailto:hej@bobot.nu"
-                      className="inline-flex items-center gap-2 bg-[#D97757] hover:bg-[#c4613d] text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium transition-all hover:scale-105 hover:shadow-xl shadow-lg shadow-[#D97757]/25 text-sm sm:text-base"
+                      className="inline-flex items-center gap-2 bg-[#D97757] hover:bg-[#c4613d] text-white px-6 py-3 rounded-xl font-medium transition-all hover:scale-105 hover:shadow-xl shadow-lg shadow-[#D97757]/25"
                       onMouseEnter={() => setCtaHover(true)}
                       onMouseLeave={() => setCtaHover(false)}
                     >
-                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
                       Kontakta oss
@@ -503,7 +689,7 @@ function LandingPage() {
             </div>
 
             {/* Right: Demo widget */}
-            <div className={`flex flex-col gap-4 sm:gap-6 pt-4 transition-all duration-1000 delay-300 ${contentVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
+            <div className={`flex flex-col gap-6 pt-4 transition-all duration-1000 delay-300 ${contentVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
               <ChatWidget
                 messages={convo1}
                 label="Kund"
@@ -513,204 +699,161 @@ function LandingPage() {
             </div>
           </div>
         </div>
-      </main>
 
-      {/* How it works section */}
-      <section className="px-4 sm:px-6 py-12 sm:py-16 bg-white/50 dark:bg-stone-800/50 border-t border-stone-200 dark:border-stone-700">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-xl sm:text-2xl font-semibold text-stone-900 dark:text-stone-100 text-center mb-8 sm:mb-12">
-            Så fungerar det
-          </h2>
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            {/* Left: Demo widget for internal use */}
-            <div className="flex justify-center lg:justify-start order-2 lg:order-1">
-              <ChatWidget
-                messages={convo2}
-                label="Anställd"
-                startDelay={500}
-                className="hover:scale-[1.02] transition-transform"
-              />
-            </div>
-            {/* Right: Steps */}
-            <div className="space-y-6 order-1 lg:order-2">
-              <HowItWorksStep
-                number={1}
-                title="Bygg din kunskapsbank"
-                description="Skriv frågor och svar manuellt eller importera från Excel, Word, CSV eller textfiler."
-                icon={
-                  <svg className="w-8 h-8 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                  </svg>
-                }
-              />
-              <HowItWorksStep
-                number={2}
-                title="Integrera på din sida"
-                description="Kopiera en enkel kodrad och klistra in på din hemsida. Klart på under 5 minuter."
-                icon={
-                  <svg className="w-8 h-8 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
-                  </svg>
-                }
-              />
-              <HowItWorksStep
-                number={3}
-                title="Bobot svarar åt dig"
-                description="Dina kunder och anställda får svar direkt, dygnet runt. Du följer upp via dashboarden."
-                icon={
-                  <svg className="w-8 h-8 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-                  </svg>
-                }
-              />
+        <ScrollIndicator onClick={() => navigateToSection(1)} />
+      </section>
+
+      {/* SECTION 2: Så fungerar det */}
+      <section
+        ref={el => sectionsRef.current[1] = el}
+        className="min-h-screen flex flex-col justify-center px-4 sm:px-6 py-20 bg-white/50 dark:bg-stone-800/50 relative"
+      >
+        <div className="max-w-6xl mx-auto w-full">
+          <div className="text-center mb-12 lg:mb-16">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-stone-900 dark:text-stone-100 mb-4">
+              Så fungerar det
+            </h2>
+            <p className="text-lg text-stone-600 dark:text-stone-400 max-w-2xl mx-auto">
+              Kom igång på under 10 minuter. Ingen teknisk kunskap krävs.
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-8 lg:gap-12">
+            {howItWorksSteps.map((step) => (
+              <div
+                key={step.number}
+                className="bg-white dark:bg-stone-800 rounded-2xl p-6 lg:p-8 shadow-lg border border-stone-200 dark:border-stone-700 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              >
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="w-16 h-16 bg-[#D97757]/10 dark:bg-[#D97757]/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+                    {step.icon}
+                  </div>
+                  <div className="w-10 h-10 bg-[#D97757] text-white rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0">
+                    {step.number}
+                  </div>
+                </div>
+                <h3 className="text-xl font-semibold text-stone-900 dark:text-stone-100 mb-3">
+                  {step.title}
+                </h3>
+                <p className="text-stone-600 dark:text-stone-400 mb-4 leading-relaxed">
+                  {step.description}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {step.features.map((feature, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1 text-xs bg-stone-100 dark:bg-stone-700 text-stone-600 dark:text-stone-300 px-2.5 py-1 rounded-full"
+                    >
+                      <svg className="w-3 h-3 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      {feature}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Integration logos / trust indicators */}
+          <div className="mt-12 lg:mt-16 text-center">
+            <p className="text-sm text-stone-500 dark:text-stone-400 mb-6">
+              Fungerar med alla webbplattformar
+            </p>
+            <div className="flex flex-wrap justify-center gap-8 items-center opacity-60">
+              <span className="text-lg font-semibold text-stone-400">WordPress</span>
+              <span className="text-lg font-semibold text-stone-400">Wix</span>
+              <span className="text-lg font-semibold text-stone-400">Squarespace</span>
+              <span className="text-lg font-semibold text-stone-400">Shopify</span>
+              <span className="text-lg font-semibold text-stone-400">Webflow</span>
             </div>
           </div>
         </div>
+
+        <ScrollIndicator onClick={() => navigateToSection(2)} />
       </section>
 
-      {/* Pricing section */}
-      <section className="px-4 sm:px-6 py-12 sm:py-16 border-t border-stone-200 dark:border-stone-700">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-xl sm:text-2xl font-semibold text-stone-900 dark:text-stone-100 text-center mb-3">
-            Enkel och transparent prissättning
-          </h2>
-          <p className="text-stone-600 dark:text-stone-400 text-center mb-8 sm:mb-12 max-w-2xl mx-auto">
-            Välj det paket som passar din organisation. Alla planer inkluderar obegränsade konversationer.
-          </p>
-          <div className="grid sm:grid-cols-3 gap-6">
-            {/* Starter */}
-            <div className="bg-white dark:bg-stone-800 rounded-2xl p-6 border border-stone-200 dark:border-stone-700 shadow-sm">
-              <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100 mb-2">Starter</h3>
-              <div className="mb-4">
-                <span className="text-3xl font-bold text-stone-900 dark:text-stone-100">990</span>
-                <span className="text-stone-500 dark:text-stone-400"> kr/mån</span>
-              </div>
-              <p className="text-sm text-stone-600 dark:text-stone-400 mb-6">Perfekt för små företag som vill testa.</p>
-              <ul className="space-y-3 text-sm text-stone-600 dark:text-stone-400 mb-6">
-                <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  100 kunskapsartiklar
-                </li>
-                <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  1 chattwidget
-                </li>
-                <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  E-postsupport
-                </li>
-              </ul>
-              <a href="mailto:hej@bobot.nu?subject=Starter-plan" className="block w-full text-center py-2.5 rounded-xl border-2 border-[#D97757] text-[#D97757] font-medium hover:bg-[#D97757]/10 transition-colors">
-                Kom igång
-              </a>
-            </div>
+      {/* SECTION 3: Pricing */}
+      <section
+        ref={el => sectionsRef.current[2] = el}
+        className="min-h-screen flex flex-col justify-center px-4 sm:px-6 py-20 relative"
+      >
+        <div className="max-w-6xl mx-auto w-full">
+          <div className="text-center mb-12 lg:mb-16">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-stone-900 dark:text-stone-100 mb-4">
+              Enkel och transparent prissättning
+            </h2>
+            <p className="text-lg text-stone-600 dark:text-stone-400 max-w-2xl mx-auto">
+              Välj det paket som passar din organisation. Inga dolda avgifter.
+            </p>
+          </div>
 
-            {/* Pro - Featured */}
-            <div className="bg-gradient-to-b from-[#D97757] to-[#c4613d] rounded-2xl p-6 shadow-xl relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-stone-900 text-white text-xs font-medium px-3 py-1 rounded-full">
-                Populärast
-              </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Pro</h3>
-              <div className="mb-4">
-                <span className="text-3xl font-bold text-white">2 490</span>
-                <span className="text-white/70"> kr/mån</span>
-              </div>
-              <p className="text-sm text-white/80 mb-6">För växande företag som behöver mer.</p>
-              <ul className="space-y-3 text-sm text-white/90 mb-6">
-                <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  500 kunskapsartiklar
-                </li>
-                <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  3 chattwidgets
-                </li>
-                <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Prioriterad support
-                </li>
-                <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Anpassade färger
-                </li>
-              </ul>
-              <a href="mailto:hej@bobot.nu?subject=Pro-plan" className="block w-full text-center py-2.5 rounded-xl bg-white text-[#D97757] font-medium hover:bg-stone-100 transition-colors">
-                Kom igång
-              </a>
+          {pricingTiers ? (
+            <div className={`grid gap-6 lg:gap-8 ${
+              orderedTiers.length === 2 ? 'sm:grid-cols-2 max-w-3xl mx-auto' :
+              orderedTiers.length === 3 ? 'sm:grid-cols-3' :
+              orderedTiers.length >= 4 ? 'sm:grid-cols-2 lg:grid-cols-4' :
+              'sm:grid-cols-1 max-w-md mx-auto'
+            }`}>
+              {orderedTiers.map((tier, index) => (
+                <PricingCard
+                  key={tier.key}
+                  tier={tier}
+                  isPopular={index === 1 && orderedTiers.length >= 3}
+                />
+              ))}
             </div>
+          ) : (
+            <div className="flex justify-center">
+              <div className="animate-pulse text-stone-400">Laddar priser...</div>
+            </div>
+          )}
 
-            {/* Enterprise */}
-            <div className="bg-white dark:bg-stone-800 rounded-2xl p-6 border border-stone-200 dark:border-stone-700 shadow-sm">
-              <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100 mb-2">Enterprise</h3>
-              <div className="mb-4">
-                <span className="text-3xl font-bold text-stone-900 dark:text-stone-100">Offert</span>
-              </div>
-              <p className="text-sm text-stone-600 dark:text-stone-400 mb-6">Skräddarsytt för stora organisationer.</p>
-              <ul className="space-y-3 text-sm text-stone-600 dark:text-stone-400 mb-6">
-                <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Obegränsade artiklar
-                </li>
-                <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Obegränsade widgets
-                </li>
-                <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Dedikerad kontaktperson
-                </li>
-                <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  SLA & API-access
-                </li>
-              </ul>
-              <a href="mailto:hej@bobot.nu?subject=Enterprise-förfrågan" className="block w-full text-center py-2.5 rounded-xl border-2 border-[#D97757] text-[#D97757] font-medium hover:bg-[#D97757]/10 transition-colors">
-                Kontakta oss
-              </a>
-            </div>
+          {/* FAQ teaser */}
+          <div className="mt-12 lg:mt-16 text-center">
+            <p className="text-stone-600 dark:text-stone-400 mb-4">
+              Har du frågor om våra priser eller vilken plan som passar dig?
+            </p>
+            <a
+              href="mailto:hej@bobot.nu?subject=Frågor om prissättning"
+              className="inline-flex items-center gap-2 text-[#D97757] hover:text-[#c4613d] font-medium transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Kontakta oss så hjälper vi dig
+            </a>
           </div>
         </div>
-      </section>
 
-      {/* Footer with email */}
-      <footer className="px-6 py-4 shrink-0 relative z-10 border-t border-stone-200 dark:border-stone-800">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
-          <span className="text-xs text-stone-400">&copy; {new Date().getFullYear()} Bobot &middot; GDPR-kompatibel</span>
-          <a
-            href="mailto:hej@bobot.nu"
-            className="flex items-center gap-2 text-[#D97757] hover:text-[#c4613d] font-medium transition-colors group"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            <span className="text-sm">hej@bobot.nu</span>
-          </a>
-        </div>
-      </footer>
+        {/* Footer */}
+        <footer className="absolute bottom-0 left-0 right-0 px-6 py-4 border-t border-stone-200 dark:border-stone-800">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+            <span className="text-xs text-stone-400">&copy; {new Date().getFullYear()} Bobot &middot; GDPR-kompatibel</span>
+            <a
+              href="mailto:hej@bobot.nu"
+              className="flex items-center gap-2 text-[#D97757] hover:text-[#c4613d] font-medium transition-colors group"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              <span className="text-sm">hej@bobot.nu</span>
+            </a>
+          </div>
+        </footer>
+      </section>
 
       <style>{`
+        html {
+          scroll-behavior: smooth;
+          scroll-snap-type: y mandatory;
+        }
+
+        section {
+          scroll-snap-align: start;
+          scroll-snap-stop: always;
+        }
+
         @keyframes float {
           0%, 100% { transform: translateY(0) rotate(-2deg); }
           50% { transform: translateY(-10px) rotate(2deg); }
