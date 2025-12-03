@@ -341,10 +341,10 @@ function ChatWidget({ messages, label, className = "", startDelay = 0 }) {
         </div>
         {label && <span className="bg-white/25 text-white font-medium text-xs px-2 py-0.5 rounded-full">{label}</span>}
       </div>
-      <div className="p-3 space-y-2 bg-stone-100 dark:bg-stone-900 min-h-[100px]">
+      <div className="p-3 space-y-1.5 bg-stone-100 dark:bg-stone-900">
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'} transition-opacity duration-300 ${visibleMessages.includes(i) ? 'opacity-100' : 'opacity-0'}`}>
-            <div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${msg.from === 'user' ? 'bg-[#D97757] text-white rounded-br-sm' : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm rounded-bl-sm'}`}>
+          <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`} style={{ opacity: visibleMessages.includes(i) ? 1 : 0, transition: 'opacity 0.3s' }}>
+            <div className={`max-w-[85%] rounded-xl px-2.5 py-1.5 text-sm leading-snug ${msg.from === 'user' ? 'bg-[#D97757] text-white rounded-br-sm' : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm rounded-bl-sm'}`}>
               <TypedText text={msg.text} delay={i === 0 ? startDelay : 0} speed={msg.from === 'bot' ? 15 : 30} onComplete={i === currentTyping ? handleMessageComplete : undefined} />
             </div>
           </div>
@@ -592,13 +592,15 @@ function LandingPage() {
   }
 
   const customerConvo = [
-    { from: 'user', text: 'Får jag ha hund i lägenheten?' },
-    { from: 'bot', text: 'Ja! Husdjur är tillåtna så länge de inte stör grannarna.' },
+    { from: 'user', text: 'Får jag ha hund?' },
+    { from: 'bot', text: 'Ja, så länge de inte stör.' },
+    { from: 'user', text: 'Hur anmäler jag?' },
+    { from: 'bot', text: 'På Mina Sidor under Husdjur.' },
   ]
 
   const employeeConvo = [
-    { from: 'user', text: 'Hur många semesterdagar har jag?' },
-    { from: 'bot', text: 'Du har 25 dagar. Ansök via HR-portalen minst 4 veckor innan.' },
+    { from: 'user', text: 'Hur många semesterdagar?' },
+    { from: 'bot', text: '25 dagar. Ansök via HR-portalen.' },
   ]
 
   const sellingPoints = ['Avlastar medarbetare', 'Alltid tillgänglig', 'Intern kunskapsbank', 'GDPR-säker', 'Träna nyanställda', 'Enkel att integrera', 'Flera språk']
