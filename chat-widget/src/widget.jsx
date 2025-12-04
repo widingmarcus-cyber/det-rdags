@@ -414,7 +414,7 @@ function ChatWidget({ config }) {
   const fontSize = widgetConfig?.font_size || 14
   const borderRadius = widgetConfig?.border_radius || 16
   const position = widgetConfig?.position || 'bottom-right'
-  const companyName = widgetConfig?.company_name || 'Assistent'
+  const companyName = widgetConfig?.widget_name || widgetConfig?.company_name || 'Assistent'
   const subtitle = widgetConfig?.subtitle || t.subtitle
   const suggestedQuestions = widgetConfig?.suggested_questions || []
 
@@ -680,6 +680,13 @@ function ChatWidget({ config }) {
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
+            // Fix for dark mode background clipping outside widget corners
+            isolation: 'isolate',
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden',
+            contain: 'paint',
+            WebkitMaskImage: 'radial-gradient(white, black)',
           }}
         >
           {/* Header */}
