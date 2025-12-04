@@ -1099,14 +1099,15 @@ def find_relevant_context(question: str, company_id: str, db: Session, top_k: in
     A score of 3+ indicates meaningful keyword overlap with the question.
 
     If widget_id is provided:
-    - STRICT isolation for ALL widgets: Each widget only sees its own knowledge items
-    - No shared items - each widget has its own separate knowledge base
+    - Returns items belonging to that specific widget
+    - ALSO returns shared items (widget_id is NULL) which are visible to all widgets
     """
     # Filter by company and widget
     query = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == company_id)
     if widget_id:
-        # STRICT isolation: Each widget only sees knowledge items assigned to it
-        query = query.filter(KnowledgeItem.widget_id == widget_id)
+        from sqlalchemy import or_
+        # Widget sees: its own items + shared items (widget_id is NULL)
+        query = query.filter(or_(KnowledgeItem.widget_id == widget_id, KnowledgeItem.widget_id.is_(None)))
     items = query.all()
 
     if not items:
@@ -4080,13 +4081,13 @@ class BulkDeleteRequest(BaseModel):
     item_ids: List[int]
 
 
-@app.delete("/knowledge/bulk")
+@app.post("/knowledge/bulk-delete")
 async def delete_knowledge_bulk(
     request: BulkDeleteRequest,
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db)
 ):
-    """Delete multiple knowledge items at once"""
+    """Delete multiple knowledge items at once (using POST for better compatibility)"""
     deleted_count = 0
 
     for item_id in request.item_ids:

@@ -258,6 +258,7 @@ function WidgetPage({ widgetType }) {
         const existingWidget = widgets.find(w => w.widget_type === widgetType)
 
         if (existingWidget) {
+          console.log('[Debug] Loading widget, border_radius from API:', existingWidget.widget_border_radius)
           setWidget(existingWidget)
           setFormData({
             primary_color: existingWidget.primary_color || '#D97757',
@@ -360,6 +361,16 @@ function WidgetPage({ widgetType }) {
       if (response.ok) {
         const updated = await response.json()
         setWidget(updated)
+        // Also update formData to reflect saved values
+        setFormData(prev => ({
+          ...prev,
+          widget_border_radius: updated.widget_border_radius || 16,
+          widget_font_family: updated.widget_font_family || 'Inter',
+          widget_font_size: updated.widget_font_size || 14,
+          widget_position: updated.widget_position || prev.widget_position,
+          start_expanded: updated.start_expanded || false
+        }))
+        console.log('[Debug] Widget saved, border_radius:', updated.widget_border_radius)
         setSuccess('Inställningar sparade!')
         setTimeout(() => setSuccess(''), 3000)
       } else {
@@ -453,8 +464,8 @@ function WidgetPage({ widgetType }) {
 
     setBulkDeleting(true)
     try {
-      const response = await authFetch(`${API_BASE}/knowledge/bulk`, {
-        method: 'DELETE',
+      const response = await authFetch(`${API_BASE}/knowledge/bulk-delete`, {
+        method: 'POST',
         body: JSON.stringify({ item_ids: selectedItems })
       })
       if (response.ok) {

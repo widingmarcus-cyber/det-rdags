@@ -331,8 +331,8 @@ function Knowledge() {
     if (!window.confirm(`Är du säker på att du vill ta bort ${selectedItems.size} poster?`)) return
 
     try {
-      const response = await authFetch(`${API_BASE}/knowledge/bulk`, {
-        method: 'DELETE',
+      const response = await authFetch(`${API_BASE}/knowledge/bulk-delete`, {
+        method: 'POST',
         body: JSON.stringify({ item_ids: Array.from(selectedItems) })
       })
 
