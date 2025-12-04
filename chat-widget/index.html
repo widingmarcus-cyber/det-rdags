@@ -547,19 +547,42 @@
   <script type="module">
     import './src/widget.jsx'
 
-    // Wait for script to load then init widget
-    setTimeout(() => {
-      Bobot.init({
-        companyId: 'demo',
-        apiUrl: 'http://localhost:8000'
-      })
+    // Fetch widget key for demo company's external widget, then init
+    const API_URL = 'http://localhost:8000'
 
-      // Hide hint after 10 seconds or when chat is opened
+    async function initWidget() {
+      try {
+        // Fetch widgets for demo company to get the external widget key
+        const res = await fetch(`${API_URL}/widgets/public/demo`)
+        if (res.ok) {
+          const widgets = await res.json()
+          const externalWidget = widgets.find(w => w.widget_type === 'external') || widgets[0]
+          if (externalWidget?.widget_key) {
+            Bobot.init({
+              widgetKey: externalWidget.widget_key,
+              apiUrl: API_URL
+            })
+          } else {
+            // Fallback to company ID
+            Bobot.init({ companyId: 'demo', apiUrl: API_URL })
+          }
+        } else {
+          // Fallback to company ID
+          Bobot.init({ companyId: 'demo', apiUrl: API_URL })
+        }
+      } catch (e) {
+        // Fallback to company ID
+        Bobot.init({ companyId: 'demo', apiUrl: API_URL })
+      }
+
+      // Hide hint after 10 seconds
       setTimeout(() => {
         const hint = document.getElementById('chatHint')
         if (hint) hint.style.display = 'none'
       }, 10000)
-    }, 100)
+    }
+
+    setTimeout(initWidget, 100)
   </script>
 </body>
 </html>

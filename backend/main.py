@@ -2300,6 +2300,31 @@ async def get_widget_config_by_key(
     }
 
 
+@app.get("/widgets/public/{company_id}")
+async def get_public_widgets(
+    company_id: str,
+    db: Session = Depends(get_db)
+):
+    """Get public widget list for a company (for widget initialization)"""
+    company = db.query(Company).filter(Company.id == company_id, Company.is_active == True).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    widgets = db.query(Widget).filter(
+        Widget.company_id == company_id,
+        Widget.is_active == True
+    ).all()
+
+    return [
+        {
+            "widget_key": w.widget_key,
+            "widget_type": w.widget_type,
+            "name": w.name
+        }
+        for w in widgets
+    ]
+
+
 @app.post("/chat/widget/{widget_key}", response_model=ChatResponse)
 async def chat_via_widget_key(
     widget_key: str,

@@ -20,11 +20,18 @@ function Dashboard() {
   const [usage, setUsage] = useState(null)
   const [analytics, setAnalytics] = useState(null)
   const [exporting, setExporting] = useState(false)
+  const [liveConversations, setLiveConversations] = useState([])
+  const [liveLoading, setLiveLoading] = useState(true)
 
   useEffect(() => {
     fetchStats()
     fetchAnalytics()
     fetchUsage()
+    fetchLiveConversations()
+
+    // Refresh live conversations every 30 seconds
+    const interval = setInterval(fetchLiveConversations, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   const fetchStats = async () => {
@@ -177,6 +184,38 @@ function Dashboard() {
     }
   }
 
+  const fetchLiveConversations = async () => {
+    try {
+      const response = await authFetch(`${API_BASE}/conversations?limit=8`)
+      if (response.ok) {
+        const data = await response.json()
+        setLiveConversations(data)
+      }
+    } catch (error) {
+      console.error('Kunde inte hämta konversationer:', error)
+    } finally {
+      setLiveLoading(false)
+    }
+  }
+
+  const isRecent = (dateStr) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffMinutes = (now - date) / 1000 / 60
+    return diffMinutes < 5
+  }
+
+  const formatTimeAgo = (dateStr) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffSeconds = Math.floor((now - date) / 1000)
+
+    if (diffSeconds < 60) return 'Just nu'
+    if (diffSeconds < 3600) return `${Math.floor(diffSeconds / 60)} min sedan`
+    if (diffSeconds < 86400) return `${Math.floor(diffSeconds / 3600)} tim sedan`
+    return date.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
+  }
+
   const StatCard = ({ title, value, icon, trend }) => (
     <div className="card group hover:shadow-md">
       <div className="flex items-start justify-between">
@@ -311,6 +350,89 @@ function Dashboard() {
           }
           trend="konversationer"
         />
+      </div>
+
+      {/* Live Conversations */}
+      <div className="card mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              {liveConversations.some(c => isRecent(c.started_at)) && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
+              )}
+            </div>
+            <h2 className="text-lg font-medium text-text-primary">Senaste konversationer</h2>
+          </div>
+          <Link to="/conversations" className="text-sm text-accent hover:underline">
+            Visa alla
+          </Link>
+        </div>
+
+        {liveLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : liveConversations.length === 0 ? (
+          <div className="text-center py-8 text-text-secondary">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto mb-3 text-text-tertiary">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <p className="text-sm">Inga konversationer än</p>
+            <p className="text-xs text-text-tertiary mt-1">Konversationer visas här när besökare chattar</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {liveConversations.map((conv) => (
+              <Link
+                key={conv.id}
+                to={`/conversations?id=${conv.id}`}
+                className="flex items-center gap-3 p-3 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all group"
+              >
+                <div className="relative flex-shrink-0">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    conv.widget_type === 'internal'
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                      : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                  }`}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </div>
+                  {isRecent(conv.started_at) && (
+                    <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-bg-secondary" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-text-primary truncate">
+                      {conv.first_message || 'Konversation startad'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-text-tertiary mt-0.5">
+                    <span>{formatTimeAgo(conv.started_at)}</span>
+                    <span>•</span>
+                    <span>{conv.message_count} meddelanden</span>
+                    {conv.was_helpful !== null && (
+                      <>
+                        <span>•</span>
+                        <span className={conv.was_helpful ? 'text-green-500' : 'text-red-500'}>
+                          {conv.was_helpful ? '👍' : '👎'}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary opacity-0 group-hover:opacity-100 transition-opacity">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Usage Limits */}

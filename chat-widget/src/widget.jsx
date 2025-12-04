@@ -373,7 +373,11 @@ function ChatWidget({ config }) {
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const res = await fetch(`${config.apiUrl}/widget/${config.companyId}/config`)
+        // Use widget-specific config if widgetKey is provided, otherwise use company config
+        const configUrl = config.widgetKey
+          ? `${config.apiUrl}/widget/key/${config.widgetKey}/config`
+          : `${config.apiUrl}/widget/${config.companyId}/config`
+        const res = await fetch(configUrl)
         if (res.ok) {
           const data = await res.json()
           setWidgetConfig(data)
