@@ -64,6 +64,7 @@ function WidgetPage({ widgetType }) {
   const [sessionId] = useState(() => 'preview-' + Math.random().toString(36).substring(2, 15))
   const [darkMode, setDarkMode] = useState(false)
   const [feedbackGiven, setFeedbackGiven] = useState({})
+  const [expandedSources, setExpandedSources] = useState({})
   const messagesEndRef = useRef(null)
   const [healthStatus, setHealthStatus] = useState(null)
 
@@ -176,7 +177,8 @@ function WidgetPage({ widgetType }) {
         method: 'POST',
         body: JSON.stringify({
           replace_existing: false,
-          categories_to_import: selectedCategories.length > 0 ? selectedCategories : null
+          categories_to_import: selectedCategories.length > 0 ? selectedCategories : null,
+          widget_id: widget.id  // Associate imported items with this widget
         })
       })
 
@@ -594,7 +596,13 @@ function WidgetPage({ widgetType }) {
 
       if (response.ok) {
         const data = await response.json()
-        setPreviewMessages(prev => [...prev, { type: 'bot', text: data.answer, hadAnswer: data.had_answer }])
+        setPreviewMessages(prev => [...prev, {
+          type: 'bot',
+          text: data.answer,
+          hadAnswer: data.had_answer,
+          sources: data.sources_detail || [],
+          id: Date.now()
+        }])
       } else {
         setPreviewMessages(prev => [...prev, { type: 'bot', text: 'Kunde inte få svar just nu.', error: true }])
       }
@@ -1143,6 +1151,67 @@ function WidgetPage({ widgetType }) {
                             }}
                           >
                             <p className="whitespace-pre-wrap">{msg.text}</p>
+
+                            {/* Sources section for bot messages */}
+                            {msg.type === 'bot' && msg.sources && msg.sources.length > 0 && (
+                              <div className="mt-2">
+                                <button
+                                  onClick={() => setExpandedSources(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))}
+                                  className="flex items-center gap-1.5 px-2 py-1 text-xs rounded-md font-medium transition-colors"
+                                  style={{
+                                    background: `${formData.primary_color}15`,
+                                    color: formData.primary_color,
+                                    border: `1px solid ${formData.primary_color}30`
+                                  }}
+                                >
+                                  <svg
+                                    width="10"
+                                    height="10"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    className={`transition-transform ${expandedSources[msg.id] ? 'rotate-90' : ''}`}
+                                  >
+                                    <polyline points="9 18 15 12 9 6"/>
+                                  </svg>
+                                  Källor ({msg.sources.length})
+                                </button>
+
+                                {expandedSources[msg.id] && (
+                                  <div className="mt-2 space-y-2">
+                                    {msg.sources.map((source, idx) => (
+                                      <div
+                                        key={idx}
+                                        className="p-2 rounded-lg text-xs"
+                                        style={{
+                                          background: darkMode ? '#1C1917' : '#FAF9F7',
+                                          border: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}`
+                                        }}
+                                      >
+                                        <div className="font-medium mb-1" style={{ color: formData.primary_color }}>
+                                          {source.question}
+                                        </div>
+                                        <div style={{ color: darkMode ? '#A8A29E' : '#57534E', lineHeight: 1.5 }}>
+                                          {source.answer}
+                                        </div>
+                                        {source.category && (
+                                          <span
+                                            className="inline-block mt-1.5 px-1.5 py-0.5 rounded text-[10px]"
+                                            style={{
+                                              background: darkMode ? '#292524' : '#F5F5F4',
+                                              color: darkMode ? '#78716C' : '#78716C'
+                                            }}
+                                          >
+                                            {source.category}
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                         {/* Feedback buttons for bot messages */}

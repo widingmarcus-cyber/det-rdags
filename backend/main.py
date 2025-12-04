@@ -4025,6 +4025,7 @@ class TemplateInfo(BaseModel):
 class TemplateApplyRequest(BaseModel):
     replace_existing: bool = False
     categories_to_import: Optional[List[str]] = None
+    widget_id: Optional[int] = None  # Target widget for the imported items
 
 
 class TemplateApplyResponse(BaseModel):
@@ -4120,19 +4121,25 @@ async def apply_template(
     items_added = 0
     items_skipped = 0
 
-    # Optionally clear existing knowledge
+    # Optionally clear existing knowledge (for this widget specifically)
     if request.replace_existing:
-        db.query(KnowledgeItem).filter(
+        delete_query = db.query(KnowledgeItem).filter(
             KnowledgeItem.company_id == company_id
-        ).delete()
+        )
+        if request.widget_id:
+            delete_query = delete_query.filter(KnowledgeItem.widget_id == request.widget_id)
+        delete_query.delete()
         db.commit()
 
-    # Get existing questions to avoid duplicates
+    # Get existing questions to avoid duplicates (for this widget specifically)
     existing_questions = set()
     if not request.replace_existing:
-        existing = db.query(KnowledgeItem.question).filter(
+        query = db.query(KnowledgeItem.question).filter(
             KnowledgeItem.company_id == company_id
-        ).all()
+        )
+        if request.widget_id:
+            query = query.filter(KnowledgeItem.widget_id == request.widget_id)
+        existing = query.all()
         existing_questions = {q[0].lower().strip() for q in existing}
 
     # Import template items
@@ -4159,7 +4166,8 @@ async def apply_template(
             company_id=company_id,
             question=question,
             answer=answer,
-            category=category
+            category=category,
+            widget_id=request.widget_id  # Associate with specific widget
         )
         db.add(db_item)
         existing_questions.add(question.lower())
