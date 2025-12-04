@@ -151,7 +151,7 @@ function WidgetPage({ widgetType }) {
   const fetchTemplatePreview = async (templateId) => {
     setTemplatePreviewLoading(true)
     try {
-      const response = await authFetch(`${API_BASE}/templates/${templateId}/preview`)
+      const response = await authFetch(`${API_BASE}/templates/${templateId}/preview?limit=500`)
       if (response.ok) {
         const data = await response.json()
         setTemplatePreview(data)
@@ -175,14 +175,14 @@ function WidgetPage({ widgetType }) {
       const response = await authFetch(`${API_BASE}/templates/${selectedTemplate.template_id}/apply`, {
         method: 'POST',
         body: JSON.stringify({
-          widget_id: widget.id,
-          categories: selectedCategories.length > 0 ? selectedCategories : null
+          replace_existing: false,
+          categories_to_import: selectedCategories.length > 0 ? selectedCategories : null
         })
       })
 
       if (response.ok) {
         const data = await response.json()
-        setSuccess(`Importerade ${data.imported || data.count || 'flera'} frågor och svar från mallen!`)
+        setSuccess(`Importerade ${data.items_added || 'flera'} frågor och svar från mallen!`)
         fetchKnowledge(widget.id)
         setShowTemplateModal(false)
         setSelectedTemplate(null)
@@ -1317,8 +1317,8 @@ function WidgetPage({ widgetType }) {
       {/* Knowledge Tab */}
       {activeTab === 'knowledge' && (
         <div>
-          {/* Templates section - only show when knowledge base is empty or small */}
-          {knowledgeItems.length < 5 && templates.length > 0 && (
+          {/* Templates section - always show if templates are available */}
+          {templates.length > 0 && (
             <div className="mb-6">
               <div className="card p-5 border-accent/20 bg-gradient-to-r from-accent/5 to-transparent">
                 <div className="flex items-start gap-4">
