@@ -1,56 +1,80 @@
 import { useState, useEffect, useContext } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AuthContext } from '../App'
 
 const API_BASE = '/api'
 
-const CATEGORIES = [
-  { value: '', label: 'Alla kategorier' },
-  { value: 'hyra', label: 'Hyra' },
-  { value: 'felanmalan', label: 'Felanmälan' },
-  { value: 'kontrakt', label: 'Kontrakt' },
-  { value: 'tvattstuga', label: 'Tvättstuga' },
-  { value: 'parkering', label: 'Parkering' },
-  { value: 'kontakt', label: 'Kontakt' },
-  { value: 'allmant', label: 'Allmänt' }
-]
-
-const LANGUAGES = [
-  { value: '', label: 'Alla språk' },
-  { value: 'sv', label: 'Svenska' },
-  { value: 'en', label: 'English' },
-  { value: 'ar', label: 'العربية' }
-]
-
 const WIDGET_TYPES = [
   { value: '', label: 'Alla widgetar' },
-  { value: 'external', label: 'Extern (kund)' },
-  { value: 'internal', label: 'Intern (anställd)' }
+  { value: 'external', label: 'Kundtjänst' },
+  { value: 'internal', label: 'Medarbetarstöd' }
+]
+
+const FEEDBACK_TYPES = [
+  { value: '', label: 'All feedback' },
+  { value: 'helpful', label: '👍 Hjälpsam' },
+  { value: 'not_helpful', label: '👎 Ej hjälpsam' },
+  { value: 'none', label: 'Ingen feedback' }
 ]
 
 function Conversations() {
   const { authFetch } = useContext(AuthContext)
+  const [searchParams, setSearchParams] = useSearchParams()
   const [conversations, setConversations] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedConversation, setSelectedConversation] = useState(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
-  const [languageFilter, setLanguageFilter] = useState('')
   const [widgetTypeFilter, setWidgetTypeFilter] = useState('')
+  const [feedbackFilter, setFeedbackFilter] = useState(searchParams.get('feedback') || '')
   const [error, setError] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [categories, setCategories] = useState([{ value: '', label: 'Alla kategorier' }])
 
   useEffect(() => {
     fetchConversations()
-  }, [categoryFilter, languageFilter, widgetTypeFilter])
+    fetchCategories()
+    // Read feedback filter from URL on mount
+    const urlFeedback = searchParams.get('feedback')
+    if (urlFeedback) {
+      setFeedbackFilter(urlFeedback)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchConversations()
+    // Update URL when feedback filter changes
+    if (feedbackFilter) {
+      setSearchParams({ feedback: feedbackFilter })
+    } else {
+      setSearchParams({})
+    }
+  }, [categoryFilter, widgetTypeFilter, feedbackFilter])
+
+  const fetchCategories = async () => {
+    try {
+      const response = await authFetch(`${API_BASE}/categories`)
+      if (response.ok) {
+        const data = await response.json()
+        const categoryOptions = [
+          { value: '', label: 'Alla kategorier' },
+          ...data.map(cat => ({ value: cat.name.toLowerCase(), label: cat.name }))
+        ]
+        setCategories(categoryOptions)
+      }
+    } catch (error) {
+      console.error('Kunde inte hämta kategorier:', error)
+    }
+  }
 
   const fetchConversations = async () => {
     try {
       let url = `${API_BASE}/conversations`
       const params = new URLSearchParams()
       if (categoryFilter) params.append('category', categoryFilter)
-      if (languageFilter) params.append('language', languageFilter)
       if (widgetTypeFilter) params.append('widget_type', widgetTypeFilter)
+      if (feedbackFilter) params.append('feedback', feedbackFilter)
       if (params.toString()) url += `?${params.toString()}`
 
       const response = await authFetch(url)
@@ -67,14 +91,21 @@ function Conversations() {
 
   const fetchConversationDetails = async (conversationId) => {
     setLoadingDetails(true)
+    setError('')
     try {
       const response = await authFetch(`${API_BASE}/conversations/${conversationId}`)
       if (response.ok) {
         const data = await response.json()
         setSelectedConversation(data)
+      } else {
+        const errData = await response.json().catch(() => ({}))
+        setError(errData.detail || `Kunde inte ladda konversation (fel ${response.status})`)
+        setSelectedConversation(null)
       }
     } catch (error) {
       console.error('Kunde inte hämta konversationsdetaljer:', error)
+      setError('Ett fel uppstod vid laddning av konversation. Försök igen.')
+      setSelectedConversation(null)
     } finally {
       setLoadingDetails(false)
     }
@@ -254,17 +285,8 @@ function Conversations() {
           onChange={(e) => setCategoryFilter(e.target.value)}
           className="input w-auto min-w-[150px]"
         >
-          {CATEGORIES.map(cat => (
+          {categories.map(cat => (
             <option key={cat.value} value={cat.value}>{cat.label}</option>
-          ))}
-        </select>
-        <select
-          value={languageFilter}
-          onChange={(e) => setLanguageFilter(e.target.value)}
-          className="input w-auto min-w-[120px]"
-        >
-          {LANGUAGES.map(lang => (
-            <option key={lang.value} value={lang.value}>{lang.label}</option>
           ))}
         </select>
         <select
@@ -276,7 +298,46 @@ function Conversations() {
             <option key={wt.value} value={wt.value}>{wt.label}</option>
           ))}
         </select>
+        <select
+          value={feedbackFilter}
+          onChange={(e) => setFeedbackFilter(e.target.value)}
+          className={`input w-auto min-w-[150px] ${
+            feedbackFilter === 'helpful' ? 'border-success text-success' :
+            feedbackFilter === 'not_helpful' ? 'border-error text-error' : ''
+          }`}
+        >
+          {FEEDBACK_TYPES.map(fb => (
+            <option key={fb.value} value={fb.value}>{fb.label}</option>
+          ))}
+        </select>
       </div>
+
+      {/* Active filter indicator */}
+      {feedbackFilter && (
+        <div className={`mb-4 px-4 py-2 rounded-lg flex items-center justify-between ${
+          feedbackFilter === 'helpful' ? 'bg-success/10 border border-success/20' :
+          feedbackFilter === 'not_helpful' ? 'bg-error/10 border border-error/20' :
+          'bg-bg-secondary'
+        }`}>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">
+              {feedbackFilter === 'helpful' ? '👍' : feedbackFilter === 'not_helpful' ? '👎' : '🤷'}
+            </span>
+            <span className="text-sm text-text-primary">
+              Visar konversationer med {feedbackFilter === 'helpful' ? 'positiv' : feedbackFilter === 'not_helpful' ? 'negativ' : 'ingen'} feedback
+            </span>
+          </div>
+          <button
+            onClick={() => setFeedbackFilter('')}
+            className="text-text-tertiary hover:text-text-primary transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-12">
@@ -335,11 +396,6 @@ function Conversations() {
                       {conv.category}
                     </span>
                   )}
-                  {conv.language && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-bg-secondary text-text-tertiary uppercase">
-                      {conv.language}
-                    </span>
-                  )}
                   {conv.was_helpful !== null && (
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
                       conv.was_helpful
@@ -389,12 +445,6 @@ function Conversations() {
                           <span className="capitalize">{selectedConversation.category}</span>
                         </>
                       )}
-                      {selectedConversation.language && (
-                        <>
-                          <span>•</span>
-                          <span className="uppercase">{selectedConversation.language}</span>
-                        </>
-                      )}
                     </div>
                   </div>
                   <button
@@ -435,7 +485,7 @@ function Conversations() {
                         {msg.sources && msg.sources.length > 0 && (
                           <div className="mt-2 pt-2 border-t border-border-subtle">
                             <p className="text-xs text-text-tertiary">
-                              Källor: {msg.sources.join(', ')}
+                              Källor: {msg.sources.map(s => typeof s === 'string' ? s : s.question).join(', ')}
                             </p>
                           </div>
                         )}

@@ -1,11 +1,12 @@
 import { useState, useEffect, useContext } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { AuthContext } from '../App'
 
 const API_BASE = '/api'
 
 function Dashboard() {
   const { auth, authFetch } = useContext(AuthContext)
+  const navigate = useNavigate()
   const [stats, setStats] = useState({
     totalQuestions: 0,
     totalKnowledge: 0,
@@ -15,10 +16,10 @@ function Dashboard() {
     answerRate: 0
   })
   const [dailyStats, setDailyStats] = useState([])
-  const [allDailyStats, setAllDailyStats] = useState([])
   const [loading, setLoading] = useState(true)
-  const [chartPeriod, setChartPeriod] = useState(7) // 7 or 30 days
   const [usage, setUsage] = useState(null)
+  const [analytics, setAnalytics] = useState(null)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     fetchStats()
@@ -52,12 +53,115 @@ function Dashboard() {
       const response = await authFetch(`${API_BASE}/analytics`)
       if (response.ok) {
         const data = await response.json()
-        const allStats = data.daily_stats || []
-        setAllDailyStats(allStats)
-        setDailyStats(allStats.slice(-7))
+        setDailyStats(data.daily_stats || [])
+        setAnalytics(data)
       }
     } catch (error) {
       console.error('Kunde inte hämta analytics:', error)
+    }
+  }
+
+  const handleExportKPIReport = () => {
+    if (!analytics) return
+    setExporting(true)
+
+    try {
+      const today = new Date().toLocaleDateString('sv-SE')
+      const satisfactionRate = analytics.feedback_stats
+        ? ((analytics.feedback_stats.helpful || 0) /
+            Math.max((analytics.feedback_stats.helpful || 0) + (analytics.feedback_stats.not_helpful || 0), 1) * 100).toFixed(1)
+        : 0
+
+      const reportData = [
+        ['KPI-RAPPORT - BOBOT CHATTSTATISTIK'],
+        ['Genererad:', today],
+        [''],
+        ['=== ÖVERSIKT ==='],
+        ['Nyckeltal', 'Värde', 'Beskrivning'],
+        ['Totala konversationer', analytics.total_conversations, 'Antal unika chattsamtal sedan start'],
+        ['Totalt meddelanden', analytics.total_messages, 'Alla meddelanden (frågor + svar)'],
+        ['Svarsfrekvens', `${analytics.answer_rate?.toFixed(1) || 0}%`, 'Andel frågor som AI kunde besvara'],
+        ['Svarstid (snitt)', `${(analytics.avg_response_time_ms / 1000).toFixed(1)}s`, 'Genomsnittlig tid för AI-svar'],
+        ['Nöjdhetsgrad', `${satisfactionRate}%`, 'Andel positiv feedback (👍)'],
+        [''],
+        ['=== AKTIVITET ==='],
+        ['Period', 'Konversationer', 'Meddelanden'],
+        ['Idag', analytics.conversations_today, analytics.messages_today],
+        ['Senaste 7 dagarna', analytics.conversations_week, analytics.messages_week],
+        [''],
+        ['=== FRÅGEANALYS ==='],
+        ['Typ', 'Antal', 'Andel'],
+        ['Besvarade frågor', analytics.total_answered, `${((analytics.total_answered / Math.max(analytics.total_answered + analytics.total_unanswered, 1)) * 100).toFixed(1)}%`],
+        ['Obesvarade frågor', analytics.total_unanswered, `${((analytics.total_unanswered / Math.max(analytics.total_answered + analytics.total_unanswered, 1)) * 100).toFixed(1)}%`],
+        [''],
+        ['=== ANVÄNDARFEEDBACK ==='],
+        ['Typ', 'Antal'],
+        ['Positiv (👍)', analytics.feedback_stats?.helpful || 0],
+        ['Negativ (👎)', analytics.feedback_stats?.not_helpful || 0],
+        ['Ingen feedback', analytics.feedback_stats?.no_feedback || 0],
+        [''],
+        ['=== SPRÅKFÖRDELNING ==='],
+        ['Språk', 'Antal', 'Andel'],
+      ]
+
+      const langNames = { sv: 'Svenska', en: 'English', ar: 'العربية' }
+      const langTotal = Object.values(analytics.language_stats || {}).reduce((a, b) => a + b, 0) || 1
+      Object.entries(analytics.language_stats || {}).forEach(([lang, count]) => {
+        reportData.push([langNames[lang] || lang, count, `${((count / langTotal) * 100).toFixed(1)}%`])
+      })
+
+      reportData.push([''])
+      reportData.push(['=== KATEGORIER ==='])
+      reportData.push(['Kategori', 'Antal frågor'])
+      Object.entries(analytics.category_stats || {})
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([cat, count]) => {
+          reportData.push([cat, count])
+        })
+
+      reportData.push([''])
+      reportData.push(['=== AKTIVITET PER TIMME ==='])
+      reportData.push(['Timme', 'Antal konversationer'])
+      Object.entries(analytics.hourly_stats || {})
+        .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+        .forEach(([hour, count]) => {
+          reportData.push([`${hour}:00`, count])
+        })
+
+      if (analytics.top_unanswered && analytics.top_unanswered.length > 0) {
+        reportData.push([''])
+        reportData.push(['=== VANLIGASTE OBESVARADE FRÅGOR ==='])
+        reportData.push(['Dessa frågor saknas i kunskapsbasen:'])
+        analytics.top_unanswered.forEach((q, i) => {
+          reportData.push([`${i + 1}. ${q}`])
+        })
+      }
+
+      const csv = reportData.map(row =>
+        row.map(cell => {
+          const str = String(cell ?? '')
+          if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`
+          }
+          return str
+        }).join(',')
+      ).join('\n')
+
+      const BOM = '\uFEFF'
+      const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `KPI-rapport-${today}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      a.remove()
+    } catch (error) {
+      console.error('KPI export failed:', error)
+      alert('Export misslyckades: ' + error.message)
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -72,10 +176,6 @@ function Dashboard() {
       console.error('Kunde inte hämta användning:', error)
     }
   }
-
-  useEffect(() => {
-    setDailyStats(allDailyStats.slice(-chartPeriod))
-  }, [chartPeriod, allDailyStats])
 
   const StatCard = ({ title, value, icon, trend }) => (
     <div className="card group hover:shadow-md">
@@ -183,7 +283,7 @@ function Dashboard() {
               <line x1="3" y1="10" x2="21" y2="10" />
             </svg>
           }
-          trend="frågor"
+          trend="konversationer"
         />
         <StatCard
           title="Denna vecka"
@@ -195,7 +295,7 @@ function Dashboard() {
               <line x1="6" y1="20" x2="6" y2="14" />
             </svg>
           }
-          trend="frågor"
+          trend="konversationer"
         />
         <StatCard
           title="Senaste 30 dagar"
@@ -209,7 +309,7 @@ function Dashboard() {
               <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
             </svg>
           }
-          trend="frågor"
+          trend="konversationer"
         />
       </div>
 
@@ -254,70 +354,6 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Activity Chart */}
-      {dailyStats.length > 0 && (
-        <div className="card mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-text-primary">
-              Aktivitet senaste {chartPeriod} dagarna
-            </h2>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-4 text-xs text-text-tertiary">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-accent"></span> Frågor
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-success"></span> Besvarade
-                </span>
-              </div>
-              <div className="flex rounded-lg bg-bg-secondary p-1">
-                <button
-                  onClick={() => setChartPeriod(7)}
-                  className={`px-3 py-1 text-xs rounded-md transition-colors ${chartPeriod === 7 ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary'}`}
-                  aria-pressed={chartPeriod === 7}
-                >
-                  7 dagar
-                </button>
-                <button
-                  onClick={() => setChartPeriod(30)}
-                  className={`px-3 py-1 text-xs rounded-md transition-colors ${chartPeriod === 30 ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary'}`}
-                  aria-pressed={chartPeriod === 30}
-                >
-                  30 dagar
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="h-40 flex items-end gap-2">
-            {dailyStats.map((day, i) => {
-              const maxQuestions = Math.max(...dailyStats.map(d => d.questions || 0), 1)
-              const questionHeight = ((day.questions || 0) / maxQuestions) * 100
-              const answeredHeight = ((day.answered || 0) / maxQuestions) * 100
-              const date = new Date(day.date)
-              const dayName = date.toLocaleDateString('sv-SE', { weekday: 'short' })
-
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full flex items-end gap-1 h-32">
-                    <div
-                      className="flex-1 bg-accent/20 rounded-t transition-all hover:bg-accent/30"
-                      style={{ height: `${questionHeight}%`, minHeight: day.questions ? '4px' : '0' }}
-                      title={`${day.questions || 0} frågor`}
-                    />
-                    <div
-                      className="flex-1 bg-success/30 rounded-t transition-all hover:bg-success/40"
-                      style={{ height: `${answeredHeight}%`, minHeight: day.answered ? '4px' : '0' }}
-                      title={`${day.answered || 0} besvarade`}
-                    />
-                  </div>
-                  <span className="text-xs text-text-tertiary capitalize">{dayName}</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Actions Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quick Actions */}
@@ -325,37 +361,47 @@ function Dashboard() {
           <h2 className="text-lg font-medium text-text-primary mb-4">Snabbåtgärder</h2>
           <div className="space-y-2">
             <Link
-              to="/widget/external"
+              to="/analytics"
               className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all duration-150 group"
             >
-              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+              <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  <circle cx="12" cy="10" r="3" />
-                  <path d="M12 13v2" />
+                  <line x1="18" y1="20" x2="18" y2="10" />
+                  <line x1="12" y1="20" x2="12" y2="4" />
+                  <line x1="6" y1="20" x2="6" y2="14" />
                 </svg>
               </div>
               <div>
-                <p className="font-medium text-text-primary">Kundtjänst</p>
-                <p className="text-sm text-text-secondary">Widget för kunder och besökare</p>
+                <p className="font-medium text-text-primary">Se statistik</p>
+                <p className="text-sm text-text-secondary">Detaljerad analys och rapporter</p>
               </div>
             </Link>
-            <Link
-              to="/widget/internal"
-              className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all duration-150 group"
+            <button
+              onClick={handleExportKPIReport}
+              disabled={exporting || !analytics}
+              className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all duration-150 group w-full text-left disabled:opacity-50"
             >
-              <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  <path d="M12 8v4" />
-                  <path d="M12 16h.01" />
-                </svg>
+              <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                {exporting ? (
+                  <svg className="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                    <path d="M12 2a10 10 0 0 1 10 10" />
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                  </svg>
+                )}
               </div>
               <div>
-                <p className="font-medium text-text-primary">Medarbetarstöd</p>
-                <p className="text-sm text-text-secondary">Widget för anställda</p>
+                <p className="font-medium text-text-primary">{exporting ? 'Exporterar...' : 'KPI-rapport'}</p>
+                <p className="text-sm text-text-secondary">Ladda ner sammanställd statistik</p>
               </div>
-            </Link>
+            </button>
             <Link
               to="/conversations"
               className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all duration-150 group"
@@ -366,18 +412,33 @@ function Dashboard() {
                 </svg>
               </div>
               <div>
-                <p className="font-medium text-text-primary">Se konversationer</p>
-                <p className="text-sm text-text-secondary">Granska chatthistorik</p>
+                <p className="font-medium text-text-primary">Granska konversationer</p>
+                <p className="text-sm text-text-secondary">Se chatthistorik och feedback</p>
+              </div>
+            </Link>
+            <Link
+              to="/settings"
+              state={{ tab: 'privacy' }}
+              className="flex items-center gap-4 p-4 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-transparent hover:border-border-subtle transition-all duration-150 group"
+            >
+              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium text-text-primary">GDPR & Integritet</p>
+                <p className="text-sm text-text-secondary">Datalagring och sekretesspolicy</p>
               </div>
             </Link>
           </div>
         </div>
 
-        {/* Widget Code */}
+        {/* Widgets */}
         <div className="card">
-          <h2 className="text-lg font-medium text-text-primary mb-2">Kom igång</h2>
+          <h2 className="text-lg font-medium text-text-primary mb-2">Dina widgets</h2>
           <p className="text-sm text-text-secondary mb-4">
-            Konfigurera dina widgets och hämta installationskod
+            Hantera dina chatbotar och kunskapsbaser
           </p>
           <div className="space-y-3">
             <Link
@@ -392,7 +453,7 @@ function Dashboard() {
                 </div>
                 <div>
                   <p className="font-medium text-text-primary text-sm">Kundtjänst</p>
-                  <p className="text-xs text-text-secondary">För din webbplats</p>
+                  <p className="text-xs text-text-secondary">För kunder och besökare</p>
                 </div>
               </div>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
@@ -411,7 +472,7 @@ function Dashboard() {
                 </div>
                 <div>
                   <p className="font-medium text-text-primary text-sm">Medarbetarstöd</p>
-                  <p className="text-xs text-text-secondary">För intern användning</p>
+                  <p className="text-xs text-text-secondary">För anställda internt</p>
                 </div>
               </div>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
@@ -420,7 +481,7 @@ function Dashboard() {
             </Link>
           </div>
           <p className="text-xs text-text-tertiary mt-4">
-            Installationskod finns under varje widgets inställningar → Installera-fliken
+            Klicka på en widget för att hantera kunskapsbas, utseende och installationskod
           </p>
         </div>
       </div>

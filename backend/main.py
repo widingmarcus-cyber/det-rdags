@@ -21,11 +21,11 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
 from database import (
-    create_tables, get_db, Company, KnowledgeItem, ChatLog, SuperAdmin,
+    create_tables, run_migrations, get_db, Company, KnowledgeItem, ChatLog, SuperAdmin,
     CompanySettings, Conversation, Message, DailyStatistics, GDPRAuditLog,
     AdminAuditLog, GlobalSettings, CompanyActivityLog, Subscription, Invoice,
     CompanyNote, CompanyDocument, WidgetPerformance, EmailNotificationQueue,
-    RoadmapItem, PricingTier, Widget, PageView, DailyPageStats
+    RoadmapItem, PricingTier, Widget, PageView, DailyPageStats, Category
 )
 from auth import (
     hash_password, verify_password, create_token, create_2fa_pending_token,
@@ -153,6 +153,7 @@ async def lifespan(app: FastAPI):
 
     # Startup
     create_tables()
+    run_migrations()  # Add new columns to existing tables
     init_demo_data()
 
     # Start background tasks
@@ -569,6 +570,22 @@ class KnowledgeItemResponse(BaseModel):
     widget_name: Optional[str] = None
 
 
+class CategoryCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100, description="Category name")
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Kategorinamn kan inte vara tomt')
+        return v.strip()
+
+
+class CategoryResponse(BaseModel):
+    id: int
+    name: str
+
+
 class CompanyCreate(BaseModel):
     id: str
     name: str
@@ -648,10 +665,14 @@ class WidgetCreate(BaseModel):
     widget_type: str = "external"  # external, internal, custom
     description: Optional[str] = ""
     primary_color: Optional[str] = "#D97757"
+    secondary_color: Optional[str] = "#FEF3EC"  # AI message background
+    background_color: Optional[str] = "#FAF8F5"  # Widget background
     welcome_message: Optional[str] = "Hej! Hur kan jag hjälpa dig idag?"
     fallback_message: Optional[str] = "Tyvärr kunde jag inte hitta ett svar på din fråga. Vänligen kontakta oss direkt."
     subtitle: Optional[str] = "Alltid redo att hjälpa"
     language: Optional[str] = "sv"
+    tone: Optional[str] = ""  # professional, collegial, casual - empty means use widget_type default
+    start_expanded: Optional[bool] = False  # Start widget open instead of as floating button
     # Per-widget contact info
     display_name: Optional[str] = ""
     contact_email: Optional[str] = ""
@@ -664,6 +685,8 @@ class WidgetUpdate(BaseModel):
     description: Optional[str] = None
     is_active: Optional[bool] = None
     primary_color: Optional[str] = None
+    secondary_color: Optional[str] = None  # AI message background
+    background_color: Optional[str] = None  # Widget background
     widget_font_family: Optional[str] = None
     widget_font_size: Optional[int] = None
     widget_border_radius: Optional[int] = None
@@ -672,6 +695,8 @@ class WidgetUpdate(BaseModel):
     fallback_message: Optional[str] = None
     subtitle: Optional[str] = None
     language: Optional[str] = None
+    tone: Optional[str] = None  # professional, collegial, casual
+    start_expanded: Optional[bool] = None  # Start widget open instead of as floating button
     suggested_questions: Optional[str] = None  # JSON array
     require_consent: Optional[bool] = None
     consent_text: Optional[str] = None
@@ -689,6 +714,8 @@ class WidgetResponse(BaseModel):
     description: str
     is_active: bool
     primary_color: str
+    secondary_color: str = "#FEF3EC"  # AI message background
+    background_color: str = "#FAF8F5"  # Widget background
     widget_font_family: str
     widget_font_size: int
     widget_border_radius: int
@@ -697,6 +724,8 @@ class WidgetResponse(BaseModel):
     fallback_message: str
     subtitle: str
     language: str
+    tone: str = ""
+    start_expanded: bool = False  # Start widget open instead of as floating button
     suggested_questions: List[str]
     require_consent: bool
     consent_text: str
@@ -821,7 +850,7 @@ class MessageResponse(BaseModel):
     role: str
     content: str
     created_at: datetime
-    sources: Optional[List[str]] = None
+    sources: Optional[List[dict]] = None  # Knowledge items used for response
     had_answer: bool = True
 
 
@@ -1297,13 +1326,14 @@ def get_greeting_response(language: str, company_name: str = None) -> str:
     return responses.get(language, responses["sv"])
 
 
-def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None, category: str = None, has_knowledge_match: bool = False, widget_type: str = "external") -> str:
+def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None, category: str = None, has_knowledge_match: bool = False, widget_type: str = "external", widget = None) -> str:
     """Bygg prompt med kontext - använder specificerat eller detekterat språk
 
     ANTI-HALLUCINATION: This prompt is designed to prevent the AI from inventing information.
     The AI should ONLY answer based on the provided knowledge base items.
 
     widget_type: "external" (customers/tenants) or "internal" (employees)
+    widget: Optional Widget object with contact info that overrides company settings
     """
     # Use provided language or detect from question
     lang = language if language in ["sv", "en", "ar"] else detect_language(question)
@@ -1314,13 +1344,22 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
 
     company_name = settings.company_name if settings else "the company"
 
+    # Use widget display_name if available
+    if widget and widget.display_name:
+        company_name = widget.display_name
+
     # Build company facts section (bilingual labels for better matching)
+    # Widget contact info takes priority over company settings
     company_facts = []
     if settings:
-        if settings.contact_email:
-            company_facts.append(f"Email/E-post: {settings.contact_email}")
-        if settings.contact_phone:
-            company_facts.append(f"Phone/Telefon: {settings.contact_phone}")
+        # Email: widget contact_email > settings contact_email
+        contact_email = (widget.contact_email if widget and widget.contact_email else None) or settings.contact_email
+        contact_phone = (widget.contact_phone if widget and widget.contact_phone else None) or settings.contact_phone
+
+        if contact_email:
+            company_facts.append(f"Email/E-post: {contact_email}")
+        if contact_phone:
+            company_facts.append(f"Phone/Telefon: {contact_phone}")
         if settings.data_controller_name:
             gdpr_contact = f"GDPR-ansvarig (personuppgiftsansvarig/dataskyddsansvarig): {settings.data_controller_name}"
             if settings.data_controller_email:
@@ -1342,17 +1381,56 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
     else:
         knowledge = "FACTS: No matching information found.\n"
 
-    # Different personalities based on widget type
-    if widget_type == "internal":
-        # Internal widget - colleague-like, more thoughtful and collaborative
-        return f"""You are a helpful internal assistant for {company_name} - like a knowledgeable colleague who genuinely wants to help their teammates succeed.
+    # Determine effective tone: widget.tone > widget_type default
+    # Tones: professional, collegial, casual
+    effective_tone = ""
+    if widget and widget.tone:
+        effective_tone = widget.tone
+    elif widget_type == "internal":
+        effective_tone = "collegial"
+    else:
+        effective_tone = "professional"
+
+    # Different personalities based on tone
+    if effective_tone == "casual":
+        # Casual tone - very relaxed, buddy-like
+        return f"""You are {company_name}'s helpful assistant - think of yourself as a friendly buddy who happens to know everything about the company.
+
+PERSONALITY:
+- Super chill and approachable. Like texting with a helpful friend.
+- Use casual language, contractions, maybe even the occasional emoji if it fits.
+- Be genuinely warm and personable - not corporate at all.
+- It's totally fine to be a bit playful while still being helpful.
+- Show personality! React naturally to what people say.
+
+{company_info}
+
+{knowledge}
+
+HOW TO RESPOND:
+- Use ONLY the facts above. Don't make stuff up.
+- Keep it conversational - 1-3 sentences usually works great.
+- If someone's having a rough time: Be sympathetic first ("Ah, that's annoying!" / "Ugh, I get it!").
+- Feel free to add friendly touches ("Hope that helps!" / "Let me know if you need anything else!").
+- Reply in {target_lang}.
+
+DON'T DO THIS:
+- Don't invent info - stick to what you know
+- Don't be stiff or formal
+- Don't guess with words like "typically" or "usually"
+
+Question: {question}"""
+
+    elif effective_tone == "collegial":
+        # Collegial tone - like a helpful coworker
+        return f"""You are a helpful assistant for {company_name} - like a knowledgeable colleague who genuinely wants to help their teammates succeed.
 
 PERSONALITY:
 - You're a thoughtful colleague, not a bot. Think of yourself as the team member who always knows where to find information.
-- Be warm and supportive. Show that you understand the daily challenges employees face.
-- When appropriate, add context or helpful tips that might make their job easier.
+- Be warm and supportive. Show that you understand the daily challenges people face.
+- When appropriate, add context or helpful tips that might make things easier.
 - Use a natural, conversational tone - like chatting with a trusted coworker.
-- It's okay to be slightly more detailed than you would be with external customers.
+- It's okay to be slightly more detailed when context helps.
 
 {company_info}
 
@@ -1372,10 +1450,11 @@ NEVER DO THIS:
 - Don't pretend to know internal processes you weren't given info about
 - Don't be overly formal or robotic - you're a colleague, not a customer service bot
 
-Colleague's question: {question}"""
+Question: {question}"""
+
     else:
-        # External widget - warm but concise for customers/tenants
-        return f"""You are a friendly assistant for {company_name}, a property management company. You help tenants with their questions.
+        # Professional tone (default) - warm but concise
+        return f"""You are a friendly assistant for {company_name}, a property management company. You help people with their questions.
 
 PERSONALITY: Warm and helpful, like a friendly neighbor. Professional but not robotic. You genuinely want to help.
 
@@ -1395,7 +1474,7 @@ NEVER DO THIS:
 - Don't use "typically", "usually", "vanligtvis" to guess answers
 - Don't pretend to know things you weren't given
 
-Tenant message: {question}"""
+Question: {question}"""
 
 
 def anonymize_ip(ip: str) -> str:
@@ -2338,8 +2417,8 @@ async def chat_via_widget_key(
         start_time = time.time()
         relevant_items = find_relevant_context(request.question, company_id, db, widget_id=widget.id)
 
-        # Build prompt and get AI response
-        prompt = build_prompt(request.question, relevant_items, settings=settings, language=language, widget_type=widget.widget_type)
+        # Build prompt and get AI response (pass widget for contact info override)
+        prompt = build_prompt(request.question, relevant_items, settings=settings, language=language, widget_type=widget.widget_type, widget=widget)
         answer = await query_ollama(prompt)
         response_time = int((time.time() - start_time) * 1000)
 
@@ -2919,7 +2998,8 @@ async def get_conversations(
     offset: int = Query(0, ge=0, description="Number of items to skip"),
     category: Optional[str] = None,
     language: Optional[str] = None,
-    widget_type: Optional[str] = None
+    widget_type: Optional[str] = None,
+    feedback: Optional[str] = None
 ):
     """Hämta konversationer för inloggat företag"""
     query = db.query(Conversation).filter(
@@ -2933,6 +3013,15 @@ async def get_conversations(
     # Filter by language if provided
     if language:
         query = query.filter(Conversation.language == language)
+
+    # Filter by feedback if provided
+    if feedback:
+        if feedback == "helpful":
+            query = query.filter(Conversation.was_helpful == True)
+        elif feedback == "not_helpful":
+            query = query.filter(Conversation.was_helpful == False)
+        elif feedback == "none":
+            query = query.filter(Conversation.was_helpful == None)
 
     # Filter by widget_type if provided
     if widget_type:
@@ -2995,7 +3084,10 @@ async def get_conversation(
 
     message_responses = []
     for msg in messages:
-        sources = json.loads(msg.sources) if msg.sources else None
+        try:
+            sources = json.loads(msg.sources) if msg.sources else None
+        except (json.JSONDecodeError, TypeError):
+            sources = None
         message_responses.append(MessageResponse(
             id=msg.id,
             role=msg.role,
@@ -3014,10 +3106,10 @@ async def get_conversation(
 
     return ConversationResponse(
         id=conversation.id,
-        session_id=conversation.session_id,
+        session_id=conversation.session_id or f"session-{conversation.id}",
         reference_id=conversation.reference_id or f"BOB-{conversation.id:04d}",
         started_at=conversation.started_at,
-        message_count=conversation.message_count,
+        message_count=conversation.message_count or 0,
         was_helpful=conversation.was_helpful,
         category=conversation.category,
         language=conversation.language,
@@ -3302,6 +3394,118 @@ async def check_similar_questions(
     # Sort by similarity descending
     similar.sort(key=lambda x: x.similarity, reverse=True)
     return similar[:5]  # Return top 5 similar
+
+
+# =============================================================================
+# Category Endpoints
+# =============================================================================
+
+
+@app.get("/categories", response_model=List[CategoryResponse])
+async def get_categories(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Hämta alla kategorier för företaget"""
+    categories = db.query(Category).filter(
+        Category.company_id == current["company_id"]
+    ).order_by(Category.name).all()
+
+    return [CategoryResponse(id=c.id, name=c.name) for c in categories]
+
+
+@app.post("/categories", response_model=CategoryResponse)
+async def create_category(
+    category: CategoryCreate,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Skapa en ny kategori"""
+    # Check if category already exists
+    existing = db.query(Category).filter(
+        Category.company_id == current["company_id"],
+        Category.name == category.name
+    ).first()
+
+    if existing:
+        raise HTTPException(status_code=400, detail="Kategorin finns redan")
+
+    new_category = Category(
+        company_id=current["company_id"],
+        name=category.name
+    )
+    db.add(new_category)
+    db.commit()
+    db.refresh(new_category)
+
+    return CategoryResponse(id=new_category.id, name=new_category.name)
+
+
+@app.put("/categories/{category_id}", response_model=CategoryResponse)
+async def update_category(
+    category_id: int,
+    category: CategoryCreate,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Uppdatera en kategori"""
+    existing = db.query(Category).filter(
+        Category.id == category_id,
+        Category.company_id == current["company_id"]
+    ).first()
+
+    if not existing:
+        raise HTTPException(status_code=404, detail="Kategorin hittades inte")
+
+    # Check if new name already exists (excluding current category)
+    duplicate = db.query(Category).filter(
+        Category.company_id == current["company_id"],
+        Category.name == category.name,
+        Category.id != category_id
+    ).first()
+
+    if duplicate:
+        raise HTTPException(status_code=400, detail="En kategori med det namnet finns redan")
+
+    # Update knowledge items with old category name to new name
+    old_name = existing.name
+    db.query(KnowledgeItem).filter(
+        KnowledgeItem.company_id == current["company_id"],
+        KnowledgeItem.category == old_name
+    ).update({KnowledgeItem.category: category.name})
+
+    existing.name = category.name
+    db.commit()
+    db.refresh(existing)
+
+    return CategoryResponse(id=existing.id, name=existing.name)
+
+
+@app.delete("/categories/{category_id}")
+async def delete_category(
+    category_id: int,
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Ta bort en kategori"""
+    existing = db.query(Category).filter(
+        Category.id == category_id,
+        Category.company_id == current["company_id"]
+    ).first()
+
+    if not existing:
+        raise HTTPException(status_code=404, detail="Kategorin hittades inte")
+
+    # Clear category from knowledge items
+    db.query(KnowledgeItem).filter(
+        KnowledgeItem.company_id == current["company_id"],
+        KnowledgeItem.category == existing.name
+    ).update({KnowledgeItem.category: ""})
+
+    db.delete(existing)
+    db.commit()
+
+    return {"message": "Kategorin borttagen"}
 
 
 class UploadResponse(BaseModel):
@@ -4023,27 +4227,56 @@ async def get_stats(
 ):
     """Hämta enkel statistik för inloggat företag"""
     company_id = current["company_id"]
+    today = date.today()
+    week_ago = today - timedelta(days=7)
+    month_ago = today - timedelta(days=30)
 
-    total = db.query(ChatLog).filter(ChatLog.company_id == company_id).count()
+    # Knowledge items count
     knowledge = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == company_id).count()
 
-    today = datetime.utcnow().date()
-    today_count = db.query(ChatLog).filter(
-        ChatLog.company_id == company_id,
-        func.date(ChatLog.created_at) == today
-    ).count()
+    # Get all daily statistics for this company
+    all_stats = db.query(DailyStatistics).filter(
+        DailyStatistics.company_id == company_id
+    ).all()
 
-    week_ago = datetime.utcnow() - timedelta(days=7)
-    week_count = db.query(ChatLog).filter(
-        ChatLog.company_id == company_id,
-        ChatLog.created_at >= week_ago
-    ).count()
+    # Total conversations from historical data
+    total = sum(s.total_conversations for s in all_stats)
 
-    month_ago = datetime.utcnow() - timedelta(days=30)
-    month_count = db.query(ChatLog).filter(
-        ChatLog.company_id == company_id,
-        ChatLog.created_at >= month_ago
-    ).count()
+    # Add active conversations not yet in daily stats
+    active_convs = db.query(Conversation).filter(
+        Conversation.company_id == company_id
+    ).all()
+    total += len(active_convs)
+
+    # Today's stats from DailyStatistics
+    today_stats = db.query(DailyStatistics).filter(
+        DailyStatistics.company_id == company_id,
+        DailyStatistics.date == today
+    ).first()
+    today_count = today_stats.total_conversations if today_stats else 0
+    # Add today's active conversations
+    today_convs = [c for c in active_convs if c.started_at.date() == today]
+    today_count += len(today_convs)
+
+    # This week's stats
+    week_stats = db.query(DailyStatistics).filter(
+        DailyStatistics.company_id == company_id,
+        DailyStatistics.date >= week_ago
+    ).all()
+    week_count = sum(s.total_conversations for s in week_stats)
+    # Add this week's active conversations
+    week_convs = [c for c in active_convs if c.started_at.date() >= week_ago]
+    week_count += len(week_convs)
+
+    # This month's stats
+    month_stats = db.query(DailyStatistics).filter(
+        DailyStatistics.company_id == company_id,
+        DailyStatistics.date >= month_ago
+    ).all()
+    month_count = sum(s.total_conversations for s in month_stats)
+    # Add this month's active conversations
+    month_convs = [c for c in active_convs if c.started_at.date() >= month_ago]
+    month_count += len(month_convs)
 
     return StatsResponse(
         total_questions=total,
@@ -4193,10 +4426,17 @@ async def get_analytics(
     conversations_today = today_stats.total_conversations if today_stats else 0
     messages_today = today_stats.total_messages if today_stats else 0
 
+    # Helper to get actual message count for a conversation
+    def get_message_count(conv):
+        count = conv.message_count or 0
+        if count == 0:
+            count = db.query(Message).filter(Message.conversation_id == conv.id).count()
+        return count
+
     # Lägg till dagens aktiva konversationer
     today_convs = [c for c in active_convs if c.started_at.date() == today]
     conversations_today += len(today_convs)
-    messages_today += sum(c.message_count for c in today_convs)
+    messages_today += sum(get_message_count(c) for c in today_convs)
 
     # This week
     week_stats = db.query(DailyStatistics).filter(
@@ -4210,7 +4450,7 @@ async def get_analytics(
     # Lägg till veckans aktiva
     week_convs = [c for c in active_convs if c.started_at.date() >= week_ago]
     conversations_week += len(week_convs)
-    messages_week += sum(c.message_count for c in week_convs)
+    messages_week += sum(get_message_count(c) for c in week_convs)
 
     # Performance
     all_response_times = []
@@ -4231,20 +4471,53 @@ async def get_analytics(
     answer_rate = (total_answered / (total_answered + total_unanswered) * 100) if (total_answered + total_unanswered) > 0 else 100
 
     # Daily breakdown (senaste 30 dagarna)
-    daily_stats_list = []
-    month_stats = db.query(DailyStatistics).filter(
-        DailyStatistics.company_id == company_id,
-        DailyStatistics.date >= month_ago
-    ).order_by(DailyStatistics.date.asc()).all()
+    # Initialize all 30 days with zeros first
+    daily_stats_dict = {}
+    for i in range(30):
+        d = (today - timedelta(days=29-i)).isoformat()
+        daily_stats_dict[d] = {
+            "date": d,
+            "conversations": 0,
+            "messages": 0,
+            "answered": 0,
+            "unanswered": 0
+        }
 
-    for s in month_stats:
-        daily_stats_list.append({
-            "date": s.date.isoformat(),
-            "conversations": s.total_conversations,
-            "messages": s.total_messages,
-            "answered": s.questions_answered,
-            "unanswered": s.questions_unanswered
-        })
+    # Count messages and conversations by day directly from tables
+    month_start = today - timedelta(days=29)
+    month_start_dt = datetime.combine(month_start, datetime.min.time())
+
+
+    # Get all conversations for this company in the last 30 days
+    conversations = db.query(Conversation).filter(
+        Conversation.company_id == company_id,
+        Conversation.started_at >= month_start_dt
+    ).all()
+
+
+    # Count conversations per day
+    for conv in conversations:
+        d = conv.started_at.date().isoformat()
+        if d in daily_stats_dict:
+            daily_stats_dict[d]["conversations"] += 1
+
+    # Get all messages for these conversations
+    if conversations:
+        conv_ids = [c.id for c in conversations]
+        messages = db.query(Message).filter(
+            Message.conversation_id.in_(conv_ids)
+        ).all()
+
+
+        # Count messages per day
+        for msg in messages:
+            if msg.created_at:
+                d = msg.created_at.date().isoformat()
+                if d in daily_stats_dict:
+                    daily_stats_dict[d]["messages"] += 1
+
+    # Convert to sorted list (always 30 days)
+    daily_stats_list = [daily_stats_dict[d] for d in sorted(daily_stats_dict.keys())]
 
     # Merge historical stats
     for s in stats:
@@ -6329,6 +6602,26 @@ class AnnouncementCreate(BaseModel):
     title: str
     message: str
     type: str = "info"  # info, warning, maintenance
+
+
+@app.get("/announcements")
+async def get_company_announcements(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Get active announcements for companies"""
+    announcement = db.query(GlobalSettings).filter(
+        GlobalSettings.key == "active_announcement"
+    ).first()
+
+    if announcement and announcement.value:
+        try:
+            data = json.loads(announcement.value)
+            return {"announcement": data}
+        except:
+            pass
+
+    return {"announcement": None}
 
 
 @app.get("/admin/announcements")

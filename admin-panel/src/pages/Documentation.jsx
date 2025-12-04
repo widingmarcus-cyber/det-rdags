@@ -55,12 +55,12 @@ function Documentation() {
                 <div className="card">
                   <h3 className="font-medium text-text-primary mb-2">Vad är Bobot?</h3>
                   <p className="text-text-secondary text-sm leading-relaxed">
-                    Bobot är en smart chattbot för fastighetsbolag. Den hjälper dig att automatiskt
-                    svara på hyresgästernas vanligaste frågor - dygnet runt, på flera språk.
+                    Bobot är en smart AI-chattbot för företag. Den hjälper dig att automatiskt
+                    svara på dina kunders vanligaste frågor - dygnet runt, på flera språk.
                   </p>
                   <p className="text-text-secondary text-sm leading-relaxed mt-3">
                     Du bygger enkelt upp en kunskapsbas med frågor och svar, och AI:n använder
-                    sedan denna information för att hjälpa dina hyresgäster direkt via din hemsida.
+                    sedan denna information för att hjälpa dina kunder direkt via din hemsida.
                   </p>
                 </div>
 
@@ -74,7 +74,7 @@ function Documentation() {
                       <div>
                         <p className="font-medium text-text-primary text-sm">Bygg din kunskapsbas</p>
                         <p className="text-xs text-text-secondary mt-1">
-                          Lägg till frågor och svar som är relevanta för dina hyresgäster.
+                          Lägg till frågor och svar som är relevanta för dina kunder.
                           Du kan använda färdiga mallar eller importera från Excel/Word.
                         </p>
                       </div>
@@ -433,20 +433,20 @@ function Documentation() {
                     <div className="border border-border-subtle rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Extern</span>
-                        <span className="font-medium text-text-primary">Kundchatt</span>
+                        <span className="font-medium text-text-primary">Kundtjänst</span>
                       </div>
                       <p className="text-sm text-text-secondary">
-                        För hyresgäster och kunder. Installeras på din publika hemsida.
-                        Kunskapsbasen innehåller information om hyra, felanmälan, etc.
+                        För externa besökare och kunder. Installeras på din publika hemsida.
+                        Kunskapsbasen innehåller information om produkter, tjänster, priser, etc.
                       </p>
                     </div>
                     <div className="border border-border-subtle rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Intern</span>
-                        <span className="font-medium text-text-primary">Internchatt</span>
+                        <span className="font-medium text-text-primary">Medarbetarstöd</span>
                       </div>
                       <p className="text-sm text-text-secondary">
-                        För anställda. Installeras på ert intranät.
+                        För anställda. Installeras på ert intranät eller interna system.
                         Kunskapsbasen innehåller policyer, rutiner, HR-information, etc.
                       </p>
                     </div>
@@ -533,7 +533,7 @@ function Documentation() {
                     </li>
                     <li className="flex gap-3">
                       <span className="flex-shrink-0 w-6 h-6 bg-accent-soft text-accent rounded-full flex items-center justify-center text-xs font-medium">2</span>
-                      <span><strong>Låt kollegor testa</strong> - Be medarbetare ställa frågor de tror hyresgäster skulle ställa</span>
+                      <span><strong>Låt kollegor testa</strong> - Be medarbetare ställa frågor de tror kunder skulle ställa</span>
                     </li>
                     <li className="flex gap-3">
                       <span className="flex-shrink-0 w-6 h-6 bg-accent-soft text-accent rounded-full flex items-center justify-center text-xs font-medium">3</span>
@@ -568,7 +568,7 @@ function Documentation() {
                       <div>
                         <p className="font-medium text-text-primary text-sm">Skriv naturligt</p>
                         <p className="text-xs text-text-secondary mt-1">
-                          Formulera frågorna som dina hyresgäster faktiskt skulle ställa dem,
+                          Formulera frågorna som dina kunder faktiskt skulle ställa dem,
                           inte som interna termer.
                         </p>
                       </div>
@@ -580,8 +580,8 @@ function Documentation() {
                       <div>
                         <p className="font-medium text-text-primary text-sm">Var specifik</p>
                         <p className="text-xs text-text-secondary mt-1">
-                          "Hyran ska betalas senast den 30:e varje månad" är bättre än
-                          "Hyran ska betalas i tid".
+                          "Leveranstiden är 3-5 arbetsdagar inom Sverige" är bättre än
+                          "Vi skickar så snabbt vi kan".
                         </p>
                       </div>
                     </div>
@@ -620,19 +620,19 @@ function Documentation() {
                     <div className="flex items-start gap-2">
                       <span className="text-accent">•</span>
                       <span>
-                        <strong>Be om feedback</strong> - Fråga hyresgäster vad de tycker om chattboten.
+                        <strong>Be om feedback</strong> - Fråga kunder vad de tycker om chattboten.
                       </span>
                     </div>
                   </div>
                 </div>
 
                 <div className="card">
-                  <h3 className="font-medium text-text-primary mb-3">Kommunicera med hyresgäster</h3>
+                  <h3 className="font-medium text-text-primary mb-3">Kommunicera med kunder</h3>
                   <div className="space-y-3 text-sm text-text-secondary">
                     <div className="flex items-start gap-2">
                       <span className="text-accent">•</span>
                       <span>
-                        <strong>Var tydlig med att det är AI</strong> - Hyresgäster uppskattar
+                        <strong>Var tydlig med att det är AI</strong> - Kunder uppskattar
                         ärlighet. Välkomstmeddelandet kan nämna att det är en AI-assistent.
                       </span>
                     </div>
@@ -711,7 +711,7 @@ function Documentation() {
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="text-accent">•</span>
-                      Använda färdiga mallar för fastighetsbolag
+                      Använda färdiga mallar för vanliga branscher
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="text-accent">•</span>
@@ -776,7 +776,7 @@ function Documentation() {
                     <h3 className="font-medium text-text-primary">Statistik & Analys</h3>
                   </div>
                   <p className="text-sm text-text-secondary mb-3">
-                    Få insikter om vad dina hyresgäster frågar om:
+                    Få insikter om vad dina kunder frågar om:
                   </p>
                   <ul className="space-y-2 text-sm text-text-secondary">
                     <li className="flex items-center gap-2">
@@ -868,7 +868,7 @@ function Documentation() {
                       <div>
                         <p className="font-medium text-text-primary text-sm">Chattmeddelanden</p>
                         <p className="text-xs text-text-secondary mt-1">
-                          Det hyresgästen skriver och AI:ns svar. Raderas automatiskt efter den
+                          Det kunden skriver och AI:ns svar. Raderas automatiskt efter den
                           tid du valt (7-30 dagar).
                         </p>
                       </div>
@@ -927,7 +927,7 @@ function Documentation() {
                 <div className="card">
                   <h3 className="font-medium text-text-primary mb-3">Användarens rättigheter</h3>
                   <p className="text-sm text-text-secondary mb-3">
-                    Dina hyresgäster kan direkt i chatten:
+                    Dina kunder kan direkt i chatten:
                   </p>
                   <div className="space-y-3">
                     <div className="flex items-start gap-3 p-3 bg-bg-secondary rounded-lg">
@@ -998,7 +998,7 @@ function Documentation() {
                       <div>
                         <p className="font-medium text-text-primary text-sm">Lokal AI</p>
                         <p className="text-xs text-text-secondary mt-1">
-                          AI:n körs lokalt - dina hyresgästers frågor skickas aldrig till externa
+                          AI:n körs lokalt - dina kunders frågor skickas aldrig till externa
                           tjänster som ChatGPT eller Google
                         </p>
                       </div>

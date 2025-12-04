@@ -1,6 +1,8 @@
 import { NavLink } from 'react-router-dom'
+import { useState } from 'react'
 
-function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode }) {
+function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, announcement, onDismissAnnouncement }) {
+  const [showAnnouncement, setShowAnnouncement] = useState(false)
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: 'chart' },
     { to: '/widget/external', label: 'Kundtjänst', icon: 'external' },
@@ -89,44 +91,69 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode }) 
       {/* Logo & Mascot */}
       <div className="p-4 mb-2">
         <div className="flex items-center gap-3 px-3 py-2">
-          {/* Cute Robot Mascot */}
+          {/* Mini Bobot Mascot - matches Landing page style */}
           <div className="w-10 h-10 relative" aria-hidden="true">
             <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-              {/* Antenna */}
-              <circle cx="24" cy="6" r="3" fill="#D97757"/>
-              <rect x="22" y="6" width="4" height="6" fill="#D97757"/>
+              {/* Feet */}
+              <rect x="10" y="38" width="12" height="5" rx="2.5" fill="#78716C" />
+              <rect x="26" y="38" width="12" height="5" rx="2.5" fill="#78716C" />
+              <rect x="11.5" y="39" width="9" height="3" rx="1.5" fill="#57534E" />
+              <rect x="27.5" y="39" width="9" height="3" rx="1.5" fill="#57534E" />
+              {/* Body */}
+              <rect x="12" y="22" width="24" height="17" rx="2" fill="#D97757" />
+              <rect x="13.5" y="23.5" width="21" height="14" rx="1" fill="#C4613D" />
+              {/* Chest screens */}
+              <rect x="15" y="30" width="8" height="6" rx="1" fill="#1C1917" />
+              <rect x="25" y="30" width="8" height="6" rx="1" fill="#1C1917" />
+              {/* Neck */}
+              <rect x="20" y="18" width="8" height="5" rx="1" fill="#78716C" />
               {/* Head */}
-              <rect x="8" y="12" width="32" height="24" rx="6" fill="url(#mascotGradient)"/>
-              {/* Eyes */}
-              <circle cx="17" cy="24" r="4" fill="white"/>
-              <circle cx="31" cy="24" r="4" fill="white"/>
-              <circle cx="18" cy="24" r="2" fill="#3D2B24"/>
-              <circle cx="32" cy="24" r="2" fill="#3D2B24"/>
+              <rect x="14" y="8" width="20" height="11" rx="2" fill="#D97757" />
+              {/* Eyes - dark screens */}
+              <ellipse cx="19" cy="13.5" rx="4.5" ry="4" fill="#1C1917" />
+              <ellipse cx="29" cy="13.5" rx="4.5" ry="4" fill="#1C1917" />
+              <ellipse cx="19" cy="13.5" rx="3.5" ry="3" fill="#292524" />
+              <ellipse cx="29" cy="13.5" rx="3.5" ry="3" fill="#292524" />
+              {/* Pupils */}
+              <ellipse cx="19" cy="14" rx="2" ry="2" fill="#D97757">
+                <animate attributeName="ry" values="2;0.2;2;2;2" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+              </ellipse>
+              <ellipse cx="29" cy="14" rx="2" ry="2" fill="#D97757">
+                <animate attributeName="ry" values="2;0.2;2;2;2" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+              </ellipse>
               {/* Eye shine */}
-              <circle cx="18.5" cy="23" r="0.8" fill="white"/>
-              <circle cx="32.5" cy="23" r="0.8" fill="white"/>
-              {/* Cheeks */}
-              <ellipse cx="12" cy="28" rx="2.5" ry="1.5" fill="#E8A87C" opacity="0.6"/>
-              <ellipse cx="36" cy="28" rx="2.5" ry="1.5" fill="#E8A87C" opacity="0.6"/>
-              {/* Mouth */}
-              <path d="M20 30 Q24 34 28 30" stroke="#3D2B24" strokeWidth="2" strokeLinecap="round" fill="none"/>
-              {/* Ears */}
-              <rect x="2" y="20" width="6" height="10" rx="2" fill="#C4613D"/>
-              <rect x="40" y="20" width="6" height="10" rx="2" fill="#C4613D"/>
-              {/* Body hint */}
-              <rect x="16" y="36" width="16" height="8" rx="3" fill="#C4613D"/>
-              {/* Gradient definition */}
-              <defs>
-                <linearGradient id="mascotGradient" x1="8" y1="12" x2="40" y2="36" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#D97757"/>
-                  <stop offset="1" stopColor="#C4613D"/>
-                </linearGradient>
-              </defs>
+              <circle cx="20" cy="13" r="1" fill="#FEF2EE">
+                <animate attributeName="opacity" values="1;0;1;1;1" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+              </circle>
+              <circle cx="30" cy="13" r="1" fill="#FEF2EE">
+                <animate attributeName="opacity" values="1;0;1;1;1" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+              </circle>
+              {/* Nose */}
+              <rect x="22.5" cy="12" width="3" height="3" rx="1" fill="#78716C" />
+              {/* Arms */}
+              <rect x="5" y="25" width="7" height="2.5" rx="1.2" fill="#78716C">
+                <animateTransform attributeName="transform" type="rotate" values="0 8 26;-8 8 26;0 8 26" dur="3s" repeatCount="indefinite" />
+              </rect>
+              <rect x="36" y="25" width="7" height="2.5" rx="1.2" fill="#78716C">
+                <animateTransform attributeName="transform" type="rotate" values="0 40 26;8 40 26;0 40 26" dur="3s" repeatCount="indefinite" />
+              </rect>
+              {/* Hands */}
+              <rect x="3" y="23" width="3.5" height="6" rx="1" fill="#57534E">
+                <animateTransform attributeName="transform" type="rotate" values="0 4.5 26;-8 4.5 26;0 4.5 26" dur="3s" repeatCount="indefinite" />
+              </rect>
+              <rect x="41.5" y="23" width="3.5" height="6" rx="1" fill="#57534E">
+                <animateTransform attributeName="transform" type="rotate" values="0 43.5 26;8 43.5 26;0 43.5 26" dur="3s" repeatCount="indefinite" />
+              </rect>
+              {/* Antenna */}
+              <rect x="22.5" y="4" width="3" height="5" rx="1" fill="#78716C" />
+              <circle cx="24" cy="3" r="2.5" fill="#4A9D7C">
+                <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite" />
+              </circle>
             </svg>
           </div>
           <div>
             <span className="font-semibold text-text-primary block">Bobot</span>
-            <span className="text-xs text-text-tertiary">AI Assistent</span>
+            <span className="text-xs text-text-tertiary">din medarbetare</span>
           </div>
         </div>
       </div>
@@ -148,6 +175,91 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode }) 
           </NavLink>
         ))}
       </nav>
+
+      {/* Notification bell - always visible */}
+      <div className="px-3 py-2 relative">
+        <button
+          onClick={() => announcement && setShowAnnouncement(!showAnnouncement)}
+          className={`sidebar-item w-full text-left relative ${!announcement ? 'opacity-60 cursor-default' : ''}`}
+          aria-label={announcement ? "Visa meddelanden" : "Inga meddelanden"}
+        >
+          <span className="relative">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+            {announcement && (
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-accent rounded-full animate-pulse" />
+            )}
+          </span>
+          <span>Meddelanden</span>
+          {announcement && (
+            <span className="ml-auto bg-accent text-white text-xs px-1.5 py-0.5 rounded-full">1</span>
+          )}
+        </button>
+
+        {/* Announcement popup */}
+        {showAnnouncement && announcement && (
+          <div className="absolute left-full bottom-0 ml-2 w-72 bg-bg-primary border border-border-subtle rounded-lg shadow-xl z-50 overflow-hidden">
+            <div className={`px-4 py-3 border-b border-border-subtle ${
+              announcement.type === 'warning' ? 'bg-warning/10' :
+              announcement.type === 'maintenance' ? 'bg-error/10' : 'bg-accent-soft'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {announcement.type === 'warning' ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-warning">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                      <line x1="12" y1="9" x2="12" y2="13" />
+                      <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                  ) : announcement.type === 'maintenance' ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-error">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="16" x2="12" y2="12" />
+                      <line x1="12" y1="8" x2="12.01" y2="8" />
+                    </svg>
+                  )}
+                  <span className="font-medium text-text-primary text-sm">{announcement.title}</span>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowAnnouncement(false) }}
+                  className="text-text-tertiary hover:text-text-primary"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="px-4 py-3">
+              <p className="text-sm text-text-secondary leading-relaxed">{announcement.message}</p>
+              {announcement.created_at && (
+                <p className="text-xs text-text-tertiary mt-2">
+                  {new Date(announcement.created_at).toLocaleDateString('sv-SE', {
+                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                  })}
+                </p>
+              )}
+            </div>
+            <div className="px-4 py-2 bg-bg-secondary border-t border-border-subtle">
+              <button
+                onClick={() => { onDismissAnnouncement(); setShowAnnouncement(false) }}
+                className="text-xs text-text-tertiary hover:text-text-primary"
+              >
+                Markera som läst
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* User section */}
       <div className="p-3 border-t border-border-subtle" role="region" aria-label="Användarmeny">

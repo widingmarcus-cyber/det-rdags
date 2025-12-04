@@ -1,11 +1,13 @@
 import { useState, useEffect, useContext } from 'react'
+import { useLocation } from 'react-router-dom'
 import { AuthContext } from '../App'
 
 const API_BASE = '/api'
 
 function Settings() {
   const { auth, authFetch } = useContext(AuthContext)
-  const [activeTab, setActiveTab] = useState('notifications')
+  const location = useLocation()
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'notifications')
   const [settings, setSettings] = useState({
     company_name: '',
     data_retention_days: 30,
@@ -495,12 +497,12 @@ function Settings() {
                       <span className="px-2 py-0.5 bg-success/20 text-success text-xs font-medium rounded-full">Aktivt</span>
                     </div>
                     <p className="text-sm text-text-secondary mb-4">
-                      All data lagras och bearbetas inom EU/EES i enlighet med GDPR.
+                      All data lagras och bearbetas i Sverige i enlighet med GDPR.
                     </p>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div className="bg-bg-secondary rounded-lg p-3">
                         <p className="text-text-tertiary text-xs uppercase tracking-wide mb-1">Datacenter</p>
-                        <p className="text-text-primary font-medium">EU Region</p>
+                        <p className="text-text-primary font-medium">Sverige</p>
                       </div>
                       <div className="bg-bg-secondary rounded-lg p-3">
                         <p className="text-text-tertiary text-xs uppercase tracking-wide mb-1">AI-behandling</p>
@@ -533,39 +535,43 @@ function Settings() {
                     </p>
                   </div>
 
-                  <div className="border border-success/30 bg-success/5 rounded-lg p-4">
+                  <div className="border border-amber-500/30 bg-amber-500/5 rounded-lg p-4">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 bg-success/20 rounded-lg flex items-center justify-center">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success">
+                      <div className="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-500">
                           <circle cx="12" cy="12" r="10" />
                           <path d="M12 8v4l2 2" />
                         </svg>
                       </div>
                       <div>
-                        <p className="font-medium text-text-primary">WCAG 2.2 AA</p>
-                        <p className="text-xs text-success">Uppfyllt</p>
+                        <p className="font-medium text-text-primary">Tillgänglighet</p>
+                        <p className="text-xs text-amber-500">Nivå A (arbetar mot AA)</p>
                       </div>
                     </div>
                     <p className="text-xs text-text-secondary">
-                      Tillgänglighetskraven enligt DOS-lagen och WCAG 2.2
+                      Grundläggande WCAG 2.1 A uppfyllt. Arbetar mot AA-nivå enligt DOS-lagen.
                     </p>
                   </div>
 
-                  <div className="border border-success/30 bg-success/5 rounded-lg p-4">
+                  <div className={`border rounded-lg p-4 ${settings.require_consent ? 'border-success/30 bg-success/5' : 'border-error/30 bg-error/5'}`}>
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 bg-success/20 rounded-lg flex items-center justify-center">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${settings.require_consent ? 'bg-success/20' : 'bg-error/20'}`}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={settings.require_consent ? 'text-success' : 'text-error'}>
                           <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                           <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                         </svg>
                       </div>
                       <div>
                         <p className="font-medium text-text-primary">PuB</p>
-                        <p className="text-xs text-success">Kompatibel</p>
+                        <p className={`text-xs ${settings.require_consent ? 'text-success' : 'text-error'}`}>
+                          {settings.require_consent ? 'Aktiverat' : 'Ej aktiverat'}
+                        </p>
                       </div>
                     </div>
                     <p className="text-xs text-text-secondary">
-                      Svensk personuppgiftsbehandling enligt offentlighetsprincipen
+                      {settings.require_consent
+                        ? 'Samtyckeshantering för personuppgiftsbehandling är aktiverad'
+                        : 'Aktivera samtycke under Integritet-fliken för PuB-kompatibilitet'}
                     </p>
                   </div>
 

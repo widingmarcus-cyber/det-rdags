@@ -477,7 +477,7 @@ function Preview() {
 
           {/* Messages - Anthropic style */}
           <div
-            className="h-96 overflow-y-auto p-4 space-y-4"
+            className="h-96 overflow-y-auto overflow-x-hidden p-4 space-y-4"
             style={{ backgroundColor: theme.bg }}
             role="log"
             aria-label="Chattmeddelanden"
@@ -487,7 +487,7 @@ function Preview() {
             {messages.map((msg, index) => (
               <div
                 key={index}
-                className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex w-full ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
                 style={{ animation: 'slideUp 0.3s ease-out' }}
                 role="article"
                 aria-label={msg.type === 'user' ? 'Ditt meddelande' : 'Bobot svarar'}

@@ -54,6 +54,9 @@ function App() {
     return saved ? JSON.parse(saved) : null
   })
 
+  // Announcement state
+  const [announcement, setAnnouncement] = useState(null)
+
   // Admin auth
   const [adminAuth, setAdminAuth] = useState(() => {
     const saved = localStorage.getItem('bobot_admin_auth')
@@ -204,6 +207,32 @@ function App() {
     return response
   }
 
+  // Fetch announcements for companies
+  const fetchAnnouncement = async () => {
+    if (!auth?.token) return
+    try {
+      const response = await fetch(`${API_BASE}/announcements`, {
+        headers: { 'Authorization': `Bearer ${auth.token}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setAnnouncement(data.announcement)
+      }
+    } catch (e) {
+      console.error('Could not fetch announcements:', e)
+    }
+  }
+
+  // Fetch announcements when authenticated
+  useEffect(() => {
+    if (auth) {
+      fetchAnnouncement()
+      // Refresh every 5 minutes
+      const interval = setInterval(fetchAnnouncement, 5 * 60 * 1000)
+      return () => clearInterval(interval)
+    }
+  }, [auth])
+
   // Hjälpfunktion för autentiserade API-anrop (admin)
   const adminFetch = async (url, options = {}) => {
     const headers = {
@@ -267,6 +296,8 @@ function App() {
           onLogout={handleLogout}
           darkMode={darkMode}
           toggleDarkMode={toggleDarkMode}
+          announcement={announcement}
+          onDismissAnnouncement={() => setAnnouncement(null)}
         />
         <main id="main-content" className="flex-1 p-8 overflow-auto" role="main" aria-label="Huvudinnehåll">
           <Routes>

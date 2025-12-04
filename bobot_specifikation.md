@@ -31,6 +31,7 @@
 | Importera FAQ | Ladda upp CSV/Excel/Word/TXT | ✅ Klar |
 | Ladda upp dokument | PDF/Word som AI läser | ✅ Klar |
 | URL-import | Extrahera Q&A från webbsidor | ✅ Klar |
+| Mallar | Färdiga Q&A-mallar för snabb start | ✅ Klar |
 | Versionshistorik | Se tidigare versioner | 🔜 Planerad |
 | Bulk-redigering | Ändra flera samtidigt | 🔜 Planerad |
 

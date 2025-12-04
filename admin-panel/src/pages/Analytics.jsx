@@ -86,7 +86,7 @@ function Analytics() {
         [''],
         ['=== ÖVERSIKT ==='],
         ['Nyckeltal', 'Värde', 'Beskrivning'],
-        ['Totalt konversationer', analytics.total_conversations, 'Antal unika chattsamtal sedan start'],
+        ['Totala konversationer', analytics.total_conversations, 'Antal unika chattsamtal sedan start'],
         ['Totalt meddelanden', analytics.total_messages, 'Alla meddelanden (frågor + svar)'],
         ['Svarsfrekvens', `${analytics.answer_rate?.toFixed(1) || 0}%`, 'Andel frågor som AI kunde besvara'],
         ['Svarstid (snitt)', `${(analytics.avg_response_time_ms / 1000).toFixed(1)}s`, 'Genomsnittlig tid för AI-svar'],
@@ -251,7 +251,7 @@ function Analytics() {
       {/* Overview Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <StatCard
-          label="Totalt konversationer"
+          label="Totala konversationer"
           value={analytics.total_conversations}
           icon={
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -315,30 +315,49 @@ function Analytics() {
       {analytics.daily_stats && analytics.daily_stats.length > 0 && (
         <div className="card mb-8">
           <h3 className="text-lg font-medium text-text-primary mb-4">Senaste 30 dagarna</h3>
-          <div className="h-48 flex items-end gap-1">
-            {analytics.daily_stats.map((day, index) => (
-              <div
-                key={index}
-                className="flex-1 flex flex-col items-center group"
-              >
-                <div className="relative w-full">
-                  {/* Tooltip */}
-                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-text-primary text-bg-primary text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                    {new Date(day.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}
-                    <br />
-                    {day.messages} meddelanden
-                  </div>
-                  {/* Bar */}
-                  <div
-                    className="w-full bg-accent/80 hover:bg-accent rounded-t transition-all cursor-pointer"
-                    style={{
-                      height: `${Math.max((day.messages / maxMessages) * 160, 4)}px`
-                    }}
-                  />
-                </div>
+          {maxMessages === 0 ? (
+            <div className="h-40 flex items-center justify-center">
+              <div className="text-center">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary mx-auto mb-2">
+                  <line x1="18" y1="20" x2="18" y2="10" />
+                  <line x1="12" y1="20" x2="12" y2="4" />
+                  <line x1="6" y1="20" x2="6" y2="14" />
+                </svg>
+                <p className="text-text-tertiary text-sm">Ingen aktivitet ännu</p>
+                <p className="text-text-tertiary text-xs mt-1">Data visas när konversationer startar</p>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="h-40 flex items-stretch gap-[3px]">
+              {analytics.daily_stats.map((day, index) => {
+                const barHeight = maxMessages > 0 ? (day.messages / maxMessages) * 100 : 0
+                return (
+                  <div
+                    key={index}
+                    className="flex-1 h-full flex flex-col items-center group relative"
+                  >
+                    {/* Tooltip */}
+                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-text-primary text-bg-primary text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                      {new Date(day.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}
+                      <br />
+                      {day.messages} meddelanden
+                    </div>
+                    {/* Bar container */}
+                    <div className="w-full h-full flex items-end">
+                      <div
+                        className={`w-full rounded-t transition-all cursor-pointer ${
+                          day.messages > 0 ? 'bg-accent hover:bg-accent/80' : 'bg-border-subtle'
+                        }`}
+                        style={{
+                          height: day.messages > 0 ? `${Math.max(barHeight, 5)}%` : '4px'
+                        }}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
           <div className="flex justify-between mt-2 text-xs text-text-tertiary">
             <span>30 dagar sedan</span>
             <span>Idag</span>
@@ -346,96 +365,135 @@ function Analytics() {
         </div>
       )}
 
-      {/* Language & Feedback Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-        {/* Language Distribution */}
-        <div className="card">
-          <h3 className="text-lg font-medium text-text-primary mb-4">Språk</h3>
-          {Object.keys(analytics.language_stats || {}).length > 0 ? (
-            <div className="space-y-2">
-              {Object.entries(analytics.language_stats)
-                .sort((a, b) => b[1] - a[1])
-                .map(([lang, count]) => {
-                  const langNames = { sv: 'Svenska', en: 'English', ar: 'العربية' }
-                  const total = Object.values(analytics.language_stats).reduce((a, b) => a + b, 0)
-                  const percent = total > 0 ? ((count / total) * 100).toFixed(0) : 0
-                  return (
-                    <div key={lang}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-text-secondary">{langNames[lang] || lang}</span>
-                        <span className="font-medium text-text-primary">{count} ({percent}%)</span>
-                      </div>
-                      <div className="h-1.5 bg-bg-secondary rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-accent rounded-full"
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                    </div>
-                  )
-                })}
-            </div>
-          ) : (
-            <p className="text-text-tertiary text-sm">Ingen språkdata ännu</p>
-          )}
+      {/* Feedback & Satisfaction - Full Width */}
+      <div className="card mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-medium text-text-primary">Användarfeedback</h3>
+            <p className="text-sm text-text-secondary">Klicka på en kategori för att se relaterade konversationer</p>
+          </div>
+          <button
+            onClick={() => navigate('/conversations')}
+            className="btn btn-ghost text-sm"
+          >
+            Alla konversationer →
+          </button>
         </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Helpful */}
+          <button
+            onClick={() => navigate('/conversations?feedback=helpful')}
+            className="p-4 bg-success/5 border border-success/20 rounded-xl hover:bg-success/10 transition-all text-left group"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">👍</span>
+                <span className="font-medium text-text-primary">Hjälpsamma svar</span>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary group-hover:text-success transition-colors">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </div>
+            <span className="text-3xl font-bold text-success">{analytics.feedback_stats?.helpful || 0}</span>
+            <p className="text-xs text-text-tertiary mt-1">Användare tyckte svaret var bra</p>
+          </button>
 
-        {/* Feedback Stats */}
-        <div className="card">
-          <h3 className="text-lg font-medium text-text-primary mb-4">Feedback</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
+          {/* Not Helpful */}
+          <button
+            onClick={() => navigate('/conversations?feedback=not_helpful')}
+            className="p-4 bg-error/5 border border-error/20 rounded-xl hover:bg-error/10 transition-all text-left group"
+          >
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <span className="text-lg">👍</span>
-                <span className="text-text-secondary">Hjälpsam</span>
+                <span className="text-2xl">👎</span>
+                <span className="font-medium text-text-primary">Behöver förbättras</span>
               </div>
-              <span className="font-medium text-success">{analytics.feedback_stats?.helpful || 0}</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary group-hover:text-error transition-colors">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">👎</span>
-                <span className="text-text-secondary">Ej hjälpsam</span>
-              </div>
-              <span className="font-medium text-error">{analytics.feedback_stats?.not_helpful || 0}</span>
+            <span className="text-3xl font-bold text-error">{analytics.feedback_stats?.not_helpful || 0}</span>
+            <p className="text-xs text-text-tertiary mt-1">Granska för att förbättra kunskapsbasen</p>
+          </button>
+
+          {/* No Feedback */}
+          <div className="p-4 bg-bg-secondary rounded-xl">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-2xl">🤷</span>
+              <span className="font-medium text-text-primary">Ingen feedback</span>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">🤷</span>
-                <span className="text-text-secondary">Ingen feedback</span>
-              </div>
-              <span className="font-medium text-text-tertiary">{analytics.feedback_stats?.no_feedback || 0}</span>
-            </div>
+            <span className="text-3xl font-bold text-text-tertiary">{analytics.feedback_stats?.no_feedback || 0}</span>
+            <p className="text-xs text-text-tertiary mt-1">Användare gav ingen feedback</p>
           </div>
         </div>
 
+        {/* Satisfaction Rate Bar */}
+        {(analytics.feedback_stats?.helpful || 0) + (analytics.feedback_stats?.not_helpful || 0) > 0 && (
+          <div className="mt-6 pt-6 border-t border-border-subtle">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-text-secondary">Nöjdhetsgrad</span>
+              <span className="font-medium text-text-primary">
+                {(((analytics.feedback_stats?.helpful || 0) /
+                  ((analytics.feedback_stats?.helpful || 0) + (analytics.feedback_stats?.not_helpful || 0))) * 100).toFixed(0)}%
+              </span>
+            </div>
+            <div className="h-3 bg-bg-secondary rounded-full overflow-hidden flex">
+              <div
+                className="h-full bg-success transition-all"
+                style={{
+                  width: `${((analytics.feedback_stats?.helpful || 0) /
+                    ((analytics.feedback_stats?.helpful || 0) + (analytics.feedback_stats?.not_helpful || 0))) * 100}%`
+                }}
+              />
+              <div
+                className="h-full bg-error transition-all"
+                style={{
+                  width: `${((analytics.feedback_stats?.not_helpful || 0) /
+                    ((analytics.feedback_stats?.helpful || 0) + (analytics.feedback_stats?.not_helpful || 0))) * 100}%`
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Activity & Categories */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         {/* Peak Hours */}
         <div className="card">
-          <h3 className="text-lg font-medium text-text-primary mb-4">Aktivitet</h3>
+          <h3 className="text-lg font-medium text-text-primary mb-4">Aktivitet per timme</h3>
           {peakHour && peakHour[1] > 0 ? (
             <div>
-              <div className="text-center mb-4">
-                <span className="text-4xl font-bold text-accent">{peakHour[0]}:00</span>
-                <p className="text-sm text-text-tertiary mt-1">Mest aktiv timme</p>
+              <div className="flex items-center gap-3 mb-4 p-3 bg-accent-soft rounded-lg">
+                <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center text-white font-bold">
+                  {peakHour[0]}
+                </div>
+                <div>
+                  <p className="font-medium text-text-primary">Mest aktiv kl {peakHour[0]}:00</p>
+                  <p className="text-sm text-text-secondary">{peakHour[1]} konversationer</p>
+                </div>
               </div>
-              <div className="flex items-end justify-center gap-0.5 h-16">
-                {Object.entries(analytics.hourly_stats || {})
-                  .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-                  .filter((_, i) => i % 2 === 0) // Show every other hour
-                  .map(([hour, count]) => {
-                    const maxCount = Math.max(...Object.values(analytics.hourly_stats || {}), 1)
-                    return (
-                      <div
-                        key={hour}
-                        className="w-2 bg-accent/60 hover:bg-accent rounded-t transition-all"
-                        style={{ height: `${Math.max((count / maxCount) * 100, 4)}%` }}
-                        title={`${hour}:00 - ${count} konversationer`}
-                      />
-                    )
-                  })}
+              <div className="flex items-end justify-between gap-1 h-24">
+                {Array.from({ length: 24 }, (_, i) => {
+                  const count = analytics.hourly_stats?.[String(i)] || 0
+                  const maxCount = Math.max(...Object.values(analytics.hourly_stats || {}), 1)
+                  return (
+                    <div
+                      key={i}
+                      className={`flex-1 rounded-t transition-all cursor-pointer ${
+                        String(i) === peakHour[0] ? 'bg-accent' : 'bg-accent/40 hover:bg-accent/60'
+                      }`}
+                      style={{ height: `${Math.max((count / maxCount) * 100, 4)}%` }}
+                      title={`${String(i).padStart(2, '0')}:00 - ${count} konversationer`}
+                    />
+                  )
+                })}
               </div>
-              <div className="flex justify-between mt-1 text-xs text-text-tertiary">
+              <div className="flex justify-between mt-2 text-xs text-text-tertiary">
                 <span>00:00</span>
+                <span>06:00</span>
                 <span>12:00</span>
+                <span>18:00</span>
                 <span>23:00</span>
               </div>
             </div>
@@ -443,51 +501,40 @@ function Analytics() {
             <p className="text-text-tertiary text-sm">Ingen tidsdata ännu</p>
           )}
         </div>
-      </div>
-
-      {/* Answer Breakdown & Categories */}
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        <div className="card">
-          <h3 className="text-lg font-medium text-text-primary mb-4">Frågor</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 bg-success rounded-full"></span>
-                <span className="text-text-secondary">Besvarade</span>
-              </div>
-              <span className="font-medium text-text-primary">{analytics.total_answered}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 bg-warning rounded-full"></span>
-                <span className="text-text-secondary">Obesvarade</span>
-              </div>
-              <span className="font-medium text-text-primary">{analytics.total_unanswered}</span>
-            </div>
-            {/* Progress bar */}
-            <div className="h-2 bg-bg-secondary rounded-full overflow-hidden mt-2">
-              <div
-                className="h-full bg-success rounded-full transition-all"
-                style={{ width: `${analytics.answer_rate}%` }}
-              />
-            </div>
-          </div>
-        </div>
 
         {/* Category Breakdown */}
         <div className="card">
-          <h3 className="text-lg font-medium text-text-primary mb-4">Kategorier</h3>
+          <h3 className="text-lg font-medium text-text-primary mb-4">Populära kategorier</h3>
           {Object.keys(analytics.category_stats || {}).length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {Object.entries(analytics.category_stats)
                 .sort((a, b) => b[1] - a[1])
                 .slice(0, 6)
-                .map(([category, count]) => (
-                  <div key={category} className="flex items-center justify-between">
-                    <span className="text-text-secondary capitalize">{category}</span>
-                    <span className="font-medium text-text-primary">{count}</span>
-                  </div>
-                ))}
+                .map(([category, count], index) => {
+                  const total = Object.values(analytics.category_stats).reduce((a, b) => a + b, 0)
+                  const percent = total > 0 ? ((count / total) * 100).toFixed(0) : 0
+                  return (
+                    <div key={category}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-medium ${
+                            index === 0 ? 'bg-accent text-white' : 'bg-bg-secondary text-text-secondary'
+                          }`}>
+                            {index + 1}
+                          </span>
+                          <span className="text-text-primary capitalize">{category}</span>
+                        </div>
+                        <span className="text-sm text-text-secondary">{count} ({percent}%)</span>
+                      </div>
+                      <div className="h-1.5 bg-bg-secondary rounded-full overflow-hidden ml-8">
+                        <div
+                          className={`h-full rounded-full transition-all ${index === 0 ? 'bg-accent' : 'bg-accent/50'}`}
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
             </div>
           ) : (
             <p className="text-text-tertiary text-sm">Ingen kategoridata ännu</p>
