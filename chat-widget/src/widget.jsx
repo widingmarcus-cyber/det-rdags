@@ -417,9 +417,7 @@ function ChatWidget({ config }) {
   const [widgetConfig, setWidgetConfig] = useState(null)
   const [conversationId, setConversationId] = useState(null)
   const [showMenu, setShowMenu] = useState(false)
-  const [darkMode, setDarkMode] = useState(() =>
-    window.matchMedia?.('(prefers-color-scheme: dark)').matches
-  )
+  const [darkMode, setDarkMode] = useState(false) // Default to light mode
   const [consentGiven, setConsentGiven] = useState(false)
   const [hasUserSentMessage, setHasUserSentMessage] = useState(false)
   const [showGdprModal, setShowGdprModal] = useState(null) // 'view', 'delete', 'revoke', or null

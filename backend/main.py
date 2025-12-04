@@ -2025,8 +2025,9 @@ async def chat(
     # Hämta inställningar
     settings = get_or_create_settings(db, company_id)
 
-    # Determine widget type (internal vs external) for personalized responses
+    # Determine widget for knowledge filtering and personalized responses
     widget_type = "external"  # Default to customer-facing
+    widget = None  # Store widget for knowledge filtering
     if request.widget_key:
         widget = db.query(Widget).filter(
             Widget.widget_key == request.widget_key,
@@ -2104,8 +2105,12 @@ async def chat(
         had_answer = True
         context = []
     else:
-        # Hitta kontext i kunskapsbasen
-        context = find_relevant_context(request.question, company_id, db)
+        # Hitta kontext i kunskapsbasen (with widget isolation if widget_key was provided)
+        context = find_relevant_context(
+            request.question, company_id, db,
+            widget_id=widget.id if widget else None,
+            widget_type=widget_type
+        )
 
         # ANTI-HALLUCINATION: Only consider it "had_answer" if we ACTUALLY found knowledge base matches
         had_answer = len(context) > 0
