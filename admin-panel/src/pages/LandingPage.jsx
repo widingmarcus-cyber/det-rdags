@@ -559,7 +559,16 @@ function DemoWidget() {
                 </svg>
               </button>
             </div>
-            <p className="text-center text-xs text-stone-400 mt-2">Detta är en demo - <a href="mailto:hej@bobot.nu" className="text-[#D97757] hover:underline">kontakta oss</a> för att komma igång!</p>
+            <div className="mt-2 pt-2 border-t border-stone-100 dark:border-stone-700">
+              <p className="text-center text-xs text-stone-400">
+                Personuppgiftsansvarig: <span className="font-medium text-stone-500 dark:text-stone-400">Marcus Widing</span>
+                {' · '}
+                <a href="mailto:hej@bobot.nu" className="text-[#D97757] hover:underline">hej@bobot.nu</a>
+              </p>
+              <p className="text-center text-xs text-stone-400 mt-1">
+                Detta är en demo - <a href="mailto:hej@bobot.nu" className="text-[#D97757] hover:underline">kontakta oss</a> för att komma igång!
+              </p>
+            </div>
           </div>
         </div>
       )}

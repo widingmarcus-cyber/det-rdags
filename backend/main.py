@@ -2238,6 +2238,7 @@ async def get_widget_config(
         "require_consent": settings.require_consent if settings.require_consent is not None else True,
         "consent_text": settings.consent_text or "Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.",
         "data_controller_name": settings.data_controller_name or "",
+        "data_controller_email": settings.data_controller_email or "",
     }
 
 
@@ -2289,6 +2290,7 @@ async def get_widget_config_by_key(
         "require_consent": widget.require_consent if widget.require_consent is not None else True,
         "consent_text": widget.consent_text or "Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.",
         "data_controller_name": settings.data_controller_name or "",
+        "data_controller_email": settings.data_controller_email or "",
     }
 
 

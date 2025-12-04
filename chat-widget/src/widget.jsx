@@ -22,9 +22,20 @@ const translations = {
     privacyPolicy: 'Integritetspolicy',
     viewMyData: 'Visa min data',
     deleteMyData: 'Radera min data',
+    revokeConsent: 'Dra tillbaka samtycke',
     consentGiven: 'Du har gett samtycke',
+    consentRevoked: 'Samtycke har återkallats',
     dataDeleted: 'Din data har raderats',
     confirmDelete: 'Är du säker? Detta kan inte ångras.',
+    confirmRevoke: 'Vill du dra tillbaka ditt samtycke? Du kan behöva ge samtycke igen för att fortsätta chatta.',
+    gdprRights: 'Dina rättigheter',
+    dataController: 'Personuppgiftsansvarig',
+    gdprContact: 'För GDPR-frågor, kontakta:',
+    close: 'Stäng',
+    cancel: 'Avbryt',
+    confirm: 'Bekräfta',
+    noDataFound: 'Ingen data hittades för denna session.',
+    yourData: 'Din data',
     openChat: 'Öppna chatt',
     closeChat: 'Stäng chatt',
     sendMessage: 'Skicka',
@@ -50,9 +61,20 @@ const translations = {
     privacyPolicy: 'Privacy policy',
     viewMyData: 'View my data',
     deleteMyData: 'Delete my data',
+    revokeConsent: 'Revoke consent',
     consentGiven: 'You have given consent',
+    consentRevoked: 'Consent has been revoked',
     dataDeleted: 'Your data has been deleted',
     confirmDelete: 'Are you sure? This cannot be undone.',
+    confirmRevoke: 'Do you want to revoke your consent? You may need to give consent again to continue chatting.',
+    gdprRights: 'Your rights',
+    dataController: 'Data controller',
+    gdprContact: 'For GDPR inquiries, contact:',
+    close: 'Close',
+    cancel: 'Cancel',
+    confirm: 'Confirm',
+    noDataFound: 'No data found for this session.',
+    yourData: 'Your data',
     openChat: 'Open chat',
     closeChat: 'Close chat',
     sendMessage: 'Send',
@@ -78,9 +100,20 @@ const translations = {
     privacyPolicy: 'سياسة الخصوصية',
     viewMyData: 'عرض بياناتي',
     deleteMyData: 'حذف بياناتي',
+    revokeConsent: 'سحب الموافقة',
     consentGiven: 'لقد وافقت',
+    consentRevoked: 'تم سحب الموافقة',
     dataDeleted: 'تم حذف بياناتك',
     confirmDelete: 'هل أنت متأكد؟ لا يمكن التراجع عن هذا.',
+    confirmRevoke: 'هل تريد سحب موافقتك؟ قد تحتاج إلى الموافقة مرة أخرى للاستمرار في الدردشة.',
+    gdprRights: 'حقوقك',
+    dataController: 'مسؤول البيانات',
+    gdprContact: 'لاستفسارات GDPR، تواصل مع:',
+    close: 'إغلاق',
+    cancel: 'إلغاء',
+    confirm: 'تأكيد',
+    noDataFound: 'لم يتم العثور على بيانات لهذه الجلسة.',
+    yourData: 'بياناتك',
     openChat: 'افتح الدردشة',
     closeChat: 'أغلق الدردشة',
     sendMessage: 'إرسال',
@@ -298,6 +331,10 @@ function ChatWidget({ config }) {
   )
   const [consentGiven, setConsentGiven] = useState(false)
   const [hasUserSentMessage, setHasUserSentMessage] = useState(false)
+  const [showGdprModal, setShowGdprModal] = useState(null) // 'view', 'delete', 'revoke', or null
+  const [gdprData, setGdprData] = useState(null)
+  const [gdprLoading, setGdprLoading] = useState(false)
+  const [gdprMessage, setGdprMessage] = useState(null)
 
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
@@ -402,6 +439,78 @@ function ChatWidget({ config }) {
     } catch (e) {}
     localStorage.setItem(`bobot_consent_${config.companyId}`, 'true')
     setConsentGiven(true)
+  }
+
+  // GDPR Rights: View my data
+  const handleViewData = async () => {
+    setGdprLoading(true)
+    setGdprData(null)
+    setGdprMessage(null)
+    try {
+      const res = await fetch(`${config.apiUrl}/gdpr/${config.companyId}/my-data?session_id=${sessionId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setGdprData(data)
+      } else {
+        setGdprMessage(t.noDataFound)
+      }
+    } catch (e) {
+      setGdprMessage(t.errorMessage)
+    }
+    setGdprLoading(false)
+  }
+
+  // GDPR Rights: Delete my data
+  const handleDeleteData = async () => {
+    setGdprLoading(true)
+    setGdprMessage(null)
+    try {
+      const res = await fetch(`${config.apiUrl}/gdpr/${config.companyId}/my-data?session_id=${sessionId}`, {
+        method: 'DELETE'
+      })
+      if (res.ok) {
+        setGdprMessage(t.dataDeleted)
+        // Clear local data
+        clearStorage(config.companyId)
+        setMessages([{ id: 0, type: 'bot', text: widgetConfig?.welcome_message || t.welcomeMessage, time: Date.now() }])
+        setSessionId(generateSessionId())
+        setConversationId(null)
+        setFeedbackGiven({})
+        setHasUserSentMessage(false)
+        setTimeout(() => {
+          setShowGdprModal(null)
+          setGdprMessage(null)
+        }, 2000)
+      } else {
+        setGdprMessage(t.errorMessage)
+      }
+    } catch (e) {
+      setGdprMessage(t.errorMessage)
+    }
+    setGdprLoading(false)
+  }
+
+  // GDPR Rights: Revoke consent
+  const handleRevokeConsent = async () => {
+    setGdprLoading(true)
+    setGdprMessage(null)
+    try {
+      await fetch(`${config.apiUrl}/gdpr/${config.companyId}/consent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, consent_given: false })
+      })
+      localStorage.removeItem(`bobot_consent_${config.companyId}`)
+      setConsentGiven(false)
+      setGdprMessage(t.consentRevoked)
+      setTimeout(() => {
+        setShowGdprModal(null)
+        setGdprMessage(null)
+      }, 2000)
+    } catch (e) {
+      setGdprMessage(t.errorMessage)
+    }
+    setGdprLoading(false)
   }
 
   const startNewConversation = () => {
@@ -630,6 +739,63 @@ function ChatWidget({ config }) {
                     </a>
                   </>
                 )}
+                {/* GDPR Rights Section */}
+                <div style={{ height: 1, background: theme.border }}/>
+                <div style={{ padding: '8px 14px', color: theme.textMuted, fontSize: fontSize - 2, fontWeight: 500 }}>
+                  {t.gdprRights}
+                </div>
+                <button onClick={() => { setShowGdprModal('view'); setShowMenu(false); handleViewData(); }} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                  padding: '12px 14px', border: 'none', background: 'transparent',
+                  cursor: 'pointer', color: theme.text, fontSize: fontSize - 1,
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  {t.viewMyData}
+                </button>
+                <button onClick={() => { setShowGdprModal('delete'); setShowMenu(false); }} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                  padding: '12px 14px', border: 'none', background: 'transparent',
+                  cursor: 'pointer', color: theme.text, fontSize: fontSize - 1,
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                  {t.deleteMyData}
+                </button>
+                {consentGiven && (
+                  <button onClick={() => { setShowGdprModal('revoke'); setShowMenu(false); }} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                    padding: '12px 14px', border: 'none', background: 'transparent',
+                    cursor: 'pointer', color: theme.text, fontSize: fontSize - 1,
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="15" y1="9" x2="9" y2="15"/>
+                      <line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
+                    {t.revokeConsent}
+                  </button>
+                )}
+                {/* Data Controller Info */}
+                {(widgetConfig?.data_controller_name || widgetConfig?.data_controller_email) && (
+                  <>
+                    <div style={{ height: 1, background: theme.border }}/>
+                    <div style={{ padding: '12px 14px', fontSize: fontSize - 2 }}>
+                      <div style={{ color: theme.textMuted, marginBottom: 4 }}>{t.gdprContact}</div>
+                      {widgetConfig?.data_controller_name && (
+                        <div style={{ color: theme.text, fontWeight: 500 }}>{widgetConfig.data_controller_name}</div>
+                      )}
+                      {widgetConfig?.data_controller_email && (
+                        <a href={`mailto:${widgetConfig.data_controller_email}`} style={{ color: primaryColor, textDecoration: 'none' }}>
+                          {widgetConfig.data_controller_email}
+                        </a>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -673,6 +839,164 @@ function ChatWidget({ config }) {
                     {t.no}
                   </button>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* GDPR Modal */}
+          {showGdprModal && (
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', zIndex: 20, borderRadius: borderRadius,
+            }}>
+              <div style={{
+                background: theme.bgElevated, borderRadius: 16, padding: 24,
+                margin: 20, maxWidth: 340, width: '100%', boxShadow: theme.shadowLg,
+                maxHeight: '80%', overflow: 'auto',
+              }}>
+                {/* View Data Modal */}
+                {showGdprModal === 'view' && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                      <h3 style={{ margin: 0, fontSize: fontSize + 2, fontWeight: 600, color: theme.text }}>
+                        {t.yourData}
+                      </h3>
+                      <button onClick={() => { setShowGdprModal(null); setGdprData(null); }} style={{
+                        background: 'transparent', border: 'none', cursor: 'pointer', color: theme.textSecondary, padding: 4,
+                      }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                      </button>
+                    </div>
+                    {gdprLoading && (
+                      <div style={{ textAlign: 'center', padding: 20, color: theme.textSecondary }}>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: 4 }}>
+                          <span className="bobot-dot" style={{ width: 6, height: 6, background: primaryColor, borderRadius: '50%' }}/>
+                          <span className="bobot-dot" style={{ width: 6, height: 6, background: primaryColor, borderRadius: '50%' }}/>
+                          <span className="bobot-dot" style={{ width: 6, height: 6, background: primaryColor, borderRadius: '50%' }}/>
+                        </div>
+                      </div>
+                    )}
+                    {gdprMessage && (
+                      <p style={{ color: theme.textSecondary, textAlign: 'center', fontSize: fontSize - 1 }}>{gdprMessage}</p>
+                    )}
+                    {gdprData && !gdprLoading && (
+                      <div style={{ fontSize: fontSize - 1 }}>
+                        <div style={{ marginBottom: 12 }}>
+                          <span style={{ color: theme.textMuted }}>Session ID:</span>
+                          <span style={{ color: theme.text, marginLeft: 8, fontFamily: 'monospace', fontSize: fontSize - 2 }}>{gdprData.session_id}</span>
+                        </div>
+                        {gdprData.consent_status && (
+                          <div style={{ marginBottom: 12 }}>
+                            <span style={{ color: theme.textMuted }}>{t.consentGiven}:</span>
+                            <span style={{ color: theme.text, marginLeft: 8 }}>{gdprData.consent_status.consent_given ? t.yes : t.no}</span>
+                          </div>
+                        )}
+                        {gdprData.messages?.length > 0 && (
+                          <div>
+                            <div style={{ color: theme.textMuted, marginBottom: 8 }}>Meddelanden ({gdprData.messages.length}):</div>
+                            <div style={{ maxHeight: 200, overflowY: 'auto', background: theme.bg, borderRadius: 8, padding: 8 }}>
+                              {gdprData.messages.map((msg, i) => (
+                                <div key={i} style={{ marginBottom: 8, padding: 8, background: theme.bgElevated, borderRadius: 6, fontSize: fontSize - 2 }}>
+                                  <div style={{ color: msg.type === 'user' ? primaryColor : theme.textSecondary, fontWeight: 500 }}>
+                                    {msg.type === 'user' ? 'Du' : 'Bot'}
+                                  </div>
+                                  <div style={{ color: theme.text, marginTop: 4 }}>{msg.content}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Delete Data Modal */}
+                {showGdprModal === 'delete' && (
+                  <>
+                    <div style={{
+                      width: 48, height: 48, borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+                    }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
+                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                      </svg>
+                    </div>
+                    <h3 style={{ margin: '0 0 12px', fontSize: fontSize + 2, fontWeight: 600, textAlign: 'center', color: theme.text }}>
+                      {t.deleteMyData}
+                    </h3>
+                    {gdprMessage ? (
+                      <p style={{ color: '#22c55e', textAlign: 'center', fontSize: fontSize - 1 }}>{gdprMessage}</p>
+                    ) : (
+                      <>
+                        <p style={{ margin: '0 0 20px', fontSize: fontSize - 1, color: theme.textSecondary, textAlign: 'center', lineHeight: 1.5 }}>
+                          {t.confirmDelete}
+                        </p>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                          <button onClick={handleDeleteData} disabled={gdprLoading} style={{
+                            flex: 1, padding: '12px 16px', background: '#ef4444', color: '#fff',
+                            border: 'none', borderRadius: 10, fontSize: fontSize, fontWeight: 500, cursor: 'pointer',
+                            opacity: gdprLoading ? 0.7 : 1,
+                          }}>
+                            {gdprLoading ? '...' : t.confirm}
+                          </button>
+                          <button onClick={() => setShowGdprModal(null)} style={{
+                            flex: 1, padding: '12px 16px', background: 'transparent', color: theme.textSecondary,
+                            border: `1px solid ${theme.border}`, borderRadius: 10, fontSize: fontSize, cursor: 'pointer',
+                          }}>
+                            {t.cancel}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+
+                {/* Revoke Consent Modal */}
+                {showGdprModal === 'revoke' && (
+                  <>
+                    <div style={{
+                      width: 48, height: 48, borderRadius: '50%', background: 'rgba(245, 158, 11, 0.1)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+                    }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="15" y1="9" x2="9" y2="15"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
+                      </svg>
+                    </div>
+                    <h3 style={{ margin: '0 0 12px', fontSize: fontSize + 2, fontWeight: 600, textAlign: 'center', color: theme.text }}>
+                      {t.revokeConsent}
+                    </h3>
+                    {gdprMessage ? (
+                      <p style={{ color: '#22c55e', textAlign: 'center', fontSize: fontSize - 1 }}>{gdprMessage}</p>
+                    ) : (
+                      <>
+                        <p style={{ margin: '0 0 20px', fontSize: fontSize - 1, color: theme.textSecondary, textAlign: 'center', lineHeight: 1.5 }}>
+                          {t.confirmRevoke}
+                        </p>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                          <button onClick={handleRevokeConsent} disabled={gdprLoading} style={{
+                            flex: 1, padding: '12px 16px', background: '#f59e0b', color: '#fff',
+                            border: 'none', borderRadius: 10, fontSize: fontSize, fontWeight: 500, cursor: 'pointer',
+                            opacity: gdprLoading ? 0.7 : 1,
+                          }}>
+                            {gdprLoading ? '...' : t.confirm}
+                          </button>
+                          <button onClick={() => setShowGdprModal(null)} style={{
+                            flex: 1, padding: '12px 16px', background: 'transparent', color: theme.textSecondary,
+                            border: `1px solid ${theme.border}`, borderRadius: 10, fontSize: fontSize, cursor: 'pointer',
+                          }}>
+                            {t.cancel}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           )}

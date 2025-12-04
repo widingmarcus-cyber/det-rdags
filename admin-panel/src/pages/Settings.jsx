@@ -359,8 +359,8 @@ function Settings() {
                     </svg>
                   </div>
                   <div>
-                    <h2 className="text-lg font-medium text-text-primary">PuB-avtal & Samtycke</h2>
-                    <p className="text-sm text-text-secondary">Personuppgiftsbiträdesavtal (PuB) och samtyckeshantering</p>
+                    <h2 className="text-lg font-medium text-text-primary">Samtycke</h2>
+                    <p className="text-sm text-text-secondary">Hantera samtycke och integritetsinställningar för chatten</p>
                   </div>
                 </div>
 
@@ -452,25 +452,24 @@ function Settings() {
               </div>
 
               {/* GDPR Rights Info */}
-              <div className="card bg-accent/5 border-accent/20">
+              <div className="card bg-success/5 border-success/20">
                 <div className="flex items-start gap-3">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent flex-shrink-0 mt-0.5">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="16" x2="12" y2="12" />
-                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-success flex-shrink-0 mt-0.5">
+                    <path d="M9 11l3 3L22 4" />
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
                   </svg>
                   <div className="text-sm">
-                    <p className="font-medium text-text-primary">Automatiska GDPR-rättigheter</p>
+                    <p className="font-medium text-text-primary">Inbyggda GDPR-rättigheter</p>
                     <p className="text-text-secondary mt-1">
-                      Widgeten ger automatiskt användare möjlighet att:
+                      Widgetens meny ger användare direktåtkomst till sina rättigheter:
                     </p>
                     <ul className="mt-2 space-y-1 text-text-secondary">
-                      <li>• Se sin data (registerutdrag)</li>
-                      <li>• Radera sin konversationshistorik</li>
-                      <li>• Dra tillbaka samtycke</li>
+                      <li>• <strong>Visa min data</strong> – Se all lagrad konversationshistorik</li>
+                      <li>• <strong>Radera min data</strong> – Permanent radering av all data</li>
+                      <li>• <strong>Dra tillbaka samtycke</strong> – Återkalla tidigare givet samtycke</li>
                     </ul>
                     <p className="text-text-secondary mt-2">
-                      Alla åtgärder loggas i GDPR-revisionsloggen.
+                      Personuppgiftsansvarigs kontaktinfo visas automatiskt i widgeten. Alla åtgärder loggas i GDPR-revisionsloggen.
                     </p>
                   </div>
                 </div>
