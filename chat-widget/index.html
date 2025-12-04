@@ -538,32 +538,76 @@
     </div>
   </footer>
 
-  <!-- Chat hint (temporary) -->
+  <!-- Chat hint for external widget (right side) -->
   <div class="chat-hint" id="chatHint">
     Har du frågor? Chatta med oss!
+  </div>
+
+  <!-- Chat hint for internal widget (left side) -->
+  <style>
+    .chat-hint-left {
+      position: fixed;
+      bottom: 100px;
+      left: 24px;
+      background: white;
+      padding: 12px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      font-size: 14px;
+      color: #1C1917;
+      animation: bounce 2s infinite;
+      z-index: 999;
+    }
+    .chat-hint-left::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 30px;
+      width: 0;
+      height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 8px solid white;
+    }
+  </style>
+  <div class="chat-hint-left" id="chatHintInternal">
+    Anställd? Klicka här för intern support!
   </div>
 
   <!-- Widget script -->
   <script type="module">
     import './src/widget.jsx'
 
-    // Fetch widget key for demo company's external widget, then init
+    // Fetch widget keys for demo company's widgets, then init both
     const API_URL = 'http://localhost:8000'
 
-    async function initWidget() {
+    async function initWidgets() {
       try {
-        // Fetch widgets for demo company to get the external widget key
+        // Fetch all widgets for demo company
         const res = await fetch(`${API_URL}/widgets/public/demo`)
         if (res.ok) {
           const widgets = await res.json()
-          const externalWidget = widgets.find(w => w.widget_type === 'external') || widgets[0]
+
+          // Initialize external widget (bottom-right) - for customers
+          const externalWidget = widgets.find(w => w.widget_type === 'external')
           if (externalWidget?.widget_key) {
             Bobot.init({
               widgetKey: externalWidget.widget_key,
               apiUrl: API_URL
             })
-          } else {
-            // Fallback to company ID
+          }
+
+          // Initialize internal widget (bottom-left) - for employees
+          const internalWidget = widgets.find(w => w.widget_type === 'internal')
+          if (internalWidget?.widget_key) {
+            Bobot.init({
+              widgetKey: internalWidget.widget_key,
+              apiUrl: API_URL
+            })
+          }
+
+          // Fallback if no widgets found
+          if (!externalWidget && !internalWidget) {
             Bobot.init({ companyId: 'demo', apiUrl: API_URL })
           }
         } else {
@@ -575,14 +619,16 @@
         Bobot.init({ companyId: 'demo', apiUrl: API_URL })
       }
 
-      // Hide hint after 10 seconds
+      // Hide hints after 10 seconds
       setTimeout(() => {
         const hint = document.getElementById('chatHint')
+        const hintInternal = document.getElementById('chatHintInternal')
         if (hint) hint.style.display = 'none'
+        if (hintInternal) hintInternal.style.display = 'none'
       }, 10000)
     }
 
-    setTimeout(initWidget, 100)
+    setTimeout(initWidgets, 100)
   </script>
 </body>
 </html>

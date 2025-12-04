@@ -1470,11 +1470,13 @@ function ChatWidget({ config }) {
   )
 }
 
-// Global init
+// Global init - supports multiple widget instances
+let widgetCounter = 0
 window.Bobot = {
   init: function(config) {
+    widgetCounter++
     const container = document.createElement('div')
-    container.id = 'bobot-widget-root'
+    container.id = `bobot-widget-root-${widgetCounter}`
     document.body.appendChild(container)
 
     createRoot(container).render(
@@ -1484,6 +1486,8 @@ window.Bobot = {
         ...config
       }} />
     )
+
+    return container.id
   }
 }
 

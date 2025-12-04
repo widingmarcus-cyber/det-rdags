@@ -1258,6 +1258,8 @@ def create_default_widgets(db: Session, company_id: str) -> List[Widget]:
         welcome_message="Hej kollega! Vad kan jag hjälpa dig med?",
         fallback_message="Jag hittade inget svar i kunskapsbasen. Kontakta din chef eller HR.",
         subtitle="Intern support",
+        widget_position="bottom-left",  # Internal widget on left side
+        primary_color="#4A9D7C",  # Different color for internal widget
     )
     db.add(internal_widget)
     widgets.append(internal_widget)
@@ -2460,7 +2462,25 @@ async def chat_via_widget_key(
         had_answer = len(relevant_items) > 0
 
         if not had_answer:
-            answer = widget.fallback_message or "Tyvärr kunde jag inte hitta ett svar på din fråga."
+            # Build dynamic fallback message with widget contact info
+            # Widget contact info takes priority over company settings
+            contact_email = widget.contact_email or settings.contact_email
+            contact_phone = widget.contact_phone or settings.contact_phone
+            contact_info = ""
+            if contact_email or contact_phone:
+                contact_parts = []
+                if contact_phone:
+                    contact_parts.append(contact_phone)
+                if contact_email:
+                    contact_parts.append(contact_email)
+                contact_info = " (" + ", ".join(contact_parts) + ")"
+
+            fallback_messages = {
+                "sv": widget.fallback_message or f"Den frågan har jag tyvärr inte information om. Men fråga gärna något annat – kanske kan jag hjälpa dig med det! Annars når du oss på{contact_info or ' kontaktuppgifterna på hemsidan'}.",
+                "en": f"I don't have information about that specific question. But feel free to ask me something else – maybe I can help with that! Otherwise, you can reach us at{contact_info or ' the contact details on our website'}.",
+                "ar": f"للأسف ليس لدي معلومات عن هذا السؤال. لكن لا تتردد في طرح سؤال آخر - ربما أستطيع المساعدة! أو يمكنك التواصل معنا{contact_info or ' عبر بيانات الاتصال على موقعنا'}."
+            }
+            answer = fallback_messages.get(language, fallback_messages["sv"])
 
     # Save bot message
     # sources_detail includes full knowledge base entries for user reference
