@@ -3127,8 +3127,8 @@ async def get_conversation(
         message_responses.append(MessageResponse(
             id=msg.id,
             role=msg.role,
-            content=msg.content,
-            created_at=msg.created_at,
+            content=msg.content or "",
+            created_at=msg.created_at or conversation.started_at or datetime.utcnow(),
             sources=sources,
             had_answer=msg.had_answer if msg.had_answer is not None else True
         ))
@@ -3144,7 +3144,7 @@ async def get_conversation(
         id=conversation.id,
         session_id=conversation.session_id or f"session-{conversation.id}",
         reference_id=conversation.reference_id or f"BOB-{conversation.id:04d}",
-        started_at=conversation.started_at,
+        started_at=conversation.started_at or datetime.utcnow(),
         message_count=conversation.message_count or 0,
         was_helpful=conversation.was_helpful,
         category=conversation.category,

@@ -234,9 +234,63 @@ function adjustColor(hex, amount) {
   return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`
 }
 
-// Format time
+// Format time (24-hour format)
 function formatTime(date) {
-  return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return new Date(date).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', hour12: false })
+}
+
+// Render text with clickable links
+function renderTextWithLinks(text, linkColor) {
+  if (!text) return null
+
+  // Pattern to match URLs (http/https/www) and markdown-style links [text](url)
+  const urlPattern = /(https?:\/\/[^\s\)]+|www\.[^\s\)]+)/g
+  const markdownLinkPattern = /\[([^\]]+)\]\(([^)]+)\)/g
+
+  // First, replace markdown links with placeholder
+  let processedText = text.replace(markdownLinkPattern, '___MDLINK___$1___URL___$2___ENDLINK___')
+
+  // Split by URLs
+  const parts = processedText.split(urlPattern)
+
+  return parts.map((part, i) => {
+    // Check if this is a markdown link placeholder
+    if (part.startsWith('___MDLINK___')) {
+      const match = part.match(/___MDLINK___(.+)___URL___(.+)___ENDLINK___/)
+      if (match) {
+        const [, linkText, url] = match
+        return (
+          <a
+            key={i}
+            href={url.startsWith('http') ? url : `https://${url}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: linkColor, textDecoration: 'underline' }}
+          >
+            {linkText}
+          </a>
+        )
+      }
+    }
+
+    // Check if this part is a URL
+    if (part.match(/^(https?:\/\/|www\.)/)) {
+      const href = part.startsWith('http') ? part : `https://${part}`
+      return (
+        <a
+          key={i}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: linkColor, textDecoration: 'underline' }}
+        >
+          {part}
+        </a>
+      )
+    }
+
+    return part
+  })
 }
 
 // CSS animations and styles
@@ -636,6 +690,8 @@ function ChatWidget({ config }) {
             display: 'flex',
             alignItems: 'center',
             gap: 12,
+            borderTopLeftRadius: borderRadius - 1,
+            borderTopRightRadius: borderRadius - 1,
           }}>
             <div style={{
               width: 38,
@@ -1089,7 +1145,7 @@ function ChatWidget({ config }) {
                   borderBottomRightRadius: msg.type === 'user' && !isRTL ? 4 : borderRadius - 4,
                   borderBottomLeftRadius: msg.type === 'user' && isRTL ? 4 : (msg.type === 'bot' && !isRTL ? 4 : borderRadius - 4),
                 }}>
-                  {msg.text}
+                  {msg.type === 'bot' ? renderTextWithLinks(msg.text, primaryColor) : msg.text}
 
                   {/* Sources section for bot messages */}
                   {msg.type === 'bot' && msg.sources && msg.sources.length > 0 && (
