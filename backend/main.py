@@ -1069,15 +1069,19 @@ def find_relevant_context(question: str, company_id: str, db: Session, top_k: in
     A score of 3+ indicates meaningful keyword overlap with the question.
 
     If widget_id is provided:
-    - Returns items belonging to that specific widget
-    - Also includes shared items (widget_id is NULL) for all widgets
+    - Internal widgets: ONLY returns items belonging to that specific widget (strict isolation)
+    - External widgets: Returns items belonging to that widget OR shared items (widget_id is NULL)
     """
     # Filter by company and widget
     query = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == company_id)
     if widget_id:
-        # Include items for this specific widget OR shared items (widget_id is NULL)
         from sqlalchemy import or_
-        query = query.filter(or_(KnowledgeItem.widget_id == widget_id, KnowledgeItem.widget_id.is_(None)))
+        if widget_type == "internal":
+            # Internal widgets: STRICT isolation - only their own knowledge, no shared items
+            query = query.filter(KnowledgeItem.widget_id == widget_id)
+        else:
+            # External widgets: Include items for this specific widget OR shared items (widget_id is NULL)
+            query = query.filter(or_(KnowledgeItem.widget_id == widget_id, KnowledgeItem.widget_id.is_(None)))
     items = query.all()
 
     if not items:
@@ -2284,9 +2288,12 @@ async def get_widget_config_by_key(
         "welcome_message": widget.welcome_message or "",
         "fallback_message": widget.fallback_message or "",
         "subtitle": widget.subtitle or "Alltid redo att hjälpa",
+        # Widget Colors
         "primary_color": widget.primary_color or "#D97757",
-        "contact_email": settings.contact_email or "",
-        "contact_phone": settings.contact_phone or "",
+        "secondary_color": widget.secondary_color or "#FEF3EC",
+        "background_color": widget.background_color or "#FAF8F5",
+        "contact_email": widget.contact_email or settings.contact_email or "",
+        "contact_phone": widget.contact_phone or settings.contact_phone or "",
         # Widget Typography & Style
         "font_family": widget.widget_font_family or "Inter",
         "font_size": widget.widget_font_size or 14,
@@ -2560,6 +2567,8 @@ async def list_widgets(
             description=w.description or "",
             is_active=w.is_active,
             primary_color=w.primary_color or "#D97757",
+            secondary_color=w.secondary_color or "#FEF3EC",
+            background_color=w.background_color or "#FAF8F5",
             widget_font_family=w.widget_font_family or "Inter",
             widget_font_size=w.widget_font_size or 14,
             widget_border_radius=w.widget_border_radius or 16,
@@ -2624,6 +2633,8 @@ async def create_widget(
         description=new_widget.description or "",
         is_active=new_widget.is_active,
         primary_color=new_widget.primary_color or "#D97757",
+        secondary_color=new_widget.secondary_color or "#FEF3EC",
+        background_color=new_widget.background_color or "#FAF8F5",
         widget_font_family=new_widget.widget_font_family or "Inter",
         widget_font_size=new_widget.widget_font_size or 14,
         widget_border_radius=new_widget.widget_border_radius or 16,
@@ -2677,6 +2688,8 @@ async def get_widget(
         description=widget.description or "",
         is_active=widget.is_active,
         primary_color=widget.primary_color or "#D97757",
+        secondary_color=widget.secondary_color or "#FEF3EC",
+        background_color=widget.background_color or "#FAF8F5",
         widget_font_family=widget.widget_font_family or "Inter",
         widget_font_size=widget.widget_font_size or 14,
         widget_border_radius=widget.widget_border_radius or 16,
@@ -2746,6 +2759,8 @@ async def update_widget(
         description=widget.description or "",
         is_active=widget.is_active,
         primary_color=widget.primary_color or "#D97757",
+        secondary_color=widget.secondary_color or "#FEF3EC",
+        background_color=widget.background_color or "#FAF8F5",
         widget_font_family=widget.widget_font_family or "Inter",
         widget_font_size=widget.widget_font_size or 14,
         widget_border_radius=widget.widget_border_radius or 16,

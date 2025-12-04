@@ -744,6 +744,21 @@ def run_migrations():
                 conn.execute(text("ALTER TABLE widgets ADD COLUMN start_expanded BOOLEAN DEFAULT 0"))
                 print("[Migration] Added 'start_expanded' column to widgets table")
 
+            # Add widget_font_family column if missing
+            if 'widget_font_family' not in existing_columns:
+                conn.execute(text("ALTER TABLE widgets ADD COLUMN widget_font_family VARCHAR DEFAULT 'Inter'"))
+                print("[Migration] Added 'widget_font_family' column to widgets table")
+
+            # Add widget_font_size column if missing
+            if 'widget_font_size' not in existing_columns:
+                conn.execute(text("ALTER TABLE widgets ADD COLUMN widget_font_size INTEGER DEFAULT 14"))
+                print("[Migration] Added 'widget_font_size' column to widgets table")
+
+            # Add widget_border_radius column if missing
+            if 'widget_border_radius' not in existing_columns:
+                conn.execute(text("ALTER TABLE widgets ADD COLUMN widget_border_radius INTEGER DEFAULT 16"))
+                print("[Migration] Added 'widget_border_radius' column to widgets table")
+
             conn.commit()
 
 

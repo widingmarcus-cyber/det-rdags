@@ -410,6 +410,8 @@ function ChatWidget({ config }) {
 
   // Get config values with defaults
   const primaryColor = widgetConfig?.primary_color || theme.accent
+  const secondaryColor = widgetConfig?.secondary_color || (darkMode ? '#262320' : '#FEF3EC')
+  const backgroundColor = widgetConfig?.background_color || (darkMode ? '#171412' : '#FAF8F5')
   const fontFamily = widgetConfig?.font_family || 'Inter'
   const fontSize = widgetConfig?.font_size || 14
   const borderRadius = widgetConfig?.border_radius || 16
@@ -1114,7 +1116,8 @@ function ChatWidget({ config }) {
 
           {/* Messages */}
           <div style={{
-            flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: 16, background: theme.bg,
+            flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: 16,
+            background: darkMode ? theme.bg : backgroundColor,
             width: '100%', boxSizing: 'border-box', minWidth: 0,
           }}>
             {messages.map((msg, i) => (
@@ -1138,10 +1141,10 @@ function ChatWidget({ config }) {
                   lineHeight: 1.55,
                   wordBreak: 'break-word',
                   // User messages: accent gradient with white text
-                  // Bot messages: subtle background with border
+                  // Bot messages: secondary color background (from widget config)
                   background: msg.type === 'user'
                     ? `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(primaryColor, -15)} 100%)`
-                    : theme.bgBot,
+                    : (darkMode ? theme.bgBot : secondaryColor),
                   color: msg.type === 'user' ? theme.textOnAccent : theme.text,
                   border: msg.type === 'bot' ? `1px solid ${theme.bgBotBorder}` : 'none',
                   boxShadow: msg.type === 'user' ? '0 2px 8px rgba(0, 0, 0, 0.08)' : 'none',
@@ -1319,7 +1322,7 @@ function ChatWidget({ config }) {
               <div className="bobot-msg" style={{ marginBottom: 16 }}>
                 <div style={{
                   padding: '14px 18px', borderRadius: borderRadius - 4,
-                  background: theme.bgBot, border: `1px solid ${theme.borderSubtle}`,
+                  background: darkMode ? theme.bgBot : secondaryColor, border: `1px solid ${theme.borderSubtle}`,
                   borderBottomLeftRadius: isRTL ? borderRadius - 4 : 4,
                   display: 'flex', alignItems: 'center', gap: 8,
                 }}>
