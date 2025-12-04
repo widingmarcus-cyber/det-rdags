@@ -1053,12 +1053,12 @@ def normalize_text(text: str) -> str:
     return text
 
 
-def find_relevant_context(question: str, company_id: str, db: Session, top_k: int = 3, min_score: int = 5, widget_id: Optional[int] = None) -> List[KnowledgeItem]:
+def find_relevant_context(question: str, company_id: str, db: Session, top_k: int = 3, min_score: int = 3, widget_id: Optional[int] = None) -> List[KnowledgeItem]:
     """Hitta relevanta frågor/svar från kunskapsbasen - fuzzy matching
 
     ANTI-HALLUCINATION: Only returns items with score >= min_score to prevent
     weak matches from being used as context for AI-generated answers.
-    A score of 5+ indicates meaningful keyword overlap with the question.
+    A score of 3+ indicates meaningful keyword overlap with the question.
 
     If widget_id is provided, only returns items that belong to that widget
     OR items with no widget (shared across all widgets).
@@ -1103,14 +1103,20 @@ def find_relevant_context(question: str, company_id: str, db: Session, top_k: in
         common_words = meaningful_words & item_words
         score += len(common_words) * 3
 
-        # Partial/substring matches (medium score) - important for compound words
+        # Partial/substring matches - important for Swedish compound words
+        # e.g., "felanmäler" should match "felanmälan" or "anmäler"
         for q_word in meaningful_words:
             if len(q_word) >= 4:  # Only check words with 4+ chars
                 for i_word in item_words:
                     if len(i_word) >= 4:
-                        # Check if one contains the other (handles "felanmälan" matching "felanmalan")
+                        # Check if one contains the other
                         if q_word in i_word or i_word in q_word:
-                            score += 2
+                            # Give more points for longer substring matches
+                            match_len = min(len(q_word), len(i_word))
+                            if match_len >= 6:
+                                score += 3  # Strong match (e.g., "anmaler" in "felanmaler")
+                            else:
+                                score += 2
                         # Check root similarity (first 4 chars match)
                         elif q_word[:4] == i_word[:4]:
                             score += 1
