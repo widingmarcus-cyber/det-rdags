@@ -67,6 +67,16 @@ function WidgetPage({ widgetType }) {
   const messagesEndRef = useRef(null)
   const [healthStatus, setHealthStatus] = useState(null)
 
+  // Template state
+  const [templates, setTemplates] = useState([])
+  const [templatesLoading, setTemplatesLoading] = useState(false)
+  const [showTemplateModal, setShowTemplateModal] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState(null)
+  const [templatePreview, setTemplatePreview] = useState(null)
+  const [templatePreviewLoading, setTemplatePreviewLoading] = useState(false)
+  const [applyingTemplate, setApplyingTemplate] = useState(false)
+  const [selectedCategories, setSelectedCategories] = useState([])
+
   const isExternal = widgetType === 'external'
   const pageTitle = isExternal ? 'Extern Widget' : 'Intern Widget'
   const pageDescription = isExternal
@@ -92,6 +102,7 @@ function WidgetPage({ widgetType }) {
   useEffect(() => {
     fetchWidget()
     fetchCategories()
+    fetchTemplates()
     checkHealth()
   }, [widgetType])
 
@@ -120,6 +131,86 @@ function WidgetPage({ widgetType }) {
         { id: 6, name: 'Allmänt' }
       ])
     }
+  }
+
+  const fetchTemplates = async () => {
+    setTemplatesLoading(true)
+    try {
+      const response = await authFetch(`${API_BASE}/templates`)
+      if (response.ok) {
+        const data = await response.json()
+        setTemplates(data)
+      }
+    } catch (e) {
+      console.error('Kunde inte hämta mallar:', e)
+    } finally {
+      setTemplatesLoading(false)
+    }
+  }
+
+  const fetchTemplatePreview = async (templateId) => {
+    setTemplatePreviewLoading(true)
+    try {
+      const response = await authFetch(`${API_BASE}/templates/${templateId}/preview`)
+      if (response.ok) {
+        const data = await response.json()
+        setTemplatePreview(data)
+        // Pre-select all categories
+        if (data.categories) {
+          setSelectedCategories(data.categories)
+        }
+      }
+    } catch (e) {
+      console.error('Kunde inte hämta mallförhandsvisning:', e)
+    } finally {
+      setTemplatePreviewLoading(false)
+    }
+  }
+
+  const handleApplyTemplate = async () => {
+    if (!selectedTemplate || !widget) return
+
+    setApplyingTemplate(true)
+    try {
+      const response = await authFetch(`${API_BASE}/templates/${selectedTemplate.template_id}/apply`, {
+        method: 'POST',
+        body: JSON.stringify({
+          widget_id: widget.id,
+          categories: selectedCategories.length > 0 ? selectedCategories : null
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSuccess(`Importerade ${data.imported || data.count || 'flera'} frågor och svar från mallen!`)
+        fetchKnowledge(widget.id)
+        setShowTemplateModal(false)
+        setSelectedTemplate(null)
+        setTemplatePreview(null)
+        setSelectedCategories([])
+      } else {
+        const err = await response.json()
+        setError(err.detail || 'Kunde inte applicera mallen')
+      }
+    } catch (e) {
+      setError('Ett fel uppstod: ' + e.message)
+    } finally {
+      setApplyingTemplate(false)
+    }
+  }
+
+  const openTemplateModal = (template) => {
+    setSelectedTemplate(template)
+    setShowTemplateModal(true)
+    fetchTemplatePreview(template.template_id)
+  }
+
+  const toggleCategory = (category) => {
+    setSelectedCategories(prev =>
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    )
   }
 
   const fetchWidget = async () => {
@@ -1224,6 +1315,60 @@ function WidgetPage({ widgetType }) {
       {/* Knowledge Tab */}
       {activeTab === 'knowledge' && (
         <div>
+          {/* Templates section - only show when knowledge base is empty or small */}
+          {knowledgeItems.length < 5 && templates.length > 0 && (
+            <div className="mb-6">
+              <div className="card p-5 border-accent/20 bg-gradient-to-r from-accent/5 to-transparent">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="12" y1="18" x2="12" y2="12" />
+                      <line x1="9" y1="15" x2="15" y2="15" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-text-primary mb-1">Kom igång snabbt med mallar</h3>
+                    <p className="text-sm text-text-secondary mb-4">
+                      Importera färdiga frågor och svar anpassade för din bransch. Du kan redigera och anpassa innehållet efter dina behov.
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      {templates.map(template => (
+                        <button
+                          key={template.template_id}
+                          onClick={() => openTemplateModal(template)}
+                          className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-bg-secondary rounded-lg border border-border-subtle hover:border-accent hover:shadow-sm transition-all group"
+                        >
+                          <span className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors">
+                            {template.industry === 'property_management' ? (
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                                <polyline points="9 22 9 12 15 12 15 22" />
+                              </svg>
+                            ) : (
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                              </svg>
+                            )}
+                          </span>
+                          <div className="text-left">
+                            <div className="font-medium text-text-primary text-sm">{template.name}</div>
+                            <div className="text-xs text-text-tertiary">{template.item_count || template.items?.length || '?'} frågor</div>
+                          </div>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary group-hover:text-accent ml-2">
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Action bar */}
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-4 flex-1">
@@ -1326,6 +1471,41 @@ function WidgetPage({ widgetType }) {
               </div>
               <h3 className="text-lg font-medium text-text-primary">Ingen kunskapsbank ännu</h3>
               <p className="text-text-secondary mt-2 mb-4">Lägg till frågor och svar för att träna din {isExternal ? 'kundwidget' : 'interna widget'}</p>
+
+              {/* Template options if available */}
+              {templates.length > 0 && (
+                <div className="mb-6">
+                  <p className="text-sm text-text-secondary mb-3">Börja med en färdig mall:</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {templates.map(template => (
+                      <button
+                        key={template.template_id}
+                        onClick={() => openTemplateModal(template)}
+                        className="inline-flex items-center gap-2 px-3 py-2 bg-accent-soft text-accent rounded-lg hover:bg-accent hover:text-white transition-colors text-sm"
+                      >
+                        {template.industry === 'property_management' ? (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                            <polyline points="9 22 9 12 15 12 15 22" />
+                          </svg>
+                        ) : (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                          </svg>
+                        )}
+                        {template.name}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="my-4 flex items-center gap-4">
+                    <div className="flex-1 border-t border-border-subtle"></div>
+                    <span className="text-xs text-text-tertiary">eller</span>
+                    <div className="flex-1 border-t border-border-subtle"></div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-center gap-3">
                 <button onClick={() => setShowImportModal(true)} className="btn btn-secondary">
                   Importera data
@@ -1563,6 +1743,180 @@ function WidgetPage({ widgetType }) {
                   <li>• Kolumn B: Svar</li>
                   <li>• Kolumn C: Kategori (valfritt)</li>
                 </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template Modal */}
+      {showTemplateModal && selectedTemplate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-bg-primary rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-border-subtle flex items-center justify-between flex-shrink-0">
+              <div>
+                <h2 className="text-lg font-semibold text-text-primary">{selectedTemplate.name}</h2>
+                <p className="text-sm text-text-secondary mt-1">{selectedTemplate.description}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowTemplateModal(false)
+                  setSelectedTemplate(null)
+                  setTemplatePreview(null)
+                  setSelectedCategories([])
+                }}
+                className="text-text-tertiary hover:text-text-primary text-2xl"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1">
+              {templatePreviewLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+                </div>
+              ) : templatePreview ? (
+                <div className="space-y-6">
+                  {/* Category selection */}
+                  <div>
+                    <h3 className="font-medium text-text-primary mb-3">Välj kategorier att importera</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {templatePreview.categories?.map(category => (
+                        <button
+                          key={category}
+                          onClick={() => toggleCategory(category)}
+                          className={`px-3 py-1.5 rounded-full text-sm transition-all ${
+                            selectedCategories.includes(category)
+                              ? 'bg-accent text-white'
+                              : 'bg-bg-secondary text-text-secondary hover:bg-accent-soft hover:text-accent'
+                          }`}
+                        >
+                          {category}
+                          {selectedCategories.includes(category) && (
+                            <span className="ml-1.5">✓</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => setSelectedCategories(templatePreview.categories || [])}
+                        className="text-xs text-accent hover:underline"
+                      >
+                        Välj alla
+                      </button>
+                      <span className="text-text-tertiary">|</span>
+                      <button
+                        onClick={() => setSelectedCategories([])}
+                        className="text-xs text-accent hover:underline"
+                      >
+                        Avmarkera alla
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Preview items */}
+                  <div>
+                    <h3 className="font-medium text-text-primary mb-3">
+                      Förhandsvisning ({selectedCategories.length > 0
+                        ? templatePreview.items?.filter(item => selectedCategories.includes(item.category)).length
+                        : templatePreview.items?.length || 0} frågor)
+                    </h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto border border-border-subtle rounded-lg">
+                      {templatePreview.items
+                        ?.filter(item => selectedCategories.length === 0 || selectedCategories.includes(item.category))
+                        .slice(0, 20)
+                        .map((item, index) => (
+                          <div
+                            key={index}
+                            className={`p-3 ${index % 2 === 0 ? 'bg-bg-secondary' : 'bg-bg-primary'}`}
+                          >
+                            <div className="flex items-start gap-2">
+                              <span className="badge badge-accent text-xs flex-shrink-0">{item.category}</span>
+                              <div className="min-w-0">
+                                <p className="font-medium text-text-primary text-sm">{item.question}</p>
+                                <p className="text-text-secondary text-xs mt-1 line-clamp-2">{item.answer}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      {templatePreview.items?.filter(item => selectedCategories.length === 0 || selectedCategories.includes(item.category)).length > 20 && (
+                        <div className="p-3 text-center text-text-tertiary text-sm">
+                          ... och {templatePreview.items.filter(item => selectedCategories.length === 0 || selectedCategories.includes(item.category)).length - 20} fler frågor
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Info box */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="16" x2="12" y2="12" />
+                        <line x1="12" y1="8" x2="12.01" y2="8" />
+                      </svg>
+                      <div className="text-sm text-blue-800 dark:text-blue-200">
+                        <p className="font-medium mb-1">Vad händer vid import?</p>
+                        <ul className="text-blue-700 dark:text-blue-300 space-y-0.5">
+                          <li>• Frågorna läggs till i din kunskapsbank</li>
+                          <li>• Du kan redigera och anpassa innehållet efteråt</li>
+                          <li>• Befintliga frågor påverkas inte</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-text-secondary">
+                  Kunde inte ladda mallförhandsvisning
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-border-subtle flex items-center justify-between flex-shrink-0">
+              <span className="text-sm text-text-secondary">
+                {selectedCategories.length > 0
+                  ? `${templatePreview?.items?.filter(item => selectedCategories.includes(item.category)).length || 0} frågor valda`
+                  : `${templatePreview?.items?.length || 0} frågor totalt`}
+              </span>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowTemplateModal(false)
+                    setSelectedTemplate(null)
+                    setTemplatePreview(null)
+                    setSelectedCategories([])
+                  }}
+                  className="btn btn-ghost"
+                >
+                  Avbryt
+                </button>
+                <button
+                  onClick={handleApplyTemplate}
+                  disabled={applyingTemplate || selectedCategories.length === 0}
+                  className="btn btn-primary"
+                >
+                  {applyingTemplate ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Importerar...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Importera mall
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
