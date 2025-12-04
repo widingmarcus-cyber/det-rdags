@@ -35,6 +35,9 @@ function Settings() {
 
   const [activityLogs, setActivityLogs] = useState([])
   const [activityLoading, setActivityLoading] = useState(false)
+  const [activityPage, setActivityPage] = useState(1)
+  const [activityTotal, setActivityTotal] = useState(0)
+  const ACTIVITY_PER_PAGE = 20
 
   useEffect(() => {
     fetchSettings()
@@ -42,17 +45,19 @@ function Settings() {
 
   useEffect(() => {
     if (activeTab === 'activity') {
-      fetchActivityLogs()
+      fetchActivityLogs(activityPage)
     }
-  }, [activeTab])
+  }, [activeTab, activityPage])
 
-  const fetchActivityLogs = async () => {
+  const fetchActivityLogs = async (page = 1) => {
     setActivityLoading(true)
     try {
-      const response = await authFetch(`${API_BASE}/activity-log?limit=50`)
+      const offset = (page - 1) * ACTIVITY_PER_PAGE
+      const response = await authFetch(`${API_BASE}/activity-log?limit=${ACTIVITY_PER_PAGE}&offset=${offset}`)
       if (response.ok) {
         const data = await response.json()
         setActivityLogs(data.logs || [])
+        setActivityTotal(data.total || 0)
       }
     } catch (error) {
       console.error('Kunde inte hämta aktivitetslogg:', error)
@@ -60,6 +65,8 @@ function Settings() {
       setActivityLoading(false)
     }
   }
+
+  const activityTotalPages = Math.ceil(activityTotal / ACTIVITY_PER_PAGE)
 
   const fetchSettings = async () => {
     try {
@@ -694,7 +701,14 @@ function Settings() {
               {/* Activity List */}
               <div className="card">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium text-text-primary">Senaste händelser</h3>
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-medium text-text-primary">Alla händelser</h3>
+                    {activityTotal > 0 && (
+                      <span className="text-xs text-text-secondary bg-bg-secondary px-2 py-1 rounded">
+                        {activityTotal} totalt
+                      </span>
+                    )}
+                  </div>
                   <span className="text-xs text-text-tertiary bg-bg-secondary px-2 py-1 rounded">
                     Sparas i 12 månader
                   </span>
@@ -801,6 +815,62 @@ function Settings() {
                         )
                       })}
                     </div>
+
+                    {/* Pagination */}
+                    {activityTotalPages > 1 && (
+                      <div className="flex items-center justify-between mt-6 pt-4 border-t border-border-subtle">
+                        <div className="text-sm text-text-secondary">
+                          Visar {((activityPage - 1) * ACTIVITY_PER_PAGE) + 1}–{Math.min(activityPage * ACTIVITY_PER_PAGE, activityTotal)} av {activityTotal}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setActivityPage(1)}
+                            disabled={activityPage === 1}
+                            className="p-2 rounded-lg border border-border-subtle bg-bg-primary text-text-secondary hover:bg-bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            title="Första sidan"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="11 17 6 12 11 7" />
+                              <polyline points="18 17 13 12 18 7" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => setActivityPage(p => Math.max(1, p - 1))}
+                            disabled={activityPage === 1}
+                            className="p-2 rounded-lg border border-border-subtle bg-bg-primary text-text-secondary hover:bg-bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            title="Föregående"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="15 18 9 12 15 6" />
+                            </svg>
+                          </button>
+                          <span className="px-3 py-1 text-sm text-text-primary">
+                            Sida {activityPage} av {activityTotalPages}
+                          </span>
+                          <button
+                            onClick={() => setActivityPage(p => Math.min(activityTotalPages, p + 1))}
+                            disabled={activityPage === activityTotalPages}
+                            className="p-2 rounded-lg border border-border-subtle bg-bg-primary text-text-secondary hover:bg-bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            title="Nästa"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => setActivityPage(activityTotalPages)}
+                            disabled={activityPage === activityTotalPages}
+                            className="p-2 rounded-lg border border-border-subtle bg-bg-primary text-text-secondary hover:bg-bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            title="Sista sidan"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="13 17 18 12 13 7" />
+                              <polyline points="6 17 11 12 6 7" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

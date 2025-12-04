@@ -455,9 +455,178 @@ function DemoWidget() {
       return 'Bobot skiljer sig genom: All data i Sverige (inte USA), lokal AI utan tredjepartstjänster, specialbyggt för fastighetsbolag med svenska funktioner, och enkel prissättning utan dolda kostnader.'
     }
 
+    // Competitors - Intercom
+    if (msg.includes('intercom')) {
+      return 'Jämfört med Intercom: Bobot är specialbyggt för svenska fastighetsbolag med lokal AI och data i Sverige. Intercom är en generell lösning med servrar i USA. Bobot har enklare prissättning utan dolda kostnader per agent.'
+    }
+
+    // Competitors - Zendesk
+    if (msg.includes('zendesk')) {
+      return 'Jämfört med Zendesk: Bobot är enklare att komma igång med (10 min vs dagar), billigare för mindre företag, och specialanpassat för fastigheter. All data stannar i Sverige. Zendesk är bättre för stora globala supportteam.'
+    }
+
+    // Competitors - Freshdesk/Freshchat
+    if (msg.includes('freshdesk') || msg.includes('freshchat') || msg.includes('fresh')) {
+      return 'Jämfört med Freshdesk: Bobot är en AI-first-lösning fokuserad på självbetjäning. Freshdesk är mer ett traditionellt ticketsystem. Bobot kräver ingen intern supportpersonal - AI:n svarar automatiskt baserat på din kunskapsbas.'
+    }
+
+    // Competitors - ChatGPT/OpenAI
+    if (msg.includes('chatgpt') || msg.includes('openai') || msg.includes('gpt')) {
+      return 'Till skillnad från ChatGPT: Bobot använder lokal AI (Llama 3.1) så ingen data skickas till OpenAI. Din kunskapsbas är helt privat. ChatGPT kan hallucinera - Bobot svarar ENDAST baserat på dina godkända svar.'
+    }
+
+    // Competitors - General
+    if (msg.includes('konkurrent') || msg.includes('alternativ') || msg.includes('liknande')) {
+      return 'Bobot skiljer sig från konkurrenter som Intercom, Zendesk och Freshchat genom: 100% svensk datalagring, lokal AI utan tredjepartstjänster, specialbyggt för fastighetsbolag, enkel prissättning, och snabb uppstart på under 10 minuter.'
+    }
+
+    // Templates / Mallar
+    if (msg.includes('mall') || msg.includes('template') || msg.includes('färdig')) {
+      return 'Ja! Vi har färdiga kunskapsbasmallar för vanliga fastighetsämnen som tvättstuga, felanmälan, hyresavi, uppsägning, andrahandsuthyrning m.m. Du kan applicera en mall och anpassa den efter era behov.'
+    }
+
+    // Export functionality
+    if (msg.includes('export') || msg.includes('ladda ner') || msg.includes('backup')) {
+      return 'Du kan exportera både kunskapsbas och konversationshistorik till CSV-format. Perfekt för backup, analys i Excel, eller om du vill migrera data. All export sker med ett klick i adminpanelen.'
+    }
+
+    // Dark mode
+    if (msg.includes('mörkt') || msg.includes('dark mode') || msg.includes('mörk')) {
+      return 'Ja! Widgeten har inbyggt stöd för mörkt läge. Den anpassar sig automatiskt efter användarens systeminställningar, eller så kan användaren växla manuellt via menyn i chatten.'
+    }
+
+    // Webhooks & Notifications
+    if (msg.includes('webhook') || msg.includes('notis') || msg.includes('avisering') || msg.includes('epost') && msg.includes('varning')) {
+      return 'Bobot kan skicka notifikationer när något viktigt händer - t.ex. när en fråga inte kunde besvaras, eller när feedback är negativ. Perfekt för att snabbt förbättra kunskapsbasen!'
+    }
+
+    // Offline / Availability
+    if (msg.includes('offline') || msg.includes('nere') || msg.includes('tillgäng')) {
+      return 'Bobot är tillgänglig 24/7, 365 dagar om året. Om AI-tjänsten tillfälligt skulle vara nere, visar widgeten ett vänligt felmeddelande och uppmanar användaren att försöka igen eller kontakta er direkt.'
+    }
+
+    // Response time / Performance
+    if (msg.includes('svarstid') || msg.includes('snabb') || msg.includes('prestand') || msg.includes('hastighet')) {
+      return 'Typisk svarstid är 1-3 sekunder. Bobot använder lokal AI-inferens vilket ger snabbare svar än molnbaserade lösningar. Widgeten visar en trevlig skrivindikator medan svaret genereras.'
+    }
+
+    // Contract terms
+    if (msg.includes('avtal') || msg.includes('bindningstid') || msg.includes('kontrakt') || msg.includes('uppsägning')) {
+      return 'Alla paket faktureras månadsvis utan bindningstid. Du kan uppgradera, nedgradera eller säga upp när som helst. Uppsägningstid är till slutet av innevarande månad.'
+    }
+
+    // Roadmap / Future
+    if (msg.includes('roadmap') || msg.includes('kommande') || msg.includes('planera') || msg.includes('framtid') || msg.includes('snart')) {
+      return 'På vår roadmap finns: Fler språk, röstinmatning, integration med fastighetssystem, automatisk kunskapsbasuppdatering från dokument, och AI-förbättringsförslag. Kontakta oss om du har önskemål!'
+    }
+
+    // Customer success / References
+    if (msg.includes('kund') && (msg.includes('referens') || msg.includes('exempel') || msg.includes('case'))) {
+      return 'Vi har nöjda kunder bland svenska fastighetsbolag som använder Bobot för hyresgästsupport. Kontakta oss på hej@bobot.nu så berättar vi mer och kan ordna referenssamtal!'
+    }
+
+    // Feedback system
+    if (msg.includes('feedback') || msg.includes('betyg') || msg.includes('tumme') || msg.includes('nöjd')) {
+      return 'Varje AI-svar har tumme upp/tumme ner-knappar. Du kan se statistik över nöjdhet i adminpanelen och enkelt identifiera svar som behöver förbättras. Negativ feedback kan trigga notifikationer.'
+    }
+
+    // Categories / Organization
+    if (msg.includes('kategori') || msg.includes('sortera') || msg.includes('organiser')) {
+      return 'Din kunskapsbas kan organiseras i kategorier (t.ex. Tvättstuga, Felanmälan, Ekonomi). Det gör det enklare att hålla ordning och du kan filtrera vilka kategorier varje widget ska använda.'
+    }
+
+    // Suggested questions / Quick replies
+    if (msg.includes('snabbknappar') || msg.includes('förslag') || msg.includes('snabb') && msg.includes('fråg')) {
+      return 'Du kan konfigurera snabbknappar som visas i widgeten - vanliga frågor som användare kan klicka på direkt. T.ex. "Hur bokar jag tvättstuga?", "Hur felanmäler jag?". Upp till 4 snabbknappar per widget.'
+    }
+
+    // Position / Placement
+    if (msg.includes('position') || msg.includes('placera') || msg.includes('höger') || msg.includes('vänster')) {
+      return 'Widgeten kan placeras i nedre högra eller vänstra hörnet av hemsidan. Du väljer position i inställningarna och kan enkelt byta när som helst.'
+    }
+
+    // Conversation history
+    if (msg.includes('historik') || msg.includes('spara') && msg.includes('konversation')) {
+      return 'Konversationer sparas automatiskt så användaren kan fortsätta där de slutade, även om de stänger webbläsaren. Du väljer hur länge data sparas (7-30 dagar enligt GDPR). All historik är tillgänglig i adminpanelen.'
+    }
+
+    // Multiple companies / Tenants
+    if (msg.includes('flera företag') || msg.includes('multi-tenant') || msg.includes('återförsälj')) {
+      return 'Bobot stöder multi-tenant - perfekt om du är återförsäljare eller vill hantera flera dotterbolag. Varje företag får egen inloggning, kunskapsbas och widgets. Kontakta oss för partnerprogram!'
+    }
+
+    // Super admin
+    if (msg.includes('admin') || msg.includes('administr')) {
+      return 'Adminpanelen ger dig full kontroll: hantera kunskapsbas, se konversationer, analysera statistik, anpassa widget-design, hantera flera widgets, exportera data och mer. Inget tekniskt kunnande krävs!'
+    }
+
+    // Swedish / Local
+    if (msg.includes('svensk') || msg.includes('lokal') || msg.includes('sverige')) {
+      return 'Bobot är 100% svenskt! Utvecklat i Sverige, alla servrar i Sverige, support på svenska, och specialanpassat för svenska fastighetsbolag. Vi förstår den svenska marknaden och GDPR-kraven.'
+    }
+
+    // Environment / Sustainability
+    if (msg.includes('miljö') || msg.includes('hållbar') || msg.includes('grön') || msg.includes('klimat')) {
+      return 'Genom att automatisera svar minskar Bobot behovet av upprepade e-postkonversationer och telefonsamtal. Digital självbetjäning är mer miljövänligt än traditionell support. Våra servrar drivs med förnybar energi.'
+    }
+
+    // Accessibility
+    if (msg.includes('tillgänglighet') || msg.includes('wcag') || msg.includes('skärmläsare') || msg.includes('funktions')) {
+      return 'Widgeten är byggd med tillgänglighet i åtanke: tangentbordsnavigering, ARIA-labels för skärmläsare, tillräcklig kontrast, och reducerad rörelse-stöd. Vi strävar efter WCAG 2.1 AA-compliance.'
+    }
+
+    // Trial / Test period
+    if (msg.includes('gratis') || msg.includes('prov') || msg.includes('testperiod') || msg.includes('utan kostnad')) {
+      return 'Ja, vi erbjuder kostnadsfri testperiod! Kontakta oss på hej@bobot.nu så sätter vi upp en demo med er egen kunskapsbas. Du kan testa fullt ut innan du bestämmer dig.'
+    }
+
+    // Scaling / Growth
+    if (msg.includes('skala') || msg.includes('växa') || msg.includes('mer trafik') || msg.includes('stor trafik')) {
+      return 'Bobot skalar automatiskt med er tillväxt. Behöver ni fler konversationer eller artiklar? Uppgradera enkelt till nästa paket. Enterprise-kunder får obegränsade resurser och dedicated support.'
+    }
+
+    // Downgrade / Cancel
+    if (msg.includes('avsluta') || msg.includes('säg upp') || msg.includes('nedgrader')) {
+      return 'Du kan nedgradera eller säga upp när som helst - inga bindningstider! Uppsägning gäller från slutet av innevarande månad. Din data kan exporteras innan avslut.'
+    }
+
+    // Invoice / Billing
+    if (msg.includes('faktura') || msg.includes('betal') && (msg.includes('sätt') || msg.includes('metod'))) {
+      return 'Vi fakturerar månadsvis med 30 dagars betalningsvillkor. Faktura skickas via e-post i PDF-format. Vi accepterar alla vanliga betalningsmetoder. Företag inom EU får faktura utan moms (reverse charge).'
+    }
+
+    // Onboarding / Help getting started
+    if (msg.includes('hjälp') && (msg.includes('start') || msg.includes('börja') || msg.includes('igång'))) {
+      return 'Vi hjälper dig komma igång! Starter-paketet har gratis onboarding. Högre paket inkluderar personlig genomgång och hjälp att importera er kunskapsbas. E-posta hej@bobot.nu så bokar vi ett uppstartsmöte!'
+    }
+
+    // Question words - generic help
+    if (msg.includes('hur') && msg.includes('fungerar')) {
+      return 'Bobot fungerar i tre steg:\n\n1. Du bygger en kunskapsbas med frågor och svar\n2. Du kopierar widget-koden till din hemsida\n3. AI:n svarar automatiskt på besökarnas frågor 24/7!\n\nVill du veta mer om något specifikt steg?'
+    }
+
+    // Why Bobot
+    if (msg.includes('varför') && (msg.includes('bobot') || msg.includes('välja') || msg.includes('använda'))) {
+      return 'Varför Bobot?\n\n✓ Spara 80% av supporttiden\n✓ Tillgänglig 24/7 på 3 språk\n✓ 100% GDPR-säker, svensk data\n✓ Igång på 10 minuter\n✓ Inga dolda kostnader\n✓ Specialbyggt för fastighetsbolag'
+    }
+
     // Thanks
     if (msg.includes('tack') || msg.includes('thanks') || msg.includes('bra') || msg.includes('perfekt')) {
       return 'Tack själv! Har du fler frågor så är det bara att fråga. 😊'
+    }
+
+    // Hello in other languages
+    if (msg.includes('hello') || msg.includes('hi ') || msg.includes('hey')) {
+      return 'Hello! Bobot supports English too. Feel free to ask about pricing, features, GDPR compliance, or how to get started!'
+    }
+
+    if (msg.includes('مرحبا') || msg.includes('السلام')) {
+      return 'مرحباً! يدعم Bobot اللغة العربية أيضاً. يمكنك السؤال عن الأسعار والميزات والخصوصية.'
+    }
+
+    // Numbers / Metrics
+    if (msg.includes('hur många') || msg.includes('antal') && msg.includes('kund')) {
+      return 'Vi växer stadigt med nöjda kunder bland svenska fastighetsbolag. Kontakta oss på hej@bobot.nu för att höra om konkreta kundcase och referenssamtal!'
     }
 
     // Default responses
