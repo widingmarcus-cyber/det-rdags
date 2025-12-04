@@ -39,27 +39,8 @@ function WidgetPage({ widgetType }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  // Settings form - internal widgets default to bottom-left, external to bottom-right
-  const [formData, setFormData] = useState({
-    primary_color: '#D97757',
-    secondary_color: '#FEF3EC',
-    background_color: '#FAF8F5',
-    welcome_message: 'Hej! Hur kan jag hjälpa dig idag?',
-    fallback_message: 'Tyvärr kunde jag inte hitta ett svar på din fråga.',
-    subtitle: 'Alltid redo att hjälpa',
-    language: 'sv',
-    tone: '',  // professional, collegial, casual - empty means use widget_type default
-    // Per-widget contact info
-    display_name: '',
-    contact_email: '',
-    contact_phone: '',
-    // Font and style options
-    widget_font_family: 'Inter',
-    widget_font_size: 14,
-    widget_border_radius: 16,
-    widget_position: widgetType === 'internal' ? 'bottom-left' : 'bottom-right',
-    start_expanded: false  // Start widget open instead of as floating button
-  })
+  // Settings form - initialized as null until widget data loads
+  const [formData, setFormData] = useState(null)
 
   // Knowledge state
   const [knowledgeItems, setKnowledgeItems] = useState([])
@@ -143,10 +124,10 @@ function WidgetPage({ widgetType }) {
 
   // Load Google Font for preview when font changes
   useEffect(() => {
-    if (formData.widget_font_family) {
+    if (formData?.widget_font_family) {
       loadGoogleFont(formData.widget_font_family)
     }
-  }, [formData.widget_font_family])
+  }, [formData?.widget_font_family])
 
   const fetchCategories = async () => {
     try {
@@ -664,7 +645,7 @@ function WidgetPage({ widgetType }) {
   }
 
   const resetPreview = () => {
-    setPreviewMessages([{ type: 'bot', text: formData.welcome_message || 'Hej! Hur kan jag hjälpa dig?' }])
+    setPreviewMessages([{ type: 'bot', text: formData?.welcome_message || 'Hej! Hur kan jag hjälpa dig?' }])
     setFeedbackGiven({})
   }
 
@@ -688,7 +669,7 @@ function WidgetPage({ widgetType }) {
     { id: 'knowledge', label: 'Kunskapsbank', icon: 'book', count: knowledgeItems.length }
   ]
 
-  if (loading) {
+  if (loading || !formData) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
