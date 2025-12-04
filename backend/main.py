@@ -575,6 +575,7 @@ class KnowledgeItemResponse(BaseModel):
     category: str
     widget_id: Optional[int] = None
     widget_name: Optional[str] = None
+    created_at: Optional[datetime] = None
 
 
 class CategoryCreate(BaseModel):
@@ -3199,7 +3200,8 @@ async def get_knowledge(
     if widget_id is not None:
         query = query.filter(KnowledgeItem.widget_id == widget_id)
 
-    items = query.all()
+    # Sort by created_at descending (newest first)
+    items = query.order_by(KnowledgeItem.created_at.desc()).all()
 
     # Get widget names for display
     widget_ids = set(i.widget_id for i in items if i.widget_id)
@@ -3214,7 +3216,8 @@ async def get_knowledge(
         answer=i.answer,
         category=i.category or "",
         widget_id=i.widget_id,
-        widget_name=widgets.get(i.widget_id) if i.widget_id else None
+        widget_name=widgets.get(i.widget_id) if i.widget_id else None,
+        created_at=i.created_at
     ) for i in items]
 
 
@@ -3264,7 +3267,8 @@ async def add_knowledge(
         answer=new_item.answer,
         category=new_item.category or "",
         widget_id=new_item.widget_id,
-        widget_name=widget_name
+        widget_name=widget_name,
+        created_at=new_item.created_at
     )
 
 
@@ -3313,7 +3317,8 @@ async def update_knowledge(
         answer=db_item.answer,
         category=db_item.category or "",
         widget_id=db_item.widget_id,
-        widget_name=widget_name
+        widget_name=widget_name,
+        created_at=db_item.created_at
     )
 
 
