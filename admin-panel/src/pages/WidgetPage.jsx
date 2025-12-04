@@ -241,25 +241,24 @@ function WidgetPage({ widgetType }) {
         if (existingWidget) {
           console.log('[Debug] Loading widget, border_radius from API:', existingWidget.widget_border_radius)
           setWidget(existingWidget)
+          // Use ?? instead of || to preserve 0 values (e.g., border_radius: 0)
           setFormData({
-            primary_color: existingWidget.primary_color || '#D97757',
-            secondary_color: existingWidget.secondary_color || '#FEF3EC',
-            background_color: existingWidget.background_color || '#FAF8F5',
-            welcome_message: existingWidget.welcome_message || 'Hej! Hur kan jag hjälpa dig idag?',
-            fallback_message: existingWidget.fallback_message || 'Tyvärr kunde jag inte hitta ett svar.',
-            subtitle: existingWidget.subtitle || 'Alltid redo att hjälpa',
-            language: existingWidget.language || 'sv',
-            tone: existingWidget.tone || '',
-            // Per-widget contact info
-            display_name: existingWidget.display_name || '',
-            contact_email: existingWidget.contact_email || '',
-            contact_phone: existingWidget.contact_phone || '',
-            // Font and style options
-            widget_font_family: existingWidget.widget_font_family || 'Inter',
-            widget_font_size: existingWidget.widget_font_size || 14,
-            widget_border_radius: existingWidget.widget_border_radius || 16,
-            widget_position: existingWidget.widget_position || (widgetType === 'internal' ? 'bottom-left' : 'bottom-right'),
-            start_expanded: existingWidget.start_expanded || false
+            primary_color: existingWidget.primary_color ?? '#D97757',
+            secondary_color: existingWidget.secondary_color ?? '#FEF3EC',
+            background_color: existingWidget.background_color ?? '#FAF8F5',
+            welcome_message: existingWidget.welcome_message ?? 'Hej! Hur kan jag hjälpa dig idag?',
+            fallback_message: existingWidget.fallback_message ?? 'Tyvärr kunde jag inte hitta ett svar.',
+            subtitle: existingWidget.subtitle ?? 'Alltid redo att hjälpa',
+            language: existingWidget.language ?? 'sv',
+            tone: existingWidget.tone ?? '',
+            display_name: existingWidget.display_name ?? '',
+            contact_email: existingWidget.contact_email ?? '',
+            contact_phone: existingWidget.contact_phone ?? '',
+            widget_font_family: existingWidget.widget_font_family ?? 'Inter',
+            widget_font_size: existingWidget.widget_font_size ?? 14,
+            widget_border_radius: existingWidget.widget_border_radius ?? 16,
+            widget_position: existingWidget.widget_position ?? (widgetType === 'internal' ? 'bottom-left' : 'bottom-right'),
+            start_expanded: existingWidget.start_expanded ?? false
           })
           fetchKnowledge(existingWidget.id)
           setPreviewMessages([{ type: 'bot', text: existingWidget.welcome_message || 'Hej! Hur kan jag hjälpa dig idag?' }])
@@ -300,23 +299,24 @@ function WidgetPage({ widgetType }) {
       if (response.ok) {
         const newWidget = await response.json()
         setWidget(newWidget)
+        // Use ?? instead of || to preserve 0 values
         setFormData({
-          primary_color: newWidget.primary_color,
-          secondary_color: newWidget.secondary_color || '#FEF3EC',
-          background_color: newWidget.background_color || '#FAF8F5',
-          welcome_message: newWidget.welcome_message,
-          fallback_message: newWidget.fallback_message,
-          subtitle: newWidget.subtitle,
-          language: newWidget.language,
-          tone: newWidget.tone || '',
-          display_name: newWidget.display_name || '',
-          contact_email: newWidget.contact_email || '',
-          contact_phone: newWidget.contact_phone || '',
-          widget_font_family: newWidget.widget_font_family || 'Inter',
-          widget_font_size: newWidget.widget_font_size || 14,
-          widget_border_radius: newWidget.widget_border_radius || 16,
-          widget_position: newWidget.widget_position || (widgetType === 'internal' ? 'bottom-left' : 'bottom-right'),
-          start_expanded: newWidget.start_expanded || false
+          primary_color: newWidget.primary_color ?? '#D97757',
+          secondary_color: newWidget.secondary_color ?? '#FEF3EC',
+          background_color: newWidget.background_color ?? '#FAF8F5',
+          welcome_message: newWidget.welcome_message ?? '',
+          fallback_message: newWidget.fallback_message ?? '',
+          subtitle: newWidget.subtitle ?? '',
+          language: newWidget.language ?? 'sv',
+          tone: newWidget.tone ?? '',
+          display_name: newWidget.display_name ?? '',
+          contact_email: newWidget.contact_email ?? '',
+          contact_phone: newWidget.contact_phone ?? '',
+          widget_font_family: newWidget.widget_font_family ?? 'Inter',
+          widget_font_size: newWidget.widget_font_size ?? 14,
+          widget_border_radius: newWidget.widget_border_radius ?? 16,
+          widget_position: newWidget.widget_position ?? (widgetType === 'internal' ? 'bottom-left' : 'bottom-right'),
+          start_expanded: newWidget.start_expanded ?? false
         })
         setPreviewMessages([{ type: 'bot', text: newWidget.welcome_message }])
       }
@@ -342,15 +342,26 @@ function WidgetPage({ widgetType }) {
       if (response.ok) {
         const updated = await response.json()
         setWidget(updated)
-        // Also update formData to reflect saved values
-        setFormData(prev => ({
-          ...prev,
-          widget_border_radius: updated.widget_border_radius || 16,
-          widget_font_family: updated.widget_font_family || 'Inter',
-          widget_font_size: updated.widget_font_size || 14,
-          widget_position: updated.widget_position || prev.widget_position,
-          start_expanded: updated.start_expanded || false
-        }))
+        // Update ALL formData fields from response to ensure sync
+        // Use ?? instead of || to preserve 0 values
+        setFormData({
+          primary_color: updated.primary_color ?? '#D97757',
+          secondary_color: updated.secondary_color ?? '#FEF3EC',
+          background_color: updated.background_color ?? '#FAF8F5',
+          welcome_message: updated.welcome_message ?? '',
+          fallback_message: updated.fallback_message ?? '',
+          subtitle: updated.subtitle ?? '',
+          language: updated.language ?? 'sv',
+          tone: updated.tone ?? '',
+          display_name: updated.display_name ?? '',
+          contact_email: updated.contact_email ?? '',
+          contact_phone: updated.contact_phone ?? '',
+          widget_font_family: updated.widget_font_family ?? 'Inter',
+          widget_font_size: updated.widget_font_size ?? 14,
+          widget_border_radius: updated.widget_border_radius ?? 16,
+          widget_position: updated.widget_position ?? 'bottom-right',
+          start_expanded: updated.start_expanded ?? false
+        })
         console.log('[Debug] Widget saved, border_radius:', updated.widget_border_radius)
         setSuccess('Inställningar sparade!')
         setTimeout(() => setSuccess(''), 3000)
