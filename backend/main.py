@@ -5474,7 +5474,7 @@ PRICING_TIERS = {
     "enterprise": {
         "name": "Enterprise",
         "monthly_fee": 10000,
-        "startup_fee": 50000,
+        "startup_fee": 32000,
         "max_conversations": 0,  # 0 = unlimited
         "max_knowledge_items": 0,  # 0 = unlimited
         "features": ["Allt i Business", "Obegränsade kunskapsartiklar", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling", "Dedikerad onboarding & utbildning"]

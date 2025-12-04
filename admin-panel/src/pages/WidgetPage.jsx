@@ -1137,7 +1137,9 @@ function WidgetPage({ widgetType }) {
                                 ? `${formData.widget_border_radius}px ${formData.widget_border_radius}px 4px ${formData.widget_border_radius}px`
                                 : `${formData.widget_border_radius}px ${formData.widget_border_radius}px ${formData.widget_border_radius}px 4px`,
                               fontSize: `${formData.widget_font_size}px`,
-                              lineHeight: '1.5'
+                              lineHeight: '1.5',
+                              wordBreak: 'break-word',
+                              overflowWrap: 'break-word'
                             }}
                           >
                             <p className="whitespace-pre-wrap">{msg.text}</p>
