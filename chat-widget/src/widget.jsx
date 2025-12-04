@@ -673,21 +673,12 @@ function ChatWidget({ config }) {
             [isLeft ? 'left' : 'right']: 0,
             width: 380,
             height: 560,
-            background: theme.bgElevated,
             borderRadius: borderRadius,
             boxShadow: theme.shadowLg,
             border: `1px solid ${theme.border}`,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
-            // Fix for dark mode background clipping outside widget corners
-            isolation: 'isolate',
-            transform: 'translateZ(0)',
-            WebkitBackfaceVisibility: 'hidden',
-            backfaceVisibility: 'hidden',
-            contain: 'paint',
-            clipPath: `inset(0 round ${borderRadius}px)`,
-            WebkitClipPath: `inset(0 round ${borderRadius}px)`,
           }}
         >
           {/* Header */}
@@ -1343,7 +1334,11 @@ function ChatWidget({ config }) {
 
           {/* Input Area */}
           <div style={{
-            padding: 12, borderTop: `1px solid ${theme.border}`, background: theme.bgSubtle,
+            padding: 12,
+            borderTop: `1px solid ${theme.border}`,
+            background: theme.bgSubtle,
+            borderBottomLeftRadius: borderRadius,
+            borderBottomRightRadius: borderRadius,
           }}>
             <form onSubmit={handleSend} style={{ display: 'flex', gap: 10 }}>
               <input

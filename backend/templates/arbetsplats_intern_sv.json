@@ -1,0 +1,198 @@
+{
+  "template_id": "arbetsplats_intern_sv",
+  "name": "Arbetsplats Intern - Svenska",
+  "description": "Intern kunskapsbas med vanliga HR-frågor, semesterregler, arbetstider och anställningsvillkor enligt svensk lag",
+  "version": "1.0.0",
+  "language": "sv",
+  "industry": "internal_hr",
+  "last_updated": "2025-01-01",
+  "sources": [
+    "Semesterlagen (1977:480)",
+    "Arbetstidslagen (1982:673)",
+    "Lag om anställningsskydd (LAS)",
+    "Arbetsmiljölagen",
+    "Föräldraledighetslagen"
+  ],
+  "categories": [
+    "Semester & Ledighet",
+    "Arbetstid & Övertid",
+    "Sjukfrånvaro",
+    "Föräldraledighet",
+    "Anställning & Uppsägning",
+    "Lön & Förmåner",
+    "Arbetsmiljö",
+    "IT & System"
+  ],
+  "items": [
+    {
+      "category": "Semester & Ledighet",
+      "question": "Hur många semesterdagar har jag rätt till?",
+      "answer": "Enligt semesterlagen har alla anställda rätt till minst 25 betalda semesterdagar per år. Många kollektivavtal ger fler dagar, ofta 25-30 dagar beroende på ålder och anställningstid. Kontrollera ditt anställningsavtal eller kollektivavtal för exakt antal."
+    },
+    {
+      "category": "Semester & Ledighet",
+      "question": "När kan jag ta ut semester?",
+      "answer": "Du har rätt till minst fyra veckors sammanhängande semester under perioden juni-augusti, om du inte kommer överens om annat med arbetsgivaren. Övrig semester kan tas ut under resten av året. Semesteransökan görs via vårt HR-system och ska godkännas av din chef."
+    },
+    {
+      "category": "Semester & Ledighet",
+      "question": "Kan jag spara semesterdagar?",
+      "answer": "Ja, du kan spara semesterdagar som överstiger 20 dagar per år. Sparade dagar måste tas ut inom fem år. Du kan ha max 30 sparade dagar. De 20 första dagarna måste tas ut under intjänandeåret och kan inte sparas."
+    },
+    {
+      "category": "Semester & Ledighet",
+      "question": "Hur ansöker jag om semester?",
+      "answer": "Semester ansöks via vårt HR-system. Logga in, välj 'Ledighet' och fyll i önskade datum. Din chef får en notifikation och godkänner eller avslår ansökan. Försök ansöka minst 2 veckor i förväg, och för sommarsemester helst innan april."
+    },
+    {
+      "category": "Semester & Ledighet",
+      "question": "Vad händer om jag blir sjuk under semestern?",
+      "answer": "Om du blir sjuk under semestern kan du få tillbaka semesterdagarna. Du måste sjukanmäla dig första sjukdagen och meddela arbetsgivaren att du vill avbryta semestern. Läkarintyg krävs vanligtvis. De återstående semesterdagarna kan tas ut vid ett annat tillfälle."
+    },
+    {
+      "category": "Semester & Ledighet",
+      "question": "Hur fungerar semesterlön?",
+      "answer": "Semesterlön är din ordinarie månadslön plus ett semestertillägg. Tillägget är vanligtvis 0,43% av din månadslön per semesterdag enligt lag, men kan vara högre enligt kollektivavtal (ofta 0,8%). Semesterlönen betalas ut när du tar semester."
+    },
+    {
+      "category": "Semester & Ledighet",
+      "question": "Kan jag få semesterersättning istället för ledighet?",
+      "answer": "Nej, enligt lag ska semester tas ut som ledighet, inte betalas ut. Undantag gäller endast vid anställningens slut, då ej uttagen semester betalas ut som semesterersättning. Syftet är att säkerställa att alla får vila och återhämtning."
+    },
+    {
+      "category": "Semester & Ledighet",
+      "question": "Vad är en klämdagar?",
+      "answer": "Klämdag är en arbetsdag mellan en helgdag och helg. Exempelvis fredag efter Kristi himmelsfärd. Klämdag är normalt en arbetsdag, men många arbetsgivare ger ledigt. Kontrollera med din chef eller HR om klämdag är ledig eller om du behöver ta semester."
+    },
+    {
+      "category": "Arbetstid & Övertid",
+      "question": "Hur lång är en normal arbetsvecka?",
+      "answer": "Normal arbetstid är 40 timmar per vecka enligt arbetstidslagen. Med kollektivavtal kan det vara något annorlunda. Arbetstiden kan fördelas ojämnt över perioder, men genomsnittet ska vara max 40 timmar/vecka under en beräkningsperiod."
+    },
+    {
+      "category": "Arbetstid & Övertid",
+      "question": "Vad räknas som övertid?",
+      "answer": "Övertid är arbetstid utöver din ordinarie arbetstid som beordras av arbetsgivaren. Max 50 timmar övertid får tas ut under en kalendermånad och max 200 timmar per år. Övertid ersätts med övertidsersättning eller kompledighet enligt kollektivavtal."
+    },
+    {
+      "category": "Arbetstid & Övertid",
+      "question": "Hur fungerar flextid?",
+      "answer": "Med flextid kan du själv välja när du börjar och slutar inom vissa ramar (t.ex. 07-09 och 15-18). Kärntid då alla måste vara på plats är vanligtvis mitt på dagen. Du ansvarar för att arbeta dina timmar och registrera tid i tidrapporteringssystemet."
+    },
+    {
+      "category": "Arbetstid & Övertid",
+      "question": "Hur registrerar jag min arbetstid?",
+      "answer": "Arbetstid registreras i vårt tidrapporteringssystem. Logga in dagligen eller veckovis och registrera din arbetade tid, eventuell övertid och frånvaro. Tidrapporten ska godkännas av din chef. Deadline för godkännande är vanligtvis månadens sista arbetsdag."
+    },
+    {
+      "category": "Arbetstid & Övertid",
+      "question": "Vad gäller för raster och pauser?",
+      "answer": "Du har rätt till rast (t.ex. lunch) efter max 5 timmars arbete. Rast räknas inte som arbetstid. Du har även rätt till kortare pauser under arbetsdagen som räknas som arbetstid. Exakt längd och antal bestäms av arbetsgivaren eller kollektivavtal."
+    },
+    {
+      "category": "Sjukfrånvaro",
+      "question": "Hur sjukanmäler jag mig?",
+      "answer": "Sjukanmäl dig första sjukdagen genom att ringa eller maila din chef före arbetstidens början. Registrera även sjukfrånvaro i HR-systemet. Första dagen är karensdag utan sjuklön. Från dag 2-14 betalar arbetsgivaren sjuklön (80% av lönen)."
+    },
+    {
+      "category": "Sjukfrånvaro",
+      "question": "När behöver jag läkarintyg?",
+      "answer": "Läkarintyg krävs från och med dag 8 i sjukperioden. Arbetsgivaren kan i särskilda fall begära läkarintyg tidigare (förstadagsintyg). Intyget ska lämnas till arbetsgivaren så snart som möjligt och visar att du är arbetsoförmögen, inte diagnos."
+    },
+    {
+      "category": "Sjukfrånvaro",
+      "question": "Vad är VAB och hur fungerar det?",
+      "answer": "VAB (vård av barn) är ledighet för att ta hand om sjukt barn under 12 år. Du får tillfällig föräldrapenning från Försäkringskassan (ca 80% av SGI). Anmäl VAB till arbetsgivaren samma dag och ansök om ersättning hos Försäkringskassan inom 90 dagar."
+    },
+    {
+      "category": "Sjukfrånvaro",
+      "question": "Hur länge kan jag vara sjukskriven?",
+      "answer": "Det finns ingen maxgräns för sjukskrivning. De första 14 dagarna betalar arbetsgivaren sjuklön. Därefter tar Försäkringskassan över med sjukpenning. Vid längre sjukskrivning görs regelbundna bedömningar av arbetsförmåga och rehabiliteringsplan upprättas."
+    },
+    {
+      "category": "Föräldraledighet",
+      "question": "Hur lång föräldraledighet har jag rätt till?",
+      "answer": "Du har rätt till föräldraledighet tills barnet fyller 18 månader, oavsett om du tar ut föräldrapenning. Föräldrapenning kan tas ut i totalt 480 dagar per barn, varav 90 dagar är reserverade för varje förälder och kan inte överlåtas."
+    },
+    {
+      "category": "Föräldraledighet",
+      "question": "Hur ansöker jag om föräldraledighet?",
+      "answer": "Meddela arbetsgivaren minst 2 månader före planerad ledighet. Ansök i HR-systemet och ange planerade datum. Du behöver även ansöka om föräldrapenning hos Försäkringskassan. Du kan ta ut ledighet på hel-, tre kvarts-, halv-, fjärdedels- eller åttondelstid."
+    },
+    {
+      "category": "Föräldraledighet",
+      "question": "Får jag behålla mina förmåner under föräldraledighet?",
+      "answer": "Ja, du behåller de flesta förmåner under föräldraledighet. Tjänstepension fortsätter att betalas in på full lön enligt de flesta kollektivavtal. Du behåller även din anställningstrygghet och rätt att återgå till samma eller likvärdigt arbete."
+    },
+    {
+      "category": "Föräldraledighet",
+      "question": "Vad är de 10 pappadagarna?",
+      "answer": "Pappan/partnern har rätt till 10 dagars ledighet med tillfällig föräldrapenning i samband med barnets födelse. Dagarna måste tas ut inom 60 dagar från att barnet kommit hem. Ersättning är ca 80% av SGI och ansöks hos Försäkringskassan."
+    },
+    {
+      "category": "Anställning & Uppsägning",
+      "question": "Vilken uppsägningstid har jag?",
+      "answer": "Uppsägningstiden beror på anställningstid. Enligt LAS: 1 månad (0-2 års anställning), 2 månader (2-4 år), 3 månader (4-6 år), upp till 6 månader (10+ år). Kollektivavtal eller anställningsavtal kan ge längre tid. Uppsägning ska vara skriftlig."
+    },
+    {
+      "category": "Anställning & Uppsägning",
+      "question": "Hur säger jag upp mig?",
+      "answer": "Lämna in en skriftlig uppsägning till din chef eller HR. Ange ditt namn, att du säger upp dig och sista arbetsdag enligt din uppsägningstid. Du behöver inte ange anledning. Bekräftelse skickas från HR med information om praktiska detaljer."
+    },
+    {
+      "category": "Anställning & Uppsägning",
+      "question": "Vad händer med mina semesterdagar när jag slutar?",
+      "answer": "Ej uttagen betald semester betalas ut som semesterersättning i din slutlön. Om du tagit ut för mycket semester kan arbetsgivaren göra avdrag. Sparade semesterdagar betalas också ut. Du får även semesterersättning för innevarande intjänandeår."
+    },
+    {
+      "category": "Lön & Förmåner",
+      "question": "När betalas lönen ut?",
+      "answer": "Lön betalas ut den 25:e varje månad. Om den 25:e infaller på en helg betalas lönen ut närmast föregående bankdag. Lönespecifikation finns tillgänglig i HR-systemet några dagar före utbetalning."
+    },
+    {
+      "category": "Lön & Förmåner",
+      "question": "Hur fungerar friskvårdsbidraget?",
+      "answer": "Du har rätt till friskvårdsbidrag på upp till 5000 kr per år för godkända aktiviteter som gym, simning, yoga, massage m.m. Spara kvitto och registrera i HR-systemet för utbetalning. Bidraget är skattefritt och återställs varje kalenderår."
+    },
+    {
+      "category": "Lön & Förmåner",
+      "question": "Vilka försäkringar har jag genom jobbet?",
+      "answer": "Som anställd omfattas du av tjänstegrupplivförsäkring (TGL), trygghetsförsäkring vid arbetsskada (TFA) och tjänstepension. Dessa gäller automatiskt. Kontakta HR för detaljer om försäkringsbelopp och villkor. Informationsblad finns på intranätet."
+    },
+    {
+      "category": "Arbetsmiljö",
+      "question": "Vem kontaktar jag vid arbetsmiljöproblem?",
+      "answer": "Kontakta först din närmaste chef. Du kan även vända dig till skyddsombudet på arbetsplatsen eller HR-avdelningen. Vid akuta situationer som hotar liv eller hälsa, kontakta räddningstjänsten. Anonyma tips kan lämnas via visselblåsarfunktionen."
+    },
+    {
+      "category": "Arbetsmiljö",
+      "question": "Hur anmäler jag en arbetsskada?",
+      "answer": "Anmäl arbetsskada till din chef och HR omedelbart. Skadan ska rapporteras till Försäkringskassan och AFA Försäkring. Fyll i anmälan i HR-systemet. Dokumentera händelsen med datum, tid, plats och vittnen. Sök läkarvård och spara alla kvitton."
+    },
+    {
+      "category": "Arbetsmiljö",
+      "question": "Vad är systematiskt arbetsmiljöarbete?",
+      "answer": "Systematiskt arbetsmiljöarbete (SAM) innebär att arbetsgivaren kontinuerligt undersöker, riskbedömer, åtgärdar och följer upp arbetsmiljön. Alla anställda ska delta i arbetsmiljöarbetet. Skyddsronder genomförs regelbundet och du kan alltid rapportera risker."
+    },
+    {
+      "category": "IT & System",
+      "question": "Hur återställer jag mitt lösenord?",
+      "answer": "Gå till inloggningssidan och klicka på 'Glömt lösenord'. Ange din e-postadress så skickas en återställningslänk. Alternativt kontakta IT-support. Lösenord ska vara minst 12 tecken med blandade bokstäver, siffror och specialtecken."
+    },
+    {
+      "category": "IT & System",
+      "question": "Hur kommer jag åt systemen hemifrån?",
+      "answer": "Anslut via VPN för att komma åt interna system hemifrån. Ladda ner VPN-klienten från intranätet och följ installationsguiden. Logga in med dina vanliga inloggningsuppgifter. Vid problem, kontakta IT-support."
+    },
+    {
+      "category": "IT & System",
+      "question": "Vem kontaktar jag vid IT-problem?",
+      "answer": "Kontakta IT-support via e-post it-support@foretaget.se eller telefon. Beskriv problemet, vilken dator/system det gäller och eventuella felmeddelanden. Akuta problem som påverkar många hanteras prioriterat. Supporttider är vardagar 08-17."
+    },
+    {
+      "category": "IT & System",
+      "question": "Hur beställer jag ny utrustning?",
+      "answer": "Beställ IT-utrustning via serviceportalen på intranätet. Fyll i beställningsformuläret och ange motivering. Din chef godkänner beställningen. Leveranstid är normalt 5-10 arbetsdagar. Standardutrustning (laptop, skärm, headset) ingår för alla anställda."
+    }
+  ]
+}
