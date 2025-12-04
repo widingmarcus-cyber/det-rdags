@@ -3,6 +3,33 @@ import { AuthContext } from '../App'
 
 const API_BASE = '/api'
 
+// Load Google Font dynamically for preview
+const loadGoogleFont = (fontFamily) => {
+  const fontId = `widget-font-${fontFamily.replace(/\s+/g, '-').toLowerCase()}`
+  if (document.getElementById(fontId)) return // Already loaded
+
+  // Map of supported fonts to their Google Fonts URL format
+  const googleFonts = {
+    'Inter': 'Inter:wght@400;500;600',
+    'Roboto': 'Roboto:wght@400;500;700',
+    'Open Sans': 'Open+Sans:wght@400;500;600',
+    'Lato': 'Lato:wght@400;700',
+    'Poppins': 'Poppins:wght@400;500;600',
+    'Source Sans Pro': 'Source+Sans+Pro:wght@400;600',
+    'Nunito': 'Nunito:wght@400;500;600',
+    'Montserrat': 'Montserrat:wght@400;500;600',
+  }
+
+  const fontUrl = googleFonts[fontFamily]
+  if (fontUrl) {
+    const link = document.createElement('link')
+    link.id = fontId
+    link.rel = 'stylesheet'
+    link.href = `https://fonts.googleapis.com/css2?family=${fontUrl}&display=swap`
+    document.head.appendChild(link)
+  }
+}
+
 function WidgetPage({ widgetType }) {
   const { authFetch } = useContext(AuthContext)
   const [activeTab, setActiveTab] = useState('settings')
@@ -113,6 +140,13 @@ function WidgetPage({ widgetType }) {
       checkHealth()
     }
   }, [activeTab])
+
+  // Load Google Font for preview when font changes
+  useEffect(() => {
+    if (formData.widget_font_family) {
+      loadGoogleFont(formData.widget_font_family)
+    }
+  }, [formData.widget_font_family])
 
   const fetchCategories = async () => {
     try {

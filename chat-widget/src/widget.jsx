@@ -293,8 +293,38 @@ function renderTextWithLinks(text, linkColor) {
   })
 }
 
+// Load Google Font dynamically
+const loadGoogleFont = (fontFamily) => {
+  const fontId = `bobot-font-${fontFamily.replace(/\s+/g, '-').toLowerCase()}`
+  if (document.getElementById(fontId)) return // Already loaded
+
+  // Map of supported fonts to their Google Fonts URL format
+  const googleFonts = {
+    'Inter': 'Inter:wght@400;500;600',
+    'Roboto': 'Roboto:wght@400;500;700',
+    'Open Sans': 'Open+Sans:wght@400;500;600',
+    'Lato': 'Lato:wght@400;700',
+    'Poppins': 'Poppins:wght@400;500;600',
+    'Source Sans Pro': 'Source+Sans+Pro:wght@400;600',
+    'Nunito': 'Nunito:wght@400;500;600',
+    'Montserrat': 'Montserrat:wght@400;500;600',
+  }
+
+  const fontUrl = googleFonts[fontFamily]
+  if (fontUrl) {
+    const link = document.createElement('link')
+    link.id = fontId
+    link.rel = 'stylesheet'
+    link.href = `https://fonts.googleapis.com/css2?family=${fontUrl}&display=swap`
+    document.head.appendChild(link)
+  }
+}
+
 // CSS animations and styles
 const injectStyles = (fontFamily, borderRadius) => {
+  // Load the selected font from Google Fonts
+  loadGoogleFont(fontFamily)
+
   const id = 'bobot-widget-styles'
   let styleEl = document.getElementById(id)
   if (!styleEl) {
@@ -304,8 +334,6 @@ const injectStyles = (fontFamily, borderRadius) => {
   }
 
   styleEl.textContent = `
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-
     @keyframes bobot-fade-in {
       from { opacity: 0; transform: translateY(8px) scale(0.98); }
       to { opacity: 1; transform: translateY(0) scale(1); }
@@ -425,6 +453,13 @@ function ChatWidget({ config }) {
     injectStyles(fontFamily, borderRadius)
   }, [fontFamily, borderRadius])
 
+  // Auto-open widget if start_expanded is set in API config
+  useEffect(() => {
+    if (widgetConfig?.start_expanded && !isOpen) {
+      setIsOpen(true)
+    }
+  }, [widgetConfig?.start_expanded])
+
   // Fetch config and restore conversation
   useEffect(() => {
     const fetchConfig = async () => {
@@ -443,16 +478,9 @@ function ChatWidget({ config }) {
           // Consent is NOT persisted - users must accept each session
           // This ensures GDPR compliance by requiring explicit consent
 
-          // Restore conversation
-          const saved = loadFromStorage(config.companyId)
-          if (saved?.messages?.length > 1) {
-            setMessages(saved.messages)
-            if (saved.sessionId) setSessionId(saved.sessionId)
-            if (saved.conversationId) setConversationId(saved.conversationId)
-            if (saved.feedbackGiven) setFeedbackGiven(saved.feedbackGiven)
-          } else {
-            setMessages([{ id: 0, type: 'bot', text: data.welcome_message || t.welcomeMessage, time: Date.now() }])
-          }
+          // Always start fresh - no conversation persistence
+          // Each page refresh starts a new conversation
+          setMessages([{ id: 0, type: 'bot', text: data.welcome_message || t.welcomeMessage, time: Date.now() }])
         } else {
           setMessages([{ id: 0, type: 'bot', text: t.welcomeMessage, time: Date.now() }])
         }
@@ -463,12 +491,8 @@ function ChatWidget({ config }) {
     fetchConfig()
   }, [])
 
-  // Save conversation
-  useEffect(() => {
-    if (messages.length > 1 && widgetConfig) {
-      saveToStorage(config.companyId, { messages, sessionId, conversationId, feedbackGiven })
-    }
-  }, [messages, sessionId, conversationId, feedbackGiven])
+  // Conversation is NOT saved to localStorage
+  // Each page refresh starts a new conversation for GDPR compliance
 
   // Auto-scroll
   useEffect(() => {

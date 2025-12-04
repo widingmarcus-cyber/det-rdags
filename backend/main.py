@@ -2325,6 +2325,7 @@ async def get_widget_config_by_key(
         "font_size": widget.widget_font_size or 14,
         "border_radius": widget.widget_border_radius or 16,
         "position": widget.widget_position or ("bottom-left" if widget.widget_type == "internal" else "bottom-right"),
+        "start_expanded": widget.start_expanded or False,
         # Quick Reply Suggestions
         "suggested_questions": suggested_questions,
         # PuB/GDPR Compliance
