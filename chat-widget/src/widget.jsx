@@ -651,6 +651,36 @@ function ChatWidget({ config }) {
               <div style={{ fontSize: fontSize - 2, opacity: 0.85, marginTop: 2 }}>{subtitle}</div>
             </div>
 
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              title={darkMode ? t.lightMode : t.darkMode}
+              style={{
+                width: 32,
+                height: 32,
+                background: 'rgba(255,255,255,0.15)',
+                border: 'none',
+                borderRadius: 8,
+                color: 'inherit',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {darkMode ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                  <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+              )}
+            </button>
+
             {/* Menu Button */}
             <button
               onClick={() => setShowMenu(!showMenu)}
@@ -716,25 +746,6 @@ function ChatWidget({ config }) {
                     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
                   </svg>
                   {t.newConversation}
-                </button>
-                <div style={{ height: 1, background: theme.border }}/>
-                <button onClick={() => { setDarkMode(!darkMode); setShowMenu(false) }} style={{
-                  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                  padding: '12px 14px', border: 'none', background: 'transparent',
-                  cursor: 'pointer', color: theme.text, fontSize: fontSize - 1,
-                }}>
-                  {darkMode ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-                      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-                    </svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                    </svg>
-                  )}
-                  {darkMode ? t.lightMode : t.darkMode}
                 </button>
                 {widgetConfig?.privacy_policy_url && (
                   <>
@@ -895,29 +906,55 @@ function ChatWidget({ config }) {
                     )}
                     {gdprData && !gdprLoading && (
                       <div style={{ fontSize: fontSize - 1 }}>
-                        <div style={{ marginBottom: 12 }}>
-                          <span style={{ color: theme.textMuted }}>Session ID:</span>
-                          <span style={{ color: theme.text, marginLeft: 8, fontFamily: 'monospace', fontSize: fontSize - 2 }}>{gdprData.session_id}</span>
-                        </div>
-                        {gdprData.consent_status && (
-                          <div style={{ marginBottom: 12 }}>
-                            <span style={{ color: theme.textMuted }}>{t.consentGiven}:</span>
-                            <span style={{ color: theme.text, marginLeft: 8 }}>{gdprData.consent_status.consent_given ? t.yes : t.no}</span>
-                          </div>
-                        )}
-                        {gdprData.messages?.length > 0 && (
-                          <div>
-                            <div style={{ color: theme.textMuted, marginBottom: 8 }}>Meddelanden ({gdprData.messages.length}):</div>
-                            <div style={{ maxHeight: 200, overflowY: 'auto', background: theme.bg, borderRadius: 8, padding: 8 }}>
-                              {gdprData.messages.map((msg, i) => (
-                                <div key={i} style={{ marginBottom: 8, padding: 8, background: theme.bgElevated, borderRadius: 6, fontSize: fontSize - 2 }}>
-                                  <div style={{ color: msg.type === 'user' ? primaryColor : theme.textSecondary, fontWeight: 500 }}>
-                                    {msg.type === 'user' ? 'Du' : 'Bot'}
-                                  </div>
-                                  <div style={{ color: theme.text, marginTop: 4 }}>{msg.content}</div>
-                                </div>
-                              ))}
+                        {gdprData.data ? (
+                          <>
+                            <div style={{ marginBottom: 12 }}>
+                              <span style={{ color: theme.textMuted }}>Konversation:</span>
+                              <span style={{ color: theme.text, marginLeft: 8, fontFamily: 'monospace', fontSize: fontSize - 2 }}>{gdprData.data.conversation_id}</span>
                             </div>
+                            <div style={{ marginBottom: 12 }}>
+                              <span style={{ color: theme.textMuted }}>{t.consentGiven}:</span>
+                              <span style={{ color: theme.text, marginLeft: 8 }}>{gdprData.data.consent_given ? t.yes : t.no}</span>
+                            </div>
+                            {gdprData.data.started_at && (
+                              <div style={{ marginBottom: 12 }}>
+                                <span style={{ color: theme.textMuted }}>Startad:</span>
+                                <span style={{ color: theme.text, marginLeft: 8 }}>{new Date(gdprData.data.started_at).toLocaleString('sv-SE')}</span>
+                              </div>
+                            )}
+                            {gdprData.data.messages?.length > 0 && (
+                              <div>
+                                <div style={{ color: theme.textMuted, marginBottom: 8 }}>Meddelanden ({gdprData.data.messages.length}):</div>
+                                <div style={{ maxHeight: 200, overflowY: 'auto', background: theme.bg, borderRadius: 8, padding: 8 }}>
+                                  {gdprData.data.messages.map((msg, i) => (
+                                    <div key={i} style={{ marginBottom: 8, padding: 8, background: theme.bgElevated, borderRadius: 6, fontSize: fontSize - 2 }}>
+                                      <div style={{ color: msg.role === 'user' ? primaryColor : theme.textSecondary, fontWeight: 500 }}>
+                                        {msg.role === 'user' ? 'Du' : 'Bot'}
+                                      </div>
+                                      <div style={{ color: theme.text, marginTop: 4 }}>{msg.content}</div>
+                                      {msg.timestamp && (
+                                        <div style={{ color: theme.textMuted, fontSize: fontSize - 3, marginTop: 4 }}>
+                                          {new Date(msg.timestamp).toLocaleString('sv-SE')}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {gdprData.data_controller && (
+                              <div style={{ marginTop: 16, padding: 12, background: theme.bgSubtle, borderRadius: 8, fontSize: fontSize - 2 }}>
+                                <div style={{ color: theme.textMuted, marginBottom: 4 }}>Personuppgiftsansvarig:</div>
+                                <div style={{ color: theme.text }}>{gdprData.data_controller.company}</div>
+                                <div style={{ color: theme.textMuted, marginTop: 4 }}>
+                                  Data raderas efter {gdprData.data_controller.retention_days} dagar
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div style={{ textAlign: 'center', color: theme.textSecondary, padding: 16 }}>
+                            {gdprData.message || t.noDataFound}
                           </div>
                         )}
                       </div>
@@ -1014,18 +1051,19 @@ function ChatWidget({ config }) {
 
           {/* Messages */}
           <div style={{
-            flex: 1, overflowY: 'auto', overflow: 'hidden', padding: 16, background: theme.bg,
+            flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: 16, background: theme.bg,
             width: '100%', boxSizing: 'border-box', minWidth: 0,
           }}>
             {messages.map((msg, i) => (
               <div key={msg.id} className="bobot-msg" style={{
                 marginBottom: 16,
                 display: 'flex',
+                flexDirection: 'column',
                 width: '100%',
                 maxWidth: '100%',
                 boxSizing: 'border-box',
                 minWidth: 0,
-                justifyContent: msg.type === 'user' ? (isRTL ? 'flex-start' : 'flex-end') : (isRTL ? 'flex-end' : 'flex-start'),
+                alignItems: msg.type === 'user' ? (isRTL ? 'flex-start' : 'flex-end') : (isRTL ? 'flex-end' : 'flex-start'),
               }}>
                 <div style={{
                   maxWidth: '85%',
@@ -1166,7 +1204,7 @@ function ChatWidget({ config }) {
                 {msg.time && i > 0 && (
                   <div style={{
                     fontSize: fontSize - 4, color: theme.textMuted, marginTop: 4,
-                    paddingX: 4,
+                    paddingLeft: 4, paddingRight: 4,
                   }}>
                     {formatTime(msg.time)}
                   </div>
