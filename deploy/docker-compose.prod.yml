@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bobot-backend
+    restart: always
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - .env
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+    volumes:
+      - ./data:/app/data
+      - backend-db:/app
+    depends_on:
+      - ollama
+    networks:
+      - bobot-network
+
+  admin-panel:
+    build:
+      context: ./admin-panel
+      dockerfile: Dockerfile
+    container_name: bobot-admin
+    restart: always
+    ports:
+      - "127.0.0.1:3000:80"
+    networks:
+      - bobot-network
+
+  chat-widget:
+    build:
+      context: ./chat-widget
+      dockerfile: Dockerfile
+    container_name: bobot-widget
+    restart: always
+    ports:
+      - "127.0.0.1:3001:80"
+    networks:
+      - bobot-network
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: bobot-ollama
+    restart: always
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - bobot-network
+
+volumes:
+  backend-db:
+  ollama-data:
+
+networks:
+  bobot-network:
+    driver: bridge
