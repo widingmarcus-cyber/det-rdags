@@ -442,6 +442,11 @@ function ChatWidget({ config }) {
   const fontSize = widgetConfig?.font_size || 14
   const borderRadius = widgetConfig?.border_radius || 16
   const position = widgetConfig?.position || 'bottom-right'
+
+  // Debug: log border radius when config changes
+  if (widgetConfig) {
+    console.log('[Bobot] Widget config loaded:', { border_radius: widgetConfig.border_radius, applied: borderRadius })
+  }
   const companyName = widgetConfig?.widget_name || widgetConfig?.company_name || 'Assistent'
   const subtitle = widgetConfig?.subtitle || t.subtitle
   const suggestedQuestions = widgetConfig?.suggested_questions || []

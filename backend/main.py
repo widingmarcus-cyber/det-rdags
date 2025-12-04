@@ -422,9 +422,11 @@ response_cache = {}
 CACHE_TTL = 300  # 5 minutes
 
 
-def get_cached_response(company_id: str, question: str, language: str = "sv"):
+def get_cached_response(company_id: str, question: str, language: str = "sv", widget_key: str = None):
     """Get cached response if available and not expired"""
-    cache_key = f"{company_id}:{language}:{question.lower().strip()}"
+    # Include widget_key in cache key to prevent cross-widget cache contamination
+    widget_part = widget_key or "default"
+    cache_key = f"{company_id}:{widget_part}:{language}:{question.lower().strip()}"
     if cache_key in response_cache:
         cached, timestamp = response_cache[cache_key]
         if datetime.utcnow().timestamp() - timestamp < CACHE_TTL:
@@ -434,9 +436,11 @@ def get_cached_response(company_id: str, question: str, language: str = "sv"):
     return None
 
 
-def set_cached_response(company_id: str, question: str, response: dict, language: str = "sv"):
+def set_cached_response(company_id: str, question: str, response: dict, language: str = "sv", widget_key: str = None):
     """Cache a response"""
-    cache_key = f"{company_id}:{language}:{question.lower().strip()}"
+    # Include widget_key in cache key to prevent cross-widget cache contamination
+    widget_part = widget_key or "default"
+    cache_key = f"{company_id}:{widget_part}:{language}:{question.lower().strip()}"
     response_cache[cache_key] = (response, datetime.utcnow().timestamp())
     # Clean old entries if cache gets too large
     if len(response_cache) > 1000:
@@ -1095,19 +1099,14 @@ def find_relevant_context(question: str, company_id: str, db: Session, top_k: in
     A score of 3+ indicates meaningful keyword overlap with the question.
 
     If widget_id is provided:
-    - Internal widgets: ONLY returns items belonging to that specific widget (strict isolation)
-    - External widgets: Returns items belonging to that widget OR shared items (widget_id is NULL)
+    - STRICT isolation for ALL widgets: Each widget only sees its own knowledge items
+    - No shared items - each widget has its own separate knowledge base
     """
     # Filter by company and widget
     query = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == company_id)
     if widget_id:
-        from sqlalchemy import or_
-        if widget_type == "internal":
-            # Internal widgets: STRICT isolation - only their own knowledge, no shared items
-            query = query.filter(KnowledgeItem.widget_id == widget_id)
-        else:
-            # External widgets: Include items for this specific widget OR shared items (widget_id is NULL)
-            query = query.filter(or_(KnowledgeItem.widget_id == widget_id, KnowledgeItem.widget_id.is_(None)))
+        # STRICT isolation: Each widget only sees knowledge items assigned to it
+        query = query.filter(KnowledgeItem.widget_id == widget_id)
     items = query.all()
 
     if not items:
@@ -2007,8 +2006,8 @@ async def chat(
     # Determine language early (needed for cache key)
     language = request.language if request.language in ["sv", "en", "ar"] else detect_language(request.question)
 
-    # Check cache first (include language in cache key)
-    cached = get_cached_response(company_id, request.question, language)
+    # Check cache first (include language and widget_key in cache key)
+    cached = get_cached_response(company_id, request.question, language, widget_key=request.widget_key)
     if cached:
         # Return cached response with new session handling
         session_id = request.session_id or str(uuid.uuid4())
@@ -2207,7 +2206,7 @@ async def chat(
         "had_answer": had_answer,
         "confidence": confidence
     }
-    set_cached_response(company_id, request.question, cache_data, language)
+    set_cached_response(company_id, request.question, cache_data, language, widget_key=request.widget_key)
 
     return ChatResponse(
         answer=answer,
@@ -2417,9 +2416,8 @@ async def chat_via_widget_key(
     # Determine language
     language = request.language if request.language in ["sv", "en", "ar"] else detect_language(request.question)
 
-    # Check cache
-    cache_key = f"{widget_key}:{request.question}:{language}"
-    cached = get_cached_response(company_id, request.question, language)
+    # Check cache (include widget_key to prevent cross-widget cache contamination)
+    cached = get_cached_response(company_id, request.question, language, widget_key=widget_key)
     if cached:
         session_id = request.session_id or str(uuid.uuid4())
         return ChatResponse(
@@ -2539,7 +2537,7 @@ async def chat_via_widget_key(
 
     db.commit()
 
-    # Cache the response
+    # Cache the response (include widget_key to prevent cross-widget cache contamination)
     set_cached_response(company_id, request.question, {
         "answer": answer,
         "sources": sources,
@@ -2547,7 +2545,7 @@ async def chat_via_widget_key(
         "had_answer": had_answer,
         "conversation_id": conversation.reference_id,
         "confidence": 100 if had_answer else 0
-    }, language)
+    }, language, widget_key=widget_key)
 
     return ChatResponse(
         answer=answer,
