@@ -41,6 +41,9 @@ const translations = {
     sendMessage: 'Skicka',
     typing: 'skriver...',
     today: 'Idag',
+    sources: 'Källor',
+    showSources: 'Visa källor',
+    hideSources: 'Dölj källor',
   },
   en: {
     welcomeMessage: 'Hi! How can I help you today?',
@@ -80,6 +83,9 @@ const translations = {
     sendMessage: 'Send',
     typing: 'typing...',
     today: 'Today',
+    sources: 'Sources',
+    showSources: 'Show sources',
+    hideSources: 'Hide sources',
   },
   ar: {
     welcomeMessage: 'مرحباً! كيف يمكنني مساعدتك اليوم؟',
@@ -119,6 +125,9 @@ const translations = {
     sendMessage: 'إرسال',
     typing: 'يكتب...',
     today: 'اليوم',
+    sources: 'المصادر',
+    showSources: 'عرض المصادر',
+    hideSources: 'إخفاء المصادر',
   }
 }
 
@@ -335,6 +344,7 @@ function ChatWidget({ config }) {
   const [gdprData, setGdprData] = useState(null)
   const [gdprLoading, setGdprLoading] = useState(false)
   const [gdprMessage, setGdprMessage] = useState(null)
+  const [expandedSources, setExpandedSources] = useState({}) // Track which messages have expanded sources
 
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
@@ -556,6 +566,7 @@ function ChatWidget({ config }) {
           text: data.answer,
           hadAnswer: data.had_answer,
           confidence: data.confidence || 100,
+          sources: data.sources_detail || [], // Store detailed sources for display
           time: Date.now()
         }])
       } else {
@@ -1037,6 +1048,95 @@ function ChatWidget({ config }) {
                   borderBottomLeftRadius: msg.type === 'user' && isRTL ? 4 : (msg.type === 'bot' && !isRTL ? 4 : borderRadius - 4),
                 }}>
                   {msg.text}
+
+                  {/* Sources section for bot messages */}
+                  {msg.type === 'bot' && msg.sources && msg.sources.length > 0 && (
+                    <div style={{ marginTop: 10 }}>
+                      <button
+                        onClick={() => setExpandedSources(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '6px 10px',
+                          fontSize: fontSize - 2,
+                          background: theme.bgAccentSoft,
+                          color: primaryColor,
+                          border: `1px solid ${primaryColor}30`,
+                          borderRadius: 8,
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          style={{
+                            transform: expandedSources[msg.id] ? 'rotate(90deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.15s'
+                          }}
+                        >
+                          <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                        {t.sources} ({msg.sources.length})
+                      </button>
+
+                      {expandedSources[msg.id] && (
+                        <div style={{
+                          marginTop: 8,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 8,
+                        }}>
+                          {msg.sources.map((source, idx) => (
+                            <div
+                              key={idx}
+                              style={{
+                                padding: 10,
+                                background: theme.bg,
+                                borderRadius: 8,
+                                border: `1px solid ${theme.border}`,
+                              }}
+                            >
+                              <div style={{
+                                fontSize: fontSize - 2,
+                                fontWeight: 500,
+                                color: primaryColor,
+                                marginBottom: 6,
+                              }}>
+                                {source.question}
+                              </div>
+                              <div style={{
+                                fontSize: fontSize - 2,
+                                color: theme.textSecondary,
+                                lineHeight: 1.5,
+                              }}>
+                                {source.answer}
+                              </div>
+                              {source.category && (
+                                <div style={{
+                                  marginTop: 6,
+                                  fontSize: fontSize - 3,
+                                  color: theme.textMuted,
+                                  display: 'inline-block',
+                                  padding: '2px 6px',
+                                  background: theme.bgSubtle,
+                                  borderRadius: 4,
+                                }}>
+                                  {source.category}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Feedback for bot messages */}
                   {msg.type === 'bot' && msg.id !== 0 && !feedbackGiven[msg.id] && (

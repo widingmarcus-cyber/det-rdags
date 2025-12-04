@@ -401,9 +401,16 @@ class ChatRequest(BaseModel):
         return v.strip()
 
 
+class SourceDetail(BaseModel):
+    question: str
+    answer: str
+    category: Optional[str] = None
+
+
 class ChatResponse(BaseModel):
     answer: str
     sources: List[str] = []
+    sources_detail: List[SourceDetail] = []  # Full knowledge base entries used
     session_id: str
     conversation_id: str  # Short readable ID for user reference (e.g., "BOB-A1B2")
     had_answer: bool = True
@@ -1974,6 +1981,7 @@ async def chat(
         return ChatResponse(
             answer=cached["answer"],
             sources=cached.get("sources", []),
+            sources_detail=cached.get("sources_detail", []),
             session_id=session_id,
             conversation_id=cached.get("conversation_id", "BOB-CACHE"),
             had_answer=cached.get("had_answer", True),
@@ -2118,6 +2126,7 @@ async def chat(
 
     # Spara bot-svaret
     sources = [item.question for item in context]
+    sources_detail = [{"question": item.question, "answer": item.answer, "category": item.category} for item in context]
     bot_message = Message(
         conversation_id=conversation.id,
         role="bot",
@@ -2154,6 +2163,7 @@ async def chat(
     cache_data = {
         "answer": answer,
         "sources": sources,
+        "sources_detail": sources_detail,
         "conversation_id": conversation.reference_id,
         "had_answer": had_answer,
         "confidence": confidence
@@ -2163,6 +2173,7 @@ async def chat(
     return ChatResponse(
         answer=answer,
         sources=sources,
+        sources_detail=sources_detail,
         session_id=session_id,
         conversation_id=conversation.reference_id,
         had_answer=had_answer,
@@ -2346,6 +2357,7 @@ async def chat_via_widget_key(
         return ChatResponse(
             answer=cached["answer"],
             sources=cached.get("sources", []),
+            sources_detail=cached.get("sources_detail", []),
             session_id=session_id,
             conversation_id=cached.get("conversation_id", "BOB-CACHE"),
             had_answer=cached.get("had_answer", True),
@@ -2425,14 +2437,14 @@ async def chat_via_widget_key(
             answer = widget.fallback_message or "Tyvärr kunde jag inte hitta ett svar på din fråga."
 
     # Save bot message
-    # sources_detail for database storage (richer info), sources for API response (List[str])
-    sources_detail = [{"question": item.question, "category": item.category} for item in relevant_items[:3]]
+    # sources_detail includes full knowledge base entries for user reference
     sources = [item.question for item in relevant_items[:3]]
+    sources_detail = [{"question": item.question, "answer": item.answer, "category": item.category} for item in relevant_items[:3]]
     bot_message = Message(
         conversation_id=conversation.id,
         role="bot",
         content=answer,
-        sources=json.dumps(sources_detail),
+        sources=json.dumps(sources),
         had_answer=had_answer,
         response_time_ms=response_time
     )
@@ -2445,6 +2457,7 @@ async def chat_via_widget_key(
     set_cached_response(company_id, request.question, {
         "answer": answer,
         "sources": sources,
+        "sources_detail": sources_detail,
         "had_answer": had_answer,
         "conversation_id": conversation.reference_id,
         "confidence": 100 if had_answer else 0
@@ -2453,6 +2466,7 @@ async def chat_via_widget_key(
     return ChatResponse(
         answer=answer,
         sources=sources,
+        sources_detail=sources_detail,
         session_id=session_id,
         conversation_id=conversation.reference_id,
         had_answer=had_answer,

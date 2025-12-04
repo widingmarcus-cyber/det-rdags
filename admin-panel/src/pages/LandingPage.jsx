@@ -295,6 +295,7 @@ function DemoWidget() {
   ])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [expandedSources, setExpandedSources] = useState({})
 
   // Smart demo responses based on keywords - accurate information only
   const getSmartResponse = (userMsg) => {
@@ -353,6 +354,17 @@ function DemoWidget() {
     // Internal widget / Medarbetarstöd
     if (msg.includes('intern') || msg.includes('medarbetar') || msg.includes('anställd') || msg.includes('personal')) {
       return 'Bobot har stöd för intern användning! Du kan skapa en separat widget för medarbetarstöd med egen kunskapsbas för HR-frågor, policyer, rutiner - med anpassad ton.'
+    }
+
+    // Sources feature demo
+    if (msg.includes('källa') || msg.includes('källor') || msg.includes('source') || msg.includes('referens')) {
+      return {
+        text: 'Bobot visar nu vilka kunskapsbasartiklar som användes för att ge svaret! Användare kan klicka på "Källor" för att se ursprungsinformationen.',
+        sources: [
+          { question: 'Visar Bobot varifrån svaren kommer?', answer: 'Ja! Varje AI-svar inkluderar klickbara källor som visar exakt vilka kunskapsbasartiklar som användes för att generera svaret.', category: 'Funktioner' },
+          { question: 'Kan användare se originalinnehållet?', answer: 'Ja, användare kan expandera källorna för att se den fullständiga frågan och svaret från kunskapsbasen.', category: 'Funktioner' }
+        ]
+      }
     }
 
     // Knowledge base
@@ -518,7 +530,11 @@ function DemoWidget() {
 
     setTimeout(() => {
       const response = getSmartResponse(userMsg)
-      setMessages(prev => [...prev, { type: 'bot', text: response }])
+      // Handle both string responses and object responses (with sources)
+      const botMessage = typeof response === 'string'
+        ? { type: 'bot', text: response }
+        : { type: 'bot', text: response.text, sources: response.sources, id: Date.now() }
+      setMessages(prev => [...prev, botMessage])
       setIsTyping(false)
     }, 800 + Math.random() * 700)
   }
@@ -561,6 +577,52 @@ function DemoWidget() {
                     : 'bg-[#FEF3EC] dark:bg-stone-700 text-stone-700 dark:text-stone-200 border border-[#E8D5CC] dark:border-stone-600 rounded-bl-sm'
                 }`}>
                   {msg.text}
+
+                  {/* Sources section for demo */}
+                  {msg.type === 'bot' && msg.sources && msg.sources.length > 0 && (
+                    <div className="mt-2">
+                      <button
+                        onClick={() => setExpandedSources(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-[#D97757]/10 text-[#D97757] border border-[#D97757]/30 rounded-md font-medium hover:bg-[#D97757]/20 transition-colors"
+                      >
+                        <svg
+                          width="10"
+                          height="10"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className={`transition-transform ${expandedSources[msg.id] ? 'rotate-90' : ''}`}
+                        >
+                          <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                        Källor ({msg.sources.length})
+                      </button>
+
+                      {expandedSources[msg.id] && (
+                        <div className="mt-2 space-y-2">
+                          {msg.sources.map((source, idx) => (
+                            <div
+                              key={idx}
+                              className="p-2.5 bg-white dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-600"
+                            >
+                              <div className="text-xs font-medium text-[#D97757] mb-1">
+                                {source.question}
+                              </div>
+                              <div className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+                                {source.answer}
+                              </div>
+                              {source.category && (
+                                <span className="inline-block mt-1.5 px-1.5 py-0.5 text-[10px] bg-stone-100 dark:bg-stone-700 text-stone-500 dark:text-stone-400 rounded">
+                                  {source.category}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
