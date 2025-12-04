@@ -1061,22 +1061,25 @@ def normalize_text(text: str) -> str:
     return text
 
 
-def find_relevant_context(question: str, company_id: str, db: Session, top_k: int = 3, min_score: int = 3, widget_id: Optional[int] = None) -> List[KnowledgeItem]:
+def find_relevant_context(question: str, company_id: str, db: Session, top_k: int = 3, min_score: int = 3, widget_id: Optional[int] = None, widget_type: str = "external") -> List[KnowledgeItem]:
     """Hitta relevanta frågor/svar från kunskapsbasen - fuzzy matching
 
     ANTI-HALLUCINATION: Only returns items with score >= min_score to prevent
     weak matches from being used as context for AI-generated answers.
     A score of 3+ indicates meaningful keyword overlap with the question.
 
-    If widget_id is provided, only returns items that belong to that widget
-    OR items with no widget (shared across all widgets).
+    If widget_id is provided:
+    - Returns ONLY items belonging to that specific widget (strict isolation)
+    - No shared items to prevent knowledge leakage between widgets
     """
     # Filter by company and widget
     query = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == company_id)
     if widget_id:
-        # Include items for this specific widget OR shared items (widget_id is NULL)
-        from sqlalchemy import or_
-        query = query.filter(or_(KnowledgeItem.widget_id == widget_id, KnowledgeItem.widget_id.is_(None)))
+        # Strict widget isolation: only return items for this specific widget
+        query = query.filter(KnowledgeItem.widget_id == widget_id)
+    else:
+        # No widget specified: only return shared items (for backwards compatibility)
+        query = query.filter(KnowledgeItem.widget_id.is_(None))
     items = query.all()
 
     if not items:
@@ -2451,7 +2454,7 @@ async def chat_via_widget_key(
     else:
         # Find relevant context from widget-specific knowledge base
         start_time = time.time()
-        relevant_items = find_relevant_context(request.question, company_id, db, widget_id=widget.id)
+        relevant_items = find_relevant_context(request.question, company_id, db, widget_id=widget.id, widget_type=widget.widget_type)
 
         # Build prompt and get AI response (pass widget for contact info override)
         prompt = build_prompt(request.question, relevant_items, settings=settings, language=language, widget_type=widget.widget_type, widget=widget)
