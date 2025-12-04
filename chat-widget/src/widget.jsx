@@ -22,14 +22,28 @@ const translations = {
     privacyPolicy: 'Integritetspolicy',
     viewMyData: 'Visa min data',
     deleteMyData: 'Radera min data',
+    revokeConsent: 'Dra tillbaka samtycke',
     consentGiven: 'Du har gett samtycke',
+    consentRevoked: 'Samtycke har återkallats',
     dataDeleted: 'Din data har raderats',
     confirmDelete: 'Är du säker? Detta kan inte ångras.',
+    confirmRevoke: 'Vill du dra tillbaka ditt samtycke? Du kan behöva ge samtycke igen för att fortsätta chatta.',
+    gdprRights: 'Dina rättigheter',
+    dataController: 'Personuppgiftsansvarig',
+    gdprContact: 'För GDPR-frågor, kontakta:',
+    close: 'Stäng',
+    cancel: 'Avbryt',
+    confirm: 'Bekräfta',
+    noDataFound: 'Ingen data hittades för denna session.',
+    yourData: 'Din data',
     openChat: 'Öppna chatt',
     closeChat: 'Stäng chatt',
     sendMessage: 'Skicka',
     typing: 'skriver...',
     today: 'Idag',
+    sources: 'Källor',
+    showSources: 'Visa källor',
+    hideSources: 'Dölj källor',
   },
   en: {
     welcomeMessage: 'Hi! How can I help you today?',
@@ -50,14 +64,28 @@ const translations = {
     privacyPolicy: 'Privacy policy',
     viewMyData: 'View my data',
     deleteMyData: 'Delete my data',
+    revokeConsent: 'Revoke consent',
     consentGiven: 'You have given consent',
+    consentRevoked: 'Consent has been revoked',
     dataDeleted: 'Your data has been deleted',
     confirmDelete: 'Are you sure? This cannot be undone.',
+    confirmRevoke: 'Do you want to revoke your consent? You may need to give consent again to continue chatting.',
+    gdprRights: 'Your rights',
+    dataController: 'Data controller',
+    gdprContact: 'For GDPR inquiries, contact:',
+    close: 'Close',
+    cancel: 'Cancel',
+    confirm: 'Confirm',
+    noDataFound: 'No data found for this session.',
+    yourData: 'Your data',
     openChat: 'Open chat',
     closeChat: 'Close chat',
     sendMessage: 'Send',
     typing: 'typing...',
     today: 'Today',
+    sources: 'Sources',
+    showSources: 'Show sources',
+    hideSources: 'Hide sources',
   },
   ar: {
     welcomeMessage: 'مرحباً! كيف يمكنني مساعدتك اليوم؟',
@@ -78,14 +106,28 @@ const translations = {
     privacyPolicy: 'سياسة الخصوصية',
     viewMyData: 'عرض بياناتي',
     deleteMyData: 'حذف بياناتي',
+    revokeConsent: 'سحب الموافقة',
     consentGiven: 'لقد وافقت',
+    consentRevoked: 'تم سحب الموافقة',
     dataDeleted: 'تم حذف بياناتك',
     confirmDelete: 'هل أنت متأكد؟ لا يمكن التراجع عن هذا.',
+    confirmRevoke: 'هل تريد سحب موافقتك؟ قد تحتاج إلى الموافقة مرة أخرى للاستمرار في الدردشة.',
+    gdprRights: 'حقوقك',
+    dataController: 'مسؤول البيانات',
+    gdprContact: 'لاستفسارات GDPR، تواصل مع:',
+    close: 'إغلاق',
+    cancel: 'إلغاء',
+    confirm: 'تأكيد',
+    noDataFound: 'لم يتم العثور على بيانات لهذه الجلسة.',
+    yourData: 'بياناتك',
     openChat: 'افتح الدردشة',
     closeChat: 'أغلق الدردشة',
     sendMessage: 'إرسال',
     typing: 'يكتب...',
     today: 'اليوم',
+    sources: 'المصادر',
+    showSources: 'عرض المصادر',
+    hideSources: 'إخفاء المصادر',
   }
 }
 
@@ -192,13 +234,97 @@ function adjustColor(hex, amount) {
   return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`
 }
 
-// Format time
+// Format time (24-hour format)
 function formatTime(date) {
-  return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return new Date(date).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', hour12: false })
+}
+
+// Render text with clickable links
+function renderTextWithLinks(text, linkColor) {
+  if (!text) return null
+
+  // Pattern to match URLs (http/https/www) and markdown-style links [text](url)
+  const urlPattern = /(https?:\/\/[^\s\)]+|www\.[^\s\)]+)/g
+  const markdownLinkPattern = /\[([^\]]+)\]\(([^)]+)\)/g
+
+  // First, replace markdown links with placeholder
+  let processedText = text.replace(markdownLinkPattern, '___MDLINK___$1___URL___$2___ENDLINK___')
+
+  // Split by URLs
+  const parts = processedText.split(urlPattern)
+
+  return parts.map((part, i) => {
+    // Check if this is a markdown link placeholder
+    if (part.startsWith('___MDLINK___')) {
+      const match = part.match(/___MDLINK___(.+)___URL___(.+)___ENDLINK___/)
+      if (match) {
+        const [, linkText, url] = match
+        return (
+          <a
+            key={i}
+            href={url.startsWith('http') ? url : `https://${url}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: linkColor, textDecoration: 'underline' }}
+          >
+            {linkText}
+          </a>
+        )
+      }
+    }
+
+    // Check if this part is a URL
+    if (part.match(/^(https?:\/\/|www\.)/)) {
+      const href = part.startsWith('http') ? part : `https://${part}`
+      return (
+        <a
+          key={i}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: linkColor, textDecoration: 'underline' }}
+        >
+          {part}
+        </a>
+      )
+    }
+
+    return part
+  })
+}
+
+// Load Google Font dynamically
+const loadGoogleFont = (fontFamily) => {
+  const fontId = `bobot-font-${fontFamily.replace(/\s+/g, '-').toLowerCase()}`
+  if (document.getElementById(fontId)) return // Already loaded
+
+  // Map of supported fonts to their Google Fonts URL format
+  const googleFonts = {
+    'Inter': 'Inter:wght@400;500;600',
+    'Roboto': 'Roboto:wght@400;500;700',
+    'Open Sans': 'Open+Sans:wght@400;500;600',
+    'Lato': 'Lato:wght@400;700',
+    'Poppins': 'Poppins:wght@400;500;600',
+    'Source Sans Pro': 'Source+Sans+Pro:wght@400;600',
+    'Nunito': 'Nunito:wght@400;500;600',
+    'Montserrat': 'Montserrat:wght@400;500;600',
+  }
+
+  const fontUrl = googleFonts[fontFamily]
+  if (fontUrl) {
+    const link = document.createElement('link')
+    link.id = fontId
+    link.rel = 'stylesheet'
+    link.href = `https://fonts.googleapis.com/css2?family=${fontUrl}&display=swap`
+    document.head.appendChild(link)
+  }
 }
 
 // CSS animations and styles
 const injectStyles = (fontFamily, borderRadius) => {
+  // Load the selected font from Google Fonts
+  loadGoogleFont(fontFamily)
+
   const id = 'bobot-widget-styles'
   let styleEl = document.getElementById(id)
   if (!styleEl) {
@@ -208,8 +334,6 @@ const injectStyles = (fontFamily, borderRadius) => {
   }
 
   styleEl.textContent = `
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-
     @keyframes bobot-fade-in {
       from { opacity: 0; transform: translateY(8px) scale(0.98); }
       to { opacity: 1; transform: translateY(0) scale(1); }
@@ -293,11 +417,14 @@ function ChatWidget({ config }) {
   const [widgetConfig, setWidgetConfig] = useState(null)
   const [conversationId, setConversationId] = useState(null)
   const [showMenu, setShowMenu] = useState(false)
-  const [darkMode, setDarkMode] = useState(() =>
-    window.matchMedia?.('(prefers-color-scheme: dark)').matches
-  )
+  const [darkMode, setDarkMode] = useState(false) // Default to light mode
   const [consentGiven, setConsentGiven] = useState(false)
   const [hasUserSentMessage, setHasUserSentMessage] = useState(false)
+  const [showGdprModal, setShowGdprModal] = useState(null) // 'view', 'delete', 'revoke', or null
+  const [gdprData, setGdprData] = useState(null)
+  const [gdprLoading, setGdprLoading] = useState(false)
+  const [gdprMessage, setGdprMessage] = useState(null)
+  const [expandedSources, setExpandedSources] = useState({}) // Track which messages have expanded sources
 
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
@@ -309,11 +436,18 @@ function ChatWidget({ config }) {
 
   // Get config values with defaults
   const primaryColor = widgetConfig?.primary_color || theme.accent
+  const secondaryColor = widgetConfig?.secondary_color || (darkMode ? '#262320' : '#FEF3EC')
+  const backgroundColor = widgetConfig?.background_color || (darkMode ? '#171412' : '#FAF8F5')
   const fontFamily = widgetConfig?.font_family || 'Inter'
   const fontSize = widgetConfig?.font_size || 14
   const borderRadius = widgetConfig?.border_radius || 16
   const position = widgetConfig?.position || 'bottom-right'
-  const companyName = widgetConfig?.company_name || 'Assistent'
+
+  // Debug: log border radius when config changes
+  if (widgetConfig) {
+    console.log('[Bobot] Widget config loaded:', { border_radius: widgetConfig.border_radius, applied: borderRadius })
+  }
+  const companyName = widgetConfig?.widget_name || widgetConfig?.company_name || 'Assistent'
   const subtitle = widgetConfig?.subtitle || t.subtitle
   const suggestedQuestions = widgetConfig?.suggested_questions || []
 
@@ -322,30 +456,34 @@ function ChatWidget({ config }) {
     injectStyles(fontFamily, borderRadius)
   }, [fontFamily, borderRadius])
 
+  // Auto-open widget if start_expanded is set in API config
+  useEffect(() => {
+    if (widgetConfig?.start_expanded && !isOpen) {
+      setIsOpen(true)
+    }
+  }, [widgetConfig?.start_expanded])
+
   // Fetch config and restore conversation
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const res = await fetch(`${config.apiUrl}/widget/${config.companyId}/config`)
+        // Use widget-specific config if widgetKey is provided, otherwise use company config
+        // Add cache-busting timestamp to ensure fresh config
+        const cacheBuster = `?t=${Date.now()}`
+        const configUrl = config.widgetKey
+          ? `${config.apiUrl}/widget/key/${config.widgetKey}/config${cacheBuster}`
+          : `${config.apiUrl}/widget/${config.companyId}/config${cacheBuster}`
+        const res = await fetch(configUrl, { cache: 'no-store' })
         if (res.ok) {
           const data = await res.json()
           setWidgetConfig(data)
 
-          // Check stored consent
-          if (localStorage.getItem(`bobot_consent_${config.companyId}`) === 'true') {
-            setConsentGiven(true)
-          }
+          // Consent is NOT persisted - users must accept each session
+          // This ensures GDPR compliance by requiring explicit consent
 
-          // Restore conversation
-          const saved = loadFromStorage(config.companyId)
-          if (saved?.messages?.length > 1) {
-            setMessages(saved.messages)
-            if (saved.sessionId) setSessionId(saved.sessionId)
-            if (saved.conversationId) setConversationId(saved.conversationId)
-            if (saved.feedbackGiven) setFeedbackGiven(saved.feedbackGiven)
-          } else {
-            setMessages([{ id: 0, type: 'bot', text: data.welcome_message || t.welcomeMessage, time: Date.now() }])
-          }
+          // Always start fresh - no conversation persistence
+          // Each page refresh starts a new conversation
+          setMessages([{ id: 0, type: 'bot', text: data.welcome_message || t.welcomeMessage, time: Date.now() }])
         } else {
           setMessages([{ id: 0, type: 'bot', text: t.welcomeMessage, time: Date.now() }])
         }
@@ -356,12 +494,8 @@ function ChatWidget({ config }) {
     fetchConfig()
   }, [])
 
-  // Save conversation
-  useEffect(() => {
-    if (messages.length > 1 && widgetConfig) {
-      saveToStorage(config.companyId, { messages, sessionId, conversationId, feedbackGiven })
-    }
-  }, [messages, sessionId, conversationId, feedbackGiven])
+  // Conversation is NOT saved to localStorage
+  // Each page refresh starts a new conversation for GDPR compliance
 
   // Auto-scroll
   useEffect(() => {
@@ -400,8 +534,80 @@ function ChatWidget({ config }) {
         body: JSON.stringify({ session_id: sessionId, consent_given: true })
       })
     } catch (e) {}
-    localStorage.setItem(`bobot_consent_${config.companyId}`, 'true')
+    // Consent is session-only, not persisted to localStorage
     setConsentGiven(true)
+  }
+
+  // GDPR Rights: View my data
+  const handleViewData = async () => {
+    setGdprLoading(true)
+    setGdprData(null)
+    setGdprMessage(null)
+    try {
+      const res = await fetch(`${config.apiUrl}/gdpr/${config.companyId}/my-data?session_id=${sessionId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setGdprData(data)
+      } else {
+        setGdprMessage(t.noDataFound)
+      }
+    } catch (e) {
+      setGdprMessage(t.errorMessage)
+    }
+    setGdprLoading(false)
+  }
+
+  // GDPR Rights: Delete my data
+  const handleDeleteData = async () => {
+    setGdprLoading(true)
+    setGdprMessage(null)
+    try {
+      const res = await fetch(`${config.apiUrl}/gdpr/${config.companyId}/my-data?session_id=${sessionId}`, {
+        method: 'DELETE'
+      })
+      if (res.ok) {
+        setGdprMessage(t.dataDeleted)
+        // Clear local data
+        clearStorage(config.companyId)
+        setMessages([{ id: 0, type: 'bot', text: widgetConfig?.welcome_message || t.welcomeMessage, time: Date.now() }])
+        setSessionId(generateSessionId())
+        setConversationId(null)
+        setFeedbackGiven({})
+        setHasUserSentMessage(false)
+        setTimeout(() => {
+          setShowGdprModal(null)
+          setGdprMessage(null)
+        }, 2000)
+      } else {
+        setGdprMessage(t.errorMessage)
+      }
+    } catch (e) {
+      setGdprMessage(t.errorMessage)
+    }
+    setGdprLoading(false)
+  }
+
+  // GDPR Rights: Revoke consent
+  const handleRevokeConsent = async () => {
+    setGdprLoading(true)
+    setGdprMessage(null)
+    try {
+      await fetch(`${config.apiUrl}/gdpr/${config.companyId}/consent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, consent_given: false })
+      })
+      // Consent is session-only, no localStorage to clear
+      setConsentGiven(false)
+      setGdprMessage(t.consentRevoked)
+      setTimeout(() => {
+        setShowGdprModal(null)
+        setGdprMessage(null)
+      }, 2000)
+    } catch (e) {
+      setGdprMessage(t.errorMessage)
+    }
+    setGdprLoading(false)
   }
 
   const startNewConversation = () => {
@@ -447,6 +653,7 @@ function ChatWidget({ config }) {
           text: data.answer,
           hadAnswer: data.had_answer,
           confidence: data.confidence || 100,
+          sources: data.sources_detail || [], // Store detailed sources for display
           time: Date.now()
         }])
       } else {
@@ -495,13 +702,14 @@ function ChatWidget({ config }) {
             [isLeft ? 'left' : 'right']: 0,
             width: 380,
             height: 560,
-            background: theme.bgElevated,
             borderRadius: borderRadius,
             boxShadow: theme.shadowLg,
             border: `1px solid ${theme.border}`,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
+            // Force clipping to rounded corners using clip-path
+            clipPath: `inset(0 round ${borderRadius}px)`,
           }}
         >
           {/* Header */}
@@ -512,6 +720,8 @@ function ChatWidget({ config }) {
             display: 'flex',
             alignItems: 'center',
             gap: 12,
+            borderTopLeftRadius: borderRadius - 1,
+            borderTopRightRadius: borderRadius - 1,
           }}>
             <div style={{
               width: 38,
@@ -530,6 +740,36 @@ function ChatWidget({ config }) {
               <div style={{ fontWeight: 600, fontSize: fontSize + 2, letterSpacing: '-0.01em' }}>{companyName}</div>
               <div style={{ fontSize: fontSize - 2, opacity: 0.85, marginTop: 2 }}>{subtitle}</div>
             </div>
+
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              title={darkMode ? t.lightMode : t.darkMode}
+              style={{
+                width: 32,
+                height: 32,
+                background: 'rgba(255,255,255,0.15)',
+                border: 'none',
+                borderRadius: 8,
+                color: 'inherit',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {darkMode ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                  <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+              )}
+            </button>
 
             {/* Menu Button */}
             <button
@@ -597,25 +837,6 @@ function ChatWidget({ config }) {
                   </svg>
                   {t.newConversation}
                 </button>
-                <div style={{ height: 1, background: theme.border }}/>
-                <button onClick={() => { setDarkMode(!darkMode); setShowMenu(false) }} style={{
-                  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                  padding: '12px 14px', border: 'none', background: 'transparent',
-                  cursor: 'pointer', color: theme.text, fontSize: fontSize - 1,
-                }}>
-                  {darkMode ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-                      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-                    </svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                    </svg>
-                  )}
-                  {darkMode ? t.lightMode : t.darkMode}
-                </button>
                 {widgetConfig?.privacy_policy_url && (
                   <>
                     <div style={{ height: 1, background: theme.border }}/>
@@ -628,6 +849,63 @@ function ChatWidget({ config }) {
                       </svg>
                       {t.privacyPolicy}
                     </a>
+                  </>
+                )}
+                {/* GDPR Rights Section */}
+                <div style={{ height: 1, background: theme.border }}/>
+                <div style={{ padding: '8px 14px', color: theme.textMuted, fontSize: fontSize - 2, fontWeight: 500 }}>
+                  {t.gdprRights}
+                </div>
+                <button onClick={() => { setShowGdprModal('view'); setShowMenu(false); handleViewData(); }} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                  padding: '12px 14px', border: 'none', background: 'transparent',
+                  cursor: 'pointer', color: theme.text, fontSize: fontSize - 1,
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  {t.viewMyData}
+                </button>
+                <button onClick={() => { setShowGdprModal('delete'); setShowMenu(false); }} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                  padding: '12px 14px', border: 'none', background: 'transparent',
+                  cursor: 'pointer', color: theme.text, fontSize: fontSize - 1,
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                  {t.deleteMyData}
+                </button>
+                {consentGiven && (
+                  <button onClick={() => { setShowGdprModal('revoke'); setShowMenu(false); }} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                    padding: '12px 14px', border: 'none', background: 'transparent',
+                    cursor: 'pointer', color: theme.text, fontSize: fontSize - 1,
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="15" y1="9" x2="9" y2="15"/>
+                      <line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
+                    {t.revokeConsent}
+                  </button>
+                )}
+                {/* Data Controller Info */}
+                {(widgetConfig?.data_controller_name || widgetConfig?.data_controller_email) && (
+                  <>
+                    <div style={{ height: 1, background: theme.border }}/>
+                    <div style={{ padding: '12px 14px', fontSize: fontSize - 2 }}>
+                      <div style={{ color: theme.textMuted, marginBottom: 4 }}>{t.gdprContact}</div>
+                      {widgetConfig?.data_controller_name && (
+                        <div style={{ color: theme.text, fontWeight: 500 }}>{widgetConfig.data_controller_name}</div>
+                      )}
+                      {widgetConfig?.data_controller_email && (
+                        <a href={`mailto:${widgetConfig.data_controller_email}`} style={{ color: primaryColor, textDecoration: 'none' }}>
+                          {widgetConfig.data_controller_email}
+                        </a>
+                      )}
+                    </div>
                   </>
                 )}
               </div>
@@ -677,20 +955,206 @@ function ChatWidget({ config }) {
             </div>
           )}
 
+          {/* GDPR Modal */}
+          {showGdprModal && (
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', zIndex: 20, borderRadius: borderRadius,
+            }}>
+              <div style={{
+                background: theme.bgElevated, borderRadius: 16, padding: 24,
+                margin: 20, maxWidth: 340, width: '100%', boxShadow: theme.shadowLg,
+                maxHeight: '80%', overflow: 'auto',
+              }}>
+                {/* View Data Modal */}
+                {showGdprModal === 'view' && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                      <h3 style={{ margin: 0, fontSize: fontSize + 2, fontWeight: 600, color: theme.text }}>
+                        {t.yourData}
+                      </h3>
+                      <button onClick={() => { setShowGdprModal(null); setGdprData(null); }} style={{
+                        background: 'transparent', border: 'none', cursor: 'pointer', color: theme.textSecondary, padding: 4,
+                      }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                      </button>
+                    </div>
+                    {gdprLoading && (
+                      <div style={{ textAlign: 'center', padding: 20, color: theme.textSecondary }}>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: 4 }}>
+                          <span className="bobot-dot" style={{ width: 6, height: 6, background: primaryColor, borderRadius: '50%' }}/>
+                          <span className="bobot-dot" style={{ width: 6, height: 6, background: primaryColor, borderRadius: '50%' }}/>
+                          <span className="bobot-dot" style={{ width: 6, height: 6, background: primaryColor, borderRadius: '50%' }}/>
+                        </div>
+                      </div>
+                    )}
+                    {gdprMessage && (
+                      <p style={{ color: theme.textSecondary, textAlign: 'center', fontSize: fontSize - 1 }}>{gdprMessage}</p>
+                    )}
+                    {gdprData && !gdprLoading && (
+                      <div style={{ fontSize: fontSize - 1 }}>
+                        {gdprData.data ? (
+                          <>
+                            <div style={{ marginBottom: 12 }}>
+                              <span style={{ color: theme.textMuted }}>Konversation:</span>
+                              <span style={{ color: theme.text, marginLeft: 8, fontFamily: 'monospace', fontSize: fontSize - 2 }}>{gdprData.data.conversation_id}</span>
+                            </div>
+                            <div style={{ marginBottom: 12 }}>
+                              <span style={{ color: theme.textMuted }}>{t.consentGiven}:</span>
+                              <span style={{ color: theme.text, marginLeft: 8 }}>{gdprData.data.consent_given ? t.yes : t.no}</span>
+                            </div>
+                            {gdprData.data.started_at && (
+                              <div style={{ marginBottom: 12 }}>
+                                <span style={{ color: theme.textMuted }}>Startad:</span>
+                                <span style={{ color: theme.text, marginLeft: 8 }}>{new Date(gdprData.data.started_at).toLocaleString('sv-SE')}</span>
+                              </div>
+                            )}
+                            {gdprData.data.messages?.length > 0 && (
+                              <div>
+                                <div style={{ color: theme.textMuted, marginBottom: 8 }}>Meddelanden ({gdprData.data.messages.length}):</div>
+                                <div style={{ maxHeight: 200, overflowY: 'auto', background: theme.bg, borderRadius: 8, padding: 8 }}>
+                                  {gdprData.data.messages.map((msg, i) => (
+                                    <div key={i} style={{ marginBottom: 8, padding: 8, background: theme.bgElevated, borderRadius: 6, fontSize: fontSize - 2 }}>
+                                      <div style={{ color: msg.role === 'user' ? primaryColor : theme.textSecondary, fontWeight: 500 }}>
+                                        {msg.role === 'user' ? 'Du' : 'Bot'}
+                                      </div>
+                                      <div style={{ color: theme.text, marginTop: 4 }}>{msg.content}</div>
+                                      {msg.timestamp && (
+                                        <div style={{ color: theme.textMuted, fontSize: fontSize - 3, marginTop: 4 }}>
+                                          {new Date(msg.timestamp).toLocaleString('sv-SE')}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {gdprData.data_controller && (
+                              <div style={{ marginTop: 16, padding: 12, background: theme.bgSubtle, borderRadius: 8, fontSize: fontSize - 2 }}>
+                                <div style={{ color: theme.textMuted, marginBottom: 4 }}>Personuppgiftsansvarig:</div>
+                                <div style={{ color: theme.text }}>{gdprData.data_controller.company}</div>
+                                <div style={{ color: theme.textMuted, marginTop: 4 }}>
+                                  Data raderas efter {gdprData.data_controller.retention_days} dagar
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div style={{ textAlign: 'center', color: theme.textSecondary, padding: 16 }}>
+                            {gdprData.message || t.noDataFound}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Delete Data Modal */}
+                {showGdprModal === 'delete' && (
+                  <>
+                    <div style={{
+                      width: 48, height: 48, borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+                    }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
+                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                      </svg>
+                    </div>
+                    <h3 style={{ margin: '0 0 12px', fontSize: fontSize + 2, fontWeight: 600, textAlign: 'center', color: theme.text }}>
+                      {t.deleteMyData}
+                    </h3>
+                    {gdprMessage ? (
+                      <p style={{ color: '#22c55e', textAlign: 'center', fontSize: fontSize - 1 }}>{gdprMessage}</p>
+                    ) : (
+                      <>
+                        <p style={{ margin: '0 0 20px', fontSize: fontSize - 1, color: theme.textSecondary, textAlign: 'center', lineHeight: 1.5 }}>
+                          {t.confirmDelete}
+                        </p>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                          <button onClick={handleDeleteData} disabled={gdprLoading} style={{
+                            flex: 1, padding: '12px 16px', background: '#ef4444', color: '#fff',
+                            border: 'none', borderRadius: 10, fontSize: fontSize, fontWeight: 500, cursor: 'pointer',
+                            opacity: gdprLoading ? 0.7 : 1,
+                          }}>
+                            {gdprLoading ? '...' : t.confirm}
+                          </button>
+                          <button onClick={() => setShowGdprModal(null)} style={{
+                            flex: 1, padding: '12px 16px', background: 'transparent', color: theme.textSecondary,
+                            border: `1px solid ${theme.border}`, borderRadius: 10, fontSize: fontSize, cursor: 'pointer',
+                          }}>
+                            {t.cancel}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+
+                {/* Revoke Consent Modal */}
+                {showGdprModal === 'revoke' && (
+                  <>
+                    <div style={{
+                      width: 48, height: 48, borderRadius: '50%', background: 'rgba(245, 158, 11, 0.1)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+                    }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="15" y1="9" x2="9" y2="15"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
+                      </svg>
+                    </div>
+                    <h3 style={{ margin: '0 0 12px', fontSize: fontSize + 2, fontWeight: 600, textAlign: 'center', color: theme.text }}>
+                      {t.revokeConsent}
+                    </h3>
+                    {gdprMessage ? (
+                      <p style={{ color: '#22c55e', textAlign: 'center', fontSize: fontSize - 1 }}>{gdprMessage}</p>
+                    ) : (
+                      <>
+                        <p style={{ margin: '0 0 20px', fontSize: fontSize - 1, color: theme.textSecondary, textAlign: 'center', lineHeight: 1.5 }}>
+                          {t.confirmRevoke}
+                        </p>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                          <button onClick={handleRevokeConsent} disabled={gdprLoading} style={{
+                            flex: 1, padding: '12px 16px', background: '#f59e0b', color: '#fff',
+                            border: 'none', borderRadius: 10, fontSize: fontSize, fontWeight: 500, cursor: 'pointer',
+                            opacity: gdprLoading ? 0.7 : 1,
+                          }}>
+                            {gdprLoading ? '...' : t.confirm}
+                          </button>
+                          <button onClick={() => setShowGdprModal(null)} style={{
+                            flex: 1, padding: '12px 16px', background: 'transparent', color: theme.textSecondary,
+                            border: `1px solid ${theme.border}`, borderRadius: 10, fontSize: fontSize, cursor: 'pointer',
+                          }}>
+                            {t.cancel}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Messages */}
           <div style={{
-            flex: 1, overflowY: 'auto', overflow: 'hidden', padding: 16, background: theme.bg,
+            flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: 16,
+            background: darkMode ? theme.bg : backgroundColor,
             width: '100%', boxSizing: 'border-box', minWidth: 0,
           }}>
             {messages.map((msg, i) => (
               <div key={msg.id} className="bobot-msg" style={{
                 marginBottom: 16,
                 display: 'flex',
+                flexDirection: 'column',
                 width: '100%',
                 maxWidth: '100%',
                 boxSizing: 'border-box',
                 minWidth: 0,
-                justifyContent: msg.type === 'user' ? (isRTL ? 'flex-start' : 'flex-end') : (isRTL ? 'flex-end' : 'flex-start'),
+                alignItems: msg.type === 'user' ? (isRTL ? 'flex-start' : 'flex-end') : (isRTL ? 'flex-end' : 'flex-start'),
               }}>
                 <div style={{
                   maxWidth: '85%',
@@ -702,17 +1166,106 @@ function ChatWidget({ config }) {
                   lineHeight: 1.55,
                   wordBreak: 'break-word',
                   // User messages: accent gradient with white text
-                  // Bot messages: subtle background with border
+                  // Bot messages: secondary color background (from widget config)
                   background: msg.type === 'user'
                     ? `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(primaryColor, -15)} 100%)`
-                    : theme.bgBot,
+                    : (darkMode ? theme.bgBot : secondaryColor),
                   color: msg.type === 'user' ? theme.textOnAccent : theme.text,
                   border: msg.type === 'bot' ? `1px solid ${theme.bgBotBorder}` : 'none',
                   boxShadow: msg.type === 'user' ? '0 2px 8px rgba(0, 0, 0, 0.08)' : 'none',
                   borderBottomRightRadius: msg.type === 'user' && !isRTL ? 4 : borderRadius - 4,
                   borderBottomLeftRadius: msg.type === 'user' && isRTL ? 4 : (msg.type === 'bot' && !isRTL ? 4 : borderRadius - 4),
                 }}>
-                  {msg.text}
+                  {msg.type === 'bot' ? renderTextWithLinks(msg.text, primaryColor) : msg.text}
+
+                  {/* Sources section for bot messages */}
+                  {msg.type === 'bot' && msg.sources && msg.sources.length > 0 && (
+                    <div style={{ marginTop: 10 }}>
+                      <button
+                        onClick={() => setExpandedSources(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '6px 10px',
+                          fontSize: fontSize - 2,
+                          background: theme.bgAccentSoft,
+                          color: primaryColor,
+                          border: `1px solid ${primaryColor}30`,
+                          borderRadius: 8,
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          style={{
+                            transform: expandedSources[msg.id] ? 'rotate(90deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.15s'
+                          }}
+                        >
+                          <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                        {t.sources} ({msg.sources.length})
+                      </button>
+
+                      {expandedSources[msg.id] && (
+                        <div style={{
+                          marginTop: 8,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 8,
+                        }}>
+                          {msg.sources.map((source, idx) => (
+                            <div
+                              key={idx}
+                              style={{
+                                padding: 10,
+                                background: theme.bg,
+                                borderRadius: 8,
+                                border: `1px solid ${theme.border}`,
+                              }}
+                            >
+                              <div style={{
+                                fontSize: fontSize - 2,
+                                fontWeight: 500,
+                                color: primaryColor,
+                                marginBottom: 6,
+                              }}>
+                                {source.question}
+                              </div>
+                              <div style={{
+                                fontSize: fontSize - 2,
+                                color: theme.textSecondary,
+                                lineHeight: 1.5,
+                              }}>
+                                {source.answer}
+                              </div>
+                              {source.category && (
+                                <div style={{
+                                  marginTop: 6,
+                                  fontSize: fontSize - 3,
+                                  color: theme.textMuted,
+                                  display: 'inline-block',
+                                  padding: '2px 6px',
+                                  background: theme.bgSubtle,
+                                  borderRadius: 4,
+                                }}>
+                                  {source.category}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Feedback for bot messages */}
                   {msg.type === 'bot' && msg.id !== 0 && !feedbackGiven[msg.id] && (
@@ -742,7 +1295,7 @@ function ChatWidget({ config }) {
                 {msg.time && i > 0 && (
                   <div style={{
                     fontSize: fontSize - 4, color: theme.textMuted, marginTop: 4,
-                    paddingX: 4,
+                    paddingLeft: 4, paddingRight: 4,
                   }}>
                     {formatTime(msg.time)}
                   </div>
@@ -794,7 +1347,7 @@ function ChatWidget({ config }) {
               <div className="bobot-msg" style={{ marginBottom: 16 }}>
                 <div style={{
                   padding: '14px 18px', borderRadius: borderRadius - 4,
-                  background: theme.bgBot, border: `1px solid ${theme.borderSubtle}`,
+                  background: darkMode ? theme.bgBot : secondaryColor, border: `1px solid ${theme.borderSubtle}`,
                   borderBottomLeftRadius: isRTL ? borderRadius - 4 : 4,
                   display: 'flex', alignItems: 'center', gap: 8,
                 }}>
@@ -813,7 +1366,11 @@ function ChatWidget({ config }) {
 
           {/* Input Area */}
           <div style={{
-            padding: 12, borderTop: `1px solid ${theme.border}`, background: theme.bgSubtle,
+            padding: 12,
+            borderTop: `1px solid ${theme.border}`,
+            background: theme.bgSubtle,
+            borderBottomLeftRadius: borderRadius,
+            borderBottomRightRadius: borderRadius,
           }}>
             <form onSubmit={handleSend} style={{ display: 'flex', gap: 10 }}>
               <input
@@ -945,11 +1502,13 @@ function ChatWidget({ config }) {
   )
 }
 
-// Global init
+// Global init - supports multiple widget instances
+let widgetCounter = 0
 window.Bobot = {
   init: function(config) {
+    widgetCounter++
     const container = document.createElement('div')
-    container.id = 'bobot-widget-root'
+    container.id = `bobot-widget-root-${widgetCounter}`
     document.body.appendChild(container)
 
     createRoot(container).render(
@@ -959,6 +1518,8 @@ window.Bobot = {
         ...config
       }} />
     )
+
+    return container.id
   }
 }
 

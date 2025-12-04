@@ -3,55 +3,632 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bobot Widget Demo</title>
+  <title>Exempelfastigheter AB - Din nya bostad</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 40px 20px;
-      line-height: 1.6;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-    h1 { color: #1e40af; }
-    .info-box {
-      background: #f0f9ff;
-      border: 1px solid #bae6fd;
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      line-height: 1.6;
+      color: #1C1917;
+      background: #FAFAF9;
+    }
+
+    /* Header */
+    header {
+      background: white;
+      border-bottom: 1px solid #E7E5E4;
+      padding: 16px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+      color: #D97757;
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: #57534E;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 15px;
+      transition: color 0.15s;
+    }
+
+    .nav-links a:hover {
+      color: #D97757;
+    }
+
+    .btn-primary {
+      background: #D97757;
+      color: white;
+      padding: 10px 20px;
       border-radius: 8px;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 15px;
+      transition: background 0.15s;
+    }
+
+    .btn-primary:hover {
+      background: #C4684A;
+    }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #FEF7F4 0%, #FDF4F0 100%);
+      padding: 80px 0;
+    }
+
+    .hero-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    .hero h1 {
+      font-size: 48px;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 24px;
+      color: #1C1917;
+    }
+
+    .hero p {
+      font-size: 18px;
+      color: #57534E;
+      margin-bottom: 32px;
+    }
+
+    .hero-image {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+      padding: 24px;
+      aspect-ratio: 4/3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hero-image img {
+      max-width: 100%;
+      border-radius: 8px;
+    }
+
+    .placeholder-img {
+      background: linear-gradient(135deg, #F5F5F4 0%, #E7E5E4 100%);
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #A8A29E;
+      font-size: 14px;
+    }
+
+    /* Features */
+    .features {
+      padding: 80px 0;
+    }
+
+    .section-title {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .section-title h2 {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .section-title p {
+      color: #57534E;
+      font-size: 18px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+    }
+
+    .feature-card {
+      background: white;
+      border-radius: 12px;
+      padding: 32px;
+      border: 1px solid #E7E5E4;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+
+    .feature-card:hover {
+      box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: #FEF7F4;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      color: #D97757;
+    }
+
+    .feature-card h3 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .feature-card p {
+      color: #57534E;
+      font-size: 15px;
+    }
+
+    /* Apartments */
+    .apartments {
+      background: white;
+      padding: 80px 0;
+    }
+
+    .apartments-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .apartment-card {
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #E7E5E4;
+      transition: box-shadow 0.2s;
+    }
+
+    .apartment-card:hover {
+      box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15);
+    }
+
+    .apartment-img {
+      height: 200px;
+      background: linear-gradient(135deg, #E7E5E4 0%, #D6D3D1 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #A8A29E;
+      font-size: 14px;
+    }
+
+    .apartment-info {
       padding: 20px;
-      margin: 20px 0;
+    }
+
+    .apartment-info h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .apartment-info p {
+      color: #57534E;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    .apartment-price {
+      font-size: 20px;
+      font-weight: 700;
+      color: #D97757;
+    }
+
+    .apartment-price span {
+      font-size: 14px;
+      font-weight: 400;
+      color: #78716C;
+    }
+
+    /* Contact */
+    .contact {
+      padding: 80px 0;
+      background: linear-gradient(135deg, #1C1917 0%, #292524 100%);
+      color: white;
+    }
+
+    .contact h2 {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .contact > .container > p {
+      text-align: center;
+      color: #A8A29E;
+      font-size: 18px;
+      margin-bottom: 48px;
+    }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+    }
+
+    .contact-card {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .contact-card h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .contact-card p {
+      color: #A8A29E;
+      font-size: 15px;
+    }
+
+    .contact-card a {
+      color: #D97757;
+      text-decoration: none;
+    }
+
+    /* Footer */
+    footer {
+      background: #1C1917;
+      padding: 24px 0;
+      border-top: 1px solid #292524;
+    }
+
+    footer p {
+      text-align: center;
+      color: #78716C;
+      font-size: 14px;
+    }
+
+    /* Chat hint */
+    .chat-hint {
+      position: fixed;
+      bottom: 100px;
+      right: 24px;
+      background: white;
+      padding: 12px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      font-size: 14px;
+      color: #1C1917;
+      animation: bounce 2s infinite;
+      z-index: 999;
+    }
+
+    .chat-hint::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      right: 30px;
+      width: 0;
+      height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 8px solid white;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero-content {
+        grid-template-columns: 1fr;
+      }
+
+      .features-grid,
+      .apartments-grid,
+      .contact-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .nav-links {
+        display: none;
+      }
+
+      .hero h1 {
+        font-size: 32px;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Välkommen till Fastighetsbolaget AB</h1>
-  <p>Detta är en exempelhemsida som visar hur chattwidgeten fungerar.</p>
+  <!-- Header -->
+  <header>
+    <div class="container">
+      <nav>
+        <a href="#" class="logo">Exempelfastigheter</a>
+        <ul class="nav-links">
+          <li><a href="#hem">Hem</a></li>
+          <li><a href="#ledigt">Lediga lägenheter</a></li>
+          <li><a href="#om-oss">Om oss</a></li>
+          <li><a href="#kontakt">Kontakt</a></li>
+        </ul>
+        <a href="#kontakt" class="btn-primary">Mina sidor</a>
+      </nav>
+    </div>
+  </header>
 
-  <div class="info-box">
-    <h3>Om oss</h3>
-    <p>Vi är ett av Sveriges ledande fastighetsbolag med över 10 000 lägenheter i Stockholm, Göteborg och Malmö.</p>
+  <!-- Hero -->
+  <section class="hero" id="hem">
+    <div class="container">
+      <div class="hero-content">
+        <div>
+          <h1>Hitta ditt nya hem hos oss</h1>
+          <p>Vi erbjuder moderna och trivsamma hyresrätter i Stockholm, Göteborg och Malmö. Med oss får du snabb service och ett tryggt boende.</p>
+          <a href="#ledigt" class="btn-primary">Se lediga lägenheter</a>
+        </div>
+        <div class="hero-image">
+          <div class="placeholder-img">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <path d="M21 15l-5-5L5 21"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features" id="om-oss">
+    <div class="container">
+      <div class="section-title">
+        <h2>Varför välja oss?</h2>
+        <p>Vi sätter alltid våra hyresgäster i första rummet</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </div>
+          <h3>Moderna lägenheter</h3>
+          <p>Alla våra lägenheter är renoverade och utrustade med moderna bekvämligheter.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
+              <path d="M15 7a2 2 0 0 1 2 2"/>
+              <path d="M19 7a6 6 0 0 1 1 3"/>
+            </svg>
+          </div>
+          <h3>Snabb kundservice</h3>
+          <p>Vi svarar snabbt på dina frågor och felanmälningar. Prova vår AI-chattbot!</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <h3>Tryggt boende</h3>
+          <p>Säkra områden med bra belysning och kameraövervakning i gemensamma utrymmen.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Apartments -->
+  <section class="apartments" id="ledigt">
+    <div class="container">
+      <div class="section-title">
+        <h2>Lediga lägenheter</h2>
+        <p>Hitta din nästa bostad bland våra lediga objekt</p>
+      </div>
+      <div class="apartments-grid">
+        <div class="apartment-card">
+          <div class="apartment-img">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            </svg>
+          </div>
+          <div class="apartment-info">
+            <h3>2 rum och kök, Södermalm</h3>
+            <p>58 m² · Balkong · Hiss · Nytt kök</p>
+            <div class="apartment-price">11 500 kr <span>/mån</span></div>
+          </div>
+        </div>
+        <div class="apartment-card">
+          <div class="apartment-img">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            </svg>
+          </div>
+          <div class="apartment-info">
+            <h3>3 rum och kök, Kungsholmen</h3>
+            <p>76 m² · Balkong · Parkering · Tvättstuga</p>
+            <div class="apartment-price">14 200 kr <span>/mån</span></div>
+          </div>
+        </div>
+        <div class="apartment-card">
+          <div class="apartment-img">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            </svg>
+          </div>
+          <div class="apartment-info">
+            <h3>1 rum och kök, Vasastan</h3>
+            <p>35 m² · Hiss · Nära tunnelbana</p>
+            <div class="apartment-price">8 900 kr <span>/mån</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section class="contact" id="kontakt">
+    <div class="container">
+      <h2>Kontakta oss</h2>
+      <p>Vi finns här för att hjälpa dig</p>
+      <div class="contact-grid">
+        <div class="contact-card">
+          <h3>Telefon</h3>
+          <p><a href="tel:08-123 45 67">08-123 45 67</a></p>
+        </div>
+        <div class="contact-card">
+          <h3>E-post</h3>
+          <p><a href="mailto:info@exempelfastigheter.se">info@exempelfastigheter.se</a></p>
+        </div>
+        <div class="contact-card">
+          <h3>Besöksadress</h3>
+          <p>Storgatan 1<br>111 22 Stockholm</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p>&copy; 2024 Exempelfastigheter AB. Alla rättigheter förbehållna.</p>
+    </div>
+  </footer>
+
+  <!-- Chat hint for external widget (right side) -->
+  <div class="chat-hint" id="chatHint">
+    Har du frågor? Chatta med oss!
   </div>
 
-  <h2>Våra tjänster</h2>
-  <ul>
-    <li>Hyresrätter i hela Sverige</li>
-    <li>Förstklassig kundservice</li>
-    <li>Snabb felanmälan</li>
-    <li>Digital hyresbetalning</li>
-  </ul>
-
-  <p><strong>Prova vår AI-chattbot!</strong> Klicka på chatikonen i nedre högra hörnet för att ställa frågor.</p>
+  <!-- Chat hint for internal widget (left side) -->
+  <style>
+    .chat-hint-left {
+      position: fixed;
+      bottom: 100px;
+      left: 24px;
+      background: white;
+      padding: 12px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      font-size: 14px;
+      color: #1C1917;
+      animation: bounce 2s infinite;
+      z-index: 999;
+    }
+    .chat-hint-left::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 30px;
+      width: 0;
+      height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 8px solid white;
+    }
+  </style>
+  <div class="chat-hint-left" id="chatHintInternal">
+    Anställd? Klicka här för intern support!
+  </div>
 
   <!-- Widget script -->
   <script type="module">
     import './src/widget.jsx'
 
-    // Vänta tills scriptet laddats
-    setTimeout(() => {
-      Bobot.init({
-        companyId: 'demo',
-        apiUrl: 'http://localhost:8000'
-      })
-    }, 100)
+    // Fetch widget keys for demo company's widgets, then init both
+    const API_URL = 'http://localhost:8000'
+
+    async function initWidgets() {
+      try {
+        // Fetch all widgets for demo company
+        const res = await fetch(`${API_URL}/widgets/public/demo`)
+        if (res.ok) {
+          const widgets = await res.json()
+
+          // Initialize external widget (bottom-right) - for customers
+          const externalWidget = widgets.find(w => w.widget_type === 'external')
+          if (externalWidget?.widget_key) {
+            Bobot.init({
+              widgetKey: externalWidget.widget_key,
+              apiUrl: API_URL
+            })
+          }
+
+          // Initialize internal widget (bottom-left) - for employees
+          const internalWidget = widgets.find(w => w.widget_type === 'internal')
+          if (internalWidget?.widget_key) {
+            Bobot.init({
+              widgetKey: internalWidget.widget_key,
+              apiUrl: API_URL
+            })
+          }
+
+          // Fallback if no widgets found
+          if (!externalWidget && !internalWidget) {
+            Bobot.init({ companyId: 'demo', apiUrl: API_URL })
+          }
+        } else {
+          // Fallback to company ID
+          Bobot.init({ companyId: 'demo', apiUrl: API_URL })
+        }
+      } catch (e) {
+        // Fallback to company ID
+        Bobot.init({ companyId: 'demo', apiUrl: API_URL })
+      }
+
+      // Hide hints after 10 seconds
+      setTimeout(() => {
+        const hint = document.getElementById('chatHint')
+        const hintInternal = document.getElementById('chatHintInternal')
+        if (hint) hint.style.display = 'none'
+        if (hintInternal) hintInternal.style.display = 'none'
+      }, 10000)
+    }
+
+    setTimeout(initWidgets, 100)
   </script>
 </body>
 </html>

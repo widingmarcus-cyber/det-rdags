@@ -3,6 +3,33 @@ import { AuthContext } from '../App'
 
 const API_BASE = '/api'
 
+// Load Google Font dynamically for preview
+const loadGoogleFont = (fontFamily) => {
+  const fontId = `widget-font-${fontFamily.replace(/\s+/g, '-').toLowerCase()}`
+  if (document.getElementById(fontId)) return // Already loaded
+
+  // Map of supported fonts to their Google Fonts URL format
+  const googleFonts = {
+    'Inter': 'Inter:wght@400;500;600',
+    'Roboto': 'Roboto:wght@400;500;700',
+    'Open Sans': 'Open+Sans:wght@400;500;600',
+    'Lato': 'Lato:wght@400;700',
+    'Poppins': 'Poppins:wght@400;500;600',
+    'Source Sans Pro': 'Source+Sans+Pro:wght@400;600',
+    'Nunito': 'Nunito:wght@400;500;600',
+    'Montserrat': 'Montserrat:wght@400;500;600',
+  }
+
+  const fontUrl = googleFonts[fontFamily]
+  if (fontUrl) {
+    const link = document.createElement('link')
+    link.id = fontId
+    link.rel = 'stylesheet'
+    link.href = `https://fonts.googleapis.com/css2?family=${fontUrl}&display=swap`
+    document.head.appendChild(link)
+  }
+}
+
 function WidgetPage({ widgetType }) {
   const { authFetch } = useContext(AuthContext)
   const [activeTab, setActiveTab] = useState('settings')
@@ -12,27 +39,8 @@ function WidgetPage({ widgetType }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  // Settings form
-  const [formData, setFormData] = useState({
-    primary_color: '#D97757',
-    secondary_color: '#FEF3EC',
-    background_color: '#FAF8F5',
-    welcome_message: 'Hej! Hur kan jag hjälpa dig idag?',
-    fallback_message: 'Tyvärr kunde jag inte hitta ett svar på din fråga.',
-    subtitle: 'Alltid redo att hjälpa',
-    language: 'sv',
-    tone: '',  // professional, collegial, casual - empty means use widget_type default
-    // Per-widget contact info
-    display_name: '',
-    contact_email: '',
-    contact_phone: '',
-    // Font and style options
-    widget_font_family: 'Inter',
-    widget_font_size: 14,
-    widget_border_radius: 16,
-    widget_position: 'bottom-right',
-    start_expanded: false  // Start widget open instead of as floating button
-  })
+  // Settings form - initialized as null until widget data loads
+  const [formData, setFormData] = useState(null)
 
   // Knowledge state
   const [knowledgeItems, setKnowledgeItems] = useState([])
@@ -64,8 +72,19 @@ function WidgetPage({ widgetType }) {
   const [sessionId] = useState(() => 'preview-' + Math.random().toString(36).substring(2, 15))
   const [darkMode, setDarkMode] = useState(false)
   const [feedbackGiven, setFeedbackGiven] = useState({})
+  const [expandedSources, setExpandedSources] = useState({})
   const messagesEndRef = useRef(null)
   const [healthStatus, setHealthStatus] = useState(null)
+
+  // Template state
+  const [templates, setTemplates] = useState([])
+  const [templatesLoading, setTemplatesLoading] = useState(false)
+  const [showTemplateModal, setShowTemplateModal] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState(null)
+  const [templatePreview, setTemplatePreview] = useState(null)
+  const [templatePreviewLoading, setTemplatePreviewLoading] = useState(false)
+  const [applyingTemplate, setApplyingTemplate] = useState(false)
+  const [selectedCategories, setSelectedCategories] = useState([])
 
   const isExternal = widgetType === 'external'
   const pageTitle = isExternal ? 'Extern Widget' : 'Intern Widget'
@@ -92,6 +111,7 @@ function WidgetPage({ widgetType }) {
   useEffect(() => {
     fetchWidget()
     fetchCategories()
+    fetchTemplates()
     checkHealth()
   }, [widgetType])
 
@@ -101,6 +121,13 @@ function WidgetPage({ widgetType }) {
       checkHealth()
     }
   }, [activeTab])
+
+  // Load Google Font for preview when font changes
+  useEffect(() => {
+    if (formData?.widget_font_family) {
+      loadGoogleFont(formData.widget_font_family)
+    }
+  }, [formData?.widget_font_family])
 
   const fetchCategories = async () => {
     try {
@@ -122,6 +149,87 @@ function WidgetPage({ widgetType }) {
     }
   }
 
+  const fetchTemplates = async () => {
+    setTemplatesLoading(true)
+    try {
+      const response = await authFetch(`${API_BASE}/templates`)
+      if (response.ok) {
+        const data = await response.json()
+        setTemplates(data)
+      }
+    } catch (e) {
+      console.error('Kunde inte hämta mallar:', e)
+    } finally {
+      setTemplatesLoading(false)
+    }
+  }
+
+  const fetchTemplatePreview = async (templateId) => {
+    setTemplatePreviewLoading(true)
+    try {
+      const response = await authFetch(`${API_BASE}/templates/${templateId}/preview?limit=500`)
+      if (response.ok) {
+        const data = await response.json()
+        setTemplatePreview(data)
+        // Pre-select all categories
+        if (data.categories) {
+          setSelectedCategories(data.categories)
+        }
+      }
+    } catch (e) {
+      console.error('Kunde inte hämta mallförhandsvisning:', e)
+    } finally {
+      setTemplatePreviewLoading(false)
+    }
+  }
+
+  const handleApplyTemplate = async () => {
+    if (!selectedTemplate || !widget) return
+
+    setApplyingTemplate(true)
+    try {
+      const response = await authFetch(`${API_BASE}/templates/${selectedTemplate.template_id}/apply`, {
+        method: 'POST',
+        body: JSON.stringify({
+          replace_existing: false,
+          categories_to_import: selectedCategories.length > 0 ? selectedCategories : null,
+          widget_id: widget.id  // Associate imported items with this widget
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSuccess(`Importerade ${data.items_added || 'flera'} frågor och svar från mallen!`)
+        fetchKnowledge(widget.id)
+        setShowTemplateModal(false)
+        setSelectedTemplate(null)
+        setTemplatePreview(null)
+        setSelectedCategories([])
+      } else {
+        const err = await response.json()
+        setError(err.detail || 'Kunde inte applicera mallen')
+      }
+    } catch (e) {
+      setError('Ett fel uppstod: ' + e.message)
+    } finally {
+      setApplyingTemplate(false)
+    }
+  }
+
+  const openTemplateModal = (template) => {
+    setSelectedTemplate(template)
+    setShowTemplateModal(true)
+    fetchTemplatePreview(template.template_id)
+  }
+
+  const toggleCategory = (category) => {
+    setSelectedCategories(prev =>
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    )
+  }
+
   const fetchWidget = async () => {
     setLoading(true)
     try {
@@ -131,26 +239,26 @@ function WidgetPage({ widgetType }) {
         const existingWidget = widgets.find(w => w.widget_type === widgetType)
 
         if (existingWidget) {
+          console.log('[Debug] Loading widget, border_radius from API:', existingWidget.widget_border_radius)
           setWidget(existingWidget)
+          // Use ?? instead of || to preserve 0 values (e.g., border_radius: 0)
           setFormData({
-            primary_color: existingWidget.primary_color || '#D97757',
-            secondary_color: existingWidget.secondary_color || '#FEF3EC',
-            background_color: existingWidget.background_color || '#FAF8F5',
-            welcome_message: existingWidget.welcome_message || 'Hej! Hur kan jag hjälpa dig idag?',
-            fallback_message: existingWidget.fallback_message || 'Tyvärr kunde jag inte hitta ett svar.',
-            subtitle: existingWidget.subtitle || 'Alltid redo att hjälpa',
-            language: existingWidget.language || 'sv',
-            tone: existingWidget.tone || '',
-            // Per-widget contact info
-            display_name: existingWidget.display_name || '',
-            contact_email: existingWidget.contact_email || '',
-            contact_phone: existingWidget.contact_phone || '',
-            // Font and style options
-            widget_font_family: existingWidget.widget_font_family || 'Inter',
-            widget_font_size: existingWidget.widget_font_size || 14,
-            widget_border_radius: existingWidget.widget_border_radius || 16,
-            widget_position: existingWidget.widget_position || 'bottom-right',
-            start_expanded: existingWidget.start_expanded || false
+            primary_color: existingWidget.primary_color ?? '#D97757',
+            secondary_color: existingWidget.secondary_color ?? '#FEF3EC',
+            background_color: existingWidget.background_color ?? '#FAF8F5',
+            welcome_message: existingWidget.welcome_message ?? 'Hej! Hur kan jag hjälpa dig idag?',
+            fallback_message: existingWidget.fallback_message ?? 'Tyvärr kunde jag inte hitta ett svar.',
+            subtitle: existingWidget.subtitle ?? 'Alltid redo att hjälpa',
+            language: existingWidget.language ?? 'sv',
+            tone: existingWidget.tone ?? '',
+            display_name: existingWidget.display_name ?? '',
+            contact_email: existingWidget.contact_email ?? '',
+            contact_phone: existingWidget.contact_phone ?? '',
+            widget_font_family: existingWidget.widget_font_family ?? 'Inter',
+            widget_font_size: existingWidget.widget_font_size ?? 14,
+            widget_border_radius: existingWidget.widget_border_radius ?? 16,
+            widget_position: existingWidget.widget_position ?? (widgetType === 'internal' ? 'bottom-left' : 'bottom-right'),
+            start_expanded: existingWidget.start_expanded ?? false
           })
           fetchKnowledge(existingWidget.id)
           setPreviewMessages([{ type: 'bot', text: existingWidget.welcome_message || 'Hej! Hur kan jag hjälpa dig idag?' }])
@@ -191,23 +299,24 @@ function WidgetPage({ widgetType }) {
       if (response.ok) {
         const newWidget = await response.json()
         setWidget(newWidget)
+        // Use ?? instead of || to preserve 0 values
         setFormData({
-          primary_color: newWidget.primary_color,
-          secondary_color: newWidget.secondary_color || '#FEF3EC',
-          background_color: newWidget.background_color || '#FAF8F5',
-          welcome_message: newWidget.welcome_message,
-          fallback_message: newWidget.fallback_message,
-          subtitle: newWidget.subtitle,
-          language: newWidget.language,
-          tone: newWidget.tone || '',
-          display_name: newWidget.display_name || '',
-          contact_email: newWidget.contact_email || '',
-          contact_phone: newWidget.contact_phone || '',
-          widget_font_family: newWidget.widget_font_family || 'Inter',
-          widget_font_size: newWidget.widget_font_size || 14,
-          widget_border_radius: newWidget.widget_border_radius || 16,
-          widget_position: newWidget.widget_position || 'bottom-right',
-          start_expanded: newWidget.start_expanded || false
+          primary_color: newWidget.primary_color ?? '#D97757',
+          secondary_color: newWidget.secondary_color ?? '#FEF3EC',
+          background_color: newWidget.background_color ?? '#FAF8F5',
+          welcome_message: newWidget.welcome_message ?? '',
+          fallback_message: newWidget.fallback_message ?? '',
+          subtitle: newWidget.subtitle ?? '',
+          language: newWidget.language ?? 'sv',
+          tone: newWidget.tone ?? '',
+          display_name: newWidget.display_name ?? '',
+          contact_email: newWidget.contact_email ?? '',
+          contact_phone: newWidget.contact_phone ?? '',
+          widget_font_family: newWidget.widget_font_family ?? 'Inter',
+          widget_font_size: newWidget.widget_font_size ?? 14,
+          widget_border_radius: newWidget.widget_border_radius ?? 16,
+          widget_position: newWidget.widget_position ?? (widgetType === 'internal' ? 'bottom-left' : 'bottom-right'),
+          start_expanded: newWidget.start_expanded ?? false
         })
         setPreviewMessages([{ type: 'bot', text: newWidget.welcome_message }])
       }
@@ -233,6 +342,27 @@ function WidgetPage({ widgetType }) {
       if (response.ok) {
         const updated = await response.json()
         setWidget(updated)
+        // Update ALL formData fields from response to ensure sync
+        // Use ?? instead of || to preserve 0 values
+        setFormData({
+          primary_color: updated.primary_color ?? '#D97757',
+          secondary_color: updated.secondary_color ?? '#FEF3EC',
+          background_color: updated.background_color ?? '#FAF8F5',
+          welcome_message: updated.welcome_message ?? '',
+          fallback_message: updated.fallback_message ?? '',
+          subtitle: updated.subtitle ?? '',
+          language: updated.language ?? 'sv',
+          tone: updated.tone ?? '',
+          display_name: updated.display_name ?? '',
+          contact_email: updated.contact_email ?? '',
+          contact_phone: updated.contact_phone ?? '',
+          widget_font_family: updated.widget_font_family ?? 'Inter',
+          widget_font_size: updated.widget_font_size ?? 14,
+          widget_border_radius: updated.widget_border_radius ?? 16,
+          widget_position: updated.widget_position ?? 'bottom-right',
+          start_expanded: updated.start_expanded ?? false
+        })
+        console.log('[Debug] Widget saved, border_radius:', updated.widget_border_radius)
         setSuccess('Inställningar sparade!')
         setTimeout(() => setSuccess(''), 3000)
       } else {
@@ -326,8 +456,8 @@ function WidgetPage({ widgetType }) {
 
     setBulkDeleting(true)
     try {
-      const response = await authFetch(`${API_BASE}/knowledge/bulk`, {
-        method: 'DELETE',
+      const response = await authFetch(`${API_BASE}/knowledge/bulk-delete`, {
+        method: 'POST',
         body: JSON.stringify({ item_ids: selectedItems })
       })
       if (response.ok) {
@@ -503,7 +633,13 @@ function WidgetPage({ widgetType }) {
 
       if (response.ok) {
         const data = await response.json()
-        setPreviewMessages(prev => [...prev, { type: 'bot', text: data.answer, hadAnswer: data.had_answer }])
+        setPreviewMessages(prev => [...prev, {
+          type: 'bot',
+          text: data.answer,
+          hadAnswer: data.had_answer,
+          sources: data.sources_detail || [],
+          id: Date.now()
+        }])
       } else {
         setPreviewMessages(prev => [...prev, { type: 'bot', text: 'Kunde inte få svar just nu.', error: true }])
       }
@@ -520,7 +656,7 @@ function WidgetPage({ widgetType }) {
   }
 
   const resetPreview = () => {
-    setPreviewMessages([{ type: 'bot', text: formData.welcome_message || 'Hej! Hur kan jag hjälpa dig?' }])
+    setPreviewMessages([{ type: 'bot', text: formData?.welcome_message || 'Hej! Hur kan jag hjälpa dig?' }])
     setFeedbackGiven({})
   }
 
@@ -544,7 +680,7 @@ function WidgetPage({ widgetType }) {
     { id: 'knowledge', label: 'Kunskapsbank', icon: 'book', count: knowledgeItems.length }
   ]
 
-  if (loading) {
+  if (loading || !formData) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
@@ -1046,10 +1182,73 @@ function WidgetPage({ widgetType }) {
                                 ? `${formData.widget_border_radius}px ${formData.widget_border_radius}px 4px ${formData.widget_border_radius}px`
                                 : `${formData.widget_border_radius}px ${formData.widget_border_radius}px ${formData.widget_border_radius}px 4px`,
                               fontSize: `${formData.widget_font_size}px`,
-                              lineHeight: '1.5'
+                              lineHeight: '1.5',
+                              wordBreak: 'break-word',
+                              overflowWrap: 'break-word'
                             }}
                           >
                             <p className="whitespace-pre-wrap">{msg.text}</p>
+
+                            {/* Sources section for bot messages */}
+                            {msg.type === 'bot' && msg.sources && msg.sources.length > 0 && (
+                              <div className="mt-2">
+                                <button
+                                  onClick={() => setExpandedSources(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))}
+                                  className="flex items-center gap-1.5 px-2 py-1 text-xs rounded-md font-medium transition-colors"
+                                  style={{
+                                    background: `${formData.primary_color}15`,
+                                    color: formData.primary_color,
+                                    border: `1px solid ${formData.primary_color}30`
+                                  }}
+                                >
+                                  <svg
+                                    width="10"
+                                    height="10"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    className={`transition-transform ${expandedSources[msg.id] ? 'rotate-90' : ''}`}
+                                  >
+                                    <polyline points="9 18 15 12 9 6"/>
+                                  </svg>
+                                  Källor ({msg.sources.length})
+                                </button>
+
+                                {expandedSources[msg.id] && (
+                                  <div className="mt-2 space-y-2">
+                                    {msg.sources.map((source, idx) => (
+                                      <div
+                                        key={idx}
+                                        className="p-2 rounded-lg text-xs"
+                                        style={{
+                                          background: darkMode ? '#1C1917' : '#FAF9F7',
+                                          border: `1px solid ${darkMode ? '#3D3835' : '#E7E5E4'}`
+                                        }}
+                                      >
+                                        <div className="font-medium mb-1" style={{ color: formData.primary_color }}>
+                                          {source.question}
+                                        </div>
+                                        <div style={{ color: darkMode ? '#A8A29E' : '#57534E', lineHeight: 1.5 }}>
+                                          {source.answer}
+                                        </div>
+                                        {source.category && (
+                                          <span
+                                            className="inline-block mt-1.5 px-1.5 py-0.5 rounded text-[10px]"
+                                            style={{
+                                              background: darkMode ? '#292524' : '#F5F5F4',
+                                              color: darkMode ? '#78716C' : '#78716C'
+                                            }}
+                                          >
+                                            {source.category}
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                         {/* Feedback buttons for bot messages */}
@@ -1224,6 +1423,60 @@ function WidgetPage({ widgetType }) {
       {/* Knowledge Tab */}
       {activeTab === 'knowledge' && (
         <div>
+          {/* Templates section - always show if templates are available */}
+          {templates.length > 0 && (
+            <div className="mb-6">
+              <div className="card p-5 border-accent/20 bg-gradient-to-r from-accent/5 to-transparent">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="12" y1="18" x2="12" y2="12" />
+                      <line x1="9" y1="15" x2="15" y2="15" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-text-primary mb-1">Kom igång snabbt med mallar</h3>
+                    <p className="text-sm text-text-secondary mb-4">
+                      Importera färdiga frågor och svar anpassade för din bransch. Du kan redigera och anpassa innehållet efter dina behov.
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      {templates.map(template => (
+                        <button
+                          key={template.template_id}
+                          onClick={() => openTemplateModal(template)}
+                          className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-bg-secondary rounded-lg border border-border-subtle hover:border-accent hover:shadow-sm transition-all group"
+                        >
+                          <span className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors">
+                            {template.industry === 'property_management' ? (
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                                <polyline points="9 22 9 12 15 12 15 22" />
+                              </svg>
+                            ) : (
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                              </svg>
+                            )}
+                          </span>
+                          <div className="text-left">
+                            <div className="font-medium text-text-primary text-sm">{template.name}</div>
+                            <div className="text-xs text-text-tertiary">{template.item_count || template.items?.length || '?'} frågor</div>
+                          </div>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary group-hover:text-accent ml-2">
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Action bar */}
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-4 flex-1">
@@ -1326,6 +1579,41 @@ function WidgetPage({ widgetType }) {
               </div>
               <h3 className="text-lg font-medium text-text-primary">Ingen kunskapsbank ännu</h3>
               <p className="text-text-secondary mt-2 mb-4">Lägg till frågor och svar för att träna din {isExternal ? 'kundwidget' : 'interna widget'}</p>
+
+              {/* Template options if available */}
+              {templates.length > 0 && (
+                <div className="mb-6">
+                  <p className="text-sm text-text-secondary mb-3">Börja med en färdig mall:</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {templates.map(template => (
+                      <button
+                        key={template.template_id}
+                        onClick={() => openTemplateModal(template)}
+                        className="inline-flex items-center gap-2 px-3 py-2 bg-accent-soft text-accent rounded-lg hover:bg-accent hover:text-white transition-colors text-sm"
+                      >
+                        {template.industry === 'property_management' ? (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                            <polyline points="9 22 9 12 15 12 15 22" />
+                          </svg>
+                        ) : (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                          </svg>
+                        )}
+                        {template.name}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="my-4 flex items-center gap-4">
+                    <div className="flex-1 border-t border-border-subtle"></div>
+                    <span className="text-xs text-text-tertiary">eller</span>
+                    <div className="flex-1 border-t border-border-subtle"></div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-center gap-3">
                 <button onClick={() => setShowImportModal(true)} className="btn btn-secondary">
                   Importera data
@@ -1563,6 +1851,180 @@ function WidgetPage({ widgetType }) {
                   <li>• Kolumn B: Svar</li>
                   <li>• Kolumn C: Kategori (valfritt)</li>
                 </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template Modal */}
+      {showTemplateModal && selectedTemplate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-bg-primary rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-border-subtle flex items-center justify-between flex-shrink-0">
+              <div>
+                <h2 className="text-lg font-semibold text-text-primary">{selectedTemplate.name}</h2>
+                <p className="text-sm text-text-secondary mt-1">{selectedTemplate.description}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowTemplateModal(false)
+                  setSelectedTemplate(null)
+                  setTemplatePreview(null)
+                  setSelectedCategories([])
+                }}
+                className="text-text-tertiary hover:text-text-primary text-2xl"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1">
+              {templatePreviewLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+                </div>
+              ) : templatePreview ? (
+                <div className="space-y-6">
+                  {/* Category selection */}
+                  <div>
+                    <h3 className="font-medium text-text-primary mb-3">Välj kategorier att importera</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {templatePreview.categories?.map(category => (
+                        <button
+                          key={category}
+                          onClick={() => toggleCategory(category)}
+                          className={`px-3 py-1.5 rounded-full text-sm transition-all ${
+                            selectedCategories.includes(category)
+                              ? 'bg-accent text-white'
+                              : 'bg-bg-secondary text-text-secondary hover:bg-accent-soft hover:text-accent'
+                          }`}
+                        >
+                          {category}
+                          {selectedCategories.includes(category) && (
+                            <span className="ml-1.5">✓</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => setSelectedCategories(templatePreview.categories || [])}
+                        className="text-xs text-accent hover:underline"
+                      >
+                        Välj alla
+                      </button>
+                      <span className="text-text-tertiary">|</span>
+                      <button
+                        onClick={() => setSelectedCategories([])}
+                        className="text-xs text-accent hover:underline"
+                      >
+                        Avmarkera alla
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Preview items */}
+                  <div>
+                    <h3 className="font-medium text-text-primary mb-3">
+                      Förhandsvisning ({selectedCategories.length > 0
+                        ? templatePreview.items?.filter(item => selectedCategories.includes(item.category)).length
+                        : templatePreview.items?.length || 0} frågor)
+                    </h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto border border-border-subtle rounded-lg">
+                      {templatePreview.items
+                        ?.filter(item => selectedCategories.length === 0 || selectedCategories.includes(item.category))
+                        .slice(0, 20)
+                        .map((item, index) => (
+                          <div
+                            key={index}
+                            className={`p-3 ${index % 2 === 0 ? 'bg-bg-secondary' : 'bg-bg-primary'}`}
+                          >
+                            <div className="flex items-start gap-2">
+                              <span className="badge badge-accent text-xs flex-shrink-0">{item.category}</span>
+                              <div className="min-w-0">
+                                <p className="font-medium text-text-primary text-sm">{item.question}</p>
+                                <p className="text-text-secondary text-xs mt-1 line-clamp-2">{item.answer}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      {templatePreview.items?.filter(item => selectedCategories.length === 0 || selectedCategories.includes(item.category)).length > 20 && (
+                        <div className="p-3 text-center text-text-tertiary text-sm">
+                          ... och {templatePreview.items.filter(item => selectedCategories.length === 0 || selectedCategories.includes(item.category)).length - 20} fler frågor
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Info box */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="16" x2="12" y2="12" />
+                        <line x1="12" y1="8" x2="12.01" y2="8" />
+                      </svg>
+                      <div className="text-sm text-blue-800 dark:text-blue-200">
+                        <p className="font-medium mb-1">Vad händer vid import?</p>
+                        <ul className="text-blue-700 dark:text-blue-300 space-y-0.5">
+                          <li>• Frågorna läggs till i din kunskapsbank</li>
+                          <li>• Du kan redigera och anpassa innehållet efteråt</li>
+                          <li>• Befintliga frågor påverkas inte</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-text-secondary">
+                  Kunde inte ladda mallförhandsvisning
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-border-subtle flex items-center justify-between flex-shrink-0">
+              <span className="text-sm text-text-secondary">
+                {selectedCategories.length > 0
+                  ? `${templatePreview?.items?.filter(item => selectedCategories.includes(item.category)).length || 0} frågor valda`
+                  : `${templatePreview?.items?.length || 0} frågor totalt`}
+              </span>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowTemplateModal(false)
+                    setSelectedTemplate(null)
+                    setTemplatePreview(null)
+                    setSelectedCategories([])
+                  }}
+                  className="btn btn-ghost"
+                >
+                  Avbryt
+                </button>
+                <button
+                  onClick={handleApplyTemplate}
+                  disabled={applyingTemplate || selectedCategories.length === 0}
+                  className="btn btn-primary"
+                >
+                  {applyingTemplate ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Importerar...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Importera mall
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>

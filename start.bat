@@ -27,18 +27,25 @@ echo Starting Admin Panel...
 cd /d "%~dp0admin-panel"
 start "Bobot Admin" cmd /k "npm run dev"
 
+:: Start Widget Demo
+echo.
+echo Starting Widget Demo...
+cd /d "%~dp0chat-widget"
+start "Bobot Widget" cmd /k "npm run dev"
+
 echo.
 echo ========================================
 echo   Bobot is starting up!
 echo ========================================
 echo.
-echo   Company Panel:  http://localhost:3000
-echo   Super Admin:    http://localhost:3000/admin
+echo   Admin Panel:    http://localhost:3000
+echo   Widget Demo:    http://localhost:3001
+echo   API Backend:    http://localhost:8000
 echo.
 echo   Demo login:     demo / demo123
 echo   Admin login:    admin / admin123
 echo.
-echo   Press any key to open in browser...
+echo   Press any key to open Admin Panel...
 pause >nul
 
 start http://localhost:3000

@@ -12,7 +12,6 @@ function Documentation() {
     { id: 'gdpr', label: 'Dataskydd' },
     { id: 'security', label: 'Säkerhet' },
     { id: 'selfhosting', label: 'Egen server' },
-    { id: 'faq', label: 'Vanliga frågor' },
   ]
 
   return (
@@ -454,23 +453,27 @@ function Documentation() {
                 </div>
 
                 <div className="card">
-                  <h3 className="font-medium text-text-primary mb-4">Skapa en widget</h3>
+                  <h3 className="font-medium text-text-primary mb-4">Använda en widget</h3>
+                  <p className="text-sm text-text-secondary mb-4">
+                    Varje företagskonto har två fördefinierade widgets: <strong>Extern Widget</strong> (för kunder)
+                    och <strong>Intern Widget</strong> (för medarbetare). Dessa skapas automatiskt och är redo att användas.
+                  </p>
                   <ol className="space-y-3 text-sm text-text-secondary">
                     <li className="flex gap-3">
                       <span className="flex-shrink-0 w-6 h-6 bg-accent-soft text-accent rounded-full flex items-center justify-center text-xs font-medium">1</span>
-                      <span>Gå till <strong>"Widgets"</strong> i menyn till vänster</span>
+                      <span>Klicka på <strong>"Extern Widget"</strong> eller <strong>"Intern Widget"</strong> i menyn</span>
                     </li>
                     <li className="flex gap-3">
                       <span className="flex-shrink-0 w-6 h-6 bg-accent-soft text-accent rounded-full flex items-center justify-center text-xs font-medium">2</span>
-                      <span>Klicka på <strong>"Skapa widget"</strong></span>
+                      <span>Anpassa inställningar: färger, meddelanden, ton och kontaktinfo</span>
                     </li>
                     <li className="flex gap-3">
                       <span className="flex-shrink-0 w-6 h-6 bg-accent-soft text-accent rounded-full flex items-center justify-center text-xs font-medium">3</span>
-                      <span>Välj namn, typ (extern/intern) och anpassa inställningar</span>
+                      <span>Bygg din kunskapsbas under fliken <strong>"Kunskapsbank"</strong></span>
                     </li>
                     <li className="flex gap-3">
                       <span className="flex-shrink-0 w-6 h-6 bg-accent-soft text-accent rounded-full flex items-center justify-center text-xs font-medium">4</span>
-                      <span>Kopiera widget-nyckeln och använd den i din installation</span>
+                      <span>Kopiera installationskoden längst ner på sidan och lägg till på din hemsida</span>
                     </li>
                   </ol>
                 </div>
@@ -1149,32 +1152,35 @@ function Documentation() {
 
                 <div className="card">
                   <h3 className="font-medium text-text-primary mb-4">Installation (för IT-administratörer)</h3>
+                  <p className="text-sm text-text-secondary mb-4">
+                    Bobot levereras som en Docker-uppsättning med fyra tjänster. Kontakta oss för att få
+                    tillgång till installationsfilerna och licens.
+                  </p>
                   <ol className="space-y-4 text-sm text-text-secondary">
                     <li className="flex gap-3">
                       <span className="flex-shrink-0 w-6 h-6 bg-accent-soft text-accent rounded-full flex items-center justify-center text-xs font-medium">1</span>
                       <div>
-                        <p className="font-medium text-text-primary">Klona kodbasen</p>
-                        <div className="mt-2 bg-bg-secondary rounded-lg p-3 font-mono text-xs overflow-x-auto">
-                          git clone https://github.com/ert-bolag/bobot.git
-                        </div>
+                        <p className="font-medium text-text-primary">Förbered servern</p>
+                        <p className="text-xs mt-1">Installera Docker och Docker Compose på servern. Kontrollera att portarna 3000, 3001, 8000 och 11434 är tillgängliga.</p>
                       </div>
                     </li>
                     <li className="flex gap-3">
                       <span className="flex-shrink-0 w-6 h-6 bg-accent-soft text-accent rounded-full flex items-center justify-center text-xs font-medium">2</span>
                       <div>
                         <p className="font-medium text-text-primary">Konfigurera miljövariabler</p>
-                        <p className="text-xs mt-1">Kopiera .env.example till .env och fyll i:</p>
+                        <p className="text-xs mt-1">Skapa en .env-fil med följande inställningar:</p>
                         <div className="mt-2 bg-bg-secondary rounded-lg p-3 font-mono text-xs overflow-x-auto">
 {`ENVIRONMENT=production
-SECRET_KEY=din-hemliga-nyckel
-CORS_ORIGINS=https://din-domän.se`}
+SECRET_KEY=generera-en-säker-nyckel-minst-64-tecken
+CORS_ORIGINS=https://er-domän.se,https://admin.er-domän.se
+ADMIN_PASSWORD=starkt-adminlösenord`}
                         </div>
                       </div>
                     </li>
                     <li className="flex gap-3">
                       <span className="flex-shrink-0 w-6 h-6 bg-accent-soft text-accent rounded-full flex items-center justify-center text-xs font-medium">3</span>
                       <div>
-                        <p className="font-medium text-text-primary">Starta med Docker</p>
+                        <p className="font-medium text-text-primary">Starta tjänsterna</p>
                         <div className="mt-2 bg-bg-secondary rounded-lg p-3 font-mono text-xs overflow-x-auto">
                           docker-compose up -d
                         </div>
@@ -1183,19 +1189,20 @@ CORS_ORIGINS=https://din-domän.se`}
                     <li className="flex gap-3">
                       <span className="flex-shrink-0 w-6 h-6 bg-accent-soft text-accent rounded-full flex items-center justify-center text-xs font-medium">4</span>
                       <div>
-                        <p className="font-medium text-text-primary">Ladda ner AI-modellen</p>
+                        <p className="font-medium text-text-primary">Ladda ner AI-modellen (första gången)</p>
                         <div className="mt-2 bg-bg-secondary rounded-lg p-3 font-mono text-xs overflow-x-auto">
                           docker exec -it bobot-ollama-1 ollama pull llama3.1
                         </div>
+                        <p className="text-xs mt-2">Detta tar några minuter beroende på er internetanslutning (modellen är ca 4 GB).</p>
                       </div>
                     </li>
                     <li className="flex gap-3">
                       <span className="flex-shrink-0 w-6 h-6 bg-accent-soft text-accent rounded-full flex items-center justify-center text-xs font-medium">5</span>
                       <div>
-                        <p className="font-medium text-text-primary">Konfigurera reverse proxy (valfritt)</p>
+                        <p className="font-medium text-text-primary">Konfigurera reverse proxy och HTTPS</p>
                         <p className="text-xs mt-1">
-                          För HTTPS och egen domän, konfigurera nginx eller Traefik framför Bobot.
-                          Se den tekniska dokumentationen för detaljer.
+                          Använd nginx, Caddy eller Traefik för att exponera tjänsterna med HTTPS.
+                          HTTPS är obligatoriskt i produktion för säker kommunikation.
                         </p>
                       </div>
                     </li>
@@ -1203,7 +1210,10 @@ CORS_ORIGINS=https://din-domän.se`}
                 </div>
 
                 <div className="card">
-                  <h3 className="font-medium text-text-primary mb-3">Portar och tjänster</h3>
+                  <h3 className="font-medium text-text-primary mb-3">Tjänster och portar</h3>
+                  <p className="text-sm text-text-secondary mb-4">
+                    Bobot består av fyra Docker-tjänster som kommunicerar internt:
+                  </p>
                   <div className="bg-bg-secondary rounded-lg overflow-hidden">
                     <table className="w-full text-sm">
                       <thead>
@@ -1217,26 +1227,29 @@ CORS_ORIGINS=https://din-domän.se`}
                         <tr className="border-b border-border-subtle">
                           <td className="p-3">Admin-panel</td>
                           <td className="p-3 font-mono">3000</td>
-                          <td className="p-3">Administrationsgränssnitt</td>
+                          <td className="p-3">Administrationsgränssnitt (React)</td>
                         </tr>
                         <tr className="border-b border-border-subtle">
                           <td className="p-3">Backend API</td>
                           <td className="p-3 font-mono">8000</td>
-                          <td className="p-3">REST API</td>
+                          <td className="p-3">REST API (FastAPI/Python)</td>
                         </tr>
                         <tr className="border-b border-border-subtle">
-                          <td className="p-3">Widget</td>
+                          <td className="p-3">Widget-server</td>
                           <td className="p-3 font-mono">3001</td>
-                          <td className="p-3">Chattwidget</td>
+                          <td className="p-3">Chattwidget-distribution</td>
                         </tr>
                         <tr>
-                          <td className="p-3">Ollama (AI)</td>
+                          <td className="p-3">Ollama</td>
                           <td className="p-3 font-mono">11434</td>
-                          <td className="p-3">AI-motor</td>
+                          <td className="p-3">Lokal AI-motor (intern)</td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
+                  <p className="text-xs text-text-tertiary mt-3">
+                    Ollama-porten (11434) behöver normalt inte exponeras externt - den används endast internt av backend.
+                  </p>
                 </div>
 
                 <div className="card bg-warning/5 border-warning/20">
@@ -1246,46 +1259,56 @@ CORS_ORIGINS=https://din-domän.se`}
                       <line x1="12" y1="9" x2="12" y2="13" />
                       <line x1="12" y1="17" x2="12.01" y2="17" />
                     </svg>
-                    <h3 className="font-medium text-text-primary">Viktigt att tänka på</h3>
+                    <h3 className="font-medium text-text-primary">Säkerhetsrekommendationer</h3>
                   </div>
                   <ul className="space-y-2 text-sm text-text-secondary">
                     <li className="flex items-start gap-2">
                       <span className="text-warning">•</span>
                       <span>
-                        <strong>Säkerhetskopiering:</strong> Säkerhetskopiera regelbundet databasen
-                        (bobot.db) för att undvika dataförlust
+                        <strong>Säkerhetskopiering:</strong> Schemalägg daglig backup av databasen (bobot.db)
+                        och konfigurera offsite-lagring
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-warning">•</span>
                       <span>
-                        <strong>Uppdateringar:</strong> Håll systemet uppdaterat för säkerhetspatchar
+                        <strong>HTTPS obligatoriskt:</strong> Använd alltid TLS/HTTPS i produktion -
+                        Bobot aktiverar automatiskt säkerhetsheaders (HSTS, CSP) när HTTPS detekteras
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-warning">•</span>
                       <span>
-                        <strong>HTTPS:</strong> Aktivera alltid HTTPS i produktion för säker kommunikation
+                        <strong>Brandväggsregler:</strong> Exponera endast port 3000 (admin), 8000 (API)
+                        och 3001 (widget) externt. Håll Ollama intern.
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-warning">•</span>
                       <span>
-                        <strong>Brandvägg:</strong> Begränsa åtkomst till admin-panel och API från internet
+                        <strong>Lösenordspolicy:</strong> Använd starka lösenord för admin och
+                        generera SECRET_KEY med kryptografiskt säker slumpgenerator
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-warning">•</span>
+                      <span>
+                        <strong>Övervakning:</strong> Övervaka tjänsternas hälsa via /health-endpointen
+                        och logga åtkomst
                       </span>
                     </li>
                   </ul>
                 </div>
 
                 <div className="card">
-                  <h3 className="font-medium text-text-primary mb-3">Behöver ni hjälp?</h3>
+                  <h3 className="font-medium text-text-primary mb-3">Kontakta oss</h3>
                   <p className="text-sm text-text-secondary">
-                    Om ni vill köra Bobot på egen server men saknar teknisk kompetens internt,
-                    kan vi hjälpa till med installation och konfiguration. Kontakta oss för mer information.
+                    Vill ni köra Bobot på egen server? Kontakta oss för att diskutera licensiering,
+                    få tillgång till installationspaket och eventuell hjälp med uppsättning.
                   </p>
                   <div className="mt-4 p-3 bg-accent-soft rounded-lg">
                     <p className="text-sm text-text-secondary">
-                      <strong>E-post:</strong> support@bobot.nu
+                      <strong>E-post:</strong> hej@bobot.nu
                     </p>
                   </div>
                 </div>
@@ -1293,110 +1316,6 @@ CORS_ORIGINS=https://din-domän.se`}
             </section>
           )}
 
-          {activeSection === 'faq' && (
-            <section aria-labelledby="faq-heading">
-              <h2 id="faq-heading" className="text-xl font-semibold text-text-primary mb-4">Vanliga frågor</h2>
-
-              <div className="space-y-4">
-                <details className="card group">
-                  <summary className="font-medium text-text-primary cursor-pointer list-none flex items-center justify-between">
-                    Hur lägger jag till chattboten på min hemsida?
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary group-open:rotate-180 transition-transform">
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </summary>
-                  <p className="text-sm text-text-secondary mt-3">
-                    Gå till "Installation" i menyn. Där hittar du en kod-snutt som du kopierar
-                    och klistrar in på din hemsida, precis före &lt;/body&gt;-taggen. De flesta
-                    webbplatssystem (WordPress, Squarespace, Wix) har ett enkelt sätt att lägga till
-                    anpassad kod.
-                  </p>
-                </details>
-
-                <details className="card group">
-                  <summary className="font-medium text-text-primary cursor-pointer list-none flex items-center justify-between">
-                    Kan jag se vad folk frågar?
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary group-open:rotate-180 transition-transform">
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </summary>
-                  <p className="text-sm text-text-secondary mt-3">
-                    Ja! Under "Konversationer" kan du se alla chattar som skett. Du kan också
-                    se vilka frågor som inte kunde besvaras under "Analys" - detta hjälper dig
-                    att förbättra din kunskapsbas.
-                  </p>
-                </details>
-
-                <details className="card group">
-                  <summary className="font-medium text-text-primary cursor-pointer list-none flex items-center justify-between">
-                    Vad händer om boten inte kan svara?
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary group-open:rotate-180 transition-transform">
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </summary>
-                  <p className="text-sm text-text-secondary mt-3">
-                    Om AI:n inte hittar ett passande svar i din kunskapsbas, säger den tydligt
-                    att den inte kan svara och hänvisar till dina kontaktuppgifter istället.
-                    Dessa obesvarade frågor loggas så du kan lägga till svar för dem.
-                  </p>
-                </details>
-
-                <details className="card group">
-                  <summary className="font-medium text-text-primary cursor-pointer list-none flex items-center justify-between">
-                    Hur länge sparas konversationer?
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary group-open:rotate-180 transition-transform">
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </summary>
-                  <p className="text-sm text-text-secondary mt-3">
-                    Du väljer själv under "Inställningar" - mellan 7 och 30 dagar. Efter det
-                    raderas konversationen automatiskt. Anonymiserad statistik (antal chattar,
-                    populära kategorier) sparas för att du ska kunna se trender.
-                  </p>
-                </details>
-
-                <details className="card group">
-                  <summary className="font-medium text-text-primary cursor-pointer list-none flex items-center justify-between">
-                    Stöds fler språk än svenska?
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary group-open:rotate-180 transition-transform">
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </summary>
-                  <p className="text-sm text-text-secondary mt-3">
-                    Ja! Chatten stöder svenska, engelska och arabiska (med höger-till-vänster-layout).
-                    Språket detekteras automatiskt baserat på vad användaren skriver.
-                  </p>
-                </details>
-
-                <details className="card group">
-                  <summary className="font-medium text-text-primary cursor-pointer list-none flex items-center justify-between">
-                    Kan jag exportera data?
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary group-open:rotate-180 transition-transform">
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </summary>
-                  <p className="text-sm text-text-secondary mt-3">
-                    Ja, du kan exportera både din kunskapsbas (som Excel eller JSON) och
-                    konversationshistorik (som CSV). Du hittar export-knappar i respektive sektion.
-                  </p>
-                </details>
-
-                <details className="card group">
-                  <summary className="font-medium text-text-primary cursor-pointer list-none flex items-center justify-between">
-                    Är mina data säkra?
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary group-open:rotate-180 transition-transform">
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </summary>
-                  <p className="text-sm text-text-secondary mt-3">
-                    Absolut. All kommunikation är krypterad, AI:n körs lokalt (ingen data skickas
-                    till externa tjänster), och din data är helt separerad från andra företags.
-                    IP-adresser anonymiseras automatiskt och data raderas enligt GDPR.
-                  </p>
-                </details>
-              </div>
-            </section>
-          )}
         </main>
       </div>
     </div>

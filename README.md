@@ -256,16 +256,13 @@ bobot/
 │   │       ├── Login.jsx         # Företagsinloggning
 │   │       ├── AdminLogin.jsx    # Superadmin-inloggning
 │   │       ├── Dashboard.jsx     # Statistiköversikt
-│   │       ├── Knowledge.jsx     # Kunskapsbas CRUD
+│   │       ├── WidgetPage.jsx    # Widget + kunskapsbas-hantering
 │   │       ├── Conversations.jsx # Chatthistorik
 │   │       ├── Analytics.jsx     # Detaljerad analys
 │   │       ├── Settings.jsx      # Företagsinställningar
-│   │       ├── Preview.jsx       # Widget-förhandsgranskning
-│   │       ├── Widgets.jsx       # Widget-hantering
-│   │       ├── WidgetPage.jsx    # Individuell widget-redigerare
 │   │       ├── SuperAdmin.jsx    # Multi-tenant-hantering
 │   │       ├── LandingPage.jsx   # Publik landningssida
-│   │       └── Documentation.jsx # API-dokumentation
+│   │       └── Documentation.jsx # Användardokumentation
 │   ├── package.json
 │   └── Dockerfile
 ├── chat-widget/

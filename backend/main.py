@@ -401,9 +401,16 @@ class ChatRequest(BaseModel):
         return v.strip()
 
 
+class SourceDetail(BaseModel):
+    question: str
+    answer: str
+    category: Optional[str] = None
+
+
 class ChatResponse(BaseModel):
     answer: str
     sources: List[str] = []
+    sources_detail: List[SourceDetail] = []  # Full knowledge base entries used
     session_id: str
     conversation_id: str  # Short readable ID for user reference (e.g., "BOB-A1B2")
     had_answer: bool = True
@@ -415,9 +422,11 @@ response_cache = {}
 CACHE_TTL = 300  # 5 minutes
 
 
-def get_cached_response(company_id: str, question: str, language: str = "sv"):
+def get_cached_response(company_id: str, question: str, language: str = "sv", widget_key: str = None):
     """Get cached response if available and not expired"""
-    cache_key = f"{company_id}:{language}:{question.lower().strip()}"
+    # Include widget_key in cache key to prevent cross-widget cache contamination
+    widget_part = widget_key or "default"
+    cache_key = f"{company_id}:{widget_part}:{language}:{question.lower().strip()}"
     if cache_key in response_cache:
         cached, timestamp = response_cache[cache_key]
         if datetime.utcnow().timestamp() - timestamp < CACHE_TTL:
@@ -427,9 +436,11 @@ def get_cached_response(company_id: str, question: str, language: str = "sv"):
     return None
 
 
-def set_cached_response(company_id: str, question: str, response: dict, language: str = "sv"):
+def set_cached_response(company_id: str, question: str, response: dict, language: str = "sv", widget_key: str = None):
     """Cache a response"""
-    cache_key = f"{company_id}:{language}:{question.lower().strip()}"
+    # Include widget_key in cache key to prevent cross-widget cache contamination
+    widget_part = widget_key or "default"
+    cache_key = f"{company_id}:{widget_part}:{language}:{question.lower().strip()}"
     response_cache[cache_key] = (response, datetime.utcnow().timestamp())
     # Clean old entries if cache gets too large
     if len(response_cache) > 1000:
@@ -568,6 +579,7 @@ class KnowledgeItemResponse(BaseModel):
     category: str
     widget_id: Optional[int] = None
     widget_name: Optional[str] = None
+    created_at: Optional[datetime] = None
 
 
 class CategoryCreate(BaseModel):
@@ -850,7 +862,7 @@ class MessageResponse(BaseModel):
     role: str
     content: str
     created_at: datetime
-    sources: Optional[List[dict]] = None  # Knowledge items used for response
+    sources: Optional[List[str]] = None  # Knowledge item questions used for response
     had_answer: bool = True
 
 
@@ -1004,7 +1016,33 @@ def init_demo_data():
                 )
                 db.add(demo_settings)
 
-                # Add demo knowledge base with categories
+                # Create demo widgets (external for customers, internal for employees)
+                external_widget = Widget(
+                    company_id="demo",
+                    widget_key="demo-ext-001",
+                    name="Extern",
+                    display_name="Kundtjänst",
+                    widget_type="external",
+                    widget_position="bottom-right",
+                    welcome_message="Hej! Hur kan jag hjälpa dig idag?",
+                    fallback_message="Tyvärr kunde jag inte hitta ett svar på din fråga. Kontakta oss på 08-123 456 78."
+                )
+                db.add(external_widget)
+
+                internal_widget = Widget(
+                    company_id="demo",
+                    widget_key="demo-int-001",
+                    name="Intern",
+                    display_name="HR Support",
+                    widget_type="internal",
+                    widget_position="bottom-left",
+                    welcome_message="Hej! Hur kan jag hjälpa dig med HR-frågor?",
+                    fallback_message="Jag kunde tyvärr inte hitta svaret. Kontakta HR på hr@demo.se."
+                )
+                db.add(internal_widget)
+                db.flush()  # Get widget IDs
+
+                # Add demo knowledge base for EXTERNAL widget (customer-facing)
                 demo_items = [
                     ("Hur säger jag upp min lägenhet?",
                      "För att säga upp din lägenhet behöver du skicka en skriftlig uppsägning till oss. Uppsägningstiden är vanligtvis 3 månader.",
@@ -1030,7 +1068,7 @@ def init_demo_data():
                 ]
 
                 for q, a, cat in demo_items:
-                    item = KnowledgeItem(company_id="demo", question=q, answer=a, category=cat)
+                    item = KnowledgeItem(company_id="demo", question=q, answer=a, category=cat, widget_id=external_widget.id)
                     db.add(item)
 
                 db.commit()
@@ -1053,21 +1091,22 @@ def normalize_text(text: str) -> str:
     return text
 
 
-def find_relevant_context(question: str, company_id: str, db: Session, top_k: int = 3, min_score: int = 5, widget_id: Optional[int] = None) -> List[KnowledgeItem]:
+def find_relevant_context(question: str, company_id: str, db: Session, top_k: int = 3, min_score: int = 3, widget_id: Optional[int] = None, widget_type: str = "external") -> List[KnowledgeItem]:
     """Hitta relevanta frågor/svar från kunskapsbasen - fuzzy matching
 
     ANTI-HALLUCINATION: Only returns items with score >= min_score to prevent
     weak matches from being used as context for AI-generated answers.
-    A score of 5+ indicates meaningful keyword overlap with the question.
+    A score of 3+ indicates meaningful keyword overlap with the question.
 
-    If widget_id is provided, only returns items that belong to that widget
-    OR items with no widget (shared across all widgets).
+    If widget_id is provided:
+    - Returns items belonging to that specific widget
+    - ALSO returns shared items (widget_id is NULL) which are visible to all widgets
     """
     # Filter by company and widget
     query = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == company_id)
     if widget_id:
-        # Include items for this specific widget OR shared items (widget_id is NULL)
         from sqlalchemy import or_
+        # Widget sees: its own items + shared items (widget_id is NULL)
         query = query.filter(or_(KnowledgeItem.widget_id == widget_id, KnowledgeItem.widget_id.is_(None)))
     items = query.all()
 
@@ -1103,14 +1142,20 @@ def find_relevant_context(question: str, company_id: str, db: Session, top_k: in
         common_words = meaningful_words & item_words
         score += len(common_words) * 3
 
-        # Partial/substring matches (medium score) - important for compound words
+        # Partial/substring matches - important for Swedish compound words
+        # e.g., "felanmäler" should match "felanmälan" or "anmäler"
         for q_word in meaningful_words:
             if len(q_word) >= 4:  # Only check words with 4+ chars
                 for i_word in item_words:
                     if len(i_word) >= 4:
-                        # Check if one contains the other (handles "felanmälan" matching "felanmalan")
+                        # Check if one contains the other
                         if q_word in i_word or i_word in q_word:
-                            score += 2
+                            # Give more points for longer substring matches
+                            match_len = min(len(q_word), len(i_word))
+                            if match_len >= 6:
+                                score += 3  # Strong match (e.g., "anmaler" in "felanmaler")
+                            else:
+                                score += 2
                         # Check root similarity (first 4 chars match)
                         elif q_word[:4] == i_word[:4]:
                             score += 1
@@ -1244,6 +1289,8 @@ def create_default_widgets(db: Session, company_id: str) -> List[Widget]:
         welcome_message="Hej kollega! Vad kan jag hjälpa dig med?",
         fallback_message="Jag hittade inget svar i kunskapsbasen. Kontakta din chef eller HR.",
         subtitle="Intern support",
+        widget_position="bottom-left",  # Internal widget on left side
+        primary_color="#4A9D7C",  # Different color for internal widget
     )
     db.add(internal_widget)
     widgets.append(internal_widget)
@@ -1393,15 +1440,10 @@ def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanyS
 
     # Different personalities based on tone
     if effective_tone == "casual":
-        # Casual tone - very relaxed, buddy-like
-        return f"""You are {company_name}'s helpful assistant - think of yourself as a friendly buddy who happens to know everything about the company.
+        # Casual tone - relaxed but direct
+        return f"""You are {company_name}'s assistant. You help people with their questions in a relaxed, friendly way.
 
-PERSONALITY:
-- Super chill and approachable. Like texting with a helpful friend.
-- Use casual language, contractions, maybe even the occasional emoji if it fits.
-- Be genuinely warm and personable - not corporate at all.
-- It's totally fine to be a bit playful while still being helpful.
-- Show personality! React naturally to what people say.
+STYLE: Casual and approachable. Like a helpful friend who knows the answers.
 
 {company_info}
 
@@ -1409,28 +1451,23 @@ PERSONALITY:
 
 HOW TO RESPOND:
 - Use ONLY the facts above. Don't make stuff up.
-- Keep it conversational - 1-3 sentences usually works great.
-- If someone's having a rough time: Be sympathetic first ("Ah, that's annoying!" / "Ugh, I get it!").
-- Feel free to add friendly touches ("Hope that helps!" / "Let me know if you need anything else!").
+- Keep it short: 1-3 sentences max.
+- Be friendly but get straight to the point.
 - Reply in {target_lang}.
 
 DON'T DO THIS:
 - Don't invent info - stick to what you know
-- Don't be stiff or formal
+- Don't use filler phrases like "Jag förstår att..." or "Det kan vara..."
 - Don't guess with words like "typically" or "usually"
+- Don't over-empathize or be patronizing
 
 Question: {question}"""
 
     elif effective_tone == "collegial":
-        # Collegial tone - like a helpful coworker
-        return f"""You are a helpful assistant for {company_name} - like a knowledgeable colleague who genuinely wants to help their teammates succeed.
+        # Collegial tone - helpful coworker, direct
+        return f"""You are a helpful assistant for {company_name} - like a knowledgeable colleague.
 
-PERSONALITY:
-- You're a thoughtful colleague, not a bot. Think of yourself as the team member who always knows where to find information.
-- Be warm and supportive. Show that you understand the daily challenges people face.
-- When appropriate, add context or helpful tips that might make things easier.
-- Use a natural, conversational tone - like chatting with a trusted coworker.
-- It's okay to be slightly more detailed when context helps.
+STYLE: Friendly and helpful, like a coworker who knows where to find information. Direct and efficient.
 
 {company_info}
 
@@ -1438,25 +1475,23 @@ PERSONALITY:
 
 HOW TO RESPOND:
 - Use ONLY the facts above. Never make up information or policies.
-- Answer thoughtfully in 2-4 sentences. Add relevant context when helpful.
-- If someone seems stressed or frustrated: Show empathy first ("Jag förstår, det kan vara krångligt!" / "I hear you, that can be tricky!").
-- If you know of related information that might help: Briefly mention it.
-- When relevant, you can say things like "Hoppas det hjälper!" or "Säg till om du behöver mer info!"
+- Answer clearly in 1-3 sentences. Add relevant context only if it actually helps.
+- Get straight to the answer - no preamble or filler phrases.
 - Reply in {target_lang}.
 
 NEVER DO THIS:
 - Don't invent facts, policies, or procedures
 - Don't use "typically", "usually", "vanligtvis" to guess answers
-- Don't pretend to know internal processes you weren't given info about
-- Don't be overly formal or robotic - you're a colleague, not a customer service bot
+- Don't start with empathy phrases like "Jag förstår att det kan vara..." or "Det låter som..."
+- Don't be overly sympathetic or patronizing
 
 Question: {question}"""
 
     else:
-        # Professional tone (default) - warm but concise
-        return f"""You are a friendly assistant for {company_name}, a property management company. You help people with their questions.
+        # Professional tone (default) - helpful and direct
+        return f"""You are an assistant for {company_name}. You help people with their questions.
 
-PERSONALITY: Warm and helpful, like a friendly neighbor. Professional but not robotic. You genuinely want to help.
+STYLE: Professional and helpful. Direct answers without unnecessary filler.
 
 {company_info}
 
@@ -1464,15 +1499,15 @@ PERSONALITY: Warm and helpful, like a friendly neighbor. Professional but not ro
 
 HOW TO RESPOND:
 - Use ONLY the facts above. Never make up information.
-- If you have relevant info: Answer warmly in 1-3 sentences. Include contact info if helpful.
-- If someone reports a problem: Briefly acknowledge ("Tråkigt att höra!" / "I understand") before answering.
-- Be concise but complete.
+- Answer clearly in 1-3 sentences. Include contact info if relevant.
+- Get straight to the point - no preamble.
 - Reply in {target_lang}.
 
 NEVER DO THIS:
 - Don't invent facts or give advice not in the knowledge base
 - Don't use "typically", "usually", "vanligtvis" to guess answers
-- Don't pretend to know things you weren't given
+- Don't start with phrases like "Jag förstår att..." or "Tråkigt att höra!"
+- Don't be overly empathetic or patronizing
 
 Question: {question}"""
 
@@ -1972,14 +2007,15 @@ async def chat(
     # Determine language early (needed for cache key)
     language = request.language if request.language in ["sv", "en", "ar"] else detect_language(request.question)
 
-    # Check cache first (include language in cache key)
-    cached = get_cached_response(company_id, request.question, language)
+    # Check cache first (include language and widget_key in cache key)
+    cached = get_cached_response(company_id, request.question, language, widget_key=request.widget_key)
     if cached:
         # Return cached response with new session handling
         session_id = request.session_id or str(uuid.uuid4())
         return ChatResponse(
             answer=cached["answer"],
             sources=cached.get("sources", []),
+            sources_detail=cached.get("sources_detail", []),
             session_id=session_id,
             conversation_id=cached.get("conversation_id", "BOB-CACHE"),
             had_answer=cached.get("had_answer", True),
@@ -1989,8 +2025,9 @@ async def chat(
     # Hämta inställningar
     settings = get_or_create_settings(db, company_id)
 
-    # Determine widget type (internal vs external) for personalized responses
+    # Determine widget for knowledge filtering and personalized responses
     widget_type = "external"  # Default to customer-facing
+    widget = None  # Store widget for knowledge filtering
     if request.widget_key:
         widget = db.query(Widget).filter(
             Widget.widget_key == request.widget_key,
@@ -2068,8 +2105,12 @@ async def chat(
         had_answer = True
         context = []
     else:
-        # Hitta kontext i kunskapsbasen
-        context = find_relevant_context(request.question, company_id, db)
+        # Hitta kontext i kunskapsbasen (with widget isolation if widget_key was provided)
+        context = find_relevant_context(
+            request.question, company_id, db,
+            widget_id=widget.id if widget else None,
+            widget_type=widget_type
+        )
 
         # ANTI-HALLUCINATION: Only consider it "had_answer" if we ACTUALLY found knowledge base matches
         had_answer = len(context) > 0
@@ -2124,6 +2165,7 @@ async def chat(
 
     # Spara bot-svaret
     sources = [item.question for item in context]
+    sources_detail = [{"question": item.question, "answer": item.answer, "category": item.category} for item in context]
     bot_message = Message(
         conversation_id=conversation.id,
         role="bot",
@@ -2160,15 +2202,17 @@ async def chat(
     cache_data = {
         "answer": answer,
         "sources": sources,
+        "sources_detail": sources_detail,
         "conversation_id": conversation.reference_id,
         "had_answer": had_answer,
         "confidence": confidence
     }
-    set_cached_response(company_id, request.question, cache_data, language)
+    set_cached_response(company_id, request.question, cache_data, language, widget_key=request.widget_key)
 
     return ChatResponse(
         answer=answer,
         sources=sources,
+        sources_detail=sources_detail,
         session_id=session_id,
         conversation_id=conversation.reference_id,
         had_answer=had_answer,
@@ -2229,7 +2273,7 @@ async def get_widget_config(
         # Widget Typography & Style
         "font_family": settings.widget_font_family or "Inter",
         "font_size": settings.widget_font_size or 14,
-        "border_radius": settings.widget_border_radius or 16,
+        "border_radius": settings.widget_border_radius if settings.widget_border_radius is not None else 16,
         "position": settings.widget_position or "bottom-right",
         # Quick Reply Suggestions
         "suggested_questions": suggested_questions,
@@ -2238,6 +2282,7 @@ async def get_widget_config(
         "require_consent": settings.require_consent if settings.require_consent is not None else True,
         "consent_text": settings.consent_text or "Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.",
         "data_controller_name": settings.data_controller_name or "",
+        "data_controller_email": settings.data_controller_email or "",
     }
 
 
@@ -2269,19 +2314,23 @@ async def get_widget_config_by_key(
         "widget_id": widget.id,
         "widget_key": widget.widget_key,
         "widget_type": widget.widget_type,
-        "widget_name": widget.name,
+        "widget_name": widget.display_name or settings.company_name or company.name,
         "company_name": settings.company_name or company.name,
         "welcome_message": widget.welcome_message or "",
         "fallback_message": widget.fallback_message or "",
         "subtitle": widget.subtitle or "Alltid redo att hjälpa",
+        # Widget Colors
         "primary_color": widget.primary_color or "#D97757",
-        "contact_email": settings.contact_email or "",
-        "contact_phone": settings.contact_phone or "",
+        "secondary_color": widget.secondary_color or "#FEF3EC",
+        "background_color": widget.background_color or "#FAF8F5",
+        "contact_email": widget.contact_email or settings.contact_email or "",
+        "contact_phone": widget.contact_phone or settings.contact_phone or "",
         # Widget Typography & Style
         "font_family": widget.widget_font_family or "Inter",
         "font_size": widget.widget_font_size or 14,
-        "border_radius": widget.widget_border_radius or 16,
-        "position": widget.widget_position or "bottom-right",
+        "border_radius": widget.widget_border_radius if widget.widget_border_radius is not None else 16,
+        "position": widget.widget_position or ("bottom-left" if widget.widget_type == "internal" else "bottom-right"),
+        "start_expanded": widget.start_expanded or False,
         # Quick Reply Suggestions
         "suggested_questions": suggested_questions,
         # PuB/GDPR Compliance
@@ -2289,7 +2338,33 @@ async def get_widget_config_by_key(
         "require_consent": widget.require_consent if widget.require_consent is not None else True,
         "consent_text": widget.consent_text or "Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.",
         "data_controller_name": settings.data_controller_name or "",
+        "data_controller_email": settings.data_controller_email or "",
     }
+
+
+@app.get("/widgets/public/{company_id}")
+async def get_public_widgets(
+    company_id: str,
+    db: Session = Depends(get_db)
+):
+    """Get public widget list for a company (for widget initialization)"""
+    company = db.query(Company).filter(Company.id == company_id, Company.is_active == True).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    widgets = db.query(Widget).filter(
+        Widget.company_id == company_id,
+        Widget.is_active == True
+    ).all()
+
+    return [
+        {
+            "widget_key": w.widget_key,
+            "widget_type": w.widget_type,
+            "name": w.name
+        }
+        for w in widgets
+    ]
 
 
 @app.post("/chat/widget/{widget_key}", response_model=ChatResponse)
@@ -2342,14 +2417,14 @@ async def chat_via_widget_key(
     # Determine language
     language = request.language if request.language in ["sv", "en", "ar"] else detect_language(request.question)
 
-    # Check cache
-    cache_key = f"{widget_key}:{request.question}:{language}"
-    cached = get_cached_response(company_id, request.question, language)
+    # Check cache (include widget_key to prevent cross-widget cache contamination)
+    cached = get_cached_response(company_id, request.question, language, widget_key=widget_key)
     if cached:
         session_id = request.session_id or str(uuid.uuid4())
         return ChatResponse(
             answer=cached["answer"],
             sources=cached.get("sources", []),
+            sources_detail=cached.get("sources_detail", []),
             session_id=session_id,
             conversation_id=cached.get("conversation_id", "BOB-CACHE"),
             had_answer=cached.get("had_answer", True),
@@ -2415,7 +2490,7 @@ async def chat_via_widget_key(
     else:
         # Find relevant context from widget-specific knowledge base
         start_time = time.time()
-        relevant_items = find_relevant_context(request.question, company_id, db, widget_id=widget.id)
+        relevant_items = find_relevant_context(request.question, company_id, db, widget_id=widget.id, widget_type=widget.widget_type)
 
         # Build prompt and get AI response (pass widget for contact info override)
         prompt = build_prompt(request.question, relevant_items, settings=settings, language=language, widget_type=widget.widget_type, widget=widget)
@@ -2426,17 +2501,35 @@ async def chat_via_widget_key(
         had_answer = len(relevant_items) > 0
 
         if not had_answer:
-            answer = widget.fallback_message or "Tyvärr kunde jag inte hitta ett svar på din fråga."
+            # Build dynamic fallback message with widget contact info
+            # Widget contact info takes priority over company settings
+            contact_email = widget.contact_email or settings.contact_email
+            contact_phone = widget.contact_phone or settings.contact_phone
+            contact_info = ""
+            if contact_email or contact_phone:
+                contact_parts = []
+                if contact_phone:
+                    contact_parts.append(contact_phone)
+                if contact_email:
+                    contact_parts.append(contact_email)
+                contact_info = " (" + ", ".join(contact_parts) + ")"
+
+            fallback_messages = {
+                "sv": widget.fallback_message or f"Den frågan har jag tyvärr inte information om. Men fråga gärna något annat – kanske kan jag hjälpa dig med det! Annars når du oss på{contact_info or ' kontaktuppgifterna på hemsidan'}.",
+                "en": f"I don't have information about that specific question. But feel free to ask me something else – maybe I can help with that! Otherwise, you can reach us at{contact_info or ' the contact details on our website'}.",
+                "ar": f"للأسف ليس لدي معلومات عن هذا السؤال. لكن لا تتردد في طرح سؤال آخر - ربما أستطيع المساعدة! أو يمكنك التواصل معنا{contact_info or ' عبر بيانات الاتصال على موقعنا'}."
+            }
+            answer = fallback_messages.get(language, fallback_messages["sv"])
 
     # Save bot message
-    # sources_detail for database storage (richer info), sources for API response (List[str])
-    sources_detail = [{"question": item.question, "category": item.category} for item in relevant_items[:3]]
+    # sources_detail includes full knowledge base entries for user reference
     sources = [item.question for item in relevant_items[:3]]
+    sources_detail = [{"question": item.question, "answer": item.answer, "category": item.category} for item in relevant_items[:3]]
     bot_message = Message(
         conversation_id=conversation.id,
         role="bot",
         content=answer,
-        sources=json.dumps(sources_detail),
+        sources=json.dumps(sources),
         had_answer=had_answer,
         response_time_ms=response_time
     )
@@ -2445,18 +2538,20 @@ async def chat_via_widget_key(
 
     db.commit()
 
-    # Cache the response
+    # Cache the response (include widget_key to prevent cross-widget cache contamination)
     set_cached_response(company_id, request.question, {
         "answer": answer,
         "sources": sources,
+        "sources_detail": sources_detail,
         "had_answer": had_answer,
         "conversation_id": conversation.reference_id,
         "confidence": 100 if had_answer else 0
-    }, language)
+    }, language, widget_key=widget_key)
 
     return ChatResponse(
         answer=answer,
         sources=sources,
+        sources_detail=sources_detail,
         session_id=session_id,
         conversation_id=conversation.reference_id,
         had_answer=had_answer,
@@ -2503,9 +2598,11 @@ async def list_widgets(
             description=w.description or "",
             is_active=w.is_active,
             primary_color=w.primary_color or "#D97757",
+            secondary_color=w.secondary_color or "#FEF3EC",
+            background_color=w.background_color or "#FAF8F5",
             widget_font_family=w.widget_font_family or "Inter",
             widget_font_size=w.widget_font_size or 14,
-            widget_border_radius=w.widget_border_radius or 16,
+            widget_border_radius=w.widget_border_radius if w.widget_border_radius is not None else 16,
             widget_position=w.widget_position or "bottom-right",
             welcome_message=w.welcome_message or "",
             fallback_message=w.fallback_message or "",
@@ -2533,6 +2630,9 @@ async def create_widget(
     """Skapa ny widget för inloggat företag"""
     company_id = current["company_id"]
 
+    # Internal widgets default to bottom-left, external to bottom-right
+    default_position = "bottom-left" if widget.widget_type == "internal" else "bottom-right"
+
     new_widget = Widget(
         company_id=company_id,
         widget_key=generate_widget_key(company_id, widget.widget_type),
@@ -2540,6 +2640,7 @@ async def create_widget(
         widget_type=widget.widget_type,
         description=widget.description or "",
         primary_color=widget.primary_color or "#D97757",
+        widget_position=default_position,
         welcome_message=widget.welcome_message,
         fallback_message=widget.fallback_message,
         subtitle=widget.subtitle,
@@ -2567,9 +2668,11 @@ async def create_widget(
         description=new_widget.description or "",
         is_active=new_widget.is_active,
         primary_color=new_widget.primary_color or "#D97757",
+        secondary_color=new_widget.secondary_color or "#FEF3EC",
+        background_color=new_widget.background_color or "#FAF8F5",
         widget_font_family=new_widget.widget_font_family or "Inter",
         widget_font_size=new_widget.widget_font_size or 14,
-        widget_border_radius=new_widget.widget_border_radius or 16,
+        widget_border_radius=new_widget.widget_border_radius if new_widget.widget_border_radius is not None else 16,
         widget_position=new_widget.widget_position or "bottom-right",
         welcome_message=new_widget.welcome_message or "",
         fallback_message=new_widget.fallback_message or "",
@@ -2620,9 +2723,11 @@ async def get_widget(
         description=widget.description or "",
         is_active=widget.is_active,
         primary_color=widget.primary_color or "#D97757",
+        secondary_color=widget.secondary_color or "#FEF3EC",
+        background_color=widget.background_color or "#FAF8F5",
         widget_font_family=widget.widget_font_family or "Inter",
         widget_font_size=widget.widget_font_size or 14,
-        widget_border_radius=widget.widget_border_radius or 16,
+        widget_border_radius=widget.widget_border_radius if widget.widget_border_radius is not None else 16,
         widget_position=widget.widget_position or "bottom-right",
         welcome_message=widget.welcome_message or "",
         fallback_message=widget.fallback_message or "",
@@ -2689,9 +2794,11 @@ async def update_widget(
         description=widget.description or "",
         is_active=widget.is_active,
         primary_color=widget.primary_color or "#D97757",
+        secondary_color=widget.secondary_color or "#FEF3EC",
+        background_color=widget.background_color or "#FAF8F5",
         widget_font_family=widget.widget_font_family or "Inter",
         widget_font_size=widget.widget_font_size or 14,
-        widget_border_radius=widget.widget_border_radius or 16,
+        widget_border_radius=widget.widget_border_radius if widget.widget_border_radius is not None else 16,
         widget_position=widget.widget_position or "bottom-right",
         welcome_message=widget.welcome_message or "",
         fallback_message=widget.fallback_message or "",
@@ -2779,7 +2886,7 @@ async def get_settings(
         custom_categories=settings.custom_categories or "",
         widget_font_family=settings.widget_font_family or "Inter",
         widget_font_size=settings.widget_font_size or 14,
-        widget_border_radius=settings.widget_border_radius or 16,
+        widget_border_radius=settings.widget_border_radius if settings.widget_border_radius is not None else 16,
         widget_position=settings.widget_position or "bottom-right",
         suggested_questions=settings.suggested_questions or "",
         privacy_policy_url=settings.privacy_policy_url or "",
@@ -2935,7 +3042,7 @@ async def update_settings(
         custom_categories=settings.custom_categories or "",
         widget_font_family=settings.widget_font_family or "Inter",
         widget_font_size=settings.widget_font_size or 14,
-        widget_border_radius=settings.widget_border_radius or 16,
+        widget_border_radius=settings.widget_border_radius if settings.widget_border_radius is not None else 16,
         widget_position=settings.widget_position or "bottom-right",
         suggested_questions=settings.suggested_questions or "",
         privacy_policy_url=settings.privacy_policy_url or "",
@@ -3091,8 +3198,8 @@ async def get_conversation(
         message_responses.append(MessageResponse(
             id=msg.id,
             role=msg.role,
-            content=msg.content,
-            created_at=msg.created_at,
+            content=msg.content or "",
+            created_at=msg.created_at or conversation.started_at or datetime.utcnow(),
             sources=sources,
             had_answer=msg.had_answer if msg.had_answer is not None else True
         ))
@@ -3108,7 +3215,7 @@ async def get_conversation(
         id=conversation.id,
         session_id=conversation.session_id or f"session-{conversation.id}",
         reference_id=conversation.reference_id or f"BOB-{conversation.id:04d}",
-        started_at=conversation.started_at,
+        started_at=conversation.started_at or datetime.utcnow(),
         message_count=conversation.message_count or 0,
         was_helpful=conversation.was_helpful,
         category=conversation.category,
@@ -3189,7 +3296,8 @@ async def get_knowledge(
     if widget_id is not None:
         query = query.filter(KnowledgeItem.widget_id == widget_id)
 
-    items = query.all()
+    # Sort by created_at descending (newest first)
+    items = query.order_by(KnowledgeItem.created_at.desc()).all()
 
     # Get widget names for display
     widget_ids = set(i.widget_id for i in items if i.widget_id)
@@ -3204,7 +3312,8 @@ async def get_knowledge(
         answer=i.answer,
         category=i.category or "",
         widget_id=i.widget_id,
-        widget_name=widgets.get(i.widget_id) if i.widget_id else None
+        widget_name=widgets.get(i.widget_id) if i.widget_id else None,
+        created_at=i.created_at
     ) for i in items]
 
 
@@ -3254,7 +3363,8 @@ async def add_knowledge(
         answer=new_item.answer,
         category=new_item.category or "",
         widget_id=new_item.widget_id,
-        widget_name=widget_name
+        widget_name=widget_name,
+        created_at=new_item.created_at
     )
 
 
@@ -3303,7 +3413,8 @@ async def update_knowledge(
         answer=db_item.answer,
         category=db_item.category or "",
         widget_id=db_item.widget_id,
-        widget_name=widget_name
+        widget_name=widget_name,
+        created_at=db_item.created_at
     )
 
 
@@ -3970,13 +4081,13 @@ class BulkDeleteRequest(BaseModel):
     item_ids: List[int]
 
 
-@app.delete("/knowledge/bulk")
+@app.post("/knowledge/bulk-delete")
 async def delete_knowledge_bulk(
     request: BulkDeleteRequest,
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db)
 ):
-    """Delete multiple knowledge items at once"""
+    """Delete multiple knowledge items at once (using POST for better compatibility)"""
     deleted_count = 0
 
     for item_id in request.item_ids:
@@ -4015,6 +4126,7 @@ class TemplateInfo(BaseModel):
 class TemplateApplyRequest(BaseModel):
     replace_existing: bool = False
     categories_to_import: Optional[List[str]] = None
+    widget_id: int  # REQUIRED: Target widget for the imported items (templates must be widget-specific)
 
 
 class TemplateApplyResponse(BaseModel):
@@ -4110,19 +4222,25 @@ async def apply_template(
     items_added = 0
     items_skipped = 0
 
-    # Optionally clear existing knowledge
+    # Optionally clear existing knowledge (for this widget specifically)
     if request.replace_existing:
-        db.query(KnowledgeItem).filter(
+        delete_query = db.query(KnowledgeItem).filter(
             KnowledgeItem.company_id == company_id
-        ).delete()
+        )
+        if request.widget_id:
+            delete_query = delete_query.filter(KnowledgeItem.widget_id == request.widget_id)
+        delete_query.delete()
         db.commit()
 
-    # Get existing questions to avoid duplicates
+    # Get existing questions to avoid duplicates (for this widget specifically)
     existing_questions = set()
     if not request.replace_existing:
-        existing = db.query(KnowledgeItem.question).filter(
+        query = db.query(KnowledgeItem.question).filter(
             KnowledgeItem.company_id == company_id
-        ).all()
+        )
+        if request.widget_id:
+            query = query.filter(KnowledgeItem.widget_id == request.widget_id)
+        existing = query.all()
         existing_questions = {q[0].lower().strip() for q in existing}
 
     # Import template items
@@ -4149,7 +4267,8 @@ async def apply_template(
             company_id=company_id,
             question=question,
             answer=answer,
-            category=category
+            category=category,
+            widget_id=request.widget_id  # Associate with specific widget
         )
         db.add(db_item)
         existing_questions.add(question.lower())
@@ -5449,30 +5568,30 @@ PRICING_TIERS = {
         "name": "Starter",
         "monthly_fee": 1500,
         "startup_fee": 0,  # Free setup for starter
-        "max_conversations": 500,
-        "max_knowledge_items": 100,
-        "features": ["Grundläggande AI-chatt", "100 kunskapsartiklar", "500 konversationer/månad", "E-postsupport", "Standardanalytik", "Gratis uppstart"]
+        "max_conversations": 250,
+        "max_knowledge_items": 50,
+        "features": ["Grundläggande AI-chatt", "50 kunskapsartiklar", "250 konversationer/månad", "E-postsupport", "Standardanalytik", "Gratis uppstart"]
     },
     "professional": {
         "name": "Professional",
-        "monthly_fee": 3500,
-        "startup_fee": 10000,
+        "monthly_fee": 3000,
+        "startup_fee": 8000,
         "max_conversations": 2000,
-        "max_knowledge_items": 500,
-        "features": ["Allt i Starter", "500 kunskapsartiklar", "2000 konversationer/månad", "Prioriterad support", "Avancerad analytik", "Anpassad widget"]
+        "max_knowledge_items": 250,
+        "features": ["Allt i Starter", "250 kunskapsartiklar", "2000 konversationer/månad", "Prioriterad support", "Avancerad analytik", "Anpassad widget"]
     },
     "business": {
         "name": "Business",
-        "monthly_fee": 6500,
-        "startup_fee": 25000,
-        "max_conversations": 10000,
-        "max_knowledge_items": 2000,
-        "features": ["Allt i Professional", "2000 kunskapsartiklar", "10000 konversationer/månad", "Dedikerad support", "API-åtkomst", "Anpassade integrationer", "Onboarding"]
+        "monthly_fee": 6000,
+        "startup_fee": 16000,
+        "max_conversations": 5000,
+        "max_knowledge_items": 500,
+        "features": ["Allt i Professional", "500 kunskapsartiklar", "5000 konversationer/månad", "Dedikerad support", "API-åtkomst", "Anpassade integrationer", "Onboarding"]
     },
     "enterprise": {
         "name": "Enterprise",
         "monthly_fee": 10000,
-        "startup_fee": 50000,
+        "startup_fee": 32000,
         "max_conversations": 0,  # 0 = unlimited
         "max_knowledge_items": 0,  # 0 = unlimited
         "features": ["Allt i Business", "Obegränsade kunskapsartiklar", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling", "Dedikerad onboarding & utbildning"]
