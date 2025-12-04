@@ -5451,25 +5451,25 @@ PRICING_TIERS = {
         "name": "Starter",
         "monthly_fee": 1500,
         "startup_fee": 0,  # Free setup for starter
-        "max_conversations": 500,
-        "max_knowledge_items": 100,
-        "features": ["Grundläggande AI-chatt", "100 kunskapsartiklar", "500 konversationer/månad", "E-postsupport", "Standardanalytik", "Gratis uppstart"]
+        "max_conversations": 250,
+        "max_knowledge_items": 50,
+        "features": ["Grundläggande AI-chatt", "50 kunskapsartiklar", "250 konversationer/månad", "E-postsupport", "Standardanalytik", "Gratis uppstart"]
     },
     "professional": {
         "name": "Professional",
-        "monthly_fee": 3500,
-        "startup_fee": 10000,
+        "monthly_fee": 3000,
+        "startup_fee": 8000,
         "max_conversations": 2000,
-        "max_knowledge_items": 500,
-        "features": ["Allt i Starter", "500 kunskapsartiklar", "2000 konversationer/månad", "Prioriterad support", "Avancerad analytik", "Anpassad widget"]
+        "max_knowledge_items": 250,
+        "features": ["Allt i Starter", "250 kunskapsartiklar", "2000 konversationer/månad", "Prioriterad support", "Avancerad analytik", "Anpassad widget"]
     },
     "business": {
         "name": "Business",
-        "monthly_fee": 6500,
-        "startup_fee": 25000,
-        "max_conversations": 10000,
-        "max_knowledge_items": 2000,
-        "features": ["Allt i Professional", "2000 kunskapsartiklar", "10000 konversationer/månad", "Dedikerad support", "API-åtkomst", "Anpassade integrationer", "Onboarding"]
+        "monthly_fee": 6000,
+        "startup_fee": 16000,
+        "max_conversations": 5000,
+        "max_knowledge_items": 500,
+        "features": ["Allt i Professional", "500 kunskapsartiklar", "5000 konversationer/månad", "Dedikerad support", "API-åtkomst", "Anpassade integrationer", "Onboarding"]
     },
     "enterprise": {
         "name": "Enterprise",

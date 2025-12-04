@@ -919,9 +919,9 @@ function LandingPage() {
 
   // Fallback pricing tiers if API fails
   const fallbackPricingTiers = {
-    starter: { name: "Starter", monthly_fee: 1500, startup_fee: 0, max_conversations: 500, features: ["Grundläggande AI-chatt", "100 kunskapsartiklar", "500 konversationer/månad", "E-postsupport", "Gratis uppstart"] },
-    professional: { name: "Professional", monthly_fee: 3500, startup_fee: 10000, max_conversations: 2000, features: ["Allt i Starter", "500 kunskapsartiklar", "2000 konversationer/månad", "Prioriterad support", "Anpassad widget"] },
-    business: { name: "Business", monthly_fee: 6500, startup_fee: 25000, max_conversations: 10000, features: ["Allt i Professional", "2000 kunskapsartiklar", "10000 konversationer/månad", "Dedikerad support", "API-åtkomst"] },
+    starter: { name: "Starter", monthly_fee: 1500, startup_fee: 0, max_conversations: 250, features: ["Grundläggande AI-chatt", "50 kunskapsartiklar", "250 konversationer/månad", "E-postsupport", "Gratis uppstart"] },
+    professional: { name: "Professional", monthly_fee: 3000, startup_fee: 8000, max_conversations: 2000, features: ["Allt i Starter", "250 kunskapsartiklar", "2000 konversationer/månad", "Prioriterad support", "Anpassad widget"] },
+    business: { name: "Business", monthly_fee: 6000, startup_fee: 16000, max_conversations: 5000, features: ["Allt i Professional", "500 kunskapsartiklar", "5000 konversationer/månad", "Dedikerad support", "API-åtkomst"] },
     enterprise: { name: "Enterprise", monthly_fee: 10000, startup_fee: 50000, max_conversations: 0, features: ["Allt i Business", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling"] }
   }
 
