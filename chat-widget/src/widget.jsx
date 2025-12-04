@@ -686,7 +686,8 @@ function ChatWidget({ config }) {
             WebkitBackfaceVisibility: 'hidden',
             backfaceVisibility: 'hidden',
             contain: 'paint',
-            WebkitMaskImage: 'radial-gradient(white, black)',
+            clipPath: `inset(0 round ${borderRadius}px)`,
+            WebkitClipPath: `inset(0 round ${borderRadius}px)`,
           }}
         >
           {/* Header */}

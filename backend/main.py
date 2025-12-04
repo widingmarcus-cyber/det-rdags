@@ -2276,7 +2276,7 @@ async def get_widget_config_by_key(
         "widget_id": widget.id,
         "widget_key": widget.widget_key,
         "widget_type": widget.widget_type,
-        "widget_name": widget.name,
+        "widget_name": widget.display_name or settings.company_name or company.name,
         "company_name": settings.company_name or company.name,
         "welcome_message": widget.welcome_message or "",
         "fallback_message": widget.fallback_message or "",
