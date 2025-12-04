@@ -761,6 +761,31 @@ def run_migrations():
 
             conn.commit()
 
+        # Fix orphaned knowledge items (widget_id is NULL) by assigning to external widget
+        # This prevents knowledge from being "shared" across widgets unintentionally
+        if 'knowledge_items' in inspector.get_table_names() and 'widgets' in inspector.get_table_names():
+            # Find knowledge items with NULL widget_id
+            orphaned = conn.execute(text(
+                "SELECT DISTINCT company_id FROM knowledge_items WHERE widget_id IS NULL"
+            )).fetchall()
+
+            for row in orphaned:
+                company_id = row[0]
+                # Find the first external widget for this company
+                external_widget = conn.execute(text(
+                    "SELECT id FROM widgets WHERE company_id = :cid AND widget_type = 'external' LIMIT 1"
+                ), {"cid": company_id}).fetchone()
+
+                if external_widget:
+                    widget_id = external_widget[0]
+                    result = conn.execute(text(
+                        "UPDATE knowledge_items SET widget_id = :wid WHERE company_id = :cid AND widget_id IS NULL"
+                    ), {"wid": widget_id, "cid": company_id})
+                    if result.rowcount > 0:
+                        print(f"[Migration] Assigned {result.rowcount} orphaned knowledge items to external widget for company '{company_id}'")
+
+            conn.commit()
+
 
 def get_db():
     """Dependency för att få databas-session"""

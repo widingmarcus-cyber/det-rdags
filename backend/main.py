@@ -1012,7 +1012,33 @@ def init_demo_data():
                 )
                 db.add(demo_settings)
 
-                # Add demo knowledge base with categories
+                # Create demo widgets (external for customers, internal for employees)
+                external_widget = Widget(
+                    company_id="demo",
+                    widget_key="demo-ext-001",
+                    name="Extern",
+                    display_name="Kundtjänst",
+                    widget_type="external",
+                    widget_position="bottom-right",
+                    welcome_message="Hej! Hur kan jag hjälpa dig idag?",
+                    fallback_message="Tyvärr kunde jag inte hitta ett svar på din fråga. Kontakta oss på 08-123 456 78."
+                )
+                db.add(external_widget)
+
+                internal_widget = Widget(
+                    company_id="demo",
+                    widget_key="demo-int-001",
+                    name="Intern",
+                    display_name="HR Support",
+                    widget_type="internal",
+                    widget_position="bottom-left",
+                    welcome_message="Hej! Hur kan jag hjälpa dig med HR-frågor?",
+                    fallback_message="Jag kunde tyvärr inte hitta svaret. Kontakta HR på hr@demo.se."
+                )
+                db.add(internal_widget)
+                db.flush()  # Get widget IDs
+
+                # Add demo knowledge base for EXTERNAL widget (customer-facing)
                 demo_items = [
                     ("Hur säger jag upp min lägenhet?",
                      "För att säga upp din lägenhet behöver du skicka en skriftlig uppsägning till oss. Uppsägningstiden är vanligtvis 3 månader.",
@@ -1038,7 +1064,7 @@ def init_demo_data():
                 ]
 
                 for q, a, cat in demo_items:
-                    item = KnowledgeItem(company_id="demo", question=q, answer=a, category=cat)
+                    item = KnowledgeItem(company_id="demo", question=q, answer=a, category=cat, widget_id=external_widget.id)
                     db.add(item)
 
                 db.commit()
