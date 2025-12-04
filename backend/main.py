@@ -1069,17 +1069,15 @@ def find_relevant_context(question: str, company_id: str, db: Session, top_k: in
     A score of 3+ indicates meaningful keyword overlap with the question.
 
     If widget_id is provided:
-    - Returns ONLY items belonging to that specific widget (strict isolation)
-    - No shared items to prevent knowledge leakage between widgets
+    - Returns items belonging to that specific widget
+    - Also includes shared items (widget_id is NULL) for all widgets
     """
     # Filter by company and widget
     query = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == company_id)
     if widget_id:
-        # Strict widget isolation: only return items for this specific widget
-        query = query.filter(KnowledgeItem.widget_id == widget_id)
-    else:
-        # No widget specified: only return shared items (for backwards compatibility)
-        query = query.filter(KnowledgeItem.widget_id.is_(None))
+        # Include items for this specific widget OR shared items (widget_id is NULL)
+        from sqlalchemy import or_
+        query = query.filter(or_(KnowledgeItem.widget_id == widget_id, KnowledgeItem.widget_id.is_(None)))
     items = query.all()
 
     if not items:
@@ -4078,7 +4076,7 @@ class TemplateInfo(BaseModel):
 class TemplateApplyRequest(BaseModel):
     replace_existing: bool = False
     categories_to_import: Optional[List[str]] = None
-    widget_id: Optional[int] = None  # Target widget for the imported items
+    widget_id: int  # REQUIRED: Target widget for the imported items (templates must be widget-specific)
 
 
 class TemplateApplyResponse(BaseModel):

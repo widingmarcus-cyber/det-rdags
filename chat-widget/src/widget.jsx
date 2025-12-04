@@ -428,10 +428,12 @@ function ChatWidget({ config }) {
     const fetchConfig = async () => {
       try {
         // Use widget-specific config if widgetKey is provided, otherwise use company config
+        // Add cache-busting timestamp to ensure fresh config
+        const cacheBuster = `?t=${Date.now()}`
         const configUrl = config.widgetKey
-          ? `${config.apiUrl}/widget/key/${config.widgetKey}/config`
-          : `${config.apiUrl}/widget/${config.companyId}/config`
-        const res = await fetch(configUrl)
+          ? `${config.apiUrl}/widget/key/${config.widgetKey}/config${cacheBuster}`
+          : `${config.apiUrl}/widget/${config.companyId}/config${cacheBuster}`
+        const res = await fetch(configUrl, { cache: 'no-store' })
         if (res.ok) {
           const data = await res.json()
           setWidgetConfig(data)
@@ -679,6 +681,8 @@ function ChatWidget({ config }) {
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
+            // Force clipping to rounded corners using clip-path
+            clipPath: `inset(0 round ${borderRadius}px)`,
           }}
         >
           {/* Header */}
