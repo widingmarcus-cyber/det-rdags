@@ -440,10 +440,8 @@ function ChatWidget({ config }) {
           const data = await res.json()
           setWidgetConfig(data)
 
-          // Check stored consent
-          if (localStorage.getItem(`bobot_consent_${config.companyId}`) === 'true') {
-            setConsentGiven(true)
-          }
+          // Consent is NOT persisted - users must accept each session
+          // This ensures GDPR compliance by requiring explicit consent
 
           // Restore conversation
           const saved = loadFromStorage(config.companyId)
@@ -509,7 +507,7 @@ function ChatWidget({ config }) {
         body: JSON.stringify({ session_id: sessionId, consent_given: true })
       })
     } catch (e) {}
-    localStorage.setItem(`bobot_consent_${config.companyId}`, 'true')
+    // Consent is session-only, not persisted to localStorage
     setConsentGiven(true)
   }
 
@@ -572,7 +570,7 @@ function ChatWidget({ config }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId, consent_given: false })
       })
-      localStorage.removeItem(`bobot_consent_${config.companyId}`)
+      // Consent is session-only, no localStorage to clear
       setConsentGiven(false)
       setGdprMessage(t.consentRevoked)
       setTimeout(() => {

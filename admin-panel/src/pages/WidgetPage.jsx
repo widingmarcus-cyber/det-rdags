@@ -12,7 +12,7 @@ function WidgetPage({ widgetType }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  // Settings form
+  // Settings form - internal widgets default to bottom-left, external to bottom-right
   const [formData, setFormData] = useState({
     primary_color: '#D97757',
     secondary_color: '#FEF3EC',
@@ -30,7 +30,7 @@ function WidgetPage({ widgetType }) {
     widget_font_family: 'Inter',
     widget_font_size: 14,
     widget_border_radius: 16,
-    widget_position: 'bottom-right',
+    widget_position: widgetType === 'internal' ? 'bottom-left' : 'bottom-right',
     start_expanded: false  // Start widget open instead of as floating button
   })
 
@@ -242,7 +242,7 @@ function WidgetPage({ widgetType }) {
             widget_font_family: existingWidget.widget_font_family || 'Inter',
             widget_font_size: existingWidget.widget_font_size || 14,
             widget_border_radius: existingWidget.widget_border_radius || 16,
-            widget_position: existingWidget.widget_position || 'bottom-right',
+            widget_position: existingWidget.widget_position || (widgetType === 'internal' ? 'bottom-left' : 'bottom-right'),
             start_expanded: existingWidget.start_expanded || false
           })
           fetchKnowledge(existingWidget.id)
@@ -299,7 +299,7 @@ function WidgetPage({ widgetType }) {
           widget_font_family: newWidget.widget_font_family || 'Inter',
           widget_font_size: newWidget.widget_font_size || 14,
           widget_border_radius: newWidget.widget_border_radius || 16,
-          widget_position: newWidget.widget_position || 'bottom-right',
+          widget_position: newWidget.widget_position || (widgetType === 'internal' ? 'bottom-left' : 'bottom-right'),
           start_expanded: newWidget.start_expanded || false
         })
         setPreviewMessages([{ type: 'bot', text: newWidget.welcome_message }])

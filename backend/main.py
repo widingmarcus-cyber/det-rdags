@@ -2298,7 +2298,7 @@ async def get_widget_config_by_key(
         "font_family": widget.widget_font_family or "Inter",
         "font_size": widget.widget_font_size or 14,
         "border_radius": widget.widget_border_radius or 16,
-        "position": widget.widget_position or "bottom-right",
+        "position": widget.widget_position or ("bottom-left" if widget.widget_type == "internal" else "bottom-right"),
         # Quick Reply Suggestions
         "suggested_questions": suggested_questions,
         # PuB/GDPR Compliance
@@ -2599,6 +2599,9 @@ async def create_widget(
     """Skapa ny widget för inloggat företag"""
     company_id = current["company_id"]
 
+    # Internal widgets default to bottom-left, external to bottom-right
+    default_position = "bottom-left" if widget.widget_type == "internal" else "bottom-right"
+
     new_widget = Widget(
         company_id=company_id,
         widget_key=generate_widget_key(company_id, widget.widget_type),
@@ -2606,6 +2609,7 @@ async def create_widget(
         widget_type=widget.widget_type,
         description=widget.description or "",
         primary_color=widget.primary_color or "#D97757",
+        widget_position=default_position,
         welcome_message=widget.welcome_message,
         fallback_message=widget.fallback_message,
         subtitle=widget.subtitle,
