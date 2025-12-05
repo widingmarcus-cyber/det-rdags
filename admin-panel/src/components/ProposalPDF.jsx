@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
 // Page Footer Component
 const PageFooter = ({ pageNumber, totalPages }) => (
   <View style={styles.footer} fixed>
-    <Text style={styles.footerText}>Bobot AB | www.bobot.nu | info@bobot.nu</Text>
+    <Text style={styles.footerText}>Bobot AB | www.bobot.nu | hej@bobot.nu</Text>
     <Text style={styles.pageNumber}>Sida {pageNumber} av {totalPages}</Text>
   </View>
 )
@@ -843,7 +843,7 @@ const PricingPage = ({ startupFee, monthlyFee, tier, discount, conversationLimit
       <Text style={styles.contactTitle}>Nästa steg</Text>
       <Text style={styles.contactText}>
         Kontakta oss för att påbörja er trial eller om ni har frågor om offerten.{'\n'}
-        E-post: info@bobot.nu | Webb: www.bobot.nu
+        E-post: hej@bobot.nu | Webb: www.bobot.nu
       </Text>
     </View>
 

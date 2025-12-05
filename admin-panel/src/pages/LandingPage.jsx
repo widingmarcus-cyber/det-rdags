@@ -1,7 +1,8 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// Use /api prefix which is proxied to backend in both dev and production
+const API_BASE = '/api'
 
 // Page view tracking hook
 function usePageTracking() {
@@ -25,7 +26,7 @@ function usePageTracking() {
     const utmTerm = params.get('utm_term')
 
     // Track page view
-    fetch(`${API_URL}/track/pageview`, {
+    fetch(`${API_BASE}/track/pageview`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -47,7 +48,7 @@ function usePageTracking() {
       const timeOnPage = Math.round((Date.now() - startTime) / 1000)
       const isBounce = timeOnPage < 10
 
-      navigator.sendBeacon(`${API_URL}/track/engagement`, JSON.stringify({
+      navigator.sendBeacon(`${API_BASE}/track/engagement`, JSON.stringify({
         session_id: sessionId,
         page_url: window.location.href,
         time_on_page_seconds: timeOnPage,
@@ -287,468 +288,52 @@ function ThemeToggle({ isDark, onToggle }) {
   )
 }
 
-// Demo widget floating button for landing page
-function DemoWidget() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [messages, setMessages] = useState([
-    { type: 'bot', text: 'Hej! Jag är Bobot - er AI-medarbetare. Hur kan jag hjälpa dig idag?' }
-  ])
-  const [input, setInput] = useState('')
-  const [isTyping, setIsTyping] = useState(false)
-  const [expandedSources, setExpandedSources] = useState({})
+// Live widget loader - loads the real Bobot widget for the landing page
+// Widget key should be created in production for the "Bobot" company
+const LANDING_PAGE_WIDGET_KEY = import.meta.env.VITE_LANDING_WIDGET_KEY || 'bobot-landing'
 
-  // Smart demo responses based on keywords - accurate information only
-  const getSmartResponse = (userMsg) => {
-    const msg = userMsg.toLowerCase()
+function LiveWidget() {
+  const [loaded, setLoaded] = useState(false)
 
-    // Greeting
-    if (msg.includes('hej') || msg.includes('hejsan') || msg.includes('tjena') || msg.includes('hallå') || msg.includes('god dag')) {
-      return 'Hej! Kul att du vill veta mer om Bobot. Ställ gärna frågor om funktioner, GDPR, språkstöd eller hur det fungerar!'
+  useEffect(() => {
+    // Don't load twice
+    if (window.Bobot || document.getElementById('bobot-widget-script')) {
+      if (window.Bobot) {
+        window.Bobot.init({
+          widgetKey: LANDING_PAGE_WIDGET_KEY,
+          apiUrl: API_URL
+        })
+      }
+      return
     }
 
-    // Pricing - redirect to contact
-    if (msg.includes('pris') || msg.includes('kost') || msg.includes('betala') || msg.includes('avgift') || msg.includes('paket') || msg.includes('starter') || msg.includes('professional') || msg.includes('business') || msg.includes('enterprise')) {
-      return 'Vi erbjuder olika paket anpassade efter era behov. Kontakta oss på hej@bobot.nu för en offert baserad på era specifika krav!'
-    }
-
-    // GDPR & Security
-    if (msg.includes('gdpr') || msg.includes('säker') || msg.includes('data') || msg.includes('integritet') || msg.includes('personuppgift')) {
-      return 'Bobot är 100% GDPR-kompatibel. All data lagras lokalt, IP-adresser anonymiseras automatiskt, och konversationer raderas efter din valda tidsperiod (7-30 dagar). Användare kan se och radera sin data direkt i widgeten.'
-    }
-
-    // Languages
-    if (msg.includes('språk') || msg.includes('engelska') || msg.includes('arabiska') || msg.includes('english') || msg.includes('arabic')) {
-      return 'Bobot stöder svenska, engelska och arabiska - inklusive höger-till-vänster-stöd (RTL) för arabiska! Språket detekteras automatiskt baserat på vad användaren skriver.'
-    }
-
-    // Integration & Installation
-    if (msg.includes('integrer') || msg.includes('install') || msg.includes('wordpress') || msg.includes('hemsida') || msg.includes('wix') || msg.includes('squarespace')) {
-      return 'Super enkelt! Det är bara två rader JavaScript-kod att klistra in. Fungerar med WordPress, Wix, Squarespace och alla andra plattformar. De flesta är igång på under 10 minuter!'
-    }
-
-    // Demo
-    if (msg.includes('demo') || msg.includes('test') || msg.includes('prova')) {
-      return 'Du pratar med demon just nu! För en fullständig demo med er egen kunskapsbas, kontakta oss på hej@bobot.nu.'
-    }
-
-    // AI & Technology
-    if (msg.includes('ai') || msg.includes('llm') || msg.includes('ollama') || msg.includes('chatgpt') || msg.includes('artificiell') || msg.includes('intelligens') || msg.includes('modell')) {
-      return 'Bobot drivs av Llama 3.1 via Ollama - en kraftfull open source AI-modell. All AI-behandling sker lokalt, så ingen data skickas till tredje part som OpenAI eller Google.'
-    }
-
-    // ChatGPT comparison
-    if (msg.includes('chatgpt') || msg.includes('openai') || msg.includes('gpt')) {
-      return 'Till skillnad från ChatGPT: Bobot använder lokal AI (Llama 3.1) så ingen data skickas till OpenAI. Din kunskapsbas är helt privat. Bobot svarar ENDAST baserat på dina godkända svar - ingen hallucination.'
-    }
-
-    // Features
-    if (msg.includes('funktion') || msg.includes('kan bobot') || msg.includes('vad kan') || msg.includes('möjlighet') || msg.includes('feature')) {
-      return 'Bobot erbjuder: AI-chatbot med egen kunskapsbas, flerspråksstöd (SV/EN/AR), GDPR-compliance, statistik och analys, konversationshistorik, anpassningsbart utseende, snabbknappar, och enkel integration!'
-    }
-
-    // Multiple widgets
-    if (msg.includes('flera') && (msg.includes('widget') || msg.includes('bot') || msg.includes('chatt'))) {
-      return 'Ja! Du kan ha flera widgets - t.ex. en för kunder på hemsidan och en för internt medarbetarstöd. Varje widget har egen kunskapsbas, utseende och ton.'
-    }
-
-    // Internal widget / Medarbetarstöd
-    if (msg.includes('intern') || msg.includes('medarbetar') || msg.includes('anställd') || msg.includes('personal')) {
-      return 'Bobot har stöd för intern användning! Du kan skapa en separat widget för medarbetarstöd med egen kunskapsbas för HR-frågor, policyer, rutiner - med anpassad ton.'
-    }
-
-    // Sources feature demo
-    if (msg.includes('källa') || msg.includes('källor') || msg.includes('source') || msg.includes('referens')) {
-      return {
-        text: 'Bobot visar nu vilka kunskapsbasartiklar som användes för att ge svaret! Användare kan klicka på "Källor" för att se ursprungsinformationen.',
-        sources: [
-          { question: 'Visar Bobot varifrån svaren kommer?', answer: 'Ja! Varje AI-svar inkluderar klickbara källor som visar exakt vilka kunskapsbasartiklar som användes för att generera svaret.', category: 'Funktioner' },
-          { question: 'Kan användare se originalinnehållet?', answer: 'Ja, användare kan expandera källorna för att se den fullständiga frågan och svaret från kunskapsbasen.', category: 'Funktioner' }
-        ]
+    // Load the widget script
+    const script = document.createElement('script')
+    script.id = 'bobot-widget-script'
+    script.src = `${API_URL.replace('/api', '')}/widget.js`
+    script.async = true
+    script.onload = () => {
+      setLoaded(true)
+      if (window.Bobot) {
+        window.Bobot.init({
+          widgetKey: LANDING_PAGE_WIDGET_KEY,
+          apiUrl: API_URL
+        })
       }
     }
-
-    // Knowledge base
-    if (msg.includes('kunskaps') || msg.includes('faq') || msg.includes('frågor och svar') || msg.includes('träna') || msg.includes('lära')) {
-      return 'Du bygger din kunskapsbas genom att lägga till frågor och svar manuellt, eller importera från Excel, Word, CSV eller direkt från en webbsida. AI:n svarar baserat på ditt innehåll.'
+    script.onerror = () => {
+      console.error('Failed to load Bobot widget')
     }
+    document.body.appendChild(script)
 
-    // Import & Upload
-    if (msg.includes('import') || msg.includes('ladda upp') || msg.includes('upload') || msg.includes('excel') || msg.includes('csv') || msg.includes('word')) {
-      return 'Du kan importera kunskapsbas från Excel, Word, CSV, TXT-filer eller extrahera Q&A direkt från en webbsida. Perfekt för att snabbt komma igång med befintligt FAQ-material!'
+    // Cleanup on unmount
+    return () => {
+      // Widget handles its own cleanup
     }
+  }, [])
 
-    // Templates / Mallar
-    if (msg.includes('mall') || msg.includes('template') || msg.includes('färdig')) {
-      return 'Vi har färdiga kunskapsbasmallar för vanliga fastighetsämnen som tvättstuga, felanmälan, hyresavi, uppsägning m.m. Du kan applicera en mall och anpassa den efter era behov.'
-    }
-
-    // Statistics & Analytics
-    if (msg.includes('statistik') || msg.includes('analys') || msg.includes('rapport') || msg.includes('mät')) {
-      return 'Bobot ger dig detaljerad statistik: antal konversationer, vanligaste frågorna, obesvarade frågor, nöjdhetsbetyg (tumme upp/ner), och tidsanalys. Allt kan exporteras till CSV!'
-    }
-
-    // Export functionality
-    if (msg.includes('export') || msg.includes('ladda ner') || msg.includes('backup')) {
-      return 'Du kan exportera kunskapsbas (CSV/JSON) och konversationshistorik (CSV) med ett klick i adminpanelen. Perfekt för backup eller analys i Excel.'
-    }
-
-    // Customization & Branding
-    if (msg.includes('anpassa') || msg.includes('design') || msg.includes('färg') || msg.includes('utseende') || msg.includes('brand') || msg.includes('logotyp')) {
-      return 'Widgeten är anpassningsbar! Du kan välja primärfärg, typsnitt, teckenstorlek, rundade hörn, position (höger/vänster) och välkomstmeddelande. Allt med live-förhandsgranskning.'
-    }
-
-    // Dark mode
-    if (msg.includes('mörkt') || msg.includes('dark mode') || msg.includes('mörk')) {
-      return 'Ja! Widgeten har inbyggt stöd för mörkt läge. Användaren kan växla via menyn i chatten.'
-    }
-
-    // Property Management / Fastighetsbolag
-    if (msg.includes('fastighet') || msg.includes('hyresgäst') || msg.includes('hyra') || msg.includes('lägenhet') || msg.includes('bostads')) {
-      return 'Bobot är byggt för fastighetsbolag! Perfekt för att svara på hyresgästers frågor om tvättstugor, felanmälan, hyresavi, kontaktuppgifter och mer - dygnet runt, på flera språk.'
-    }
-
-    // Support & Contact
-    if (msg.includes('support') || msg.includes('kontakt') || msg.includes('mail') || msg.includes('telefon')) {
-      return 'Kontakta oss på hej@bobot.nu så hjälper vi dig gärna!'
-    }
-
-    // Time to start
-    if (msg.includes('hur lång tid') || msg.includes('komma igång') || msg.includes('setup')) {
-      return 'De flesta är igång på under 10 minuter! Bygg din kunskapsbas, kopiera två rader JavaScript-kod till din hemsida, och du är redo.'
-    }
-
-    // Mobile & Responsive
-    if (msg.includes('mobil') || msg.includes('telefon') || msg.includes('responsiv') || msg.includes('tablet')) {
-      return 'Bobot-widgeten är fullt responsiv och fungerar perfekt på mobiler, surfplattor och datorer. På mobilen öppnas chatten i fullskärmsläge.'
-    }
-
-    // Two-factor authentication
-    if (msg.includes('2fa') || msg.includes('tvåfaktor') || msg.includes('authenticator')) {
-      return 'Ja, vi stöder tvåfaktorsautentisering (2FA) via Google Authenticator eller liknande TOTP-appar för admin-inloggning.'
-    }
-
-    // What is Bobot
-    if (msg.includes('vad är bobot') || msg.includes('vad gör bobot') || msg.includes('berätta om')) {
-      return 'Bobot är en GDPR-säker AI-chatbot för fastighetsbolag. Du bygger en kunskapsbas med frågor och svar, och widgeten hjälper dina hyresgäster 24/7 på svenska, engelska och arabiska!'
-    }
-
-    // Comparison / Jämförelse
-    if (msg.includes('jämför') || msg.includes('skillnad') || msg.includes('konkurrent') || msg.includes('alternativ')) {
-      return 'Bobot skiljer sig genom: Lokal AI utan tredjepartstjänster, specialbyggt för fastighetsbolag, GDPR-kompatibelt med data i Sverige, och enkel uppstart på under 10 minuter.'
-    }
-
-    // Feedback system
-    if (msg.includes('feedback') || msg.includes('betyg') || msg.includes('tumme') || msg.includes('nöjd')) {
-      return 'Varje AI-svar har tumme upp/tumme ner-knappar. Du kan se statistik över nöjdhet i adminpanelen och enkelt identifiera svar som behöver förbättras.'
-    }
-
-    // Categories / Organization
-    if (msg.includes('kategori') || msg.includes('sortera') || msg.includes('organiser')) {
-      return 'Din kunskapsbas kan organiseras i kategorier (t.ex. Tvättstuga, Felanmälan, Ekonomi). Du kan filtrera vilka kategorier varje widget ska använda.'
-    }
-
-    // Suggested questions / Quick replies
-    if (msg.includes('snabbknappar') || msg.includes('förslag') || msg.includes('snabb') && msg.includes('fråg')) {
-      return 'Du kan konfigurera snabbknappar som visas i widgeten - vanliga frågor som användare kan klicka på direkt.'
-    }
-
-    // Position / Placement
-    if (msg.includes('position') || msg.includes('placera') || msg.includes('höger') || msg.includes('vänster')) {
-      return 'Widgeten kan placeras i nedre högra eller vänstra hörnet av hemsidan. Du väljer position i inställningarna.'
-    }
-
-    // Conversation history
-    if (msg.includes('historik') || msg.includes('spara') && msg.includes('konversation')) {
-      return 'Konversationer sparas så användaren kan fortsätta där de slutade. Du väljer hur länge data sparas (7-30 dagar enligt GDPR). All historik är tillgänglig i adminpanelen.'
-    }
-
-    // Multi-tenant
-    if (msg.includes('flera företag') || msg.includes('multi-tenant')) {
-      return 'Bobot stöder multi-tenant - varje företag får egen inloggning, kunskapsbas och widgets. Kontakta oss för mer information!'
-    }
-
-    // Admin panel
-    if (msg.includes('admin') || msg.includes('administr')) {
-      return 'Adminpanelen ger dig full kontroll: hantera kunskapsbas, se konversationer, analysera statistik, anpassa widgets, exportera data och mer. Inget tekniskt kunnande krävs!'
-    }
-
-    // Swedish / Local
-    if (msg.includes('svensk') || msg.includes('lokal') || msg.includes('sverige')) {
-      return 'Bobot är byggt för den svenska marknaden med fokus på GDPR-compliance och svenska fastighetsbolag.'
-    }
-
-    // Accessibility
-    if (msg.includes('tillgänglighet') || msg.includes('wcag') || msg.includes('skärmläsare')) {
-      return 'Widgeten är byggd med tillgänglighet i åtanke: tangentbordsnavigering, ARIA-labels för skärmläsare, och god kontrast.'
-    }
-
-    // Availability
-    if (msg.includes('offline') || msg.includes('nere') || msg.includes('tillgäng')) {
-      return 'Bobot är tillgänglig 24/7. Om AI-tjänsten tillfälligt är nere visar widgeten ett felmeddelande och uppmanar användaren att kontakta er direkt.'
-    }
-
-    // Question words - generic help
-    if (msg.includes('hur') && msg.includes('fungerar')) {
-      return 'Bobot fungerar i tre steg:\n\n1. Du bygger en kunskapsbas med frågor och svar\n2. Du kopierar widget-koden till din hemsida\n3. AI:n svarar automatiskt på besökarnas frågor 24/7!\n\nVill du veta mer om något specifikt steg?'
-    }
-
-    // Why Bobot
-    if (msg.includes('varför') && (msg.includes('bobot') || msg.includes('välja') || msg.includes('använda'))) {
-      return 'Varför Bobot?\n\n✓ Spara 80% av supporttiden\n✓ Tillgänglig 24/7 på 3 språk\n✓ 100% GDPR-säker, svensk data\n✓ Igång på 10 minuter\n✓ Inga dolda kostnader\n✓ Specialbyggt för fastighetsbolag'
-    }
-
-    // Thanks
-    if (msg.includes('tack') || msg.includes('thanks') || msg.includes('bra') || msg.includes('perfekt')) {
-      return 'Tack själv! Har du fler frågor så är det bara att fråga. 😊'
-    }
-
-    // Hello in other languages
-    if (msg.includes('hello') || msg.includes('hi ') || msg.includes('hey')) {
-      return 'Hello! Bobot supports English too. Feel free to ask about features, GDPR compliance, or how to get started!'
-    }
-
-    if (msg.includes('مرحبا') || msg.includes('السلام')) {
-      return 'مرحباً! يدعم Bobot اللغة العربية أيضاً. يمكنك السؤال عن الميزات والخصوصية.'
-    }
-
-    // Default responses
-    const defaults = [
-      'Bra fråga! I en riktig Bobot-installation skulle jag söka igenom er kunskapsbas och ge ett precist svar baserat på era egna dokument.',
-      'Det kan jag tyvärr inte svara på i demon. Men med den riktiga Bobot kan ni träna mig på precis det ni behöver!',
-      'Intressant fråga! Kontakta oss på hej@bobot.nu så berättar vi mer om hur Bobot kan hjälpa er.',
-      'Fråga gärna om funktioner, GDPR, språkstöd eller hur snabbt ni kan komma igång!',
-    ]
-    return defaults[Math.floor(Math.random() * defaults.length)]
-  }
-
-  const handleSend = () => {
-    if (!input.trim() || isTyping) return
-    const userMsg = input.trim()
-    setMessages(prev => [...prev, { type: 'user', text: userMsg }])
-    setInput('')
-    setIsTyping(true)
-
-    setTimeout(() => {
-      const response = getSmartResponse(userMsg)
-      // Handle both string responses and object responses (with sources)
-      const botMessage = typeof response === 'string'
-        ? { type: 'bot', text: response }
-        : { type: 'bot', text: response.text, sources: response.sources, id: Date.now() }
-      setMessages(prev => [...prev, botMessage])
-      setIsTyping(false)
-    }, 800 + Math.random() * 700)
-  }
-
-  return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
-      {/* Chat Window */}
-      {isOpen && (
-        <div className="w-80 sm:w-96 bg-white dark:bg-stone-800 rounded-2xl shadow-2xl border border-stone-200 dark:border-stone-700 overflow-hidden animate-fade-in">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-[#D97757] to-[#C4613D] p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 48 48" fill="none">
-                <rect x="14" y="8" width="20" height="11" rx="2" fill="#FFFFFF" />
-                <ellipse cx="19" cy="13.5" rx="4" ry="3.5" fill="#1C1917" />
-                <ellipse cx="29" cy="13.5" rx="4" ry="3.5" fill="#1C1917" />
-                <ellipse cx="19" cy="14" rx="2" ry="2" fill="#D97757" />
-                <ellipse cx="29" cy="14" rx="2" ry="2" fill="#D97757" />
-                <rect x="12" y="22" width="24" height="14" rx="2" fill="#FFFFFF" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <div className="font-semibold text-white">Bobot Demo</div>
-              <div className="text-xs text-white/80">din medarbetare</div>
-            </div>
-            <button onClick={() => setIsOpen(false)} className="p-1 hover:bg-white/20 rounded transition-colors">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          </div>
-
-          {/* Messages */}
-          <div className="h-64 overflow-y-auto p-4 space-y-3 bg-[#FAF8F5] dark:bg-stone-900">
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm ${
-                  msg.type === 'user'
-                    ? 'bg-gradient-to-r from-[#D97757] to-[#C4613D] text-white rounded-br-sm'
-                    : 'bg-[#FEF3EC] dark:bg-stone-700 text-stone-700 dark:text-stone-200 border border-[#E8D5CC] dark:border-stone-600 rounded-bl-sm'
-                }`}>
-                  {msg.text}
-
-                  {/* Sources section for demo */}
-                  {msg.type === 'bot' && msg.sources && msg.sources.length > 0 && (
-                    <div className="mt-2">
-                      <button
-                        onClick={() => setExpandedSources(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-[#D97757]/10 text-[#D97757] border border-[#D97757]/30 rounded-md font-medium hover:bg-[#D97757]/20 transition-colors"
-                      >
-                        <svg
-                          width="10"
-                          height="10"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          className={`transition-transform ${expandedSources[msg.id] ? 'rotate-90' : ''}`}
-                        >
-                          <polyline points="9 18 15 12 9 6"/>
-                        </svg>
-                        Källor ({msg.sources.length})
-                      </button>
-
-                      {expandedSources[msg.id] && (
-                        <div className="mt-2 space-y-2">
-                          {msg.sources.map((source, idx) => (
-                            <div
-                              key={idx}
-                              className="p-2.5 bg-white dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-600"
-                            >
-                              <div className="text-xs font-medium text-[#D97757] mb-1">
-                                {source.question}
-                              </div>
-                              <div className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
-                                {source.answer}
-                              </div>
-                              {source.category && (
-                                <span className="inline-block mt-1.5 px-1.5 py-0.5 text-[10px] bg-stone-100 dark:bg-stone-700 text-stone-500 dark:text-stone-400 rounded">
-                                  {source.category}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-            {isTyping && (
-              <div className="flex justify-start">
-                <div className="bg-[#FEF3EC] dark:bg-stone-700 px-4 py-3 rounded-2xl rounded-bl-sm border border-[#E8D5CC] dark:border-stone-600">
-                  <div className="flex gap-1">
-                    <span className="w-2 h-2 bg-[#D97757] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-2 h-2 bg-[#D97757] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-2 h-2 bg-[#D97757] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Input */}
-          <div className="p-3 border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Skriv ett meddelande..."
-                className="flex-1 px-4 py-2 bg-stone-100 dark:bg-stone-700 rounded-full text-sm outline-none focus:ring-2 focus:ring-[#D97757] text-stone-700 dark:text-stone-200 placeholder-stone-400"
-              />
-              <button
-                onClick={handleSend}
-                disabled={!input.trim() || isTyping}
-                className="w-10 h-10 bg-gradient-to-r from-[#D97757] to-[#C4613D] rounded-full flex items-center justify-center text-white disabled:opacity-50 hover:scale-105 transition-transform"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z" />
-                </svg>
-              </button>
-            </div>
-            <div className="mt-2 pt-2 border-t border-stone-100 dark:border-stone-700">
-              <p className="text-center text-xs text-stone-400">
-                Personuppgiftsansvarig: <span className="font-medium text-stone-500 dark:text-stone-400">Marcus Widing</span>
-                {' · '}
-                <a href="mailto:hej@bobot.nu" className="text-[#D97757] hover:underline">hej@bobot.nu</a>
-              </p>
-              <p className="text-center text-xs text-stone-400 mt-1">
-                Detta är en demo - <a href="mailto:hej@bobot.nu" className="text-[#D97757] hover:underline">kontakta oss</a> för att komma igång!
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Floating Button with Mascot */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 ${isOpen ? '' : 'demo-widget-glow'}`}
-        style={{
-          background: 'linear-gradient(135deg, #D97757 0%, #C4613D 100%)',
-        }}
-        aria-label={isOpen ? 'Stäng demo' : 'Testa Bobot'}
-      >
-        {isOpen ? (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        ) : (
-          <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
-            {/* Feet */}
-            <rect x="10" y="38" width="12" height="5" rx="2.5" fill="#78716C" />
-            <rect x="26" y="38" width="12" height="5" rx="2.5" fill="#78716C" />
-            <rect x="11.5" y="39" width="9" height="3" rx="1.5" fill="#57534E" />
-            <rect x="27.5" y="39" width="9" height="3" rx="1.5" fill="#57534E" />
-            {/* Body */}
-            <rect x="12" y="22" width="24" height="17" rx="2" fill="#FFFFFF" />
-            <rect x="13.5" y="23.5" width="21" height="14" rx="1" fill="#F5F5F4" />
-            {/* Chest screens */}
-            <rect x="15" y="30" width="8" height="6" rx="1" fill="#1C1917" />
-            <rect x="25" y="30" width="8" height="6" rx="1" fill="#1C1917" />
-            {/* Neck */}
-            <rect x="20" y="18" width="8" height="5" rx="1" fill="#78716C" />
-            {/* Head */}
-            <rect x="14" y="8" width="20" height="11" rx="2" fill="#FFFFFF" />
-            {/* Eyes */}
-            <ellipse cx="19" cy="13.5" rx="4.5" ry="4" fill="#1C1917" />
-            <ellipse cx="29" cy="13.5" rx="4.5" ry="4" fill="#1C1917" />
-            <ellipse cx="19" cy="13.5" rx="3.5" ry="3" fill="#292524" />
-            <ellipse cx="29" cy="13.5" rx="3.5" ry="3" fill="#292524" />
-            {/* Pupils */}
-            <ellipse cx="19" cy="14" rx="2" ry="2" fill="#D97757">
-              <animate attributeName="ry" values="2;0.2;2;2;2" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
-            </ellipse>
-            <ellipse cx="29" cy="14" rx="2" ry="2" fill="#D97757">
-              <animate attributeName="ry" values="2;0.2;2;2;2" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
-            </ellipse>
-            {/* Eye shine */}
-            <circle cx="20" cy="13" r="1" fill="#FFFFFF">
-              <animate attributeName="opacity" values="1;0;1;1;1" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
-            </circle>
-            <circle cx="30" cy="13" r="1" fill="#FFFFFF">
-              <animate attributeName="opacity" values="1;0;1;1;1" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
-            </circle>
-            {/* Nose */}
-            <rect x="22.5" y="12" width="3" height="3" rx="1" fill="#78716C" />
-            {/* Arms */}
-            <rect x="5" y="25" width="7" height="2.5" rx="1.2" fill="#78716C" />
-            <rect x="36" y="25" width="7" height="2.5" rx="1.2" fill="#78716C" />
-            {/* Hands */}
-            <rect x="3" y="23" width="3.5" height="6" rx="1" fill="#57534E" />
-            <rect x="41.5" y="23" width="3.5" height="6" rx="1" fill="#57534E" />
-            {/* Antenna */}
-            <rect x="22.5" y="4" width="3" height="5" rx="1" fill="#78716C" />
-            <circle cx="24" cy="3" r="2.5" fill="#4A9D7C">
-              <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite" />
-            </circle>
-          </svg>
-        )}
-      </button>
-
-      {/* Tooltip when closed */}
-      {!isOpen && (
-        <div className="absolute bottom-16 right-0 bg-stone-900 text-white text-sm px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap animate-fade-in">
-          Testa mig!
-          <div className="absolute -bottom-1 right-5 w-2 h-2 bg-stone-900 rotate-45" />
-        </div>
-      )}
-    </div>
-  )
+  // The widget renders itself - this component just loads it
+  return null
 }
 
 function TypedText({ text, delay = 0, speed = 30, onComplete }) {
@@ -772,11 +357,11 @@ function TypedText({ text, delay = 0, speed = 30, onComplete }) {
     }
   }, [displayedText, text, speed, hasStarted, onComplete])
 
-  // Always render full text for layout, show typed portion visibly
+  // Show typed text directly (simpler approach for better cross-browser support)
   return (
-    <span className="relative">
-      <span className="invisible">{text}</span>
-      <span className="absolute inset-0">{displayedText}{isTyping && <span className="animate-pulse">|</span>}</span>
+    <span>
+      {displayedText}
+      {isTyping && <span className="animate-pulse">|</span>}
     </span>
   )
 }
@@ -868,6 +453,20 @@ function PricingCard({ tier }) {
           </li>
         ))}
       </ul>
+      {tier.self_host_available && (
+        <div className="pt-4 border-t border-stone-200 dark:border-stone-700">
+          <div className="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-400">
+            <svg className="w-4 h-4 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+            </svg>
+            <span>
+              {tier.self_host_license_fee === 0
+                ? 'Self-hosting ingår'
+                : `Self-hosting: +${formatPrice(tier.self_host_license_fee)} kr`}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -967,8 +566,16 @@ function LandingPage() {
   const [currentSection, setCurrentSection] = useState(0)
   const [pricingTiers, setPricingTiers] = useState(null)
   const [openFAQ, setOpenFAQ] = useState(null)
-  const [isDark, setIsDark] = useState(() => typeof window !== 'undefined' && document.documentElement.classList.contains('dark'))
+  const [isDark, setIsDark] = useState(false)
   const containerRef = useRef(null)
+
+  // Force light mode on landing page mount and set page title
+  useEffect(() => {
+    document.title = 'Bobot - din AI-medarbetare'
+    // Start in light mode on landing page
+    document.documentElement.classList.remove('dark')
+    setIsDark(false)
+  }, [])
   const sectionsRef = useRef([])
   const isScrollingRef = useRef(false)
 
@@ -981,10 +588,10 @@ function LandingPage() {
 
   // Fallback pricing tiers if API fails
   const fallbackPricingTiers = {
-    starter: { name: "Starter", monthly_fee: 1500, startup_fee: 0, max_conversations: 250, features: ["Grundläggande AI-chatt", "50 kunskapsartiklar", "250 konversationer/månad", "E-postsupport", "Gratis uppstart"] },
-    professional: { name: "Professional", monthly_fee: 3000, startup_fee: 8000, max_conversations: 2000, features: ["Allt i Starter", "250 kunskapsartiklar", "2000 konversationer/månad", "Prioriterad support", "Anpassad widget"] },
-    business: { name: "Business", monthly_fee: 6000, startup_fee: 16000, max_conversations: 5000, features: ["Allt i Professional", "500 kunskapsartiklar", "5000 konversationer/månad", "Dedikerad support", "API-åtkomst"] },
-    enterprise: { name: "Enterprise", monthly_fee: 10000, startup_fee: 32000, max_conversations: 0, features: ["Allt i Business", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling"] }
+    starter: { name: "Starter", monthly_fee: 1500, startup_fee: 0, max_conversations: 250, self_host_available: false, features: ["Grundläggande AI-chatt", "50 kunskapsartiklar", "250 konversationer/månad", "E-postsupport", "Gratis uppstart"] },
+    professional: { name: "Professional", monthly_fee: 3000, startup_fee: 8000, max_conversations: 2000, self_host_available: true, self_host_license_fee: 20000, features: ["Allt i Starter", "250 kunskapsartiklar", "2000 konversationer/månad", "Prioriterad support", "Anpassad widget"] },
+    business: { name: "Business", monthly_fee: 6000, startup_fee: 16000, max_conversations: 5000, self_host_available: true, self_host_license_fee: 35000, features: ["Allt i Professional", "500 kunskapsartiklar", "5000 konversationer/månad", "Dedikerad support", "API-åtkomst"] },
+    enterprise: { name: "Enterprise", monthly_fee: 10000, startup_fee: 32000, max_conversations: 0, self_host_available: true, self_host_license_fee: 0, features: ["Allt i Business", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling", "Self-hosting ingår"] }
   }
 
   useEffect(() => {
@@ -1061,7 +668,7 @@ function LandingPage() {
     { from: 'bot', text: 'Hej! Du har 25 dagar totalt i år. Vill du ansöka så gör du det via HR-portalen minst 4 veckor innan 😊' },
   ]
 
-  const sellingPoints = ['Avlastar medarbetare', 'Alltid tillgänglig', 'Intern kunskapsbank', 'GDPR-säker', 'Träna nyanställda', 'Enkel att integrera', 'Flera språk']
+  const sellingPoints = ['Avlastar medarbetare', 'Alltid tillgänglig', 'Intern kunskapsbank', 'GDPR-säker', 'Introduktion för nyanställda', 'Enkel att integrera', 'Flera språk', 'Drar ner kostnader']
 
   const howItWorksSteps = [
     {
@@ -1085,14 +692,15 @@ function LandingPage() {
   ]
 
   const faqs = [
-    { q: 'Hur lång tid tar det att komma igång?', a: 'De flesta kunder är igång på under 10 minuter. Ladda upp din kunskapsbank, kopiera koden till din hemsida, och du är redo!' },
-    { q: 'Hur fungerar GDPR-efterlevnaden?', a: 'All data lagras på servrar i Sverige. Konversationer anonymiseras automatiskt och raderas enligt dina inställningar (7-30 dagar). Vi samlar aldrig in personuppgifter utan samtycke.' },
+    { q: 'Hur lång tid tar det att komma igång?', a: 'De flesta kunder är igång på cirka 15 minuter. Ladda upp din kunskapsbank, kopiera koden till din hemsida, och du är redo!' },
+    { q: 'Hur fungerar GDPR-efterlevnaden?', a: 'All data lagras på servrar inom EU. Konversationer anonymiseras automatiskt och raderas enligt dina inställningar (7-30 dagar). Vi samlar aldrig in personuppgifter utan samtycke. Dedikerad svensk hosting finns som tillval.' },
     { q: 'Kan jag ha flera chatbotar?', a: 'Ja! Du kan skapa separata widgets - t.ex. en för kundtjänst på din hemsida och en för internt medarbetarstöd. Varje widget kan ha egen kunskapsbas, utseende och ton.' },
     { q: 'Hur importerar jag befintlig FAQ?', a: 'Du kan importera direkt från Excel, Word, CSV eller TXT-filer. Du kan även extrahera Q&A automatiskt från en befintlig webbsida genom att ange URL:en.' },
-    { q: 'Vilken AI-teknik används?', a: 'Bobot drivs av Llama 3.1 via Ollama - en kraftfull open source AI-modell. All AI-behandling sker lokalt på svenska servrar, så ingen data skickas till tredje part.' },
+    { q: 'Vilken AI-teknik används?', a: 'Bobot drivs av Qwen 2.5 14B via Ollama - en kraftfull open source AI-modell med utmärkt flerspråksstöd. All AI-behandling sker lokalt på våra servrar, så ingen data skickas till tredje part.' },
     { q: 'Vad händer om Bobot inte kan svara?', a: 'Bobot visar ett anpassningsbart reservmeddelande och loggar frågan i analytics. Du kan sedan lägga till svaret i kunskapsbanken för framtida frågor.' },
     { q: 'Kan jag anpassa utseendet?', a: 'Absolut! Du kan välja primärfärg, bakgrundsfärg, typsnitt, teckenstorlek, rundade hörn och position. Allt anpassas i adminpanelen med live-förhandsgranskning.' },
     { q: 'Finns det statistik och rapporter?', a: 'Ja, du får detaljerad statistik över antal konversationer, vanligaste frågorna, obesvarade frågor, nöjdhetsbetyg och svarstider. Allt kan exporteras till CSV.' },
+    { q: 'Kan jag hosta Bobot själv?', a: 'Ja! Self-hosting finns som tillval för Professional (+20 000 kr engång), Business (+35 000 kr engång) och Enterprise (ingår). Du får fullständig källkod, installationsguide och licensnyckel för din egen server. Licensnyckeln valideras mot bobot.nu för att säkerställa aktiv prenumeration.' },
   ]
 
   const orderedTiers = pricingTiers ? Object.entries(pricingTiers).map(([key, tier]) => ({ key, ...tier })).sort((a, b) => (a.monthly_fee || 0) - (b.monthly_fee || 0)) : []
@@ -1270,7 +878,7 @@ function LandingPage() {
         {/* Enhanced Footer */}
         <footer className="mt-auto pt-12 border-t border-stone-200 dark:border-stone-700">
           <div className="max-w-6xl mx-auto">
-            <div className="grid sm:grid-cols-3 gap-8 mb-8">
+            <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8 mb-8">
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <BobotMini />
@@ -1292,6 +900,12 @@ function LandingPage() {
                   <li><a href="mailto:hej@bobot.nu" className="hover:text-[#D97757] transition-colors">hej@bobot.nu</a></li>
                 </ul>
               </div>
+              <div>
+                <h4 className="font-semibold text-stone-900 dark:text-stone-100 mb-4">Juridiskt</h4>
+                <ul className="space-y-2 text-sm text-stone-500 dark:text-stone-400">
+                  <li><Link to="/integritetspolicy" className="hover:text-[#D97757] transition-colors">Integritetspolicy</Link></li>
+                </ul>
+              </div>
             </div>
             <div className="pt-8 border-t border-stone-200 dark:border-stone-700 flex flex-col sm:flex-row justify-between items-center gap-4">
               <span className="text-xs text-stone-400">&copy; {new Date().getFullYear()} Bobot. Alla rättigheter förbehållna.</span>
@@ -1302,7 +916,7 @@ function LandingPage() {
                 </span>
                 <span className="flex items-center gap-1">
                   <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /></svg>
-                  Data lagras i Sverige
+                  Data lagras inom EU
                 </span>
               </div>
             </div>
@@ -1310,20 +924,21 @@ function LandingPage() {
         </footer>
       </section>
 
-      {/* Demo Widget Floating Button */}
-      <DemoWidget />
+      {/* Live Widget - loads real Bobot widget for "Bobot" company */}
+      <LiveWidget />
 
       <style>{`
-        html { scroll-behavior: smooth; scroll-snap-type: y mandatory; }
-        section { scroll-snap-align: start; scroll-snap-stop: always; }
+        html { scroll-behavior: smooth; }
+        @media (min-width: 1024px) and (hover: hover) {
+          html { scroll-snap-type: y proximity; }
+          section { scroll-snap-align: start; }
+        }
         @keyframes float { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-10px) rotate(2deg); } }
         .animate-float { animation: float 4s ease-in-out infinite; }
         @keyframes sparkle { 0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; } 50% { transform: scale(1) rotate(180deg); opacity: 1; } }
         .animate-sparkle { animation: sparkle 3s ease-in-out infinite; }
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
         .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
-        @keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 15px rgba(217, 119, 87, 0.4), 0 4px 24px rgba(0, 0, 0, 0.15); } 50% { box-shadow: 0 0 25px rgba(217, 119, 87, 0.6), 0 4px 24px rgba(0, 0, 0, 0.15); } }
-        .demo-widget-glow { animation: glow-pulse 2s ease-in-out infinite; }
       `}</style>
     </div>
   )

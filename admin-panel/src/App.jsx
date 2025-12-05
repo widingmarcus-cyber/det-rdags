@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useState, useEffect, createContext } from 'react'
 import LandingPage from './pages/LandingPage'
+import PrivacyPolicy from './pages/PrivacyPolicy'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import WidgetPage from './pages/WidgetPage'
@@ -78,6 +79,28 @@ function App() {
       localStorage.removeItem('bobot_admin_auth')
     }
   }, [adminAuth])
+
+  // Dynamic page titles based on route
+  useEffect(() => {
+    const pageTitles = {
+      '/': 'Bobot - din AI-medarbetare',
+      '/login': 'Logga in - Bobot',
+      '/admin-login': 'Admin Login - Bobot',
+      '/dashboard': 'Dashboard - Bobot Admin',
+      '/conversations': 'Konversationer - Bobot Admin',
+      '/analytics': 'Analys - Bobot Admin',
+      '/settings': 'Inställningar - Bobot Admin',
+      '/docs': 'Dokumentation - Bobot Admin',
+      '/super-admin': 'Super Admin - Bobot'
+    }
+
+    // Check for widget routes
+    if (location.pathname.startsWith('/widget/')) {
+      document.title = 'Widget - Bobot Admin'
+    } else {
+      document.title = pageTitles[location.pathname] || 'Bobot - din AI-medarbetare'
+    }
+  }, [location.pathname])
 
   // Company login
   const handleLogin = async (companyId, password) => {
@@ -272,6 +295,7 @@ function App() {
     return (
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/integritetspolicy" element={<PrivacyPolicy />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

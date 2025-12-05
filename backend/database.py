@@ -73,6 +73,13 @@ class Company(Base):
     discount_end_date = Column(Date)  # When discount expires (null = permanent)
     discount_note = Column(String, default="")  # Reason for discount
 
+    # Self-hosting
+    is_self_hosted = Column(Boolean, default=False)  # Whether self-hosting is enabled
+    self_host_license_key = Column(String, unique=True, nullable=True)  # Unique license key
+    self_host_activated_at = Column(DateTime, nullable=True)  # When self-hosting was activated
+    self_host_license_valid_until = Column(DateTime, nullable=True)  # License expiry for validation
+    self_host_last_validated = Column(DateTime, nullable=True)  # Last successful validation
+
     # Relations
     knowledge_items = relationship("KnowledgeItem", back_populates="company", cascade="all, delete-orphan")
     chat_logs = relationship("ChatLog", back_populates="company", cascade="all, delete-orphan")
@@ -758,6 +765,62 @@ def run_migrations():
             if 'widget_border_radius' not in existing_columns:
                 conn.execute(text("ALTER TABLE widgets ADD COLUMN widget_border_radius INTEGER DEFAULT 16"))
                 print("[Migration] Added 'widget_border_radius' column to widgets table")
+
+            conn.commit()
+
+        # Migrate super_admins table (2FA columns)
+        if 'super_admins' in inspector.get_table_names():
+            admin_columns = [col['name'] for col in inspector.get_columns('super_admins')]
+
+            if 'totp_secret' not in admin_columns:
+                conn.execute(text("ALTER TABLE super_admins ADD COLUMN totp_secret VARCHAR"))
+                print("[Migration] Added 'totp_secret' column to super_admins table")
+
+            if 'totp_enabled' not in admin_columns:
+                conn.execute(text("ALTER TABLE super_admins ADD COLUMN totp_enabled BOOLEAN DEFAULT 0"))
+                print("[Migration] Added 'totp_enabled' column to super_admins table")
+
+            if 'backup_codes' not in admin_columns:
+                conn.execute(text("ALTER TABLE super_admins ADD COLUMN backup_codes TEXT"))
+                print("[Migration] Added 'backup_codes' column to super_admins table")
+
+            if 'last_login' not in admin_columns:
+                conn.execute(text("ALTER TABLE super_admins ADD COLUMN last_login DATETIME"))
+                print("[Migration] Added 'last_login' column to super_admins table")
+
+            if 'last_login_ip' not in admin_columns:
+                conn.execute(text("ALTER TABLE super_admins ADD COLUMN last_login_ip VARCHAR"))
+                print("[Migration] Added 'last_login_ip' column to super_admins table")
+
+            if 'dark_mode' not in admin_columns:
+                conn.execute(text("ALTER TABLE super_admins ADD COLUMN dark_mode BOOLEAN DEFAULT 0"))
+                print("[Migration] Added 'dark_mode' column to super_admins table")
+
+            conn.commit()
+
+        # Migrate companies table (self-hosting columns)
+        if 'companies' in inspector.get_table_names():
+            company_columns = [col['name'] for col in inspector.get_columns('companies')]
+
+            if 'is_self_hosted' not in company_columns:
+                conn.execute(text("ALTER TABLE companies ADD COLUMN is_self_hosted BOOLEAN DEFAULT 0"))
+                print("[Migration] Added 'is_self_hosted' column to companies table")
+
+            if 'self_host_license_key' not in company_columns:
+                conn.execute(text("ALTER TABLE companies ADD COLUMN self_host_license_key VARCHAR UNIQUE"))
+                print("[Migration] Added 'self_host_license_key' column to companies table")
+
+            if 'self_host_activated_at' not in company_columns:
+                conn.execute(text("ALTER TABLE companies ADD COLUMN self_host_activated_at DATETIME"))
+                print("[Migration] Added 'self_host_activated_at' column to companies table")
+
+            if 'self_host_license_valid_until' not in company_columns:
+                conn.execute(text("ALTER TABLE companies ADD COLUMN self_host_license_valid_until DATETIME"))
+                print("[Migration] Added 'self_host_license_valid_until' column to companies table")
+
+            if 'self_host_last_validated' not in company_columns:
+                conn.execute(text("ALTER TABLE companies ADD COLUMN self_host_last_validated DATETIME"))
+                print("[Migration] Added 'self_host_last_validated' column to companies table")
 
             conn.commit()
 

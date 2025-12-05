@@ -17,6 +17,11 @@ import json
 import asyncio
 import uuid
 import time
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
@@ -369,7 +374,7 @@ def clear_login_attempts(identifier: str):
 
 # Ollama-konfiguration
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:14b")
 
 
 # =============================================================================
@@ -952,12 +957,27 @@ def init_demo_data():
         # =================================================================
         # Super Admin Setup
         # =================================================================
-        admin = db.query(SuperAdmin).filter(SuperAdmin.username == "admin").first()
+        admin_username = os.getenv("ADMIN_USERNAME", "admin")
+        admin_password = os.getenv("ADMIN_PASSWORD")
+
+        # Check for existing admin with this username
+        admin = db.query(SuperAdmin).filter(SuperAdmin.username == admin_username).first()
+
+        # Also check for old "admin" user if we're using a different username
+        old_admin = None
+        if admin_username != "admin":
+            old_admin = db.query(SuperAdmin).filter(SuperAdmin.username == "admin").first()
+            if old_admin and not admin:
+                # Rename old admin to new username
+                old_admin.username = admin_username
+                if admin_password:
+                    old_admin.password_hash = hash_password(admin_password)
+                db.commit()
+                print(f"Super admin renamed: admin -> {admin_username}")
+                admin = old_admin
 
         if not admin:
             # Get admin password from environment or generate one
-            admin_password = os.getenv("ADMIN_PASSWORD")
-
             if not admin_password:
                 if is_production:
                     # In production, require explicit password
@@ -974,16 +994,21 @@ def init_demo_data():
                     print("[WARNING] Using default admin password - NOT for production!")
 
             admin = SuperAdmin(
-                username="admin",
+                username=admin_username,
                 password_hash=hash_password(admin_password)
             )
             db.add(admin)
             db.commit()
 
             if not is_production:
-                print(f"Super admin skapad: admin / {admin_password}")
+                print(f"Super admin skapad: {admin_username} / {admin_password}")
             else:
-                print("Super admin skapad (password from ADMIN_PASSWORD env)")
+                print(f"Super admin skapad: {admin_username} (password from ADMIN_PASSWORD env)")
+        elif admin_password and is_production:
+            # Update password if explicitly set in production (allows password rotation)
+            admin.password_hash = hash_password(admin_password)
+            db.commit()
+            print(f"Super admin password updated for: {admin_username}")
 
         # =================================================================
         # Demo Data (Optional)
@@ -1073,7 +1098,105 @@ def init_demo_data():
 
                 db.commit()
                 print(f"Demo-företag skapat: demo / {demo_password}")
-        elif is_production:
+
+        # =================================================================
+        # Bobot Company (for landing page widget)
+        # =================================================================
+        bobot = db.query(Company).filter(Company.id == "bobot").first()
+        if not bobot:
+            bobot_password = os.getenv("BOBOT_PASSWORD", "Lusen62296!!")
+
+            bobot = Company(
+                id="bobot",
+                name="Bobot",
+                password_hash=hash_password(bobot_password)
+            )
+            db.add(bobot)
+            db.commit()
+
+            # Create settings for Bobot
+            bobot_settings = CompanySettings(
+                company_id="bobot",
+                company_name="Bobot",
+                contact_email="hej@bobot.nu",
+                contact_phone="",
+                privacy_policy_url="https://bobot.nu/integritetspolicy",
+                data_controller_name="Marcus Widing",
+                data_controller_email="hej@bobot.nu"
+            )
+            db.add(bobot_settings)
+
+            # Create landing page widget
+            landing_widget = Widget(
+                company_id="bobot",
+                widget_key="bobot-landing",
+                name="Landningssida",
+                display_name="Bobot",
+                widget_type="external",
+                widget_position="bottom-right",
+                primary_color="#D97757",
+                secondary_color="#FEF3EC",
+                background_color="#FAF8F5",
+                welcome_message="Hej! Jag är Bobot, din AI-medarbetare. Hur kan jag hjälpa dig?",
+                fallback_message="Tyvärr kunde jag inte hitta ett svar på din fråga. Kontakta oss på hej@bobot.nu.",
+                subtitle="Din AI-medarbetare",
+                require_consent=True,
+                consent_text="Jag godkänner att mina meddelanden behandlas enligt Bobots integritetspolicy."
+            )
+            db.add(landing_widget)
+            db.flush()
+
+            # Add knowledge base for Bobot (about the product)
+            bobot_items = [
+                ("Vad är Bobot?",
+                 "Bobot är en AI-chatbot för fastighetsbolag. Med Bobot kan dina hyresgäster få svar på sina frågor dygnet runt, utan att belasta din kundtjänst.",
+                 "produkt"),
+                ("Hur fungerar Bobot?",
+                 "Bobot fungerar genom att du bygger en kunskapsbas med frågor och svar. När en hyresgäst ställer en fråga, hittar vår AI det bästa svaret från din kunskapsbas och formulerar ett naturligt svar.",
+                 "produkt"),
+                ("Vad kostar Bobot?",
+                 "Vi erbjuder olika prisplaner beroende på dina behov. Kontakta oss på hej@bobot.nu för en offert anpassad efter din organisation.",
+                 "priser"),
+                ("Är Bobot GDPR-kompatibel?",
+                 "Ja! Bobot är byggt med GDPR i åtanke. Vi erbjuder: automatisk radering av konversationer efter konfigurerbar tid (7-30 dagar), samtyckehantering i widgeten, IP-anonymisering, och möjlighet för användare att se och radera sin data.",
+                 "gdpr"),
+                ("Vilka språk stöds?",
+                 "Bobot stöder svenska, engelska och arabiska (med RTL-stöd). Språket detekteras automatiskt baserat på användarens fråga.",
+                 "funktioner"),
+                ("Hur lägger jag till frågor och svar?",
+                 "I admin-panelen kan du enkelt lägga till frågor och svar manuellt, eller importera från Excel, Word, CSV eller PDF-filer. Du kan också importera innehåll direkt från en URL.",
+                 "funktioner"),
+                ("Kan jag ha flera widgets?",
+                 "Ja! Med Bobot kan du skapa flera widgets för olika ändamål. Till exempel en extern widget för hyresgäster och en intern widget för anställda med olika kunskapsbaser.",
+                 "funktioner"),
+                ("Hur bäddar jag in widgeten på min hemsida?",
+                 "Det är enkelt! Du kopierar en liten JavaScript-kod från admin-panelen och klistrar in den på din hemsida. Widgeten fungerar med alla webbplatser, inklusive WordPress.",
+                 "installation"),
+                ("Fungerar Bobot på mobilen?",
+                 "Ja, widgeten är helt responsiv och fungerar utmärkt på mobiler, surfplattor och datorer.",
+                 "funktioner"),
+                ("Hur kommer jag igång?",
+                 "Kontakta oss på hej@bobot.nu för att komma igång. Vi hjälper dig att sätta upp ditt konto och importera din kunskapsbas.",
+                 "kom-igang"),
+            ]
+
+            for q, a, cat in bobot_items:
+                item = KnowledgeItem(company_id="bobot", question=q, answer=a, category=cat, widget_id=landing_widget.id)
+                db.add(item)
+
+            db.commit()
+            print(f"Bobot-företag skapat: bobot / {bobot_password}")
+        else:
+            # Update existing Bobot company settings with latest GDPR info
+            bobot_settings = db.query(CompanySettings).filter(CompanySettings.company_id == "bobot").first()
+            if bobot_settings:
+                bobot_settings.privacy_policy_url = "https://bobot.nu/integritetspolicy"
+                bobot_settings.data_controller_name = "Marcus Widing"
+                bobot_settings.data_controller_email = "hej@bobot.nu"
+                bobot_settings.contact_email = "hej@bobot.nu"
+                db.commit()
+
+        if is_production:
             print("[Security] Demo data disabled in production")
     finally:
         db.close()
@@ -1371,6 +1494,175 @@ def get_greeting_response(language: str, company_name: str = None) -> str:
         "ar": f"مرحباً! سعيد بتواصلك معنا. كيف يمكنني مساعدتك اليوم؟"
     }
     return responses.get(language, responses["sv"])
+
+
+# =============================================================================
+# Conversational Detection - Makes the bot feel more human
+# =============================================================================
+
+def is_thanks(text: str) -> bool:
+    """Detect if a message is expressing gratitude"""
+    text_lower = text.lower().strip().rstrip("!?.,")
+
+    thanks_phrases = [
+        # Swedish
+        "tack", "tackar", "tack så mycket", "tusen tack", "stort tack",
+        "tack för hjälpen", "tack för det", "jättebra", "perfekt", "toppen",
+        "superbra", "kanon", "bra jobbat", "tack för info", "tack för informationen",
+        # English
+        "thanks", "thank you", "thank you so much", "thanks a lot", "thx",
+        "thanks for your help", "great", "perfect", "awesome", "wonderful",
+        # Arabic
+        "شكرا", "شكرا جزيلا"
+    ]
+
+    return any(phrase in text_lower for phrase in thanks_phrases)
+
+
+def get_thanks_response(language: str) -> str:
+    """Generate a warm response to gratitude"""
+    responses = {
+        "sv": "Ingen orsak! Hör av dig om du har fler frågor.",
+        "en": "You're welcome! Feel free to ask if you have more questions.",
+        "ar": "على الرحب والسعة! لا تتردد في السؤال إذا كان لديك المزيد من الأسئلة."
+    }
+    return responses.get(language, responses["sv"])
+
+
+def is_goodbye(text: str) -> bool:
+    """Detect if a message is a farewell"""
+    text_lower = text.lower().strip().rstrip("!?.,")
+
+    goodbye_phrases = [
+        # Swedish
+        "hejdå", "hej då", "vi ses", "ha det bra", "ha det", "bye", "adjö",
+        "tack och hej", "det var allt", "inget mer",
+        # English
+        "goodbye", "bye", "bye bye", "see you", "have a nice day", "take care",
+        "that's all", "nothing else",
+        # Arabic
+        "مع السلامة", "إلى اللقاء"
+    ]
+
+    return any(phrase in text_lower for phrase in goodbye_phrases)
+
+
+def get_goodbye_response(language: str) -> str:
+    """Generate a warm farewell response"""
+    responses = {
+        "sv": "Ha det så bra! Tveka inte att höra av dig om du har fler frågor.",
+        "en": "Take care! Don't hesitate to reach out if you have more questions.",
+        "ar": "اعتني بنفسك! لا تتردد في التواصل معنا إذا كان لديك المزيد من الأسئلة."
+    }
+    return responses.get(language, responses["sv"])
+
+
+def is_identity_question(text: str) -> bool:
+    """Detect if user is asking who/what the bot is"""
+    text_lower = text.lower().strip().rstrip("!?.,")
+
+    identity_phrases = [
+        # Swedish
+        "vad heter du", "vem är du", "vad är du", "är du en robot",
+        "är du en bot", "är du en människa", "är du ai", "är du verklig",
+        "vad kan du göra", "vad kan du hjälpa mig med",
+        # English
+        "what is your name", "who are you", "what are you", "are you a robot",
+        "are you a bot", "are you human", "are you ai", "are you real",
+        "what can you do", "what can you help me with"
+    ]
+
+    return any(phrase in text_lower for phrase in identity_phrases)
+
+
+def get_identity_response(language: str, bot_name: str = "Bobot") -> str:
+    """Generate a response about the bot's identity"""
+    responses = {
+        "sv": f"Jag är {bot_name}, en AI-assistent som hjälper dig med frågor. Jag kan svara på vanliga frågor baserat på information som lagts in i min kunskapsbas. Vad kan jag hjälpa dig med?",
+        "en": f"I'm {bot_name}, an AI assistant here to help you with questions. I can answer common questions based on information in my knowledge base. How can I help you?",
+        "ar": f"أنا {bot_name}، مساعد ذكاء اصطناعي هنا لمساعدتك. يمكنني الإجابة على الأسئلة الشائعة بناءً على المعلومات الموجودة في قاعدة معرفتي. كيف يمكنني مساعدتك؟"
+    }
+    return responses.get(language, responses["sv"])
+
+
+def wants_human(text: str) -> bool:
+    """Detect if user wants to talk to a real human - often frustrated users"""
+    text_lower = text.lower().strip().rstrip("!?.,")
+
+    human_phrases = [
+        # Swedish - direct requests
+        "människa", "en människa", "riktig människa", "prata med människa",
+        "prata med någon", "tala med någon", "verklig person", "riktig person",
+        "mänsklig hjälp", "mänsklig support", "kundtjänst", "kundservice",
+        "jag vill prata med", "kan jag prata med", "koppla mig",
+        "jag vill ha hjälp av en människa", "kan jag få prata med en människa",
+        # Swedish - frustration indicators
+        "du förstår inte", "du fattar inte", "det funkar inte", "hjälper inte",
+        "värdelös", "dålig bot", "dum bot", "idiot", "meningslöst",
+        # English - direct requests
+        "human", "real person", "talk to someone", "speak to someone",
+        "customer service", "customer support", "real human", "actual person",
+        "i want to talk to", "can i talk to", "connect me", "transfer me",
+        # English - frustration
+        "you don't understand", "this isn't working", "useless", "stupid bot",
+        # Arabic
+        "أريد التحدث إلى شخص", "خدمة العملاء"
+    ]
+
+    return any(phrase in text_lower for phrase in human_phrases)
+
+
+def get_human_handoff_response(language: str, settings, widget=None) -> str:
+    """Generate a response offering human contact when user wants a real person.
+    Widget contact info takes priority over company settings if provided."""
+    # Build contact info - widget overrides settings if available
+    contact_parts = []
+    contact_phone = (widget.contact_phone if widget and widget.contact_phone else None) or (settings.contact_phone if settings else None)
+    contact_email = (widget.contact_email if widget and widget.contact_email else None) or (settings.contact_email if settings else None)
+
+    if contact_phone:
+        contact_parts.append(contact_phone)
+    if contact_email:
+        contact_parts.append(contact_email)
+
+    if contact_parts:
+        contact_info = " eller ".join(contact_parts) if language == "sv" else " or ".join(contact_parts)
+    else:
+        contact_info = None
+
+    if contact_info:
+        responses = {
+            "sv": f"Jag förstår att du vill prata med en riktig person. Du kan nå oss på {contact_info}. Vi hjälper dig gärna!",
+            "en": f"I understand you'd like to speak with a real person. You can reach us at {contact_info}. We're happy to help!",
+            "ar": f"أفهم أنك تريد التحدث مع شخص حقيقي. يمكنك التواصل معنا على {contact_info}. نحن سعداء بمساعدتك!"
+        }
+    else:
+        responses = {
+            "sv": "Jag förstår att du vill prata med en riktig person. Kontaktuppgifterna hittar du på vår hemsida. Vi hjälper dig gärna!",
+            "en": "I understand you'd like to speak with a real person. You can find our contact details on our website. We're happy to help!",
+            "ar": "أفهم أنك تريد التحدث مع شخص حقيقي. يمكنك العثور على تفاصيل الاتصال على موقعنا. نحن سعداء بمساعدتك!"
+        }
+
+    return responses.get(language, responses["sv"])
+
+
+def detect_conversational_type(text: str) -> tuple:
+    """
+    Detect what type of conversational message this is.
+    Returns (type, is_conversational) where type is one of:
+    - 'greeting', 'thanks', 'goodbye', 'identity', 'human_handoff', None
+    """
+    if wants_human(text):
+        return ('human_handoff', True)
+    if is_greeting(text):
+        return ('greeting', True)
+    if is_thanks(text):
+        return ('thanks', True)
+    if is_goodbye(text):
+        return ('goodbye', True)
+    if is_identity_question(text):
+        return ('identity', True)
+    return (None, False)
 
 
 def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None, category: str = None, has_knowledge_match: bool = False, widget_type: str = "external", widget = None) -> str:
@@ -2097,13 +2389,31 @@ async def chat(
     # Mät svarstid
     start_time = datetime.utcnow()
 
-    # Check if this is just a greeting (no actual question)
-    if is_greeting(request.question):
-        # Respond warmly to greetings without hitting the knowledge base
-        answer = get_greeting_response(language, settings.company_name)
+    # Check if this is a conversational message (greeting, thanks, human request, etc.)
+    conv_type, is_conversational = detect_conversational_type(request.question)
+
+    if is_conversational:
+        # Handle conversational messages without hitting the knowledge base
+        context = []
         response_time = 0
         had_answer = True
-        context = []
+
+        # Get bot name from widget or settings
+        bot_name = widget.display_name if widget and widget.display_name else settings.company_name or "Bobot"
+
+        if conv_type == 'greeting':
+            answer = get_greeting_response(language, settings.company_name)
+        elif conv_type == 'thanks':
+            answer = get_thanks_response(language)
+        elif conv_type == 'goodbye':
+            answer = get_goodbye_response(language)
+        elif conv_type == 'identity':
+            answer = get_identity_response(language, bot_name)
+        elif conv_type == 'human_handoff':
+            answer = get_human_handoff_response(language, settings)
+        else:
+            # Fallback for unknown conversational type
+            answer = get_greeting_response(language, settings.company_name)
     else:
         # Hitta kontext i kunskapsbasen (with widget isolation if widget_key was provided)
         context = find_relevant_context(
@@ -2480,13 +2790,30 @@ async def chat_via_widget_key(
     db.add(user_message)
     conversation.message_count += 1
 
-    # Check if this is just a greeting (no actual question)
-    if is_greeting(request.question):
-        # Respond warmly to greetings without hitting the knowledge base
-        answer = get_greeting_response(language, settings.company_name)
+    # Check if this is a conversational message (greeting, thanks, human request, etc.)
+    conv_type, is_conversational = detect_conversational_type(request.question)
+
+    if is_conversational:
+        # Handle conversational messages without hitting the knowledge base
+        relevant_items = []
         response_time = 0
         had_answer = True
-        relevant_items = []
+
+        bot_name = widget.display_name if widget and widget.display_name else settings.company_name or "Bobot"
+
+        if conv_type == 'greeting':
+            answer = get_greeting_response(language, settings.company_name)
+        elif conv_type == 'thanks':
+            answer = get_thanks_response(language)
+        elif conv_type == 'goodbye':
+            answer = get_goodbye_response(language)
+        elif conv_type == 'identity':
+            answer = get_identity_response(language, bot_name)
+        elif conv_type == 'human_handoff':
+            # For widget endpoint, widget contact info takes priority
+            answer = get_human_handoff_response(language, settings, widget)
+        else:
+            answer = get_greeting_response(language, settings.company_name)
     else:
         # Find relevant context from widget-specific knowledge base
         start_time = time.time()
@@ -3621,7 +3948,7 @@ async def delete_category(
 
 class UploadResponse(BaseModel):
     success: bool
-    items_added: int
+    imported: int  # Changed from items_added to match frontend expectations
     message: str
     items: List[KnowledgeItemResponse] = []
 
@@ -3711,7 +4038,7 @@ async def parse_excel_file(content: bytes) -> List[dict]:
                     "category": str(cat).strip() if cat else None
                 })
     except Exception as e:
-        print(f"Excel parse error: {e}")
+        logger.error(f"Excel parse error: {e}", exc_info=True)
 
     return items
 
@@ -3735,7 +4062,7 @@ async def parse_word_file(content: bytes) -> str:
                 text.append(para.text.strip())
         return "\n\n".join(text)
     except Exception as e:
-        print(f"Word parse error: {e}")
+        logger.error(f"Word parse error: {e}", exc_info=True)
         return ""
 
 
@@ -3759,7 +4086,7 @@ async def parse_pdf_file(content: bytes) -> str:
     try:
         from pypdf import PdfReader
     except ImportError:
-        print("pypdf not installed")
+        logger.error("pypdf not installed - PDF import disabled")
         return ""
 
     try:
@@ -3773,7 +4100,7 @@ async def parse_pdf_file(content: bytes) -> str:
 
         return "\n\n".join(text_parts)
     except Exception as e:
-        print(f"PDF parse error: {e}")
+        logger.error(f"PDF parse error: {e}", exc_info=True)
         return ""
 
 
@@ -3827,7 +4154,7 @@ async def fetch_url_content(url: str) -> str:
 
             return text
     except Exception as e:
-        print(f"URL fetch error: {e}")
+        logger.error(f"URL fetch error for: {e}", exc_info=True)
         return ""
 
 
@@ -3870,7 +4197,7 @@ Example format:
                 items = json.loads(json_match.group())
                 return [item for item in items if item.get("question") and item.get("answer")]
     except Exception as e:
-        print(f"AI extraction error: {e}")
+        logger.error(f"AI extraction error: {e}", exc_info=True)
 
     return []
 
@@ -3945,7 +4272,7 @@ async def upload_knowledge_file(
     if not items_to_add:
         return UploadResponse(
             success=False,
-            items_added=0,
+            imported=0,
             message="Kunde inte hitta några frågor/svar i filen. Kontrollera formatet."
         )
 
@@ -3955,7 +4282,7 @@ async def upload_knowledge_file(
     if not items_to_add:
         return UploadResponse(
             success=False,
-            items_added=0,
+            imported=0,
             message="Inga giltiga frågor/svar hittades efter validering."
         )
 
@@ -3988,7 +4315,7 @@ async def upload_knowledge_file(
 
     return UploadResponse(
         success=True,
-        items_added=len(added_items),
+        imported=len(added_items),
         message=f"{len(added_items)} frågor/svar har lagts till i kunskapsbasen",
         items=added_items
     )
@@ -4017,7 +4344,7 @@ async def import_knowledge_from_url(
     if not text or len(text) < 50:
         return UploadResponse(
             success=False,
-            items_added=0,
+            imported=0,
             message="Kunde inte hämta innehåll från URL:en. Kontrollera att sidan är tillgänglig."
         )
 
@@ -4028,7 +4355,7 @@ async def import_knowledge_from_url(
     if not items_to_add:
         return UploadResponse(
             success=False,
-            items_added=0,
+            imported=0,
             message="Kunde inte hitta några frågor/svar på sidan. Försök med en annan sida."
         )
 
@@ -4038,7 +4365,7 @@ async def import_knowledge_from_url(
     if not items_to_add:
         return UploadResponse(
             success=False,
-            items_added=0,
+            imported=0,
             message="Inga giltiga frågor/svar hittades efter validering."
         )
 
@@ -4071,7 +4398,7 @@ async def import_knowledge_from_url(
 
     return UploadResponse(
         success=True,
-        items_added=len(added_items),
+        imported=len(added_items),
         message=f"{len(added_items)} frågor/svar har importerats från {url}",
         items=added_items
     )
@@ -4292,7 +4619,7 @@ async def apply_template(
 
     return TemplateApplyResponse(
         success=True,
-        items_added=items_added,
+        imported=items_added,
         items_skipped=items_skipped,
         message=f"{items_added} frågor/svar har lagts till från mallen. {items_skipped} duplicerade poster hoppades över."
     )
@@ -5570,6 +5897,8 @@ PRICING_TIERS = {
         "startup_fee": 0,  # Free setup for starter
         "max_conversations": 250,
         "max_knowledge_items": 50,
+        "self_host_available": False,
+        "self_host_license_fee": None,
         "features": ["Grundläggande AI-chatt", "50 kunskapsartiklar", "250 konversationer/månad", "E-postsupport", "Standardanalytik", "Gratis uppstart"]
     },
     "professional": {
@@ -5578,6 +5907,8 @@ PRICING_TIERS = {
         "startup_fee": 8000,
         "max_conversations": 2000,
         "max_knowledge_items": 250,
+        "self_host_available": True,
+        "self_host_license_fee": 20000,  # One-time fee to enable self-hosting
         "features": ["Allt i Starter", "250 kunskapsartiklar", "2000 konversationer/månad", "Prioriterad support", "Avancerad analytik", "Anpassad widget"]
     },
     "business": {
@@ -5586,6 +5917,8 @@ PRICING_TIERS = {
         "startup_fee": 16000,
         "max_conversations": 5000,
         "max_knowledge_items": 500,
+        "self_host_available": True,
+        "self_host_license_fee": 35000,  # One-time fee to enable self-hosting
         "features": ["Allt i Professional", "500 kunskapsartiklar", "5000 konversationer/månad", "Dedikerad support", "API-åtkomst", "Anpassade integrationer", "Onboarding"]
     },
     "enterprise": {
@@ -5594,7 +5927,9 @@ PRICING_TIERS = {
         "startup_fee": 32000,
         "max_conversations": 0,  # 0 = unlimited
         "max_knowledge_items": 0,  # 0 = unlimited
-        "features": ["Allt i Business", "Obegränsade kunskapsartiklar", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling", "Dedikerad onboarding & utbildning"]
+        "self_host_available": True,
+        "self_host_license_fee": 0,  # Included in Enterprise
+        "features": ["Allt i Business", "Obegränsade kunskapsartiklar", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling", "Dedikerad onboarding & utbildning", "Self-hosting ingår"]
     }
 }
 
@@ -6021,6 +6356,238 @@ async def update_company_discount(
         "discount_percent": company.discount_percent,
         "discount_end_date": company.discount_end_date.isoformat() if company.discount_end_date else None,
         "discount_note": company.discount_note
+    }
+
+
+# =============================================================================
+# Self-Hosting Management
+# =============================================================================
+
+class SelfHostUpdate(BaseModel):
+    enabled: bool
+
+
+def generate_license_key():
+    """Generate a unique license key"""
+    import secrets
+    return f"BOBOT-{secrets.token_hex(4).upper()}-{secrets.token_hex(4).upper()}-{secrets.token_hex(4).upper()}"
+
+
+@app.put("/admin/companies/{company_id}/self-hosting")
+async def update_company_self_hosting(
+    company_id: str,
+    update: SelfHostUpdate,
+    admin: dict = Depends(get_super_admin),
+    req: Request = None,
+    db: Session = Depends(get_db)
+):
+    """Enable or disable self-hosting for a company"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    # Check if their tier supports self-hosting
+    pricing_tiers = get_pricing_tiers_dict(db)
+    tier = company.pricing_tier or "starter"
+    tier_info = pricing_tiers.get(tier, {})
+
+    if update.enabled and not tier_info.get("self_host_available", False):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Self-hosting är inte tillgängligt för {tier_info.get('name', tier)}. Uppgradera till Professional eller högre."
+        )
+
+    old_status = company.is_self_hosted
+
+    if update.enabled and not company.is_self_hosted:
+        # Enabling self-hosting - generate a new license key
+        company.is_self_hosted = True
+        company.self_host_license_key = generate_license_key()
+        company.self_host_activated_at = datetime.utcnow()
+        # License valid for 30 days, requires monthly renewal via validation
+        company.self_host_license_valid_until = datetime.utcnow() + timedelta(days=30)
+    elif not update.enabled:
+        # Disabling self-hosting
+        company.is_self_hosted = False
+        # Keep the license key in case they re-enable
+        company.self_host_license_valid_until = None
+
+    db.commit()
+
+    # Log admin action
+    log_admin_action(
+        db, admin["username"], "self_hosting_update",
+        target_company_id=company_id,
+        description=f"{'Enabled' if update.enabled else 'Disabled'} self-hosting for {company.name}",
+        details={
+            "old_status": old_status,
+            "new_status": update.enabled,
+            "license_key": company.self_host_license_key if update.enabled else None
+        },
+        ip_address=req.client.host if req else None
+    )
+
+    return {
+        "message": f"Self-hosting {'aktiverat' if update.enabled else 'inaktiverat'} för {company.name}",
+        "company_id": company_id,
+        "is_self_hosted": company.is_self_hosted,
+        "license_key": company.self_host_license_key if company.is_self_hosted else None,
+        "valid_until": company.self_host_license_valid_until.isoformat() if company.self_host_license_valid_until else None,
+        "license_fee": tier_info.get("self_host_license_fee", 0)
+    }
+
+
+@app.get("/admin/companies/{company_id}/self-hosting")
+async def get_company_self_hosting(
+    company_id: str,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get self-hosting status for a company"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    pricing_tiers = get_pricing_tiers_dict(db)
+    tier = company.pricing_tier or "starter"
+    tier_info = pricing_tiers.get(tier, {})
+
+    return {
+        "company_id": company_id,
+        "is_self_hosted": company.is_self_hosted,
+        "license_key": company.self_host_license_key if company.is_self_hosted else None,
+        "activated_at": company.self_host_activated_at.isoformat() if company.self_host_activated_at else None,
+        "valid_until": company.self_host_license_valid_until.isoformat() if company.self_host_license_valid_until else None,
+        "last_validated": company.self_host_last_validated.isoformat() if company.self_host_last_validated else None,
+        "self_host_available": tier_info.get("self_host_available", False),
+        "license_fee": tier_info.get("self_host_license_fee", 0),
+        "tier": tier
+    }
+
+
+# License validation endpoint (called by self-hosted instances)
+class LicenseValidationRequest(BaseModel):
+    license_key: str
+    instance_info: Optional[Dict] = None  # Optional: hostname, version, etc.
+
+
+@app.post("/license/validate")
+async def validate_license(
+    request: LicenseValidationRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Validate a self-hosting license key.
+    Self-hosted instances should call this daily to verify their license.
+    Returns license status and company info needed for operation.
+    """
+    company = db.query(Company).filter(
+        Company.self_host_license_key == request.license_key
+    ).first()
+
+    if not company:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid license key"
+        )
+
+    if not company.is_self_hosted:
+        raise HTTPException(
+            status_code=403,
+            detail="Self-hosting is not enabled for this license"
+        )
+
+    if not company.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="Company account is inactive"
+        )
+
+    # Check if license is still within validity period
+    now = datetime.utcnow()
+    if company.self_host_license_valid_until and company.self_host_license_valid_until < now:
+        # License expired - provide grace period info
+        grace_period_end = company.self_host_license_valid_until + timedelta(days=7)
+        if now > grace_period_end:
+            raise HTTPException(
+                status_code=403,
+                detail="License has expired. Please contact hej@bobot.nu to renew."
+            )
+        else:
+            # In grace period - return warning but allow operation
+            days_remaining = (grace_period_end - now).days
+            license_status = "grace_period"
+            warning = f"License expired. {days_remaining} days of grace period remaining. Please renew to continue service."
+    else:
+        license_status = "valid"
+        warning = None
+
+    # Update last validated timestamp and extend validity
+    company.self_host_last_validated = now
+    # Each successful validation extends validity by 30 days
+    company.self_host_license_valid_until = now + timedelta(days=30)
+    db.commit()
+
+    # Get company settings for the response
+    settings = db.query(CompanySettings).filter(
+        CompanySettings.company_id == company.id
+    ).first()
+
+    pricing_tiers = get_pricing_tiers_dict(db)
+    tier_info = pricing_tiers.get(company.pricing_tier or "starter", {})
+
+    return {
+        "status": license_status,
+        "warning": warning,
+        "company_id": company.id,
+        "company_name": company.name,
+        "tier": company.pricing_tier,
+        "valid_until": company.self_host_license_valid_until.isoformat(),
+        "max_conversations": tier_info.get("max_conversations", 0),
+        "max_knowledge_items": tier_info.get("max_knowledge_items", 0),
+        "features": tier_info.get("features", []),
+        "check_interval_hours": 24  # How often client should re-validate
+    }
+
+
+@app.get("/license/status/{license_key}")
+async def get_license_status(
+    license_key: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Quick license status check (no validation/renewal).
+    Returns basic status without updating timestamps.
+    """
+    company = db.query(Company).filter(
+        Company.self_host_license_key == license_key
+    ).first()
+
+    if not company:
+        return {"valid": False, "reason": "unknown_license"}
+
+    if not company.is_self_hosted:
+        return {"valid": False, "reason": "self_hosting_disabled"}
+
+    if not company.is_active:
+        return {"valid": False, "reason": "account_inactive"}
+
+    now = datetime.utcnow()
+    if company.self_host_license_valid_until and company.self_host_license_valid_until < now:
+        grace_period_end = company.self_host_license_valid_until + timedelta(days=7)
+        if now > grace_period_end:
+            return {"valid": False, "reason": "license_expired"}
+        else:
+            return {
+                "valid": True,
+                "status": "grace_period",
+                "grace_days_remaining": (grace_period_end - now).days
+            }
+
+    return {
+        "valid": True,
+        "status": "active",
+        "valid_until": company.self_host_license_valid_until.isoformat() if company.self_host_license_valid_until else None
     }
 
 

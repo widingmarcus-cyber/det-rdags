@@ -503,12 +503,12 @@ function Settings() {
                       <span className="px-2 py-0.5 bg-success/20 text-success text-xs font-medium rounded-full">Aktivt</span>
                     </div>
                     <p className="text-sm text-text-secondary mb-4">
-                      All data lagras och bearbetas i Sverige i enlighet med GDPR.
+                      All data lagras och bearbetas inom EU i enlighet med GDPR. Dedikerad svensk hosting finns som tillval.
                     </p>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div className="bg-bg-secondary rounded-lg p-3">
                         <p className="text-text-tertiary text-xs uppercase tracking-wide mb-1">Datacenter</p>
-                        <p className="text-text-primary font-medium">Sverige</p>
+                        <p className="text-text-primary font-medium">EU</p>
                       </div>
                       <div className="bg-bg-secondary rounded-lg p-3">
                         <p className="text-text-tertiary text-xs uppercase tracking-wide mb-1">AI-behandling</p>

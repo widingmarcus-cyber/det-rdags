@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application files
 COPY --chown=appuser:appuser *.py ./
 COPY --chown=appuser:appuser email_service.py ./
+COPY --chown=appuser:appuser templates/ ./templates/
 
 # Switch to non-root user
 USER appuser

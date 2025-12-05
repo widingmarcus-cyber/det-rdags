@@ -47,7 +47,6 @@
   body {
     @apply bg-bg-primary text-text-primary;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   /* Focus states */
