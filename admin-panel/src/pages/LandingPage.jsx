@@ -291,7 +291,7 @@ function Sparkle({ delay = 0, size = 4, className = "" }) {
 
 function ThemeToggle({ isDark, onToggle }) {
   return (
-    <button onClick={onToggle} className="p-2 rounded-lg hover:bg-stone-100 transition-colors" aria-label={isDark ? 'Byt till ljust läge' : 'Byt till mörkt läge'}>
+    <button onClick={onToggle} className="p-2 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors" aria-label={isDark ? 'Byt till ljust läge' : 'Byt till mörkt läge'}>
       {isDark ? (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-stone-500">
           <circle cx="12" cy="12" r="5" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
@@ -406,7 +406,7 @@ function ChatWidget({ messages, label, className = "", startDelay = 0 }) {
   }
 
   return (
-    <div className={`w-full max-w-[280px] bg-white rounded-2xl shadow-2xl border border-stone-200 overflow-hidden ${className}`}>
+    <div className={`w-full max-w-[280px] bg-white dark:bg-stone-800 rounded-2xl shadow-2xl border border-stone-200 dark:border-stone-700 overflow-hidden ${className}`}>
       <div className="bg-[#D97757] px-3 py-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center">
@@ -419,18 +419,18 @@ function ChatWidget({ messages, label, className = "", startDelay = 0 }) {
         </div>
         {label && <span className="bg-white/25 text-white font-medium text-xs px-2 py-0.5 rounded-full">{label}</span>}
       </div>
-      <div className="p-3 space-y-1.5 bg-stone-100">
+      <div className="p-3 space-y-1.5 bg-stone-100 dark:bg-stone-900">
         {messages.slice(0, visibleCount).map((msg, i) => (
           <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-            <div className={`max-w-[85%] rounded-xl px-2.5 py-1.5 text-sm leading-snug ${msg.from === 'user' ? 'bg-[#D97757] text-white rounded-br-sm' : 'bg-white text-stone-700 shadow-sm rounded-bl-sm'}`}>
+            <div className={`max-w-[85%] rounded-xl px-2.5 py-1.5 text-sm leading-snug ${msg.from === 'user' ? 'bg-[#D97757] text-white rounded-br-sm' : 'bg-white dark:bg-stone-700 text-stone-700 dark:text-stone-200 shadow-sm rounded-bl-sm'}`}>
               <TypedText text={msg.text} delay={0} speed={msg.from === 'bot' ? 20 : 25} onComplete={!typingDone.includes(i) ? () => handleMessageComplete(i) : undefined} />
             </div>
           </div>
         ))}
       </div>
-      <div className="px-3 py-2 border-t border-stone-200 bg-white">
+      <div className="px-3 py-2 border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800">
         <div className="flex items-center gap-2 text-stone-400">
-          <span className="flex-1 bg-stone-100 rounded-full px-3 py-1.5 text-xs">Skriv ett meddelande...</span>
+          <span className="flex-1 bg-stone-100 dark:bg-stone-700 rounded-full px-3 py-1.5 text-xs">Skriv ett meddelande...</span>
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
           </svg>
@@ -442,7 +442,7 @@ function ChatWidget({ messages, label, className = "", startDelay = 0 }) {
 
 function ScrollIndicator({ onClick }) {
   return (
-    <button onClick={onClick} className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-stone-400 hover:text-[#D97757] transition-colors animate-bounce cursor-pointer z-20">
+    <button onClick={onClick} className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-stone-400 dark:text-stone-500 hover:text-[#D97757] transition-colors animate-bounce cursor-pointer z-20">
       <span className="text-sm font-medium">Scrolla ner</span>
       <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
@@ -458,17 +458,17 @@ function formatPrice(price) {
 function PricingCard({ tier }) {
   const isEnterprise = tier.max_conversations === 0
   return (
-    <div className="rounded-2xl p-6 lg:p-8 transition-all duration-300 hover:scale-[1.02] bg-white border border-stone-200 shadow-sm hover:shadow-lg">
-      <h3 className="text-xl font-semibold mb-2 text-stone-900">{tier.name}</h3>
+    <div className="rounded-2xl p-6 lg:p-8 transition-all duration-300 hover:scale-[1.02] bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 shadow-sm hover:shadow-lg">
+      <h3 className="text-xl font-semibold mb-2 text-stone-900 dark:text-stone-100">{tier.name}</h3>
       <div className="mb-4">
         {isEnterprise ? (
-          <span className="text-3xl font-bold text-stone-900">Offert</span>
+          <span className="text-3xl font-bold text-stone-900 dark:text-stone-100">Offert</span>
         ) : (
-          <><span className="text-3xl font-bold text-stone-900">{formatPrice(tier.monthly_fee)}</span><span className="text-stone-500"> kr/mån</span></>
+          <><span className="text-3xl font-bold text-stone-900 dark:text-stone-100">{formatPrice(tier.monthly_fee)}</span><span className="text-stone-500 dark:text-stone-400"> kr/mån</span></>
         )}
       </div>
-      {tier.startup_fee > 0 && <p className="text-sm mb-4 text-stone-500">+ {formatPrice(tier.startup_fee)} kr uppstartsavgift</p>}
-      <ul className="space-y-3 text-sm mb-6 text-stone-600">
+      {tier.startup_fee > 0 && <p className="text-sm mb-4 text-stone-500 dark:text-stone-400">+ {formatPrice(tier.startup_fee)} kr uppstartsavgift</p>}
+      <ul className="space-y-3 text-sm mb-6 text-stone-600 dark:text-stone-400">
         {tier.features?.map((feature, i) => (
           <li key={i} className="flex items-start gap-2">
             <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20">
@@ -479,8 +479,8 @@ function PricingCard({ tier }) {
         ))}
       </ul>
       {tier.self_host_available && (
-        <div className="pt-4 border-t border-stone-200">
-          <div className="flex items-center gap-2 text-sm text-stone-600">
+        <div className="pt-4 border-t border-stone-200 dark:border-stone-700">
+          <div className="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-400">
             <svg className="w-4 h-4 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
             </svg>
@@ -547,15 +547,15 @@ function CodeAnimation({ isVisible }) {
 // FAQ Accordion component
 function FAQItem({ question, answer, isOpen, onClick }) {
   return (
-    <div className="border-b border-stone-200">
+    <div className="border-b border-stone-200 dark:border-stone-700">
       <button onClick={onClick} className="w-full py-5 flex items-center justify-between text-left group">
-        <span className="font-medium text-stone-900 group-hover:text-[#D97757] transition-colors">{question}</span>
+        <span className="font-medium text-stone-900 dark:text-stone-100 group-hover:text-[#D97757] transition-colors">{question}</span>
         <svg className={`w-5 h-5 text-stone-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
       <div className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-96 pb-5' : 'max-h-0'}`}>
-        <p className="text-stone-600 leading-relaxed">{answer}</p>
+        <p className="text-stone-600 dark:text-stone-400 leading-relaxed">{answer}</p>
       </div>
     </div>
   )
@@ -746,14 +746,14 @@ function LandingPage() {
   const orderedTiers = pricingTiers ? Object.entries(pricingTiers).map(([key, tier]) => ({ key, ...tier })).sort((a, b) => (a.monthly_fee || 0) - (b.monthly_fee || 0)) : []
 
   return (
-    <div ref={containerRef} className="bg-gradient-to-br from-stone-50 via-orange-50/30 to-stone-50 relative">
+    <div ref={containerRef} className="bg-gradient-to-br from-stone-50 via-orange-50/30 to-stone-50 dark:from-stone-900 dark:via-stone-800 dark:to-stone-900 relative">
 
       {/* Fixed Navigation */}
-      <nav className="fixed top-0 left-0 right-0 px-6 py-3 z-50 bg-white/80 backdrop-blur-lg border-b border-stone-200/50">
+      <nav className="fixed top-0 left-0 right-0 px-6 py-3 z-50 bg-white/80 dark:bg-stone-900/80 backdrop-blur-lg border-b border-stone-200/50 dark:border-stone-700/50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigateToSection(0)}>
             <BobotMini />
-            <span className="text-xl font-semibold text-stone-900 tracking-tight">Bobot</span>
+            <span className="text-xl font-semibold text-stone-900 dark:text-stone-100 tracking-tight">Bobot</span>
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle isDark={isDark} onToggle={toggleTheme} />
@@ -793,13 +793,13 @@ function LandingPage() {
                 <BobotMascot size={120} mousePos={mousePos} isWaving={ctaHover} className="animate-float" />
               </div>
               <div className="lg:pl-4">
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-stone-900 tracking-tight leading-tight mb-4 sm:mb-6 text-center lg:text-left">
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-stone-900 dark:text-stone-100 tracking-tight leading-tight mb-4 sm:mb-6 text-center lg:text-left">
                   Din nya medarbetare, som alltid är där
                 </h1>
-                <p className="text-lg text-stone-600 mb-6 sm:mb-8 leading-relaxed text-center lg:text-left">
+                <p className="text-lg text-stone-600 dark:text-stone-400 mb-6 sm:mb-8 leading-relaxed text-center lg:text-left">
                   Bobot svarar på frågor från kunder och anställda. Direkt, dygnet runt.
                 </p>
-                <div className="flex flex-wrap justify-center lg:justify-start gap-x-4 gap-y-2 text-sm text-stone-500 mb-8 sm:mb-10">
+                <div className="flex flex-wrap justify-center lg:justify-start gap-x-4 gap-y-2 text-sm text-stone-500 dark:text-stone-400 mb-8 sm:mb-10">
                   {sellingPoints.map(point => (
                     <span key={point} className="flex items-center gap-1.5">
                       <svg className="w-4 h-4 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
@@ -807,9 +807,9 @@ function LandingPage() {
                     </span>
                   ))}
                 </div>
-                <div className="p-6 sm:p-8 bg-gradient-to-br from-[#D97757]/10 to-[#D97757]/5 rounded-2xl border border-[#D97757]/20">
-                  <h3 className="text-lg sm:text-xl font-semibold text-stone-900 mb-2 text-center lg:text-left">Vill du veta mer?</h3>
-                  <p className="text-sm sm:text-base text-stone-600 mb-4 text-center lg:text-left">Boka en gratis demo och se hur Bobot kan hjälpa er organisation.</p>
+                <div className="p-6 sm:p-8 bg-gradient-to-br from-[#D97757]/10 to-[#D97757]/5 dark:from-[#D97757]/20 dark:to-[#D97757]/10 rounded-2xl border border-[#D97757]/20">
+                  <h3 className="text-lg sm:text-xl font-semibold text-stone-900 dark:text-stone-100 mb-2 text-center lg:text-left">Vill du veta mer?</h3>
+                  <p className="text-sm sm:text-base text-stone-600 dark:text-stone-400 mb-4 text-center lg:text-left">Boka en gratis demo och se hur Bobot kan hjälpa er organisation.</p>
                   <div className="flex justify-center lg:justify-start">
                     <a href="mailto:hej@bobot.nu" className="inline-flex items-center gap-2 bg-[#D97757] hover:bg-[#c4613d] text-white px-6 py-3 rounded-xl font-medium transition-all hover:scale-105 hover:shadow-xl shadow-lg shadow-[#D97757]/25" onMouseEnter={() => setCtaHover(true)} onMouseLeave={() => setCtaHover(false)}>
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
@@ -831,25 +831,25 @@ function LandingPage() {
       </section>
 
       {/* SECTION 2: Så fungerar det + Code animation */}
-      <section ref={el => sectionsRef.current[1] = el} className="min-h-screen flex flex-col justify-center px-4 sm:px-6 py-20 bg-white/50 relative">
+      <section ref={el => sectionsRef.current[1] = el} className="min-h-screen flex flex-col justify-center px-4 sm:px-6 py-20 bg-white/50 dark:bg-stone-800/50 relative">
         <div className="max-w-6xl mx-auto w-full">
           <div className="text-center mb-12 lg:mb-16">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-stone-900 mb-4">Så fungerar det</h2>
-            <p className="text-lg text-stone-600 max-w-2xl mx-auto">Kom igång på under 10 minuter. Ingen teknisk kunskap krävs.</p>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-stone-900 dark:text-stone-100 mb-4">Så fungerar det</h2>
+            <p className="text-lg text-stone-600 dark:text-stone-400 max-w-2xl mx-auto">Kom igång på under 10 minuter. Ingen teknisk kunskap krävs.</p>
           </div>
 
           <div ref={howItWorksRef} className="grid lg:grid-cols-3 gap-8 lg:gap-12 mb-16">
             {howItWorksSteps.map((step, idx) => (
-              <div key={step.number} className={`bg-white rounded-2xl p-6 lg:p-8 shadow-lg border border-stone-200 hover:shadow-xl transition-all duration-500 hover:-translate-y-1 ${howItWorksVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`} style={{ transitionDelay: `${idx * 150}ms` }}>
+              <div key={step.number} className={`bg-white dark:bg-stone-800 rounded-2xl p-6 lg:p-8 shadow-lg border border-stone-200 dark:border-stone-700 hover:shadow-xl transition-all duration-500 hover:-translate-y-1 ${howItWorksVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`} style={{ transitionDelay: `${idx * 150}ms` }}>
                 <div className="flex items-start gap-4 mb-4">
-                  <div className="w-16 h-16 bg-[#D97757]/10 rounded-2xl flex items-center justify-center flex-shrink-0">{step.icon}</div>
+                  <div className="w-16 h-16 bg-[#D97757]/10 dark:bg-[#D97757]/20 rounded-2xl flex items-center justify-center flex-shrink-0">{step.icon}</div>
                   <div className="w-10 h-10 bg-[#D97757] text-white rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0">{step.number}</div>
                 </div>
-                <h3 className="text-xl font-semibold text-stone-900 mb-3">{step.title}</h3>
-                <p className="text-stone-600 mb-4 leading-relaxed">{step.description}</p>
+                <h3 className="text-xl font-semibold text-stone-900 dark:text-stone-100 mb-3">{step.title}</h3>
+                <p className="text-stone-600 dark:text-stone-400 mb-4 leading-relaxed">{step.description}</p>
                 <div className="flex flex-wrap gap-2">
                   {step.features.map((feature, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 text-xs bg-stone-100 text-stone-600 px-2.5 py-1 rounded-full">
+                    <span key={i} className="inline-flex items-center gap-1 text-xs bg-stone-100 dark:bg-stone-700 text-stone-600 dark:text-stone-300 px-2.5 py-1 rounded-full">
                       <svg className="w-3 h-3 text-[#D97757]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                       {feature}
                     </span>
@@ -861,11 +861,11 @@ function LandingPage() {
 
           {/* Code animation with platform compatibility */}
           <div ref={codeRef} className="max-w-xl mx-auto">
-            <p className="text-center text-sm text-stone-500 mb-4">Så enkelt är det att integrera:</p>
+            <p className="text-center text-sm text-stone-500 dark:text-stone-400 mb-4">Så enkelt är det att integrera:</p>
             <CodeAnimation isVisible={codeVisible} />
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               {['WordPress', 'Wix', 'Squarespace', 'Shopify', 'Webflow'].map(p => (
-                <span key={p} className="inline-flex items-center gap-1.5 text-xs bg-stone-100 text-stone-500 px-3 py-1.5 rounded-full">
+                <span key={p} className="inline-flex items-center gap-1.5 text-xs bg-stone-100 dark:bg-stone-700 text-stone-500 dark:text-stone-400 px-3 py-1.5 rounded-full">
                   <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                   {p}
                 </span>
@@ -879,8 +879,8 @@ function LandingPage() {
       <section ref={el => sectionsRef.current[2] = el} className="min-h-screen flex flex-col justify-center px-4 sm:px-6 py-20 relative">
         <div className="max-w-6xl mx-auto w-full">
           <div className="text-center mb-12 lg:mb-16">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-stone-900 mb-4">Enkel och transparent prissättning</h2>
-            <p className="text-lg text-stone-600 max-w-2xl mx-auto">Välj det paket som passar din organisation. Inga dolda avgifter.</p>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-stone-900 dark:text-stone-100 mb-4">Enkel och transparent prissättning</h2>
+            <p className="text-lg text-stone-600 dark:text-stone-400 max-w-2xl mx-auto">Välj det paket som passar din organisation. Inga dolda avgifter.</p>
           </div>
           {pricingTiers ? (
             <div className={`grid gap-6 lg:gap-8 ${orderedTiers.length === 2 ? 'sm:grid-cols-2 max-w-3xl mx-auto' : orderedTiers.length === 3 ? 'sm:grid-cols-3' : orderedTiers.length >= 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-1 max-w-md mx-auto'}`}>
@@ -896,18 +896,18 @@ function LandingPage() {
       <section ref={el => sectionsRef.current[3] = el} className="min-h-screen flex flex-col px-4 sm:px-6 py-20 relative">
         <div className="max-w-3xl mx-auto w-full flex-1">
           <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-semibold text-stone-900 mb-4">Vanliga frågor</h2>
-            <p className="text-lg text-stone-600">Har du fler frågor? Kontakta oss gärna!</p>
+            <h2 className="text-3xl sm:text-4xl font-semibold text-stone-900 dark:text-stone-100 mb-4">Vanliga frågor</h2>
+            <p className="text-lg text-stone-600 dark:text-stone-400">Har du fler frågor? Kontakta oss gärna!</p>
           </div>
 
-          <div ref={faqRef} className={`bg-white rounded-2xl shadow-lg border border-stone-200 px-6 transition-all duration-700 ${faqVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div ref={faqRef} className={`bg-white dark:bg-stone-800 rounded-2xl shadow-lg border border-stone-200 dark:border-stone-700 px-6 transition-all duration-700 ${faqVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             {faqs.map((faq, i) => (
               <FAQItem key={i} question={faq.q} answer={faq.a} isOpen={openFAQ === i} onClick={() => setOpenFAQ(openFAQ === i ? null : i)} />
             ))}
           </div>
 
           <div className="mt-12 mb-8 text-center">
-            <p className="text-stone-600 mb-4">Hittar du inte svaret på din fråga?</p>
+            <p className="text-stone-600 dark:text-stone-400 mb-4">Hittar du inte svaret på din fråga?</p>
             <a href="mailto:hej@bobot.nu" className="inline-flex items-center gap-2 bg-[#D97757] hover:bg-[#c4613d] text-white px-6 py-3 rounded-xl font-medium transition-all hover:scale-105">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
               Kontakta oss
@@ -916,38 +916,38 @@ function LandingPage() {
         </div>
 
         {/* Enhanced Footer */}
-        <footer className="mt-auto pt-12 border-t border-stone-200">
+        <footer className="mt-auto pt-12 border-t border-stone-200 dark:border-stone-700">
           <div className="max-w-6xl mx-auto">
             <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8 mb-8">
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <BobotMini />
-                  <span className="text-lg font-semibold text-stone-900">Bobot</span>
+                  <span className="text-lg font-semibold text-stone-900 dark:text-stone-100">Bobot</span>
                 </div>
-                <p className="text-sm text-stone-500">AI-driven kundservice och intern kunskapsassistent. GDPR-säker och enkel att integrera.</p>
+                <p className="text-sm text-stone-500 dark:text-stone-400">AI-driven kundservice och intern kunskapsassistent. GDPR-säker och enkel att integrera.</p>
               </div>
               <div>
-                <h4 className="font-semibold text-stone-900 mb-4">Produkt</h4>
-                <ul className="space-y-2 text-sm text-stone-500">
+                <h4 className="font-semibold text-stone-900 dark:text-stone-100 mb-4">Produkt</h4>
+                <ul className="space-y-2 text-sm text-stone-500 dark:text-stone-400">
                   <li><button onClick={() => navigateToSection(1)} className="hover:text-[#D97757] transition-colors">Så fungerar det</button></li>
                   <li><button onClick={() => navigateToSection(2)} className="hover:text-[#D97757] transition-colors">Priser</button></li>
                   <li><button onClick={() => navigateToSection(3)} className="hover:text-[#D97757] transition-colors">Vanliga frågor</button></li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold text-stone-900 mb-4">Kontakt</h4>
-                <ul className="space-y-2 text-sm text-stone-500">
+                <h4 className="font-semibold text-stone-900 dark:text-stone-100 mb-4">Kontakt</h4>
+                <ul className="space-y-2 text-sm text-stone-500 dark:text-stone-400">
                   <li><a href="mailto:hej@bobot.nu" className="hover:text-[#D97757] transition-colors">hej@bobot.nu</a></li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold text-stone-900 mb-4">Juridiskt</h4>
-                <ul className="space-y-2 text-sm text-stone-500">
+                <h4 className="font-semibold text-stone-900 dark:text-stone-100 mb-4">Juridiskt</h4>
+                <ul className="space-y-2 text-sm text-stone-500 dark:text-stone-400">
                   <li><Link to="/integritetspolicy" className="hover:text-[#D97757] transition-colors">Integritetspolicy</Link></li>
                 </ul>
               </div>
             </div>
-            <div className="pt-8 border-t border-stone-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="pt-8 border-t border-stone-200 dark:border-stone-700 flex flex-col sm:flex-row justify-between items-center gap-4">
               <span className="text-xs text-stone-400">&copy; {new Date().getFullYear()} Bobot. Alla rättigheter förbehållna.</span>
               <div className="flex items-center gap-6 text-xs text-stone-400">
                 <span className="flex items-center gap-1">
