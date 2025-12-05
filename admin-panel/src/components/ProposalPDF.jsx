@@ -15,7 +15,17 @@ import {
   Ellipse
 } from '@react-pdf/renderer'
 
-// Register Inter font
+// Register Playfair Display - Serif for "Human Voice" headlines
+Font.register({
+  family: 'Playfair',
+  fonts: [
+    { src: 'https://fonts.gstatic.com/s/playfairdisplay/v36/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvXDXbtY.woff2', fontWeight: 400 },
+    { src: 'https://fonts.gstatic.com/s/playfairdisplay/v36/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKd3u3DXbtY.woff2', fontWeight: 600 },
+    { src: 'https://fonts.gstatic.com/s/playfairdisplay/v36/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKcYu3DXbtY.woff2', fontWeight: 700 },
+  ]
+})
+
+// Register Inter - Sans-serif for body text
 Font.register({
   family: 'Inter',
   fonts: [
@@ -39,54 +49,70 @@ const colors = {
   border: '#E8E4DF',
 }
 
-// Bobot Mascot Component (SVG)
+// Bobot Mascot Component (SVG) - Matching landing page design
 const BobotMascot = ({ size = 80 }) => (
-  <Svg width={size} height={size} viewBox="0 0 100 100">
-    {/* Body - rounded rectangle */}
-    <Rect x="25" y="30" width="50" height="55" rx="12" fill={colors.primary} />
+  <Svg width={size} height={size} viewBox="0 0 120 120">
+    {/* Feet */}
+    <Rect x="25" y="95" width="30" height="12" rx="6" fill="#78716C" />
+    <Rect x="65" y="95" width="30" height="12" rx="6" fill="#78716C" />
+    <Rect x="28" y="97" width="24" height="8" rx="4" fill="#57534E" />
+    <Rect x="68" y="97" width="24" height="8" rx="4" fill="#57534E" />
 
-    {/* Face plate */}
-    <Rect x="30" y="35" width="40" height="35" rx="8" fill={colors.white} />
+    {/* Body */}
+    <Rect x="30" y="55" width="60" height="42" rx="4" fill={colors.primary} />
+    <Rect x="33" y="58" width="54" height="36" rx="2" fill="#C4613D" />
+    {/* Control panel screens */}
+    <Rect x="36" y="75" width="20" height="16" rx="2" fill={colors.text} />
+    <Rect x="64" y="75" width="20" height="16" rx="2" fill={colors.text} />
 
-    {/* Eyes */}
-    <Circle cx="40" cy="48" r="5" fill={colors.text} />
-    <Circle cx="60" cy="48" r="5" fill={colors.text} />
-    <Circle cx="41" cy="47" r="2" fill={colors.white} />
-    <Circle cx="61" cy="47" r="2" fill={colors.white} />
+    {/* Neck */}
+    <Rect x="50" y="45" width="20" height="14" rx="2" fill="#78716C" />
 
-    {/* Smile */}
-    <Path d="M 40 58 Q 50 65 60 58" stroke={colors.text} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+    {/* Head */}
+    <Rect x="35" y="20" width="50" height="28" rx="4" fill={colors.primary} />
 
-    {/* Antenna */}
-    <Rect x="47" y="15" width="6" height="18" rx="3" fill={colors.primary} />
-    <Circle cx="50" cy="12" r="6" fill={colors.accent} />
+    {/* Eyes - dark background */}
+    <Ellipse cx="48" cy="34" rx="12" ry="11" fill={colors.text} />
+    <Ellipse cx="72" cy="34" rx="12" ry="11" fill={colors.text} />
+    <Ellipse cx="48" cy="34" rx="9" ry="8" fill="#292524" />
+    <Ellipse cx="72" cy="34" rx="9" ry="8" fill="#292524" />
+
+    {/* Pupils */}
+    <Ellipse cx="48" cy="35" rx="5" ry="5" fill={colors.primary} />
+    <Ellipse cx="72" cy="35" rx="5" ry="5" fill={colors.primary} />
+
+    {/* Eye highlights */}
+    <Circle cx="50" cy="32" r="2.5" fill="#FEF2EE" />
+    <Circle cx="74" cy="32" r="2.5" fill="#FEF2EE" />
+
+    {/* Nose/center detail */}
+    <Rect x="56" y="30" width="8" height="8" rx="2" fill="#78716C" />
 
     {/* Arms */}
-    <Rect x="12" y="45" width="15" height="8" rx="4" fill={colors.primary} />
-    <Rect x="73" y="45" width="15" height="8" rx="4" fill={colors.primary} />
-
+    <Rect x="15" y="62" width="18" height="6" rx="3" fill="#78716C" />
+    <Rect x="87" y="62" width="18" height="6" rx="3" fill="#78716C" />
     {/* Hands */}
-    <Circle cx="10" cy="49" r="6" fill={colors.primary} />
-    <Circle cx="90" cy="49" r="6" fill={colors.primary} />
+    <Rect x="10" y="58" width="8" height="14" rx="2" fill="#57534E" />
+    <Rect x="102" y="58" width="8" height="14" rx="2" fill="#57534E" />
 
-    {/* Feet */}
-    <Ellipse cx="38" cy="88" rx="10" ry="6" fill={colors.primary} />
-    <Ellipse cx="62" cy="88" rx="10" ry="6" fill={colors.primary} />
+    {/* Antenna */}
+    <Rect x="58" y="12" width="4" height="10" rx="2" fill="#78716C" />
+    <Circle cx="60" cy="10" r="5" fill={colors.accent} />
   </Svg>
 )
 
 // Small mascot for headers
 const BobotMascotSmall = ({ size = 40 }) => (
-  <Svg width={size} height={size} viewBox="0 0 100 100">
-    <Rect x="25" y="30" width="50" height="55" rx="12" fill={colors.primary} />
-    <Rect x="30" y="35" width="40" height="35" rx="8" fill={colors.white} />
-    <Circle cx="40" cy="48" r="5" fill={colors.text} />
-    <Circle cx="60" cy="48" r="5" fill={colors.text} />
-    <Circle cx="41" cy="47" r="2" fill={colors.white} />
-    <Circle cx="61" cy="47" r="2" fill={colors.white} />
-    <Path d="M 40 58 Q 50 65 60 58" stroke={colors.text} strokeWidth="2.5" fill="none" strokeLinecap="round" />
-    <Rect x="47" y="15" width="6" height="18" rx="3" fill={colors.primary} />
-    <Circle cx="50" cy="12" r="6" fill={colors.accent} />
+  <Svg width={size} height={size} viewBox="0 0 120 120">
+    {/* Simplified version */}
+    <Rect x="30" y="55" width="60" height="42" rx="4" fill={colors.primary} />
+    <Rect x="50" y="45" width="20" height="14" rx="2" fill="#78716C" />
+    <Rect x="35" y="20" width="50" height="28" rx="4" fill={colors.primary} />
+    <Ellipse cx="48" cy="34" rx="10" ry="9" fill={colors.text} />
+    <Ellipse cx="72" cy="34" rx="10" ry="9" fill={colors.text} />
+    <Ellipse cx="48" cy="35" rx="4" ry="4" fill={colors.primary} />
+    <Ellipse cx="72" cy="35" rx="4" ry="4" fill={colors.primary} />
+    <Circle cx="60" cy="10" r="5" fill={colors.accent} />
   </Svg>
 )
 
@@ -121,6 +147,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroTitle: {
+    fontFamily: 'Playfair',
     fontSize: 42,
     fontWeight: 700,
     color: colors.primary,
@@ -152,6 +179,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   sectionTitle: {
+    fontFamily: 'Playfair',
     fontSize: 28,
     fontWeight: 700,
     color: colors.text,
@@ -442,6 +470,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.primary,
   },
   pageHeaderTitle: {
+    fontFamily: 'Playfair',
     fontSize: 24,
     fontWeight: 700,
     color: colors.text,
