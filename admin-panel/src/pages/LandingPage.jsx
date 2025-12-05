@@ -573,9 +573,20 @@ function LandingPage() {
   // Force light mode on landing page mount and set page title
   useEffect(() => {
     document.title = 'Bobot - din AI-medarbetare'
-    // Start in light mode on landing page
+    // ALWAYS start in light mode on landing page - ignore localStorage
     document.documentElement.classList.remove('dark')
     setIsDark(false)
+    // Don't persist this to localStorage - just force light mode while on landing page
+  }, [])
+
+  // Cleanup: restore user preference when leaving landing page
+  useEffect(() => {
+    return () => {
+      const savedTheme = localStorage.getItem('theme')
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark')
+      }
+    }
   }, [])
   const sectionsRef = useRef([])
   const isScrollingRef = useRef(false)
@@ -646,8 +657,13 @@ function LandingPage() {
   const navigateToSection = (index) => {
     isScrollingRef.current = true
     setCurrentSection(index)
-    window.scrollTo({ top: index * window.innerHeight, behavior: 'smooth' })
-    setTimeout(() => { isScrollingRef.current = false }, 800)
+    const targetSection = sectionsRef.current[index]
+    if (targetSection) {
+      targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else {
+      window.scrollTo({ top: index * window.innerHeight, behavior: 'smooth' })
+    }
+    setTimeout(() => { isScrollingRef.current = false }, 1000)
   }
 
   const toggleTheme = () => {
@@ -930,10 +946,6 @@ function LandingPage() {
 
       <style>{`
         html { scroll-behavior: smooth; }
-        @media (min-width: 1024px) and (hover: hover) {
-          html { scroll-snap-type: y proximity; }
-          section { scroll-snap-align: start; }
-        }
         @keyframes float { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-10px) rotate(2deg); } }
         .animate-float { animation: float 4s ease-in-out infinite; }
         @keyframes sparkle { 0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; } 50% { transform: scale(1) rotate(180deg); opacity: 1; } }
