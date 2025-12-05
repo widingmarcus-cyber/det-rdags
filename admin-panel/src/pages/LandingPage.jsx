@@ -653,7 +653,7 @@ function LandingPage() {
     { from: 'bot', text: 'Hej! Du har 25 dagar totalt i år. Vill du ansöka så gör du det via HR-portalen minst 4 veckor innan 😊' },
   ]
 
-  const sellingPoints = ['Avlastar medarbetare', 'Alltid tillgänglig', 'Intern kunskapsbank', 'GDPR-säker', 'Träna nyanställda', 'Enkel att integrera', 'Flera språk']
+  const sellingPoints = ['Avlastar medarbetare', 'Alltid tillgänglig', 'Intern kunskapsbank', 'GDPR-säker', 'Introduktion för nyanställda', 'Enkel att integrera', 'Flera språk', 'Drar ner kostnader']
 
   const howItWorksSteps = [
     {

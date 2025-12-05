@@ -4467,27 +4467,7 @@ function SuperAdmin() {
                 Avbryt
               </button>
               <button
-                onClick={async () => {
-                  if (!announcementForm.title || !announcementForm.message) return;
-                  try {
-                    const response = await fetch(`${API_BASE}/admin/announcements`, {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                      },
-                      body: JSON.stringify(announcementForm)
-                    });
-                    if (response.ok) {
-                      const data = await response.json();
-                      setAnnouncement(data);
-                      setShowAnnouncementModal(false);
-                      setAnnouncementForm({ title: '', message: '', type: 'info' });
-                    }
-                  } catch (error) {
-                    console.error('Failed to create announcement:', error);
-                  }
-                }}
+                onClick={handleCreateAnnouncement}
                 className="btn btn-primary"
                 disabled={!announcementForm.title || !announcementForm.message}
               >
