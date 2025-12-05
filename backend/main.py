@@ -4202,33 +4202,30 @@ async def ai_extract_qa_pairs(text: str, company_name: str = "") -> List[dict]:
 
     logger.info(f"[AI Extract] Starting extraction, text length: {len(text)}")
 
-    # Limit text to 2500 chars for faster processing
-    truncated_text = text[:2500]
+    prompt = f"""Analyze this document and extract question-answer pairs that would be useful for a customer service chatbot for a property management company.
 
-    prompt = f"""Extract Q&A pairs from this text for a customer service chatbot.
+Document text:
+{text[:4000]}
 
-Text:
-{truncated_text}
+Extract relevant information as Q&A pairs. For each piece of information, create a natural question a tenant might ask, and provide the answer.
 
-Create question-answer pairs. Assign category: hyra, felanmalan, kontrakt, tvattstuga, parkering, kontakt, allmant
+Also assign each Q&A to one of these categories: hyra, felanmalan, kontrakt, tvattstuga, parkering, kontakt, allmant
 
-Return ONLY a JSON array:
-[{{"question": "...", "answer": "...", "category": "..."}}]"""
+Return your response as a JSON array with objects containing "question", "answer", and "category" fields.
+Only return the JSON array, nothing else.
+
+Example format:
+[
+  {{"question": "När ska hyran betalas?", "answer": "Hyran ska betalas senast den sista dagen varje månad.", "category": "hyra"}},
+  {{"question": "Hur gör jag en felanmälan?", "answer": "Du kan göra en felanmälan via...", "category": "felanmalan"}}
+]"""
 
     try:
         logger.info(f"[AI Extract] Sending request to Ollama at {OLLAMA_BASE_URL}")
-        async with httpx.AsyncClient(timeout=180.0) as client:
+        async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
                 f"{OLLAMA_BASE_URL}/api/generate",
-                json={
-                    "model": OLLAMA_MODEL,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {
-                        "temperature": 0.2,  # Lower for faster, deterministic extraction
-                        "num_predict": 2000,  # Limit output tokens
-                    }
-                }
+                json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
             )
             response.raise_for_status()
             result = response.json().get("response", "")
