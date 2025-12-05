@@ -313,8 +313,11 @@ function LiveWidget() {
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
+    console.log('[LiveWidget] Initializing, widgetKey:', LANDING_PAGE_WIDGET_KEY)
+
     // Don't load twice
     if (window.Bobot || document.getElementById('bobot-widget-script')) {
+      console.log('[LiveWidget] Widget already exists, reinitializing')
       if (window.Bobot) {
         window.Bobot.init({
           widgetKey: LANDING_PAGE_WIDGET_KEY,
@@ -327,19 +330,24 @@ function LiveWidget() {
     // Load the widget script
     const script = document.createElement('script')
     script.id = 'bobot-widget-script'
-    script.src = `${API_URL.replace('/api', '')}/widget.js`
+    script.src = '/widget.js'
     script.async = true
+    console.log('[LiveWidget] Loading widget from /widget.js')
     script.onload = () => {
+      console.log('[LiveWidget] Script loaded successfully')
       setLoaded(true)
       if (window.Bobot) {
+        console.log('[LiveWidget] Initializing Bobot widget')
         window.Bobot.init({
           widgetKey: LANDING_PAGE_WIDGET_KEY,
           apiUrl: API_URL
         })
+      } else {
+        console.error('[LiveWidget] window.Bobot not available after script load')
       }
     }
-    script.onerror = () => {
-      console.error('Failed to load Bobot widget')
+    script.onerror = (e) => {
+      console.error('[LiveWidget] Failed to load widget script:', e)
     }
     document.body.appendChild(script)
 
