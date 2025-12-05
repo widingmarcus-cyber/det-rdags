@@ -433,24 +433,29 @@ const styles = StyleSheet.create({
   // SECTION 6: PRICING
   pricingGrid: {
     flexDirection: 'row',
-    gap: 16,
-    marginTop: 25,
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 20,
   },
   pricingCard: {
-    flex: 1,
+    width: '31%',
+    minWidth: 140,
     backgroundColor: colors.white,
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: colors.border,
+    marginBottom: 12,
   },
   pricingCardHighlight: {
-    flex: 1,
+    width: '31%',
+    minWidth: 140,
     backgroundColor: colors.white,
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 16,
+    padding: 20,
     borderWidth: 2,
     borderColor: colors.accent,
+    marginBottom: 12,
   },
   pricingTier: {
     fontSize: 12,
@@ -461,19 +466,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   pricingPrice: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 700,
     color: colors.primary,
   },
   pricingUnit: {
-    fontSize: 12,
+    fontSize: 10,
     color: colors.textLight,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   pricingFeature: {
-    fontSize: 10,
+    fontSize: 9,
     color: colors.text,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   recommendedBadge: {
     backgroundColor: colors.accent,
@@ -728,14 +733,31 @@ const JobDescriptionPage = () => (
       </View>
     </View>
 
-    {/* Security note */}
-    <View style={{ marginTop: 40, backgroundColor: colors.slateLight, borderRadius: 16, padding: 24 }}>
-      <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text, marginBottom: 8 }}>
-        Separata kunskapsbaser
+    {/* Technical info - How it works */}
+    <View style={{ marginTop: 30, backgroundColor: colors.slateLight, borderRadius: 16, padding: 20 }}>
+      <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text, marginBottom: 12 }}>
+        Så fungerar tekniken
       </Text>
-      <Text style={{ fontSize: 11, color: colors.textLight, lineHeight: 1.6 }}>
-        Extern och intern bot kan ha helt separata kunskapsbaser. Känslig intern information delas aldrig med externa besökare. Ni styr exakt vad varje bot ska kunna svara på.
-      </Text>
+      <View style={{ flexDirection: 'row', gap: 16 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 4 }}>Lokal AI-modell</Text>
+          <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
+            Bobot drivs av en lokal språkmodell (LLM) som körs på våra svenska servrar. Ingen data skickas till externa molntjänster som OpenAI eller Google.
+          </Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 4 }}>GDPR-säker</Text>
+          <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
+            All data lagras i Sverige med automatisk radering. Ni behåller full kontroll över er information och uppfyller GDPR-kraven.
+          </Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 4 }}>Er kunskapsbas</Text>
+          <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
+            Bobot svarar endast baserat på den information ni laddar upp. Separata kunskapsbaser för extern och intern användning.
+          </Text>
+        </View>
+      </View>
     </View>
 
     <PageFooter pageNumber={3} />
@@ -1051,11 +1073,7 @@ const ContactPage = () => (
       {/* Right column - Contact card */}
       <View style={{ flex: 1 }}>
         <View style={{ backgroundColor: colors.primary, borderRadius: 20, padding: 30, height: '100%' }}>
-          <View style={{ alignItems: 'center', marginBottom: 24 }}>
-            <BobotMascot size={70} />
-          </View>
-
-          <Text style={{ fontFamily: 'Playfair', fontSize: 20, fontWeight: 700, color: colors.white, textAlign: 'center', marginBottom: 20 }}>
+          <Text style={{ fontFamily: 'Playfair', fontSize: 20, fontWeight: 700, color: colors.white, textAlign: 'center', marginBottom: 24 }}>
             Kontakta oss
           </Text>
 
@@ -1081,12 +1099,6 @@ const ContactPage = () => (
               </View>
               <Text style={{ fontSize: 13, color: colors.white, fontWeight: 500 }}>www.bobot.nu</Text>
             </View>
-          </View>
-
-          <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)' }}>
-            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', textAlign: 'center', lineHeight: 1.5 }}>
-              Vi svarar inom 24 timmar
-            </Text>
           </View>
         </View>
       </View>
