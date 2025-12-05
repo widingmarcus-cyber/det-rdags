@@ -82,7 +82,7 @@ function App() {
   // Dynamic page titles based on route
   useEffect(() => {
     const pageTitles = {
-      '/': 'Bobot - AI-chatbot för fastighetsbolag',
+      '/': 'Bobot - din AI-medarbetare',
       '/login': 'Logga in - Bobot',
       '/admin-login': 'Admin Login - Bobot',
       '/dashboard': 'Dashboard - Bobot Admin',
@@ -97,7 +97,7 @@ function App() {
     if (location.pathname.startsWith('/widget/')) {
       document.title = 'Widget - Bobot Admin'
     } else {
-      document.title = pageTitles[location.pathname] || 'Bobot - AI-chatbot för fastighetsbolag'
+      document.title = pageTitles[location.pathname] || 'Bobot - din AI-medarbetare'
     }
   }, [location.pathname])
 
