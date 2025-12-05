@@ -50,6 +50,7 @@ function SuperAdmin() {
     due_date: ''
   })
   const [creatingInvoice, setCreatingInvoice] = useState(false)
+  const [billingLoading, setBillingLoading] = useState(false)
 
   // Company notes
   const [companyNotes, setCompanyNotes] = useState([])
@@ -268,6 +269,7 @@ function SuperAdmin() {
   }
 
   const fetchBilling = async () => {
+    setBillingLoading(true)
     try {
       const [subsRes, invRes] = await Promise.all([
         adminFetch(`${API_BASE}/admin/subscriptions`),
@@ -284,6 +286,8 @@ function SuperAdmin() {
       }
     } catch (error) {
       console.error('Failed to fetch billing:', error)
+    } finally {
+      setBillingLoading(false)
     }
   }
 
@@ -1525,6 +1529,19 @@ function SuperAdmin() {
                 <line x1="16" y1="17" x2="8" y2="17" />
               </svg>
               Aktivitetslogg
+            </button>
+            <button
+              onClick={() => setActiveTab('gdpr')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'gdpr'
+                  ? 'bg-accent/10 text-accent'
+                  : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+              }`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              GDPR
             </button>
 
             {/* Divider */}
@@ -3387,9 +3404,13 @@ function SuperAdmin() {
                   </div>
                   <span className="text-sm text-text-secondary">MRR</span>
                 </div>
-                <p className="text-2xl font-bold text-text-primary">
-                  {revenueDashboard?.mrr?.toLocaleString('sv-SE') || 0} kr
-                </p>
+                {billingLoading ? (
+                  <div className="h-8 w-24 bg-bg-secondary rounded animate-pulse mb-1" />
+                ) : (
+                  <p className="text-2xl font-bold text-text-primary">
+                    {revenueDashboard?.mrr?.toLocaleString('sv-SE') || 0} kr
+                  </p>
+                )}
                 <p className="text-xs text-text-tertiary mt-1">Månadsvis återkommande intäkt</p>
               </div>
 
@@ -3405,9 +3426,13 @@ function SuperAdmin() {
                   </div>
                   <span className="text-sm text-text-secondary">ARR</span>
                 </div>
-                <p className="text-2xl font-bold text-text-primary">
-                  {revenueDashboard?.arr?.toLocaleString('sv-SE') || 0} kr
-                </p>
+                {billingLoading ? (
+                  <div className="h-8 w-24 bg-bg-secondary rounded animate-pulse mb-1" />
+                ) : (
+                  <p className="text-2xl font-bold text-text-primary">
+                    {revenueDashboard?.arr?.toLocaleString('sv-SE') || 0} kr
+                  </p>
+                )}
                 <p className="text-xs text-text-tertiary mt-1">Årlig återkommande intäkt</p>
               </div>
 
@@ -3421,9 +3446,13 @@ function SuperAdmin() {
                   </div>
                   <span className="text-sm text-text-secondary">Obetalda</span>
                 </div>
-                <p className="text-2xl font-bold text-text-primary">
-                  {invoices.filter(i => i.status === 'pending').length}
-                </p>
+                {billingLoading ? (
+                  <div className="h-8 w-12 bg-bg-secondary rounded animate-pulse mb-1" />
+                ) : (
+                  <p className="text-2xl font-bold text-text-primary">
+                    {invoices.filter(i => i.status === 'pending').length}
+                  </p>
+                )}
                 <p className="text-xs text-text-tertiary mt-1">Väntande fakturor</p>
               </div>
 
@@ -3439,9 +3468,13 @@ function SuperAdmin() {
                   </div>
                   <span className="text-sm text-text-secondary">Aktiva pren.</span>
                 </div>
-                <p className="text-2xl font-bold text-text-primary">
-                  {subscriptions.filter(s => s.status === 'active').length}
-                </p>
+                {billingLoading ? (
+                  <div className="h-8 w-12 bg-bg-secondary rounded animate-pulse mb-1" />
+                ) : (
+                  <p className="text-2xl font-bold text-text-primary">
+                    {subscriptions.filter(s => s.status === 'active').length}
+                  </p>
+                )}
                 <p className="text-xs text-text-tertiary mt-1">Betalande kunder</p>
               </div>
             </div>
@@ -3720,10 +3753,10 @@ function SuperAdmin() {
                     </div>
                   </div>
                   <div className="p-3 bg-bg-secondary rounded-lg">
-                    <p className="font-medium text-text-primary text-sm">Standardkonton</p>
+                    <p className="font-medium text-text-primary text-sm">Inloggningsuppgifter</p>
                     <div className="mt-2 space-y-1 text-xs text-text-secondary">
-                      <p>Demo: <code className="px-1 py-0.5 bg-bg-tertiary rounded">demo / demo123</code></p>
-                      <p>Admin: <code className="px-1 py-0.5 bg-bg-tertiary rounded">admin / admin123</code></p>
+                      <p>Användarnamn och lösenord konfigureras via miljövariabler (ADMIN_USERNAME, ADMIN_PASSWORD) i produktion.</p>
+                      <p className="text-text-tertiary mt-1">Se .env.prod för aktuella inställningar.</p>
                     </div>
                   </div>
                 </div>
@@ -4795,7 +4828,7 @@ function SuperAdmin() {
                 <div className="p-3">
                   <p className="text-xs text-text-tertiary uppercase tracking-wider px-3 pb-2">Snabbåtgärder</p>
                   <button
-                    onClick={() => { setCommandPaletteOpen(false); setActiveTab('companies'); setShowCreateModal(true); }}
+                    onClick={() => { setCommandPaletteOpen(false); setActiveTab('companies'); setShowModal(true); }}
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-bg-secondary text-left"
                   >
                     <span className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
