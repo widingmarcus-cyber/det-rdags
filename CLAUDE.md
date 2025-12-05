@@ -4,444 +4,345 @@
 
 **Bobot** is a GDPR-compliant AI chatbot platform where businesses build their own knowledge base of Q&A pairs. The AI uses this knowledge to answer customer questions via an embeddable chat widget.
 
-**Production Domain:** bobot.nu
-
-### Key Features
-- Multi-tenant architecture with tenant isolation
-- AI-powered responses using Ollama (Qwen 2.5 14B)
-- Multi-language support (Swedish, English, Arabic with RTL)
-- GDPR-compliant with automatic data retention cleanup
-- Real-time analytics and conversation tracking
-- Embeddable chat widget for customer websites
-- Multiple widgets per company (internal/external) with individual settings
-- Knowledge base templates for quick setup
-- 2FA authentication for super admins
-- Rate limiting and brute force protection
+- **Production:** https://bobot.nu
+- **Demo:** https://demo.bobot.nu
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                     CUSTOMER WEBSITE                                │
+│                       CUSTOMER WEBSITE                              │
 │  ┌──────────────┐                                                   │
 │  │ Chat Widget  │ ◀── Embeddable React component (IIFE)            │
 │  └──────┬───────┘                                                   │
 └─────────┼───────────────────────────────────────────────────────────┘
-          │
+          │ HTTPS
           ▼
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Admin Panel    │────▶│  FastAPI Backend│────▶│     Ollama      │
-│  (React + Vite) │     │   (Python)      │     │ (Qwen 2.5 14B)  │
+│     Nginx       │────▶│  FastAPI Backend│────▶│     Ollama      │
+│  (SSL + Proxy)  │     │   (Python)      │     │ (Qwen 2.5 14B)  │
 └─────────────────┘     └────────┬────────┘     └─────────────────┘
                                  │
-                        ┌────────▼────────┐
-                        │   SQLite DB     │
-                        │  (Multi-tenant) │
-                        └─────────────────┘
+┌─────────────────┐     ┌────────▼────────┐
+│  Admin Panel    │     │   SQLite DB     │
+│  (React + Vite) │     │  (Multi-tenant) │
+└─────────────────┘     └─────────────────┘
 ```
 
 ## Directory Structure
 
 ```
 bobot/
-├── backend/                    # Python FastAPI backend
-│   ├── main.py                 # FastAPI app (~80 endpoints, ~7000 lines)
-│   ├── database.py             # SQLAlchemy models (~25 tables)
-│   ├── auth.py                 # JWT auth, bcrypt, 2FA helpers
-│   ├── email_service.py        # Email notification service
-│   ├── migrate.py              # Database migration helpers
-│   ├── requirements.txt        # Python dependencies
+├── backend/                          # Python FastAPI backend (~8400 lines)
+│   ├── main.py                       # FastAPI app, ~100 endpoints
+│   ├── database.py                   # SQLAlchemy models (~25 tables)
+│   ├── auth.py                       # JWT, bcrypt, TOTP helpers
+│   ├── email_service.py              # Email notifications
+│   ├── migrate.py                    # Database migrations
+│   ├── requirements.txt
 │   ├── Dockerfile
-│   ├── templates/              # Knowledge base templates (JSON)
-│   │   ├── fastighetsbolag_sv.json
+│   ├── templates/                    # Knowledge base templates
+│   │   ├── fastighetsbolag_sv.json   # Property management (73 Q&As)
 │   │   └── arbetsplats_intern_sv.json
 │   └── tests/
 │       ├── test_auth.py
 │       └── test_api.py
 │
-├── admin-panel/                # React admin dashboard
+├── admin-panel/                      # React admin dashboard
+│   ├── public/
+│   │   └── favicon.svg               # Bobot mascot icon
 │   ├── src/
-│   │   ├── App.jsx             # Main app with routing & auth
-│   │   ├── main.jsx            # Entry point
-│   │   ├── index.css           # Tailwind CSS entry
+│   │   ├── App.jsx                   # Main app, routing, auth context
+│   │   ├── main.jsx                  # Entry point
+│   │   ├── index.css                 # Tailwind CSS
 │   │   ├── components/
-│   │   │   ├── Navbar.jsx      # Navigation sidebar
-│   │   │   └── ProposalPDF.jsx # PDF generation
+│   │   │   ├── Navbar.jsx            # Navigation sidebar
+│   │   │   ├── ProposalPDF.jsx       # PDF generation
+│   │   │   └── superadmin/           # SuperAdmin tab components
+│   │   │       ├── index.js          # Exports all tabs
+│   │   │       ├── OverviewTab.jsx   # Dashboard command center
+│   │   │       ├── CompaniesTab.jsx  # Company management
+│   │   │       ├── AnalyticsTab.jsx  # Platform analytics
+│   │   │       ├── BillingTab.jsx    # Subscriptions & invoices
+│   │   │       ├── PricingTab.jsx    # Pricing tiers & roadmap
+│   │   │       ├── SystemTab.jsx     # System health & maintenance
+│   │   │       ├── AuditTab.jsx      # Audit logs
+│   │   │       ├── GDPRTab.jsx       # GDPR compliance
+│   │   │       ├── PreferencesTab.jsx# Admin settings
+│   │   │       ├── DocsTab.jsx       # Documentation
+│   │   │       └── SuperAdminSidebar.jsx
 │   │   └── pages/
-│   │       ├── Login.jsx       # Company login
-│   │       ├── AdminLogin.jsx  # Super admin login (2FA)
-│   │       ├── Dashboard.jsx   # Stats overview
-│   │       ├── WidgetPage.jsx  # Widget + knowledge base editor
-│   │       ├── Conversations.jsx # Chat history viewer
-│   │       ├── Analytics.jsx   # Detailed analytics
-│   │       ├── Settings.jsx    # Company settings
-│   │       ├── SuperAdmin.jsx  # Multi-tenant management
-│   │       ├── LandingPage.jsx # Public landing page (bobot.nu)
-│   │       └── Documentation.jsx # API documentation
+│   │       ├── Login.jsx             # Company login
+│   │       ├── AdminLogin.jsx        # Super admin login (2FA)
+│   │       ├── Dashboard.jsx         # Company dashboard
+│   │       ├── WidgetPage.jsx        # Widget & knowledge editor
+│   │       ├── Conversations.jsx     # Chat history
+│   │       ├── Analytics.jsx         # Company analytics
+│   │       ├── Settings.jsx          # Company settings
+│   │       ├── SuperAdmin.jsx        # Platform management (~3200 lines)
+│   │       ├── LandingPage.jsx       # Public landing page
+│   │       ├── PrivacyPolicy.jsx     # Privacy policy
+│   │       └── Documentation.jsx     # API docs
 │   ├── package.json
 │   ├── vite.config.js
 │   ├── tailwind.config.js
 │   └── Dockerfile
 │
-├── chat-widget/                # Embeddable chat widget
+├── chat-widget/                      # Embeddable chat widget (~1500 lines)
 │   ├── src/
-│   │   └── widget.jsx          # Complete widget (~1500 lines)
+│   │   └── widget.jsx                # Complete widget component
 │   ├── package.json
-│   ├── vite.config.js          # Builds as IIFE for embedding
+│   ├── vite.config.js                # Builds as IIFE
 │   └── Dockerfile
 │
-├── deploy/                     # Production deployment
+├── deploy/                           # Production deployment
 │   ├── docker-compose.prod.yml
-│   ├── nginx.conf              # Nginx reverse proxy
-│   └── .env.prod               # Production environment
+│   ├── nginx.conf                    # SSL + reverse proxy
+│   └── .env.prod                     # ⚠️ ROTATE CREDENTIALS
 │
-├── docker-compose.yml          # Development stack
-├── bobot_specifikation.md      # Product specification (Swedish)
-├── CLAUDE.md                   # This file
-└── README.md                   # Project documentation
+├── docker-compose.yml                # Development stack
+├── CLAUDE.md                         # This file
+└── README.md                         # Project documentation
 ```
 
 ## Tech Stack
 
-### Backend
-- **Language:** Python 3.11+
-- **Framework:** FastAPI with lifespan events
-- **Database:** SQLite (PostgreSQL supported via DATABASE_URL)
-- **ORM:** SQLAlchemy 2.0
-- **AI:** Ollama with Qwen 2.5 14B
-- **Auth:** JWT (PyJWT) + bcrypt + TOTP (pyotp)
-- **Validation:** Pydantic v2
-- **File parsing:** openpyxl, python-docx, pypdf, beautifulsoup4
-- **Email:** aiosmtplib
-- **Error tracking:** Sentry (optional)
+| Component | Technology |
+|-----------|------------|
+| **Backend** | Python 3.11, FastAPI, SQLAlchemy 2.0, Pydantic v2 |
+| **Database** | SQLite (PostgreSQL supported) |
+| **AI Model** | Ollama with Qwen 2.5 14B |
+| **Auth** | JWT (PyJWT) + bcrypt + TOTP (pyotp) |
+| **Frontend** | React 18, Vite, Tailwind CSS, React Router v6 |
+| **Widget** | React 18 built as IIFE for embedding |
+| **Infrastructure** | Docker, Nginx, Let's Encrypt SSL |
 
-### Frontend (Admin Panel)
-- **Framework:** React 18 with Vite
-- **Styling:** Tailwind CSS
-- **Routing:** React Router v6
-- **State:** React Context + localStorage
-
-### Chat Widget
-- **Framework:** React 18 (built as IIFE)
-- **Styling:** Inline styles with design tokens
-- **Features:** Dark mode, RTL support, GDPR consent, sources display
-
-### Infrastructure
-- **Containerization:** Docker, docker-compose
-- **Reverse Proxy:** Nginx (production)
-- **Ports:**
-  - Backend API: 8000
-  - Admin Panel: 3000
-  - Widget Demo: 3001
-  - Ollama: 11434
-
-## Development Workflows
-
-### Quick Start with Docker (Recommended)
+## Quick Start
 
 ```bash
-# Start all services
+# Development
 docker-compose up -d
-
-# Download AI model (first time only)
 docker exec -it bobot-ollama-1 ollama pull qwen2.5:14b
 
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
+# Access
+# Admin Panel: http://localhost:3000
+# Backend API: http://localhost:8000
+# Widget Demo: http://localhost:3001
 ```
 
-### Manual Development Setup
+### Default Credentials (Development Only)
 
-```bash
-# Backend
-cd backend
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-pip install -r requirements.txt
-python main.py
-
-# Admin Panel (new terminal)
-cd admin-panel
-npm install
-npm run dev
-
-# Widget (new terminal)
-cd chat-widget
-npm install
-npm run dev
-```
-
-### Default Credentials
-
-| Account Type | ID/Username | Password |
-|-------------|-------------|----------|
+| Account | ID/Username | Password |
+|---------|-------------|----------|
 | Demo Company | `demo` | `demo123` |
 | Super Admin | `admin` | `admin123` |
 
-## Database Models
+## Key Features
 
-### Core Tables
-- **Company** - Tenant accounts with pricing tier, billing info, discounts
-- **CompanySettings** - Per-tenant configuration (colors, messages, GDPR, usage limits)
-- **Widget** - Individual widget instances per company (internal/external types)
-- **KnowledgeItem** - Q&A pairs, can be widget-specific or shared
-- **Category** - User-defined categories for knowledge items
-- **Conversation** - Chat sessions with GDPR consent tracking
-- **Message** - Individual messages with sources and response time
-- **DailyStatistics** - Aggregated analytics (GDPR-safe, retained after deletion)
+### For Customers (Companies)
+- Build knowledge base with Q&A pairs
+- Import from Excel, Word, CSV, TXT, or URL
+- Multiple widgets per company (internal/external)
+- Real-time analytics and conversation tracking
+- GDPR-compliant data handling
+- Customizable widget appearance
 
-### Admin & Audit Tables
-- **SuperAdmin** - Platform administrators with 2FA (TOTP)
-- **AdminAuditLog** - Admin action tracking
-- **GDPRAuditLog** - Data processing audit trail
-- **CompanyActivityLog** - Per-company activity (12-month retention)
+### For Platform Admins
+- Multi-tenant management
+- Company billing and subscriptions
+- Platform-wide analytics
+- System health monitoring
+- GDPR compliance tools
+- 2FA authentication
 
-### Billing Tables
-- **Subscription** - Company subscription info
-- **Invoice** - Invoice history
-- **PricingTier** - Pricing tier definitions (editable by admin)
+### Widget Features
+- Dark mode support
+- RTL language support (Arabic)
+- GDPR consent management
+- Source citations
+- Suggested questions
+- Customizable styling
 
-### Additional Tables
-- **CompanyNote** - Internal admin notes
-- **CompanyDocument** - Uploaded contracts/agreements
-- **WidgetPerformance** - Hourly performance stats
-- **RoadmapItem** - Feature roadmap
-- **GlobalSettings** - System-wide settings
-- **PageView** - Landing page analytics
-- **DailyPageStats** - Aggregated page statistics
-- **EmailNotificationQueue** - Pending notifications
-- **ChatLog** - Legacy logging (backwards compatibility)
+## API Endpoints
 
-## Key API Endpoints
+### Public (No Auth)
+```
+POST /chat/{company_id}          # Send question
+POST /chat/widget/{widget_key}   # Chat via widget key
+GET  /widget/{company_id}/config # Widget configuration
+GET  /health                     # Health check
+```
 
-### Public (Widget)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/chat/{company_id}` | Send question, get AI response |
-| POST | `/chat/widget/{widget_key}` | Chat via widget key |
-| POST | `/chat/{company_id}/feedback` | Submit feedback |
-| GET | `/widget/{company_id}/config` | Get widget configuration |
-| GET | `/widget/key/{widget_key}/config` | Get config by widget key |
-| GET | `/health` | Health check |
+### Company Auth Required
+```
+GET/PUT  /settings               # Company settings
+GET/POST /knowledge              # Knowledge base CRUD
+POST     /knowledge/upload       # File upload
+POST     /knowledge/import-url   # URL import
+GET/POST /widgets                # Widget management
+GET      /templates              # List templates
+POST     /templates/{id}/apply   # Apply template
+GET      /conversations          # Chat history
+GET      /analytics              # Detailed analytics
+```
 
-### Authentication
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/auth/login` | Company login |
-| POST | `/auth/admin/login` | Super admin login |
-| POST | `/auth/admin/verify-2fa` | 2FA verification |
+### Super Admin Auth Required
+```
+GET/POST /admin/companies        # Company management
+PUT      /admin/companies/{id}/toggle
+GET      /admin/system-health    # System status
+GET      /admin/audit-log        # Audit trail
+POST     /admin/gdpr-cleanup     # Manual cleanup
+GET      /admin/analytics/*      # Platform analytics
+```
 
-### Company (Authenticated)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET/PUT | `/settings` | Company settings |
-| GET/POST | `/knowledge` | Knowledge base CRUD |
-| PUT/DELETE | `/knowledge/{id}` | Update/delete item |
-| POST | `/knowledge/upload` | Upload Excel/Word/CSV/TXT |
-| POST | `/knowledge/import-url` | Import from URL |
-| POST | `/knowledge/check-similar` | Check for duplicates |
-| POST | `/knowledge/bulk-delete` | Bulk delete items |
-| GET/POST | `/categories` | Category management |
-| GET | `/conversations` | List conversations |
-| GET/DELETE | `/conversations/{id}` | View/delete conversation |
-| DELETE | `/conversations` | Bulk delete |
-| GET | `/stats` | Basic statistics |
-| GET | `/analytics` | Detailed analytics |
-| GET | `/my-usage` | Current usage metrics |
-| GET/POST | `/widgets` | Widget management |
-| GET/PUT/DELETE | `/widgets/{id}` | Widget CRUD |
-| GET | `/templates` | List knowledge templates |
-| POST | `/templates/{id}/apply` | Apply template |
-| GET | `/export/conversations` | Export as CSV |
-| GET | `/export/knowledge` | Export knowledge base |
-| GET | `/activity-log` | View activity log |
+## Database Schema (Key Tables)
 
-### GDPR Endpoints
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/gdpr/{company_id}/consent` | Give/revoke consent |
-| GET | `/gdpr/{company_id}/my-data` | Download user data |
-| DELETE | `/gdpr/{company_id}/my-data` | Request data deletion |
-| GET | `/gdpr/{company_id}/audit-log` | GDPR audit trail |
-
-### Super Admin
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET/POST | `/admin/companies` | List/create companies |
-| DELETE | `/admin/companies/{id}` | Delete company |
-| PUT | `/admin/companies/{id}/toggle` | Enable/disable |
-| PUT | `/admin/companies/{id}/pricing` | Set pricing tier |
-| PUT | `/admin/companies/{id}/discount` | Set discount |
-| PUT | `/admin/companies/{id}/usage-limit` | Set usage limits |
-| GET | `/admin/companies/{id}/widgets` | List widgets |
-| GET | `/admin/system-health` | System health overview |
-| POST | `/admin/gdpr-cleanup` | Manual GDPR cleanup |
-| GET | `/admin/audit-log` | Admin audit log |
-| POST | `/admin/impersonate/{id}` | Impersonate company |
-| GET | `/admin/export/{id}` | Export company data |
-| GET/POST | `/admin/pricing-tiers/db` | Pricing management |
-| GET | `/admin/revenue-dashboard` | Revenue analytics |
-| GET/POST | `/admin/subscriptions` | Subscription management |
-| GET/POST | `/admin/invoices` | Invoice management |
-| GET/POST | `/admin/roadmap` | Roadmap items |
-| GET/POST | `/admin/companies/{id}/notes` | Company notes |
-| GET/POST | `/admin/companies/{id}/documents` | Company documents |
-| GET | `/admin/activity-stream` | Real-time activity |
-| GET | `/admin/ai-insights` | AI-powered insights |
-| GET/POST/DELETE | `/admin/announcements` | Broadcast messages |
-| PUT/GET | `/admin/maintenance-mode` | Toggle maintenance |
-| GET | `/admin/analytics/overview` | Platform analytics |
+| Table | Purpose |
+|-------|---------|
+| Company | Tenant accounts |
+| CompanySettings | Per-tenant config |
+| Widget | Widget instances |
+| KnowledgeItem | Q&A pairs |
+| Category | Knowledge categories |
+| Conversation | Chat sessions |
+| Message | Individual messages |
+| SuperAdmin | Platform admins (2FA) |
+| AdminAuditLog | Admin action tracking |
+| GDPRAuditLog | Data processing audit |
+| DailyStatistics | Aggregated analytics |
 
 ## Security
 
-### Password Hashing
-- bcrypt with cost factor 12 (~250ms)
-- Legacy SHA256 migration support
+### Implemented
+- bcrypt password hashing (cost factor 12)
+- JWT tokens (24-hour expiry)
+- TOTP 2FA for super admins
+- Rate limiting (15 req/min chat, 30 req/min API)
+- Brute force protection (5 attempts → 15-min lockout)
+- HTTPS with HSTS
+- SQL injection protection (ORM)
+- XSS protection (React auto-escaping)
 
-### JWT Tokens
-- 24-hour expiry
-- Environment-based secret key (required in production)
-- Separate pending token for 2FA flow (5-minute expiry)
-
-### Rate Limiting
-- Chat: 15 requests/minute per session+IP
-- Admin API: 30 requests/minute per admin
-
-### Brute Force Protection
-- 5 failed attempts triggers 15-minute lockout
-- Tracked by username/IP
-
-### 2FA
-- TOTP support for Super Admin accounts
-- Google Authenticator compatible
-
-### Security Headers (Production)
-- HSTS, CSP, X-Frame-Options, X-XSS-Protection
-- Request ID tracing
+### Known Issues (See Security Audit)
+- ⚠️ Production credentials in repo - **ROTATE IMMEDIATELY**
+- ⚠️ GDPR endpoints lack proper authorization
+- ⚠️ Rate limiting is in-memory only
+- ⚠️ Auth tokens in localStorage (should use HttpOnly cookies)
 
 ## GDPR Compliance
 
-- Configurable data retention (7-30 days)
-- Automatic cleanup task runs hourly
-- Statistics anonymized before deletion
-- IP anonymization (last octet masked)
-- Activity log cleanup after 12 months
-- Consent management in widget
-- Data export and deletion endpoints
+- Configurable retention (7-30 days)
+- Automatic hourly cleanup
+- IP anonymization
+- Consent management
+- Data export/deletion endpoints
+- Audit logging
 
 ## Widget Embedding
 
-### Standard HTML
 ```html
 <script src="https://bobot.nu/widget.js"></script>
 <script>
   Bobot.init({
-    widgetKey: "your-widget-key",  // or companyId: "your-company-id"
+    widgetKey: "your-widget-key",
     apiUrl: "https://bobot.nu/api"
   });
 </script>
 ```
 
-### WordPress
-```php
-function add_bobot_chatbot() {
-    ?>
-    <script src="https://bobot.nu/widget.js"></script>
-    <script>
-        Bobot.init({
-            widgetKey: 'your-widget-key',
-            apiUrl: 'https://bobot.nu/api'
-        });
-    </script>
-    <?php
-}
-add_action('wp_footer', 'add_bobot_chatbot');
-```
-
 ## Environment Variables
 
 ```bash
-# Required in Production
+# Required
 ENVIRONMENT=production
-SECRET_KEY=<generate-with-secrets-module>
-CORS_ORIGINS=https://bobot.nu,https://www.bobot.nu,https://demo.bobot.nu
+SECRET_KEY=<generate-secure-key>
+CORS_ORIGINS=https://bobot.nu,https://www.bobot.nu
 
-# Optional
+# AI Configuration
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=qwen2.5:14b
+
+# Optional
 DATABASE_URL=sqlite:///./bobot.db
 SENTRY_DSN=<your-sentry-dsn>
-ADMIN_PASSWORD=<strong-password>
-DEMO_PASSWORD=demo123
-ENABLE_DEMO_DATA=true
 ```
 
 ## Design System
 
-### Colors
-- **Primary Accent:** `#D97757` (terracotta)
-- **Backgrounds:** Warm grays (#FAFAFA, #F5F5F4)
-- **Text:** Warm blacks (#1C1917)
-- **Dark mode:** Inverted with warm undertones
+| Element | Value |
+|---------|-------|
+| Primary Color | `#D97757` (terracotta) |
+| Background | `#FAFAFA`, `#F5F5F4` |
+| Text | `#1C1917` |
+| Font | Inter (Google Fonts) |
 
-### Typography
-- Font: Inter (Google Fonts, with system fallback)
-- Base size: 14-16px
-
-## Useful Commands
+## Development Commands
 
 ```bash
-# Docker logs
+# Logs
 docker-compose logs -f backend
-docker-compose logs -f ollama
 
-# Rebuild service
+# Rebuild
 docker-compose build backend
 docker-compose up -d backend
 
 # Reset database
-rm backend/bobot.db
-docker-compose restart backend
+rm backend/bobot.db && docker-compose restart backend
 
 # Test API
 curl -X POST http://localhost:8000/chat/demo \
   -H "Content-Type: application/json" \
-  -d '{"question": "Hur säger jag upp min lägenhet?"}'
-
-# Get auth token
-curl -X POST http://localhost:8000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"company_id": "demo", "password": "demo123"}'
+  -d '{"question": "Test question"}'
 ```
 
-## Key Code Patterns
+## Code Patterns
 
-### Adding New Endpoints
-1. Define Pydantic model for request/response in `main.py`
-2. Add endpoint function with appropriate decorator
-3. Use `Depends(get_current_company)` for company auth
-4. Use `Depends(get_super_admin)` for admin-only endpoints
+### Adding Endpoints
+```python
+@app.post("/endpoint")
+async def endpoint(
+    request: RequestModel,
+    current: dict = Depends(get_current_company),  # Company auth
+    db: Session = Depends(get_db)
+):
+    pass
 
-### Widget Configuration
-- Per-widget settings: primary_color, secondary_color, background_color
-- Typography: font_family, font_size, border_radius
-- Messages: welcome_message, fallback_message, subtitle
-- Behavior: start_expanded, require_consent, suggested_questions, tone
+# For admin endpoints
+@app.get("/admin/endpoint")
+async def admin_endpoint(
+    admin: SuperAdmin = Depends(get_super_admin),  # Admin auth
+    db: Session = Depends(get_db)
+):
+    pass
+```
 
 ### AI Response Flow
-1. User sends question via `/chat/{company_id}` or `/chat/widget/{widget_key}`
-2. Rate limiting checked
-3. Widget configuration loaded for tone/language
-4. `find_relevant_context()` searches knowledge base
-5. `build_prompt()` constructs AI prompt with context
-6. Ollama generates response
-7. Response cached, conversation logged, statistics updated
+1. Rate limit check
+2. Load widget config
+3. Search knowledge base (`find_relevant_context`)
+4. Build prompt with context
+5. Query Ollama
+6. Log conversation + update stats
+
+## Production Deployment
+
+See `deploy/` directory:
+- `docker-compose.prod.yml` - Production services
+- `nginx.conf` - SSL + reverse proxy config
+- SSL via Let's Encrypt (Certbot)
+
+```bash
+# Deploy
+docker-compose -f deploy/docker-compose.prod.yml up -d
+
+# SSL setup
+sudo certbot --nginx -d bobot.nu -d www.bobot.nu -d demo.bobot.nu
+```
 
 ## Known Limitations
 
-1. **Database:** SQLite by default (PostgreSQL supported)
-2. **File uploads:** 10MB limit, in-memory processing
-3. **Migrations:** Uses auto-create; Alembic recommended for production
+1. SQLite by default (PostgreSQL supported)
+2. File uploads: 10MB max, in-memory processing
+3. Rate limiting: in-memory, lost on restart
+4. No database migrations (auto-create tables)
