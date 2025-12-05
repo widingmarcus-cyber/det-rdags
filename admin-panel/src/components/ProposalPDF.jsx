@@ -118,6 +118,43 @@ const BobotMascotSmall = ({ size = 40 }) => (
   </Svg>
 )
 
+// SVG Icons to replace broken emojis (react-pdf doesn't support emojis)
+const IconBolt = ({ size = 20, color = colors.white }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill={color} />
+  </Svg>
+)
+
+const IconHome = ({ size = 20, color = colors.white }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke={color} strokeWidth={2} fill="none" />
+  </Svg>
+)
+
+const IconMoon = ({ size = 20, color = colors.white }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" fill={color} />
+  </Svg>
+)
+
+const IconPalette = ({ size = 14, color = colors.white }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Circle cx="12" cy="12" r="10" fill={color} />
+  </Svg>
+)
+
+const IconChat = ({ size = 14, color = colors.white }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" fill={color} />
+  </Svg>
+)
+
+const IconCheck = ({ size = 12, color = colors.white }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Path d="M20 6L9 17l-5-5" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+  </Svg>
+)
+
 // Create styles
 const styles = StyleSheet.create({
   // Base page
@@ -530,7 +567,7 @@ const PhilosophyPage = () => (
     <View style={styles.uspGrid}>
       <View style={styles.uspCard}>
         <View style={styles.uspIcon}>
-          <Text style={styles.uspIconText}>⚡</Text>
+          <IconBolt size={20} color={colors.white} />
         </View>
         <Text style={styles.uspTitle}>Supersnabb</Text>
         <Text style={styles.uspDescription}>Läser in dokument på några sekunder och börjar svara direkt.</Text>
@@ -538,7 +575,7 @@ const PhilosophyPage = () => (
 
       <View style={styles.uspCard}>
         <View style={[styles.uspIcon, { backgroundColor: colors.accent }]}>
-          <Text style={styles.uspIconText}>🏠</Text>
+          <IconHome size={20} color={colors.white} />
         </View>
         <Text style={styles.uspTitle}>Lokal</Text>
         <Text style={styles.uspDescription}>All kunskap stannar hos er. Inga externa moln eller tredjeparter.</Text>
@@ -546,10 +583,10 @@ const PhilosophyPage = () => (
 
       <View style={styles.uspCard}>
         <View style={styles.uspIcon}>
-          <Text style={styles.uspIconText}>🌙</Text>
+          <IconMoon size={20} color={colors.white} />
         </View>
         <Text style={styles.uspTitle}>Vaken</Text>
-        <Text style={styles.uspDescription}>Jobbar när ni går hem. Tillgänglig 24/7, 365 dagar om året.</Text>
+        <Text style={styles.uspDescription}>Jobbar dygnet runt. Tillgänglig 24/7, alla dagar.</Text>
       </View>
     </View>
 
@@ -560,19 +597,19 @@ const PhilosophyPage = () => (
       </Text>
       <View style={styles.featureList}>
         <View style={styles.featureItem}>
-          <View style={styles.featureBullet}><Text style={styles.featureBulletText}>✓</Text></View>
+          <View style={styles.featureBullet}><IconCheck size={12} color={colors.white} /></View>
           <Text style={styles.featureText}>Minskar belastning på kundtjänst och support</Text>
         </View>
         <View style={styles.featureItem}>
-          <View style={styles.featureBullet}><Text style={styles.featureBulletText}>✓</Text></View>
+          <View style={styles.featureBullet}><IconCheck size={12} color={colors.white} /></View>
           <Text style={styles.featureText}>Nyanställda blir självgående direkt</Text>
         </View>
         <View style={styles.featureItem}>
-          <View style={styles.featureBullet}><Text style={styles.featureBulletText}>✓</Text></View>
+          <View style={styles.featureBullet}><IconCheck size={12} color={colors.white} /></View>
           <Text style={styles.featureText}>Konsekvent information – samma svar varje gång</Text>
         </View>
         <View style={styles.featureItem}>
-          <View style={styles.featureBullet}><Text style={styles.featureBulletText}>✓</Text></View>
+          <View style={styles.featureBullet}><IconCheck size={12} color={colors.white} /></View>
           <Text style={styles.featureText}>GDPR-säker med automatisk dataradering</Text>
         </View>
       </View>
@@ -658,7 +695,7 @@ const CustomizationPage = () => (
       <View style={{ alignItems: 'center' }}>
         <BobotMascot size={100} />
         <Text style={{ fontSize: 10, color: colors.textLight, marginTop: 12, textAlign: 'center' }}>
-          Er egen färg & stil
+          Er egen färg och stil
         </Text>
       </View>
       <View style={styles.customizationText}>
@@ -667,7 +704,7 @@ const CustomizationPage = () => (
         </Text>
         <View style={styles.featureList}>
           <View style={styles.featureItem}>
-            <View style={styles.featureBullet}><Text style={styles.featureBulletText}>🎨</Text></View>
+            <View style={styles.featureBullet}><IconPalette size={12} color={colors.white} /></View>
             <Text style={styles.featureText}>Välj era företagsfärger</Text>
           </View>
           <View style={styles.featureItem}>
@@ -675,11 +712,11 @@ const CustomizationPage = () => (
             <Text style={styles.featureText}>Anpassa typsnitt</Text>
           </View>
           <View style={styles.featureItem}>
-            <View style={styles.featureBullet}><Text style={styles.featureBulletText}>◼</Text></View>
+            <View style={styles.featureBullet}><IconCheck size={12} color={colors.white} /></View>
             <Text style={styles.featureText}>Runda eller raka hörn</Text>
           </View>
           <View style={styles.featureItem}>
-            <View style={styles.featureBullet}><Text style={styles.featureBulletText}>💬</Text></View>
+            <View style={styles.featureBullet}><IconChat size={12} color={colors.white} /></View>
             <Text style={styles.featureText}>Anpassad ton och röst</Text>
           </View>
         </View>
@@ -692,17 +729,17 @@ const CustomizationPage = () => (
         Språkstöd
       </Text>
       <View style={{ flexDirection: 'row', gap: 16 }}>
-        <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 16, alignItems: 'center' }}>
-          <Text style={{ fontSize: 24, marginBottom: 8 }}>🇸🇪</Text>
+        <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 20, alignItems: 'center' }}>
+          <Text style={{ fontSize: 14, fontWeight: 700, color: colors.primary, marginBottom: 8 }}>SV</Text>
           <Text style={{ fontSize: 12, fontWeight: 500, color: colors.text }}>Svenska</Text>
         </View>
-        <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 16, alignItems: 'center' }}>
-          <Text style={{ fontSize: 24, marginBottom: 8 }}>🇬🇧</Text>
+        <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 20, alignItems: 'center' }}>
+          <Text style={{ fontSize: 14, fontWeight: 700, color: colors.primary, marginBottom: 8 }}>EN</Text>
           <Text style={{ fontSize: 12, fontWeight: 500, color: colors.text }}>English</Text>
         </View>
-        <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 16, alignItems: 'center' }}>
-          <Text style={{ fontSize: 24, marginBottom: 8 }}>🇸🇦</Text>
-          <Text style={{ fontSize: 12, fontWeight: 500, color: colors.text }}>العربية</Text>
+        <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 20, alignItems: 'center' }}>
+          <Text style={{ fontSize: 14, fontWeight: 700, color: colors.primary, marginBottom: 8 }}>AR</Text>
+          <Text style={{ fontSize: 12, fontWeight: 500, color: colors.text }}>Arabic</Text>
         </View>
       </View>
     </View>
