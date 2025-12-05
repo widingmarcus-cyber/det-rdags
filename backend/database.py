@@ -3,7 +3,7 @@ Bobot Database - SQLite/PostgreSQL med SQLAlchemy
 GDPR-compliant med anonymiserad statistik
 """
 
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Float, Date, Index
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Float, Date, Index, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.pool import QueuePool
@@ -201,6 +201,9 @@ class CompanySettings(Base):
     max_knowledge_items = Column(Integer, default=0)  # 0 = unlimited
     usage_reset_date = Column(Date)  # When to reset monthly counter
     limit_warning_sent = Column(Boolean, default=False)  # Track if warning was sent
+
+    # Extra settings for announcement read tracking and other flexible storage
+    extra_settings = Column(JSON, default=dict)  # {"read_announcement_id": "..."}
 
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

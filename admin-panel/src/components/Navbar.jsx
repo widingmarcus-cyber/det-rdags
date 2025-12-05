@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 
 function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, announcement, onDismissAnnouncement }) {
   const [showAnnouncement, setShowAnnouncement] = useState(false)
@@ -199,17 +200,17 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
         </button>
       </div>
 
-      {/* Slide-out message panel */}
-      {showAnnouncement && (
+      {/* Slide-out message panel - rendered via portal to ensure proper z-index */}
+      {showAnnouncement && createPortal(
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity"
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[9998] transition-opacity"
             onClick={() => setShowAnnouncement(false)}
           />
 
           {/* Slide-out panel */}
-          <div className="fixed top-0 left-60 bottom-0 w-96 bg-bg-primary border-r border-border-subtle shadow-2xl z-50 flex flex-col animate-slide-in-right">
+          <div className="fixed top-0 left-60 bottom-0 w-96 bg-bg-primary border-r border-border-subtle shadow-2xl z-[9999] flex flex-col animate-slide-in-right">
             {/* Header */}
             <div className="px-6 py-4 border-b border-border-subtle flex items-center justify-between bg-bg-secondary">
               <div className="flex items-center gap-3">
@@ -330,7 +331,8 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
               )}
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
 
       {/* User section */}
