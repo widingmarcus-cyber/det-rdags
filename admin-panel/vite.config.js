@@ -10,6 +10,10 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
+      },
+      '/widget.js': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
       }
     }
   }

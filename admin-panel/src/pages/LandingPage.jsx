@@ -1,5 +1,21 @@
 import { useNavigate, Link } from 'react-router-dom'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
+
+// Immediately remove dark class before any rendering (runs on module load)
+// Also disable transitions temporarily to prevent any flash
+if (typeof document !== 'undefined') {
+  document.documentElement.classList.remove('dark')
+  // Add a style to prevent any transitions during initial load
+  const style = document.createElement('style')
+  style.id = 'landing-no-transition'
+  style.textContent = '*, *::before, *::after { transition: none !important; }'
+  document.head.appendChild(style)
+  // Remove the style after a short delay to allow transitions again
+  setTimeout(() => {
+    const el = document.getElementById('landing-no-transition')
+    if (el) el.remove()
+  }, 100)
+}
 
 // Use /api prefix which is proxied to backend in both dev and production
 const API_BASE = '/api'
@@ -570,13 +586,12 @@ function LandingPage() {
   const [isDark, setIsDark] = useState(false)
   const containerRef = useRef(null)
 
-  // Force light mode on landing page mount and set page title
-  useEffect(() => {
+  // Force light mode on landing page - useLayoutEffect runs before paint
+  useLayoutEffect(() => {
     document.title = 'Bobot - din AI-medarbetare'
     // ALWAYS start in light mode on landing page - ignore localStorage
     document.documentElement.classList.remove('dark')
     setIsDark(false)
-    // Don't persist this to localStorage - just force light mode while on landing page
   }, [])
 
   // Cleanup: restore user preference when leaving landing page
