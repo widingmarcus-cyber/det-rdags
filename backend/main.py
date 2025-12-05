@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict
 from datetime import datetime, timedelta, date
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, text
 import httpx
 import os
 import json
@@ -2052,7 +2052,7 @@ async def health(db: Session = Depends(get_db)):
 
     # Check database connectivity
     try:
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         health_status["database"] = "connected"
     except Exception as e:
         health_status["status"] = "degraded"
