@@ -37,17 +37,18 @@ Font.register({
   ]
 })
 
-// Organic Tech Design System Colors
+// Refined, Elegant, Professional Color Palette
 const colors = {
-  primary: '#D97757',        // Terracotta
-  background: '#FDFCF0',     // Warm Sand/Unbleached Paper
-  text: '#1C1917',           // Deep Charcoal/Espresso
-  textLight: '#57534E',      // Stone gray
-  accent: '#81B29A',         // Sage Green
+  primary: '#D97757',        // Terracotta - warm accent
+  background: '#F8FAFC',     // Clean slate - professional
+  text: '#1E293B',           // Slate-900 - deep and readable
+  textLight: '#64748B',      // Slate-500 - secondary text
+  accent: '#10B981',         // Emerald - success/growth
   white: '#FFFFFF',
-  cardShadow: 'rgba(234, 88, 12, 0.05)', // Warm shadow
-  heroBackground: '#E5D0C5', // Warm blush for hero
-  border: '#E8E4DF',
+  cardShadow: 'rgba(15, 23, 42, 0.04)', // Subtle shadow
+  heroBackground: '#F1F5F9', // Slate-100 - elegant hero
+  border: '#E2E8F0',         // Slate-200 - clean dividers
+  slateLight: '#F1F5F9',     // For subtle backgrounds
 }
 
 // Bobot Mascot Component (SVG) - Matching landing page design
@@ -466,8 +467,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 30,
     paddingBottom: 20,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   pageHeaderTitle: {
     fontFamily: 'Playfair',
@@ -628,7 +629,7 @@ const JobDescriptionPage = () => (
     </View>
 
     {/* Security note */}
-    <View style={{ marginTop: 40, backgroundColor: colors.white, borderRadius: 16, padding: 24, borderLeftWidth: 4, borderLeftColor: colors.accent }}>
+    <View style={{ marginTop: 40, backgroundColor: colors.slateLight, borderRadius: 16, padding: 24 }}>
       <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text, marginBottom: 8 }}>
         Separata kunskapsbaser
       </Text>
@@ -840,7 +841,7 @@ const PricingPage = ({ startupFee, monthlyFee, tier, discount }) => (
     </View>
 
     {/* Startup fee */}
-    <View style={{ marginTop: 30, backgroundColor: colors.white, borderRadius: 16, padding: 24, borderLeftWidth: 4, borderLeftColor: colors.primary }}>
+    <View style={{ marginTop: 30, backgroundColor: colors.slateLight, borderRadius: 16, padding: 24 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <View>
           <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Uppstartsavgift (engångskostnad)</Text>
