@@ -291,11 +291,18 @@ function ThemeToggle({ isDark, onToggle }) {
 function DemoWidget() {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState([
-    { type: 'bot', text: 'Hej! Jag är Bobot - er AI-medarbetare. Hur kan jag hjälpa dig idag?' }
+    { type: 'bot', text: 'Hej! Jag är Bobot - er AI-medarbetare. Hur kan jag hjälpa dig idag?', time: Date.now() }
   ])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [expandedSources, setExpandedSources] = useState({})
+  const [showConsent, setShowConsent] = useState(true)
+  const [consentGiven, setConsentGiven] = useState(false)
+
+  // Format timestamp
+  const formatTime = (timestamp) => {
+    return new Date(timestamp).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
+  }
 
   // Smart demo responses based on keywords - accurate information only
   const getSmartResponse = (userMsg) => {
@@ -524,7 +531,7 @@ function DemoWidget() {
   const handleSend = () => {
     if (!input.trim() || isTyping) return
     const userMsg = input.trim()
-    setMessages(prev => [...prev, { type: 'user', text: userMsg }])
+    setMessages(prev => [...prev, { type: 'user', text: userMsg, time: Date.now() }])
     setInput('')
     setIsTyping(true)
 
@@ -532,20 +539,25 @@ function DemoWidget() {
       const response = getSmartResponse(userMsg)
       // Handle both string responses and object responses (with sources)
       const botMessage = typeof response === 'string'
-        ? { type: 'bot', text: response }
-        : { type: 'bot', text: response.text, sources: response.sources, id: Date.now() }
+        ? { type: 'bot', text: response, time: Date.now() }
+        : { type: 'bot', text: response.text, sources: response.sources, id: Date.now(), time: Date.now() }
       setMessages(prev => [...prev, botMessage])
       setIsTyping(false)
     }, 800 + Math.random() * 700)
   }
 
+  const handleConsent = () => {
+    setConsentGiven(true)
+    setShowConsent(false)
+  }
+
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
-      {/* Chat Window */}
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-3">
+      {/* Chat Window - full width on mobile */}
       {isOpen && (
-        <div className="w-80 sm:w-96 bg-white dark:bg-stone-800 rounded-2xl shadow-2xl border border-stone-200 dark:border-stone-700 overflow-hidden animate-fade-in">
+        <div className="w-[calc(100vw-2rem)] sm:w-96 max-w-md bg-white dark:bg-stone-800 rounded-2xl shadow-2xl border border-stone-200 dark:border-stone-700 overflow-hidden animate-fade-in max-h-[80vh] flex flex-col">
           {/* Header */}
-          <div className="bg-gradient-to-r from-[#D97757] to-[#C4613D] p-4 flex items-center gap-3">
+          <div className="bg-gradient-to-r from-[#D97757] to-[#C4613D] p-4 flex items-center gap-3 flex-shrink-0">
             <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
               <svg width="24" height="24" viewBox="0 0 48 48" fill="none">
                 <rect x="14" y="8" width="20" height="11" rx="2" fill="#FFFFFF" />
@@ -558,7 +570,7 @@ function DemoWidget() {
             </div>
             <div className="flex-1">
               <div className="font-semibold text-white">Bobot Demo</div>
-              <div className="text-xs text-white/80">din medarbetare</div>
+              <div className="text-xs text-white/80">din AI-medarbetare</div>
             </div>
             <button onClick={() => setIsOpen(false)} className="p-1 hover:bg-white/20 rounded transition-colors">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
@@ -567,16 +579,41 @@ function DemoWidget() {
             </button>
           </div>
 
+          {/* Consent Form - shown before first interaction */}
+          {showConsent && !consentGiven && (
+            <div className="p-4 bg-[#FEF3EC] border-b border-[#E8D5CC] flex-shrink-0">
+              <div className="text-sm text-stone-700 mb-3">
+                <p className="font-medium mb-2">Samtycke krävs</p>
+                <p className="text-xs text-stone-500">
+                  Genom att använda chatten godkänner du att vi behandlar din konversation enligt vår integritetspolicy.
+                  Personuppgiftsansvarig: Marcus Widing.
+                </p>
+              </div>
+              <button
+                onClick={handleConsent}
+                className="w-full py-2 bg-[#D97757] hover:bg-[#C4613D] text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                Jag godkänner
+              </button>
+            </div>
+          )}
+
           {/* Messages */}
-          <div className="h-64 overflow-y-auto p-4 space-y-3 bg-[#FAF8F5] dark:bg-stone-900">
+          <div className="h-64 sm:h-72 overflow-y-auto p-4 space-y-3 bg-[#FAF8F5] dark:bg-stone-900 flex-1">
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm ${
+                <div className={`max-w-[85%] sm:max-w-[80%] rounded-2xl text-sm ${
                   msg.type === 'user'
                     ? 'bg-gradient-to-r from-[#D97757] to-[#C4613D] text-white rounded-br-sm'
                     : 'bg-[#FEF3EC] dark:bg-stone-700 text-stone-700 dark:text-stone-200 border border-[#E8D5CC] dark:border-stone-600 rounded-bl-sm'
                 }`}>
-                  {msg.text}
+                  <div className="px-4 py-2.5">{msg.text}</div>
+                  {/* Timestamp */}
+                  {msg.time && (
+                    <div className={`px-4 pb-2 text-[10px] ${msg.type === 'user' ? 'text-white/60' : 'text-stone-400'}`}>
+                      {formatTime(msg.time)}
+                    </div>
+                  )}
 
                   {/* Sources section for demo */}
                   {msg.type === 'bot' && msg.sources && msg.sources.length > 0 && (
@@ -639,8 +676,8 @@ function DemoWidget() {
             )}
           </div>
 
-          {/* Input */}
-          <div className="p-3 border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800">
+          {/* Input - flex-shrink-0 so it doesn't collapse on mobile */}
+          <div className="p-3 border-t border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 flex-shrink-0">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -648,12 +685,12 @@ function DemoWidget() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="Skriv ett meddelande..."
-                className="flex-1 px-4 py-2 bg-stone-100 dark:bg-stone-700 rounded-full text-sm outline-none focus:ring-2 focus:ring-[#D97757] text-stone-700 dark:text-stone-200 placeholder-stone-400"
+                className="flex-1 min-w-0 px-4 py-2.5 bg-stone-100 dark:bg-stone-700 rounded-full text-sm outline-none focus:ring-2 focus:ring-[#D97757] text-stone-700 dark:text-stone-200 placeholder-stone-400"
               />
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || isTyping}
-                className="w-10 h-10 bg-gradient-to-r from-[#D97757] to-[#C4613D] rounded-full flex items-center justify-center text-white disabled:opacity-50 hover:scale-105 transition-transform"
+                className="w-10 h-10 flex-shrink-0 bg-gradient-to-r from-[#D97757] to-[#C4613D] rounded-full flex items-center justify-center text-white disabled:opacity-50 hover:scale-105 transition-transform"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z" />
@@ -661,13 +698,12 @@ function DemoWidget() {
               </button>
             </div>
             <div className="mt-2 pt-2 border-t border-stone-100 dark:border-stone-700">
-              <p className="text-center text-xs text-stone-400">
+              <p className="text-center text-[10px] sm:text-xs text-stone-400">
                 Personuppgiftsansvarig: <span className="font-medium text-stone-500 dark:text-stone-400">Marcus Widing</span>
-                {' · '}
-                <a href="mailto:hej@bobot.nu" className="text-[#D97757] hover:underline">hej@bobot.nu</a>
+                <span className="hidden sm:inline">{' · '}<a href="mailto:hej@bobot.nu" className="text-[#D97757] hover:underline">hej@bobot.nu</a></span>
               </p>
-              <p className="text-center text-xs text-stone-400 mt-1">
-                Detta är en demo - <a href="mailto:hej@bobot.nu" className="text-[#D97757] hover:underline">kontakta oss</a> för att komma igång!
+              <p className="text-center text-[10px] sm:text-xs text-stone-400 mt-1">
+                Demo - <a href="mailto:hej@bobot.nu" className="text-[#D97757] hover:underline">kontakta oss</a> för att komma igång!
               </p>
             </div>
           </div>
@@ -967,8 +1003,16 @@ function LandingPage() {
   const [currentSection, setCurrentSection] = useState(0)
   const [pricingTiers, setPricingTiers] = useState(null)
   const [openFAQ, setOpenFAQ] = useState(null)
-  const [isDark, setIsDark] = useState(() => typeof window !== 'undefined' && document.documentElement.classList.contains('dark'))
+  const [isDark, setIsDark] = useState(false)
   const containerRef = useRef(null)
+
+  // Force light mode on landing page mount and set page title
+  useEffect(() => {
+    document.title = 'Bobot - AI-chatbot för fastighetsbolag'
+    // Start in light mode on landing page
+    document.documentElement.classList.remove('dark')
+    setIsDark(false)
+  }, [])
   const sectionsRef = useRef([])
   const isScrollingRef = useRef(false)
 

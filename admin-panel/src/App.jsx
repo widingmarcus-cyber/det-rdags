@@ -79,6 +79,28 @@ function App() {
     }
   }, [adminAuth])
 
+  // Dynamic page titles based on route
+  useEffect(() => {
+    const pageTitles = {
+      '/': 'Bobot - AI-chatbot för fastighetsbolag',
+      '/login': 'Logga in - Bobot',
+      '/admin-login': 'Admin Login - Bobot',
+      '/dashboard': 'Dashboard - Bobot Admin',
+      '/conversations': 'Konversationer - Bobot Admin',
+      '/analytics': 'Analys - Bobot Admin',
+      '/settings': 'Inställningar - Bobot Admin',
+      '/docs': 'Dokumentation - Bobot Admin',
+      '/super-admin': 'Super Admin - Bobot'
+    }
+
+    // Check for widget routes
+    if (location.pathname.startsWith('/widget/')) {
+      document.title = 'Widget - Bobot Admin'
+    } else {
+      document.title = pageTitles[location.pathname] || 'Bobot - AI-chatbot för fastighetsbolag'
+    }
+  }, [location.pathname])
+
   // Company login
   const handleLogin = async (companyId, password) => {
     try {
