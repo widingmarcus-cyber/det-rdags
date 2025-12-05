@@ -222,18 +222,54 @@ function AdminLogin({ onLogin, onVerify2FA }) {
               backgroundSize: '20px 20px'
             }} />
 
-            {/* Logo */}
+            {/* Bobot Mascot Logo */}
             <div className="relative">
-              <div className="w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/20 shadow-lg">
-                <svg width="48" height="48" viewBox="0 0 100 100" className="text-white">
-                  <circle cx="50" cy="50" r="45" fill="currentColor" opacity="0.2" />
-                  <circle cx="50" cy="50" r="35" fill="currentColor" />
-                  <circle cx="38" cy="42" r="5" fill="#1C1B1A" />
-                  <circle cx="62" cy="42" r="5" fill="#1C1B1A" />
-                  <path d="M 35 58 Q 50 70 65 58" stroke="#1C1B1A" strokeWidth="3" fill="none" strokeLinecap="round" />
+              <div className="w-24 h-24 flex items-center justify-center mx-auto mb-4">
+                <svg width="80" height="80" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Antenna */}
+                  <rect x="56" y="8" width="8" height="14" rx="4" fill="white" opacity="0.6" />
+                  <circle cx="60" cy="6" r="6" fill="#4A9D7C">
+                    <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite" />
+                  </circle>
+                  {/* Head */}
+                  <rect x="30" y="20" width="60" height="36" rx="6" fill="white" />
+                  {/* Eyes */}
+                  <ellipse cx="45" cy="38" rx="10" ry="9" fill="#1C1917" />
+                  <ellipse cx="75" cy="38" rx="10" ry="9" fill="#1C1917" />
+                  <ellipse cx="45" cy="38" rx="7" ry="6" fill="#292524" />
+                  <ellipse cx="75" cy="38" rx="7" ry="6" fill="#292524" />
+                  <ellipse cx="45" cy="39" rx="4" ry="4" fill="#D97757">
+                    <animate attributeName="ry" values="4;0.5;4;4;4" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+                  </ellipse>
+                  <ellipse cx="75" cy="39" rx="4" ry="4" fill="#D97757">
+                    <animate attributeName="ry" values="4;0.5;4;4;4" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+                  </ellipse>
+                  <circle cx="47" cy="36" r="2" fill="white" opacity="0.8">
+                    <animate attributeName="opacity" values="0.8;0;0.8;0.8;0.8" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+                  </circle>
+                  <circle cx="77" cy="36" r="2" fill="white" opacity="0.8">
+                    <animate attributeName="opacity" values="0.8;0;0.8;0.8;0.8" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+                  </circle>
+                  {/* Nose */}
+                  <rect x="56" y="34" width="8" height="8" rx="2" fill="white" opacity="0.4" />
+                  {/* Neck */}
+                  <rect x="50" y="52" width="20" height="12" rx="3" fill="white" opacity="0.5" />
+                  {/* Body */}
+                  <rect x="32" y="60" width="56" height="38" rx="4" fill="white" />
+                  <rect x="36" y="64" width="48" height="30" rx="2" fill="white" opacity="0.7" />
+                  {/* Body lights */}
+                  <rect x="40" y="74" width="16" height="14" rx="2" fill="#1C1917" />
+                  <rect x="64" y="74" width="16" height="14" rx="2" fill="#1C1917" />
+                  {/* Arms */}
+                  <rect x="18" y="68" width="16" height="6" rx="3" fill="white" opacity="0.5">
+                    <animateTransform attributeName="transform" type="rotate" values="0 26 71;-6 26 71;0 26 71" dur="3s" repeatCount="indefinite" />
+                  </rect>
+                  <rect x="86" y="68" width="16" height="6" rx="3" fill="white" opacity="0.5">
+                    <animateTransform attributeName="transform" type="rotate" values="0 94 71;6 94 71;0 94 71" dur="3s" repeatCount="indefinite" />
+                  </rect>
                 </svg>
               </div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">Bobot Admin</h1>
+              <h1 className="text-2xl font-bold text-white tracking-tight">Bobot</h1>
               <p className="text-white/70 mt-1 text-sm">Säker åtkomst till kontrollpanelen</p>
             </div>
           </div>
@@ -337,13 +373,6 @@ function AdminLogin({ onLogin, onVerify2FA }) {
             {/* Security info */}
             <div className="mt-6 pt-6 border-t border-[#2A2826]">
               <div className="flex items-center justify-center gap-4 text-xs text-[#57534E]">
-                <span className="flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  2FA stöds
-                </span>
-                <span className="text-[#3A3836]">•</span>
                 <span className="flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />

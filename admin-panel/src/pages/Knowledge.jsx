@@ -431,7 +431,18 @@ function Knowledge() {
         })
       })
 
-      const result = await response.json()
+      // Try to parse response as JSON
+      const text = await response.text()
+      let result
+      try {
+        result = JSON.parse(text)
+      } catch {
+        setUploadResult({
+          success: false,
+          message: 'Serverfel: Kunde inte bearbeta svaret'
+        })
+        return
+      }
 
       if (response.ok) {
         setUploadResult({

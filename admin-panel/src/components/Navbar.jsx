@@ -179,8 +179,8 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
       {/* Notification bell - always visible */}
       <div className="px-3 py-2 relative">
         <button
-          onClick={() => announcement && setShowAnnouncement(!showAnnouncement)}
-          className={`sidebar-item w-full text-left relative ${!announcement ? 'opacity-60 cursor-default' : ''}`}
+          onClick={() => setShowAnnouncement(!showAnnouncement)}
+          className={`sidebar-item w-full text-left relative ${!announcement ? 'opacity-60' : ''}`}
           aria-label={announcement ? "Visa meddelanden" : "Inga meddelanden"}
         >
           <span className="relative">
@@ -197,69 +197,141 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
             <span className="ml-auto bg-accent text-white text-xs px-1.5 py-0.5 rounded-full">1</span>
           )}
         </button>
+      </div>
 
-        {/* Announcement popup */}
-        {showAnnouncement && announcement && (
-          <div className="absolute left-full bottom-0 ml-2 w-72 bg-bg-primary border border-border-subtle rounded-lg shadow-xl z-50 overflow-hidden">
-            <div className={`px-4 py-3 border-b border-border-subtle ${
-              announcement.type === 'warning' ? 'bg-warning/10' :
-              announcement.type === 'maintenance' ? 'bg-error/10' : 'bg-accent-soft'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {announcement.type === 'warning' ? (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-warning">
-                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                      <line x1="12" y1="9" x2="12" y2="13" />
-                      <line x1="12" y1="17" x2="12.01" y2="17" />
-                    </svg>
-                  ) : announcement.type === 'maintenance' ? (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-error">
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" y1="8" x2="12" y2="12" />
-                      <line x1="12" y1="16" x2="12.01" y2="16" />
-                    </svg>
-                  ) : (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" y1="16" x2="12" y2="12" />
-                      <line x1="12" y1="8" x2="12.01" y2="8" />
-                    </svg>
-                  )}
-                  <span className="font-medium text-text-primary text-sm">{announcement.title}</span>
-                </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowAnnouncement(false) }}
-                  className="text-text-tertiary hover:text-text-primary"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
+      {/* Slide-out message panel */}
+      {showAnnouncement && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity"
+            onClick={() => setShowAnnouncement(false)}
+          />
+
+          {/* Slide-out panel */}
+          <div className="fixed top-0 left-60 bottom-0 w-96 bg-bg-primary border-r border-border-subtle shadow-2xl z-50 flex flex-col animate-slide-in-right">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-border-subtle flex items-center justify-between bg-bg-secondary">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-accent-soft rounded-xl flex items-center justify-center">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                   </svg>
-                </button>
+                </div>
+                <div>
+                  <h2 className="font-semibold text-text-primary">Meddelanden</h2>
+                  <p className="text-xs text-text-tertiary">Från administratören</p>
+                </div>
               </div>
-            </div>
-            <div className="px-4 py-3">
-              <p className="text-sm text-text-secondary leading-relaxed">{announcement.message}</p>
-              {announcement.created_at && (
-                <p className="text-xs text-text-tertiary mt-2">
-                  {new Date(announcement.created_at).toLocaleDateString('sv-SE', {
-                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-                  })}
-                </p>
-              )}
-            </div>
-            <div className="px-4 py-2 bg-bg-secondary border-t border-border-subtle">
               <button
-                onClick={() => { onDismissAnnouncement(); setShowAnnouncement(false) }}
-                className="text-xs text-text-tertiary hover:text-text-primary"
+                onClick={() => setShowAnnouncement(false)}
+                className="p-2 hover:bg-bg-tertiary rounded-lg transition-colors text-text-tertiary hover:text-text-primary"
               >
-                Markera som läst
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
               </button>
             </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {announcement ? (
+                <div className="space-y-4">
+                  {/* Message card */}
+                  <div className={`rounded-xl border overflow-hidden ${
+                    announcement.type === 'warning' ? 'border-warning/30 bg-warning/5' :
+                    announcement.type === 'maintenance' ? 'border-error/30 bg-error/5' : 'border-accent/30 bg-accent/5'
+                  }`}>
+                    {/* Message header */}
+                    <div className={`px-4 py-3 flex items-center gap-3 ${
+                      announcement.type === 'warning' ? 'bg-warning/10' :
+                      announcement.type === 'maintenance' ? 'bg-error/10' : 'bg-accent/10'
+                    }`}>
+                      {announcement.type === 'warning' ? (
+                        <div className="w-8 h-8 rounded-lg bg-warning/20 flex items-center justify-center">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-warning">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                            <line x1="12" y1="9" x2="12" y2="13" />
+                            <line x1="12" y1="17" x2="12.01" y2="17" />
+                          </svg>
+                        </div>
+                      ) : announcement.type === 'maintenance' ? (
+                        <div className="w-8 h-8 rounded-lg bg-error/20 flex items-center justify-center">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-error">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <line x1="12" y1="16" x2="12.01" y2="16" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="16" x2="12" y2="12" />
+                            <line x1="12" y1="8" x2="12.01" y2="8" />
+                          </svg>
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <h3 className="font-medium text-text-primary">{announcement.title}</h3>
+                        <p className="text-xs text-text-tertiary">
+                          {announcement.type === 'warning' ? 'Varning' :
+                           announcement.type === 'maintenance' ? 'Underhåll' : 'Information'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Message body */}
+                    <div className="px-4 py-4">
+                      <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">{announcement.message}</p>
+                    </div>
+
+                    {/* Message footer */}
+                    <div className="px-4 py-3 bg-bg-secondary/50 border-t border-border-subtle flex items-center justify-between">
+                      {announcement.created_at && (
+                        <p className="text-xs text-text-tertiary flex items-center gap-1.5">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                          </svg>
+                          {new Date(announcement.created_at).toLocaleDateString('sv-SE', {
+                            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                          })}
+                        </p>
+                      )}
+                      <button
+                        onClick={() => { onDismissAnnouncement(); setShowAnnouncement(false) }}
+                        className="text-xs font-medium text-accent hover:text-accent-hover transition-colors flex items-center gap-1"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        Markera som läst
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Empty state */
+                <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                  <div className="w-16 h-16 bg-bg-secondary rounded-2xl flex items-center justify-center mb-4">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary">
+                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                  </div>
+                  <h3 className="font-medium text-text-primary mb-1">Inga meddelanden</h3>
+                  <p className="text-sm text-text-tertiary max-w-[200px]">
+                    Du har inga nya meddelanden från administratören just nu.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       {/* User section */}
       <div className="p-3 border-t border-border-subtle" role="region" aria-label="Användarmeny">

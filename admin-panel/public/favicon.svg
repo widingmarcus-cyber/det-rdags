@@ -1,15 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <defs>
-    <linearGradient id="bubbleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#D97757"/>
-      <stop offset="100%" style="stop-color:#C4613D"/>
-    </linearGradient>
-  </defs>
-  <!-- Speech bubble body -->
-  <rect x="2" y="4" width="28" height="18" rx="6" ry="6" fill="url(#bubbleGradient)"/>
-  <!-- Speech bubble tail -->
-  <path d="M 6 22 L 4 28 L 12 22 Z" fill="url(#bubbleGradient)"/>
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Antenna -->
+  <rect x="14" y="2" width="4" height="6" rx="2" fill="#78716C" />
+  <circle cx="16" cy="2" r="3" fill="#4A9D7C">
+    <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite" />
+  </circle>
+
+  <!-- Head -->
+  <rect x="4" y="8" width="24" height="18" rx="4" fill="#D97757" />
+
   <!-- Eyes -->
-  <circle cx="11" cy="13" r="2.5" fill="white"/>
-  <circle cx="21" cy="13" r="2.5" fill="white"/>
+  <ellipse cx="10" cy="17" rx="4" ry="3.5" fill="#1C1917" />
+  <ellipse cx="22" cy="17" rx="4" ry="3.5" fill="#1C1917" />
+  <ellipse cx="10" cy="17" rx="3" ry="2.5" fill="#292524" />
+  <ellipse cx="22" cy="17" rx="3" ry="2.5" fill="#292524" />
+
+  <!-- Pupils -->
+  <ellipse cx="10" cy="17.5" rx="2" ry="2" fill="#D97757">
+    <animate attributeName="ry" values="2;0.3;2;2;2" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+  </ellipse>
+  <ellipse cx="22" cy="17.5" rx="2" ry="2" fill="#D97757">
+    <animate attributeName="ry" values="2;0.3;2;2;2" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+  </ellipse>
+
+  <!-- Eye highlights -->
+  <circle cx="11" cy="16" r="1" fill="#FEF2EE" opacity="0.8">
+    <animate attributeName="opacity" values="0.8;0;0.8;0.8;0.8" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+  </circle>
+  <circle cx="23" cy="16" r="1" fill="#FEF2EE" opacity="0.8">
+    <animate attributeName="opacity" values="0.8;0;0.8;0.8;0.8" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+  </circle>
+
+  <!-- Nose -->
+  <rect x="14" y="15" width="4" height="4" rx="1" fill="#78716C" />
 </svg>
