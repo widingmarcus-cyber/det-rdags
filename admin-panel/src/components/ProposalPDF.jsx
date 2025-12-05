@@ -6,10 +6,16 @@ import {
   View,
   StyleSheet,
   Font,
-  pdf
+  pdf,
+  Svg,
+  Path,
+  Circle,
+  Rect,
+  G,
+  Ellipse
 } from '@react-pdf/renderer'
 
-// Register fonts (using system fonts)
+// Register Inter font
 Font.register({
   family: 'Inter',
   fonts: [
@@ -20,307 +26,387 @@ Font.register({
   ]
 })
 
-// Warm Terracotta Design System
+// Organic Tech Design System Colors
 const colors = {
-  primary: '#C4633A',      // Terracotta
-  background: '#FDF6F0',   // Warm cream
-  text: '#3D2B24',         // Deep brown
-  textLight: '#6B5248',    // Lighter brown
-  accent: '#E8A87C',       // Soft clay
+  primary: '#D97757',        // Terracotta
+  background: '#FDFCF0',     // Warm Sand/Unbleached Paper
+  text: '#1C1917',           // Deep Charcoal/Espresso
+  textLight: '#57534E',      // Stone gray
+  accent: '#81B29A',         // Sage Green
   white: '#FFFFFF',
-  border: '#E5D5CA',       // Warm border
-  success: '#5D8A66',      // Muted green
+  cardShadow: 'rgba(234, 88, 12, 0.05)', // Warm shadow
+  heroBackground: '#E5D0C5', // Warm blush for hero
+  border: '#E8E4DF',
 }
+
+// Bobot Mascot Component (SVG)
+const BobotMascot = ({ size = 80 }) => (
+  <Svg width={size} height={size} viewBox="0 0 100 100">
+    {/* Body - rounded rectangle */}
+    <Rect x="25" y="30" width="50" height="55" rx="12" fill={colors.primary} />
+
+    {/* Face plate */}
+    <Rect x="30" y="35" width="40" height="35" rx="8" fill={colors.white} />
+
+    {/* Eyes */}
+    <Circle cx="40" cy="48" r="5" fill={colors.text} />
+    <Circle cx="60" cy="48" r="5" fill={colors.text} />
+    <Circle cx="41" cy="47" r="2" fill={colors.white} />
+    <Circle cx="61" cy="47" r="2" fill={colors.white} />
+
+    {/* Smile */}
+    <Path d="M 40 58 Q 50 65 60 58" stroke={colors.text} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+
+    {/* Antenna */}
+    <Rect x="47" y="15" width="6" height="18" rx="3" fill={colors.primary} />
+    <Circle cx="50" cy="12" r="6" fill={colors.accent} />
+
+    {/* Arms */}
+    <Rect x="12" y="45" width="15" height="8" rx="4" fill={colors.primary} />
+    <Rect x="73" y="45" width="15" height="8" rx="4" fill={colors.primary} />
+
+    {/* Hands */}
+    <Circle cx="10" cy="49" r="6" fill={colors.primary} />
+    <Circle cx="90" cy="49" r="6" fill={colors.primary} />
+
+    {/* Feet */}
+    <Ellipse cx="38" cy="88" rx="10" ry="6" fill={colors.primary} />
+    <Ellipse cx="62" cy="88" rx="10" ry="6" fill={colors.primary} />
+  </Svg>
+)
+
+// Small mascot for headers
+const BobotMascotSmall = ({ size = 40 }) => (
+  <Svg width={size} height={size} viewBox="0 0 100 100">
+    <Rect x="25" y="30" width="50" height="55" rx="12" fill={colors.primary} />
+    <Rect x="30" y="35" width="40" height="35" rx="8" fill={colors.white} />
+    <Circle cx="40" cy="48" r="5" fill={colors.text} />
+    <Circle cx="60" cy="48" r="5" fill={colors.text} />
+    <Circle cx="41" cy="47" r="2" fill={colors.white} />
+    <Circle cx="61" cy="47" r="2" fill={colors.white} />
+    <Path d="M 40 58 Q 50 65 60 58" stroke={colors.text} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+    <Rect x="47" y="15" width="6" height="18" rx="3" fill={colors.primary} />
+    <Circle cx="50" cy="12" r="6" fill={colors.accent} />
+  </Svg>
+)
 
 // Create styles
 const styles = StyleSheet.create({
+  // Base page
   page: {
     backgroundColor: colors.background,
     padding: 50,
     fontFamily: 'Inter',
   },
-  // Cover Page
-  coverPage: {
+
+  // SECTION 1: HERO
+  heroPage: {
     backgroundColor: colors.background,
     padding: 0,
     fontFamily: 'Inter',
+  },
+  heroContainer: {
+    backgroundColor: colors.heroBackground,
+    margin: 40,
+    borderRadius: 24,
+    padding: 50,
+    minHeight: 700,
     display: 'flex',
     flexDirection: 'column',
+    alignItems: 'center',
     justifyContent: 'center',
+  },
+  heroMascotArea: {
+    marginBottom: 40,
     alignItems: 'center',
   },
-  coverContent: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 60,
-  },
-  logoContainer: {
-    marginBottom: 60,
-  },
-  logoText: {
-    fontSize: 48,
+  heroTitle: {
+    fontSize: 42,
     fontWeight: 700,
     color: colors.primary,
-    letterSpacing: 2,
+    marginBottom: 16,
+    textAlign: 'center',
   },
-  logoSubtext: {
+  heroSubtitle: {
     fontSize: 14,
-    color: colors.textLight,
-    marginTop: 8,
-    letterSpacing: 4,
-    textTransform: 'uppercase',
-  },
-  coverTitle: {
-    fontSize: 32,
-    fontWeight: 600,
     color: colors.text,
-    marginBottom: 12,
     textAlign: 'center',
+    lineHeight: 1.6,
+    maxWidth: 400,
+    marginBottom: 60,
   },
-  coverSubtitle: {
-    fontSize: 18,
-    color: colors.textLight,
-    marginBottom: 80,
-    textAlign: 'center',
-  },
-  coverYear: {
-    fontSize: 16,
-    color: colors.textLight,
-    marginBottom: 20,
-  },
-  coverCustomer: {
-    fontSize: 24,
-    fontWeight: 600,
-    color: colors.primary,
-    textAlign: 'center',
-    padding: 20,
-    borderTop: `2px solid ${colors.accent}`,
-    borderBottom: `2px solid ${colors.accent}`,
-    marginTop: 40,
-  },
-  coverFooter: {
+  heroFooter: {
     position: 'absolute',
-    bottom: 50,
+    bottom: 60,
     left: 0,
     right: 0,
     textAlign: 'center',
   },
-  coverDate: {
-    fontSize: 12,
+  heroFooterText: {
+    fontSize: 11,
     color: colors.textLight,
   },
 
-  // Content Pages
-  pageHeader: {
+  // SECTION 2: PHILOSOPHY
+  sectionHeader: {
     marginBottom: 30,
-    paddingBottom: 15,
-    borderBottom: `2px solid ${colors.primary}`,
-  },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: 700,
-    color: colors.primary,
-  },
-  pageSubtitle: {
-    fontSize: 12,
-    color: colors.textLight,
-    marginTop: 5,
-  },
-
-  // Section styling
-  section: {
-    marginBottom: 25,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: 600,
-    color: colors.primary,
-    marginBottom: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  paragraph: {
-    fontSize: 11,
+    fontSize: 28,
+    fontWeight: 700,
     color: colors.text,
+    marginBottom: 12,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    color: colors.textLight,
     lineHeight: 1.6,
-    marginBottom: 8,
+    marginBottom: 20,
   },
-
-  // Feature boxes
-  featureContainer: {
-    marginTop: 15,
+  uspGrid: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 30,
   },
-  featureBox: {
+  uspCard: {
+    flex: 1,
     backgroundColor: colors.white,
-    borderRadius: 8,
-    padding: 18,
-    marginBottom: 14,
-    borderLeft: `4px solid ${colors.primary}`,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
   },
-  featureTitle: {
+  uspIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    marginBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uspIconText: {
+    fontSize: 20,
+    color: colors.white,
+  },
+  uspTitle: {
     fontSize: 13,
     fontWeight: 600,
     color: colors.text,
     marginBottom: 6,
+    textAlign: 'center',
   },
-  featureDescription: {
+  uspDescription: {
     fontSize: 10,
+    color: colors.textLight,
+    textAlign: 'center',
+    lineHeight: 1.5,
+  },
+
+  // SECTION 3: JOB DESCRIPTION
+  twoColumnGrid: {
+    flexDirection: 'row',
+    gap: 20,
+    marginTop: 20,
+  },
+  roleCard: {
+    flex: 1,
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  roleCardHighlight: {
+    flex: 1,
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  roleTitle: {
+    fontSize: 16,
+    fontWeight: 600,
+    color: colors.text,
+    marginBottom: 10,
+  },
+  roleDescription: {
+    fontSize: 11,
+    color: colors.textLight,
+    lineHeight: 1.6,
+  },
+
+  // SECTION 4: CUSTOMIZATION
+  customizationBox: {
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    padding: 30,
+    marginTop: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 30,
+  },
+  customizationText: {
+    flex: 1,
+  },
+  featureList: {
+    marginTop: 15,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  featureBullet: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.accent,
+    marginRight: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureBulletText: {
+    fontSize: 10,
+    color: colors.white,
+    fontWeight: 600,
+  },
+  featureText: {
+    fontSize: 11,
+    color: colors.text,
+  },
+
+  // SECTION 5: PROCESS
+  processSteps: {
+    marginTop: 30,
+  },
+  processStep: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  stepNumber: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  stepNumberText: {
+    fontSize: 16,
+    fontWeight: 700,
+    color: colors.white,
+  },
+  stepContent: {
+    flex: 1,
+    paddingTop: 8,
+  },
+  stepTitle: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  stepDescription: {
+    fontSize: 11,
     color: colors.textLight,
     lineHeight: 1.5,
   },
 
-  // Timeline table
-  table: {
-    marginTop: 20,
-  },
-  tableHeader: {
+  // SECTION 6: PRICING
+  pricingGrid: {
     flexDirection: 'row',
-    backgroundColor: colors.primary,
-    borderRadius: 6,
-    marginBottom: 2,
+    gap: 16,
+    marginTop: 25,
   },
-  tableHeaderCell: {
-    padding: 12,
+  pricingCard: {
+    flex: 1,
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  pricingCardHighlight: {
+    flex: 1,
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 2,
+    borderColor: colors.accent,
+  },
+  pricingTier: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: colors.textLight,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  pricingPrice: {
+    fontSize: 32,
+    fontWeight: 700,
+    color: colors.primary,
+  },
+  pricingUnit: {
+    fontSize: 12,
+    color: colors.textLight,
+    marginBottom: 16,
+  },
+  pricingFeature: {
     fontSize: 10,
+    color: colors.text,
+    marginBottom: 6,
+  },
+  recommendedBadge: {
+    backgroundColor: colors.accent,
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+  },
+  recommendedText: {
+    fontSize: 9,
     fontWeight: 600,
     color: colors.white,
     textTransform: 'uppercase',
   },
-  tableRow: {
-    flexDirection: 'row',
-    backgroundColor: colors.white,
-    borderBottom: `1px solid ${colors.border}`,
-  },
-  tableRowAlt: {
-    flexDirection: 'row',
-    backgroundColor: '#FAF5F0',
-    borderBottom: `1px solid ${colors.border}`,
-  },
-  tableCell: {
-    padding: 12,
-    fontSize: 10,
-    color: colors.text,
-  },
-  tableCellWeek: {
-    width: '15%',
-    fontWeight: 600,
-    color: colors.primary,
-  },
-  tableCellActivity: {
-    width: '55%',
-  },
-  tableCellResponsible: {
-    width: '30%',
-    color: colors.textLight,
-  },
-
-  // Pricing
-  priceCard: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: 25,
-    marginBottom: 20,
-    border: `2px solid ${colors.accent}`,
-  },
-  priceCardHighlight: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    padding: 25,
-    marginBottom: 20,
-  },
-  priceTitle: {
-    fontSize: 16,
-    fontWeight: 600,
-    color: colors.text,
-    marginBottom: 8,
-  },
-  priceTitleLight: {
-    fontSize: 16,
-    fontWeight: 600,
-    color: colors.white,
-    marginBottom: 8,
-  },
-  priceAmount: {
-    fontSize: 32,
-    fontWeight: 700,
-    color: colors.primary,
-  },
-  priceAmountLight: {
-    fontSize: 32,
-    fontWeight: 700,
-    color: colors.white,
-  },
-  priceUnit: {
-    fontSize: 14,
-    color: colors.textLight,
-    marginLeft: 5,
-  },
-  priceUnitLight: {
-    fontSize: 14,
-    color: colors.accent,
-    marginLeft: 5,
-  },
-  priceDescription: {
+  pricingNote: {
     fontSize: 10,
     color: colors.textLight,
-    marginTop: 10,
-    lineHeight: 1.5,
-  },
-  priceDescriptionLight: {
-    fontSize: 10,
-    color: colors.accent,
-    marginTop: 10,
-    lineHeight: 1.5,
-  },
-  discountBadge: {
-    backgroundColor: colors.success,
-    borderRadius: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    alignSelf: 'flex-start',
-    marginTop: 10,
-  },
-  discountText: {
-    fontSize: 10,
-    fontWeight: 600,
-    color: colors.white,
-  },
-
-  // List items
-  listItem: {
-    flexDirection: 'row',
-    marginBottom: 8,
-    paddingLeft: 5,
-  },
-  listBullet: {
-    width: 20,
-    fontSize: 10,
-    color: colors.primary,
-    fontWeight: 600,
-  },
-  listText: {
-    flex: 1,
-    fontSize: 10,
-    color: colors.text,
-    lineHeight: 1.5,
-  },
-
-  // Requirements box
-  requirementsBox: {
-    backgroundColor: '#FEF3E8',
-    borderRadius: 8,
-    padding: 18,
+    textAlign: 'center',
     marginTop: 20,
-    borderLeft: `4px solid ${colors.accent}`,
+    fontStyle: 'italic',
   },
-  requirementsTitle: {
-    fontSize: 12,
+
+  // SECTION 7: CONTACT
+  contactSection: {
+    backgroundColor: colors.primary,
+    borderRadius: 20,
+    padding: 40,
+    marginTop: 40,
+    alignItems: 'center',
+  },
+  contactTitle: {
+    fontSize: 20,
     fontWeight: 600,
-    color: colors.text,
-    marginBottom: 10,
+    color: colors.white,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  contactText: {
+    fontSize: 12,
+    color: colors.heroBackground,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  contactInfo: {
+    fontSize: 11,
+    color: colors.white,
+    textAlign: 'center',
   },
 
   // Footer
@@ -331,523 +417,455 @@ const styles = StyleSheet.create({
     right: 50,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    borderTop: `1px solid ${colors.border}`,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
     paddingTop: 15,
   },
   footerText: {
     fontSize: 9,
     color: colors.textLight,
   },
-  pageNumber: {
-    fontSize: 9,
-    color: colors.textLight,
-  },
-
-  // Two column layout
-  twoColumn: {
+  footerLogo: {
     flexDirection: 'row',
-    gap: 20,
-  },
-  column: {
-    flex: 1,
+    alignItems: 'center',
+    gap: 6,
   },
 
-  // Process steps
-  processStep: {
+  // Page header with mascot
+  pageHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 30,
+    paddingBottom: 20,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary,
   },
-  stepNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.primary,
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: 600,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginRight: 12,
-  },
-  stepContent: {
-    flex: 1,
-  },
-  stepTitle: {
-    fontSize: 11,
-    fontWeight: 600,
+  pageHeaderTitle: {
+    fontSize: 24,
+    fontWeight: 700,
     color: colors.text,
-    marginBottom: 3,
-  },
-  stepDescription: {
-    fontSize: 10,
-    color: colors.textLight,
-    lineHeight: 1.4,
-  },
-
-  // Hosting options
-  hostingOption: {
-    backgroundColor: colors.white,
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 12,
-    borderLeft: `4px solid ${colors.accent}`,
-  },
-  hostingTitle: {
-    fontSize: 12,
-    fontWeight: 600,
-    color: colors.text,
-    marginBottom: 5,
-  },
-  hostingPrice: {
-    fontSize: 11,
-    color: colors.primary,
-    fontWeight: 600,
-  },
-  hostingDescription: {
-    fontSize: 9,
-    color: colors.textLight,
-    marginTop: 5,
-    lineHeight: 1.4,
-  },
-
-  // Contact section
-  contactBox: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    padding: 20,
-    marginTop: 30,
-  },
-  contactTitle: {
-    fontSize: 14,
-    fontWeight: 600,
-    color: colors.white,
-    marginBottom: 10,
-  },
-  contactText: {
-    fontSize: 10,
-    color: colors.accent,
-    lineHeight: 1.5,
   },
 })
 
 // Page Footer Component
-const PageFooter = ({ pageNumber, totalPages }) => (
+const PageFooter = ({ pageNumber }) => (
   <View style={styles.footer} fixed>
-    <Text style={styles.footerText}>Bobot AB | www.bobot.nu | hej@bobot.nu</Text>
-    <Text style={styles.pageNumber}>Sida {pageNumber} av {totalPages}</Text>
+    <View style={styles.footerLogo}>
+      <BobotMascotSmall size={20} />
+      <Text style={styles.footerText}>Bobot AB | www.bobot.nu</Text>
+    </View>
+    <Text style={styles.footerText}>Sida {pageNumber}</Text>
   </View>
 )
 
-// Cover Page
-const CoverPage = ({ customerName, contactPerson, year }) => (
-  <Page size="A4" style={styles.coverPage}>
-    <View style={styles.coverContent}>
-      {/* Logo */}
-      <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>BOBOT</Text>
-        <Text style={styles.logoSubtext}>AI-driven kundtjänst</Text>
+// SECTION 1: Hero Page
+const HeroPage = ({ customerName, year }) => (
+  <Page size="A4" style={styles.heroPage}>
+    <View style={styles.heroContainer}>
+      {/* Mascot */}
+      <View style={styles.heroMascotArea}>
+        <BobotMascot size={120} />
       </View>
 
       {/* Title */}
-      <Text style={styles.coverTitle}>Trial - AI Chatbot</Text>
-      <Text style={styles.coverSubtitle}>Förslag och villkor för provperiod</Text>
+      <Text style={styles.heroTitle}>Hälsa på Bobot.</Text>
+      <Text style={styles.heroSubtitle}>
+        Er nya digitala medarbetare. Han läser era manualer på sekunder, så att ni slipper svara på samma frågor två gånger.
+      </Text>
 
-      {/* Year */}
-      <Text style={styles.coverYear}>{year}</Text>
+      {/* Customer name */}
+      <View style={{ marginTop: 40, alignItems: 'center' }}>
+        <Text style={{ fontSize: 11, color: colors.textLight, marginBottom: 8 }}>Förslag till</Text>
+        <Text style={{ fontSize: 20, fontWeight: 600, color: colors.text }}>{customerName}</Text>
+        <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 8 }}>{year}</Text>
+      </View>
+    </View>
+  </Page>
+)
 
-      {/* Customer */}
-      <View style={{ marginTop: 40 }}>
-        <Text style={styles.coverCustomer}>{customerName}</Text>
-        {contactPerson && (
-          <Text style={{ fontSize: 14, color: colors.textLight, textAlign: 'center', marginTop: 12 }}>
-            Kontaktperson: {contactPerson}
-          </Text>
-        )}
+// SECTION 2: Philosophy Page
+const PhilosophyPage = () => (
+  <Page size="A4" style={styles.page}>
+    <View style={styles.pageHeader}>
+      <Text style={styles.pageHeaderTitle}>Varför anställa Bobot?</Text>
+      <BobotMascotSmall size={36} />
+    </View>
+
+    <Text style={styles.sectionSubtitle}>
+      Att lära upp nyanställda tar tid. Att svara på kunders rutinfrågor tar energi. Bobot är lösningen på båda problemen. Han är inte ett IT-system, han är en kollega som läser in er information och delar med sig av den – dygnet runt.
+    </Text>
+
+    {/* USP Grid */}
+    <View style={styles.uspGrid}>
+      <View style={styles.uspCard}>
+        <View style={styles.uspIcon}>
+          <Text style={styles.uspIconText}>⚡</Text>
+        </View>
+        <Text style={styles.uspTitle}>Supersnabb</Text>
+        <Text style={styles.uspDescription}>Läser in dokument på några sekunder och börjar svara direkt.</Text>
+      </View>
+
+      <View style={styles.uspCard}>
+        <View style={[styles.uspIcon, { backgroundColor: colors.accent }]}>
+          <Text style={styles.uspIconText}>🏠</Text>
+        </View>
+        <Text style={styles.uspTitle}>Lokal</Text>
+        <Text style={styles.uspDescription}>All kunskap stannar hos er. Inga externa moln eller tredjeparter.</Text>
+      </View>
+
+      <View style={styles.uspCard}>
+        <View style={styles.uspIcon}>
+          <Text style={styles.uspIconText}>🌙</Text>
+        </View>
+        <Text style={styles.uspTitle}>Vaken</Text>
+        <Text style={styles.uspDescription}>Jobbar när ni går hem. Tillgänglig 24/7, 365 dagar om året.</Text>
       </View>
     </View>
 
-    <View style={styles.coverFooter}>
-      <Text style={styles.coverDate}>
-        Dokumentdatum: {new Date().toLocaleDateString('sv-SE')}
+    {/* Additional benefits */}
+    <View style={{ marginTop: 40 }}>
+      <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 16 }}>
+        Fördelar med en AI-kollega
+      </Text>
+      <View style={styles.featureList}>
+        <View style={styles.featureItem}>
+          <View style={styles.featureBullet}><Text style={styles.featureBulletText}>✓</Text></View>
+          <Text style={styles.featureText}>Minskar belastning på kundtjänst och support</Text>
+        </View>
+        <View style={styles.featureItem}>
+          <View style={styles.featureBullet}><Text style={styles.featureBulletText}>✓</Text></View>
+          <Text style={styles.featureText}>Nyanställda blir självgående direkt</Text>
+        </View>
+        <View style={styles.featureItem}>
+          <View style={styles.featureBullet}><Text style={styles.featureBulletText}>✓</Text></View>
+          <Text style={styles.featureText}>Konsekvent information – samma svar varje gång</Text>
+        </View>
+        <View style={styles.featureItem}>
+          <View style={styles.featureBullet}><Text style={styles.featureBulletText}>✓</Text></View>
+          <Text style={styles.featureText}>GDPR-säker med automatisk dataradering</Text>
+        </View>
+      </View>
+    </View>
+
+    <PageFooter pageNumber={2} />
+  </Page>
+)
+
+// SECTION 3: Job Description Page
+const JobDescriptionPage = () => (
+  <Page size="A4" style={styles.page}>
+    <View style={styles.pageHeader}>
+      <Text style={styles.pageHeaderTitle}>Två roller i en anställning</Text>
+      <BobotMascotSmall size={36} />
+    </View>
+
+    <Text style={styles.sectionSubtitle}>
+      Bobot är flexibel och kan hjälpa till på flera fronter. Välj att använda honom för kundservice, intern support, eller båda.
+    </Text>
+
+    <View style={styles.twoColumnGrid}>
+      {/* External Role */}
+      <View style={styles.roleCardHighlight}>
+        <Text style={{ fontSize: 10, color: colors.primary, fontWeight: 600, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+          Utåtriktad
+        </Text>
+        <Text style={styles.roleTitle}>Extern Kundservice</Text>
+        <Text style={styles.roleDescription}>
+          Svarar direkt på hemsidan. Era kunder slipper telefonkö och får hjälp med priser, öppettider och bokningar oavsett tid på dygnet.
+        </Text>
+        <View style={{ marginTop: 16 }}>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Besvarar vanliga frågor</Text>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Guidar besökare på hemsidan</Text>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Tillgänglig dygnet runt</Text>
+        </View>
+      </View>
+
+      {/* Internal Role */}
+      <View style={styles.roleCard}>
+        <Text style={{ fontSize: 10, color: colors.accent, fontWeight: 600, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+          Inåtriktad
+        </Text>
+        <Text style={styles.roleTitle}>Intern Mentor</Text>
+        <Text style={styles.roleDescription}>
+          Ny på jobbet? Bobot svarar på frågor om rutiner och system. Senior personal slipper bli avbruten med samma frågor, och nyanställda blir självgående direkt.
+        </Text>
+        <View style={{ marginTop: 16 }}>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Onboarding av nyanställda</Text>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Svar på rutinfrågor</Text>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Intern kunskapsbas</Text>
+        </View>
+      </View>
+    </View>
+
+    {/* Security note */}
+    <View style={{ marginTop: 40, backgroundColor: colors.white, borderRadius: 16, padding: 24, borderLeftWidth: 4, borderLeftColor: colors.accent }}>
+      <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text, marginBottom: 8 }}>
+        Separata kunskapsbaser
+      </Text>
+      <Text style={{ fontSize: 11, color: colors.textLight, lineHeight: 1.6 }}>
+        Extern och intern bot kan ha helt separata kunskapsbaser. Känslig intern information delas aldrig med externa besökare. Ni styr exakt vad varje bot ska kunna svara på.
       </Text>
     </View>
+
+    <PageFooter pageNumber={3} />
   </Page>
 )
 
-// Features Page
-const FeaturesPage = () => (
+// SECTION 4: Customization Page
+const CustomizationPage = () => (
   <Page size="A4" style={styles.page}>
     <View style={styles.pageHeader}>
-      <Text style={styles.pageTitle}>Funktioner & Fördelar</Text>
-      <Text style={styles.pageSubtitle}>Vad Bobot erbjuder er organisation</Text>
+      <Text style={styles.pageHeaderTitle}>Er stil, vår mascot</Text>
+      <BobotMascotSmall size={36} />
     </View>
 
-    <View style={styles.featureContainer}>
-      <View style={styles.featureBox}>
-        <Text style={styles.featureTitle}>Säkerhet & Compliance</Text>
-        <Text style={styles.featureDescription}>
-          On-premise/självhostad installation möjlig. Fullt GDPR-kompatibelt med automatisk dataradering.
-          Ni behåller full kontroll över er data. Inga externa API-anrop krävs - allt körs lokalt.
+    <Text style={styles.sectionSubtitle}>
+      Bobot ska kännas som en naturlig del av er verksamhet. Han behåller sitt ansikte, men klär sig i er uniform.
+    </Text>
+
+    <View style={styles.customizationBox}>
+      <View style={{ alignItems: 'center' }}>
+        <BobotMascot size={100} />
+        <Text style={{ fontSize: 10, color: colors.textLight, marginTop: 12, textAlign: 'center' }}>
+          Er egen färg & stil
         </Text>
       </View>
-
-      <View style={styles.featureBox}>
-        <Text style={styles.featureTitle}>Dual Bot-lösning</Text>
-        <Text style={styles.featureDescription}>
-          Extern bot för hyresgäster/kunder med publikt tillgänglig FAQ och serviceinformation.
-          Intern bot för anställda med känslig dokumentation, policyer och arbetsrutiner.
-          Separata kunskapsbaser med individuell åtkomstkontroll.
+      <View style={styles.customizationText}>
+        <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 16 }}>
+          Anpassningsmöjligheter
         </Text>
-      </View>
-
-      <View style={styles.featureBox}>
-        <Text style={styles.featureTitle}>Kontroll & Flexibilitet</Text>
-        <Text style={styles.featureDescription}>
-          Egen kunskapsbas som ni själva uppdaterar. Omedelbara uppdateringar utan väntetid.
-          Anpassningsbar ton och stil. Välj exakt vad boten ska kunna svara på.
-          Kategorisering för enkel organisation av innehåll.
-        </Text>
-      </View>
-
-      <View style={styles.featureBox}>
-        <Text style={styles.featureTitle}>Kostnadseffektivitet</Text>
-        <Text style={styles.featureDescription}>
-          Förutsägbar prissättning utan dolda kostnader. 24/7 tillgänglighet utan bemanningskrav.
-          Minskar belastning på kundtjänst och support. Skalar automatiskt vid hög belastning.
-        </Text>
-      </View>
-
-      <View style={styles.featureBox}>
-        <Text style={styles.featureTitle}>Integration & Kompatibilitet</Text>
-        <Text style={styles.featureDescription}>
-          Enkel inbäddning via JavaScript-widget på valfri hemsida. Fungerar med WordPress,
-          egenutvecklade system och moderna webbramverk. Importera befintliga FAQ från Excel,
-          Word eller CSV. Stöd för svenska, engelska och arabiska.
-        </Text>
-      </View>
-    </View>
-
-    <PageFooter pageNumber={2} totalPages={5} />
-  </Page>
-)
-
-// Trial Details Page
-const TrialDetailsPage = ({ startDate, hostingOption }) => (
-  <Page size="A4" style={styles.page}>
-    <View style={styles.pageHeader}>
-      <Text style={styles.pageTitle}>Provperiod</Text>
-      <Text style={styles.pageSubtitle}>Villkor och process för trial</Text>
-    </View>
-
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Trial-period: 4 veckor</Text>
-      <Text style={styles.paragraph}>
-        Under provperioden får ni full tillgång till Bobot-plattformen med alla funktioner.
-        Ni kan testa både extern och intern bot, bygga kunskapsbas och låta användare
-        interagera med systemet i en verklig miljö.
-      </Text>
-    </View>
-
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Process</Text>
-
-      <View style={styles.processStep}>
-        <Text style={styles.stepNumber}>1</Text>
-        <View style={styles.stepContent}>
-          <Text style={styles.stepTitle}>Avtal & Uppstartsavgift</Text>
-          <Text style={styles.stepDescription}>
-            Signera trial-avtal och betala engångsavgift för uppstart.
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.processStep}>
-        <Text style={styles.stepNumber}>2</Text>
-        <View style={styles.stepContent}>
-          <Text style={styles.stepTitle}>Leverans av kod/credentials</Text>
-          <Text style={styles.stepDescription}>
-            Ni får tillgång till admin-panel och widget-kod för implementering.
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.processStep}>
-        <Text style={styles.stepNumber}>3</Text>
-        <View style={styles.stepContent}>
-          <Text style={styles.stepTitle}>Implementering & Kunskapsbas</Text>
-          <Text style={styles.stepDescription}>
-            Implementera widget på er hemsida och bygg upp kunskapsbasen med FAQ.
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.processStep}>
-        <Text style={styles.stepNumber}>4</Text>
-        <View style={styles.stepContent}>
-          <Text style={styles.stepTitle}>Intern testning</Text>
-          <Text style={styles.stepDescription}>
-            Testa chattboten internt innan ni går live mot slutanvändare.
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.processStep}>
-        <Text style={styles.stepNumber}>5</Text>
-        <View style={styles.stepContent}>
-          <Text style={styles.stepTitle}>Go live & Utvärdering</Text>
-          <Text style={styles.stepDescription}>
-            Lansera för slutanvändare och utvärdera resultat under provperioden.
-          </Text>
+        <View style={styles.featureList}>
+          <View style={styles.featureItem}>
+            <View style={styles.featureBullet}><Text style={styles.featureBulletText}>🎨</Text></View>
+            <Text style={styles.featureText}>Välj era företagsfärger</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <View style={styles.featureBullet}><Text style={styles.featureBulletText}>Aa</Text></View>
+            <Text style={styles.featureText}>Anpassa typsnitt</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <View style={styles.featureBullet}><Text style={styles.featureBulletText}>◼</Text></View>
+            <Text style={styles.featureText}>Runda eller raka hörn</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <View style={styles.featureBullet}><Text style={styles.featureBulletText}>💬</Text></View>
+            <Text style={styles.featureText}>Anpassad ton och röst</Text>
+          </View>
         </View>
       </View>
     </View>
 
-    <View style={styles.twoColumn}>
-      <View style={styles.column}>
-        <View style={styles.hostingOption}>
-          <Text style={styles.hostingTitle}>Bobot-hostad</Text>
-          <Text style={styles.hostingDescription}>
-            Vi sköter all infrastruktur. Snabbaste sättet att komma igång.
-            Automatiska uppdateringar och underhåll ingår.
-          </Text>
-        </View>
-      </View>
-      <View style={styles.column}>
-        <View style={styles.hostingOption}>
-          <Text style={styles.hostingTitle}>Självhostad</Text>
-          <Text style={styles.hostingDescription}>
-            Installera på egen server/infrastruktur. Full kontroll över data
-            och miljö. Kräver teknisk kompetens för drift.
-          </Text>
-        </View>
-      </View>
-    </View>
-
-    <View style={styles.requirementsBox}>
-      <Text style={styles.requirementsTitle}>Krav för uppstart</Text>
-      <View style={styles.listItem}>
-        <Text style={styles.listBullet}>•</Text>
-        <Text style={styles.listText}>Signerat trial-avtal</Text>
-      </View>
-      <View style={styles.listItem}>
-        <Text style={styles.listBullet}>•</Text>
-        <Text style={styles.listText}>Betald uppstartsavgift</Text>
-      </View>
-      <View style={styles.listItem}>
-        <Text style={styles.listBullet}>•</Text>
-        <Text style={styles.listText}>Kunden tillhandahåller FAQ/kunskapsinnehåll</Text>
-      </View>
-      <View style={styles.listItem}>
-        <Text style={styles.listBullet}>•</Text>
-        <Text style={styles.listText}>Kontaktperson med teknisk behörighet för implementering</Text>
-      </View>
-    </View>
-
-    <PageFooter pageNumber={3} totalPages={5} />
-  </Page>
-)
-
-// Timeline Page
-const TimelinePage = () => (
-  <Page size="A4" style={styles.page}>
-    <View style={styles.pageHeader}>
-      <Text style={styles.pageTitle}>Tidplan</Text>
-      <Text style={styles.pageSubtitle}>Aktiviteter under 4-veckors trial</Text>
-    </View>
-
-    <View style={styles.table}>
-      {/* Header */}
-      <View style={styles.tableHeader}>
-        <Text style={[styles.tableHeaderCell, { width: '15%' }]}>Vecka</Text>
-        <Text style={[styles.tableHeaderCell, { width: '55%' }]}>Aktivitet</Text>
-        <Text style={[styles.tableHeaderCell, { width: '30%' }]}>Ansvarig</Text>
-      </View>
-
-      {/* Row 1 */}
-      <View style={styles.tableRow}>
-        <Text style={[styles.tableCell, styles.tableCellWeek]}>1</Text>
-        <Text style={[styles.tableCell, styles.tableCellActivity]}>Avtal signeras + uppstartsavgift betalas</Text>
-        <Text style={[styles.tableCell, styles.tableCellResponsible]}>Kund</Text>
-      </View>
-
-      {/* Row 2 */}
-      <View style={styles.tableRowAlt}>
-        <Text style={[styles.tableCell, styles.tableCellWeek]}>1</Text>
-        <Text style={[styles.tableCell, styles.tableCellActivity]}>Leverans av kod och inloggningsuppgifter</Text>
-        <Text style={[styles.tableCell, styles.tableCellResponsible]}>Bobot</Text>
-      </View>
-
-      {/* Row 3 */}
-      <View style={styles.tableRow}>
-        <Text style={[styles.tableCell, styles.tableCellWeek]}>1-2</Text>
-        <Text style={[styles.tableCell, styles.tableCellActivity]}>Implementering på hemsida + uppsättning av kunskapsbas</Text>
-        <Text style={[styles.tableCell, styles.tableCellResponsible]}>Kund + Bobot</Text>
-      </View>
-
-      {/* Row 4 */}
-      <View style={styles.tableRowAlt}>
-        <Text style={[styles.tableCell, styles.tableCellWeek]}>2</Text>
-        <Text style={[styles.tableCell, styles.tableCellActivity]}>Intern testning och finjustering</Text>
-        <Text style={[styles.tableCell, styles.tableCellResponsible]}>Kund</Text>
-      </View>
-
-      {/* Row 5 */}
-      <View style={styles.tableRow}>
-        <Text style={[styles.tableCell, styles.tableCellWeek]}>3-4</Text>
-        <Text style={[styles.tableCell, styles.tableCellActivity]}>Live-test med riktiga användare</Text>
-        <Text style={[styles.tableCell, styles.tableCellResponsible]}>Kund</Text>
-      </View>
-
-      {/* Row 6 */}
-      <View style={styles.tableRowAlt}>
-        <Text style={[styles.tableCell, styles.tableCellWeek]}>4</Text>
-        <Text style={[styles.tableCell, styles.tableCellActivity]}>Utvärdering och beslut om fortsättning</Text>
-        <Text style={[styles.tableCell, styles.tableCellResponsible]}>Kund</Text>
-      </View>
-    </View>
-
+    {/* Languages */}
     <View style={{ marginTop: 30 }}>
-      <Text style={styles.sectionTitle}>Support under trial</Text>
-      <Text style={styles.paragraph}>
-        Under hela provperioden har ni tillgång till support via e-post. Vi hjälper till med
-        tekniska frågor, kunskapsbasuppsättning och optimering av bot-svar. En dedikerad
-        kontaktperson tilldelas för er trial.
+      <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 16 }}>
+        Språkstöd
       </Text>
+      <View style={{ flexDirection: 'row', gap: 16 }}>
+        <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 16, alignItems: 'center' }}>
+          <Text style={{ fontSize: 24, marginBottom: 8 }}>🇸🇪</Text>
+          <Text style={{ fontSize: 12, fontWeight: 500, color: colors.text }}>Svenska</Text>
+        </View>
+        <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 16, alignItems: 'center' }}>
+          <Text style={{ fontSize: 24, marginBottom: 8 }}>🇬🇧</Text>
+          <Text style={{ fontSize: 12, fontWeight: 500, color: colors.text }}>English</Text>
+        </View>
+        <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 16, alignItems: 'center' }}>
+          <Text style={{ fontSize: 24, marginBottom: 8 }}>🇸🇦</Text>
+          <Text style={{ fontSize: 12, fontWeight: 500, color: colors.text }}>العربية</Text>
+        </View>
+      </View>
     </View>
 
-    <View style={styles.requirementsBox}>
-      <Text style={styles.requirementsTitle}>Efter trial</Text>
-      <Text style={styles.paragraph}>
-        Vid avslut av provperioden väljer ni att antingen fortsätta med en prenumeration
-        eller avsluta samarbetet. Vid fortsättning behålls all data och konfiguration.
-        Vid avslut raderas all data inom 30 dagar enligt GDPR.
-      </Text>
-    </View>
-
-    <PageFooter pageNumber={4} totalPages={5} />
+    <PageFooter pageNumber={4} />
   </Page>
 )
 
-// Pricing Page
-const PricingPage = ({ startupFee, monthlyFee, tier, discount, conversationLimit }) => (
+// SECTION 5: Process Page
+const ProcessPage = () => (
   <Page size="A4" style={styles.page}>
     <View style={styles.pageHeader}>
-      <Text style={styles.pageTitle}>Prissättning</Text>
-      <Text style={styles.pageSubtitle}>Kostnader för trial och fortsatt användning</Text>
+      <Text style={styles.pageHeaderTitle}>Så här går det till</Text>
+      <BobotMascotSmall size={36} />
     </View>
 
-    {/* Startup Fee */}
-    <View style={styles.priceCardHighlight}>
-      <Text style={styles.priceTitleLight}>Uppstartsavgift (engångskostnad)</Text>
-      <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-        <Text style={styles.priceAmountLight}>{startupFee?.toLocaleString('sv-SE') || '4 900'}</Text>
-        <Text style={styles.priceUnitLight}> kr</Text>
+    <Text style={styles.sectionSubtitle}>
+      Kom igång snabbt med tre enkla steg. Ingen teknisk kompetens krävs – vi hjälper er hela vägen.
+    </Text>
+
+    <View style={styles.processSteps}>
+      <View style={styles.processStep}>
+        <View style={styles.stepNumber}>
+          <Text style={styles.stepNumberText}>1</Text>
+        </View>
+        <View style={styles.stepContent}>
+          <Text style={styles.stepTitle}>Ge honom material</Text>
+          <Text style={styles.stepDescription}>
+            Ladda upp PDF, Word, Excel eller peka på er hemsida. Bobot accepterar de vanligaste filformaten och kan även läsa innehåll direkt från URL:er.
+          </Text>
+        </View>
       </View>
-      <Text style={styles.priceDescriptionLight}>
-        Inkluderar initial uppsättning, onboarding, teknisk support under trial-perioden
-        och konfiguration av er första chattbot.
+
+      <View style={styles.processStep}>
+        <View style={[styles.stepNumber, { backgroundColor: colors.accent }]}>
+          <Text style={styles.stepNumberText}>2</Text>
+        </View>
+        <View style={styles.stepContent}>
+          <Text style={styles.stepTitle}>Han läser på</Text>
+          <Text style={styles.stepDescription}>
+            Bobot analyserar och lär sig allt på några sekunder. All information indexeras och blir sökbar. Ingen manuell kategorisering krävs.
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.processStep}>
+        <View style={styles.stepNumber}>
+          <Text style={styles.stepNumberText}>3</Text>
+        </View>
+        <View style={styles.stepContent}>
+          <Text style={styles.stepTitle}>Han börjar jobba</Text>
+          <Text style={styles.stepDescription}>
+            Redo att svara direkt. Ni kan alltid justera vad han säger genom admin-panelen. Testa internt först, sedan live när ni är nöjda.
+          </Text>
+        </View>
+      </View>
+    </View>
+
+    {/* Timeline */}
+    <View style={{ marginTop: 40, backgroundColor: colors.white, borderRadius: 16, padding: 24 }}>
+      <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 16 }}>
+        Typisk tidplan för uppstart
       </Text>
+      <View style={{ flexDirection: 'row' }}>
+        <View style={{ flex: 1, alignItems: 'center', paddingVertical: 12 }}>
+          <Text style={{ fontSize: 20, fontWeight: 700, color: colors.primary }}>Dag 1</Text>
+          <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'center', marginTop: 4 }}>Avtal & uppstart</Text>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', paddingVertical: 12, borderLeftWidth: 1, borderLeftColor: colors.border }}>
+          <Text style={{ fontSize: 20, fontWeight: 700, color: colors.primary }}>Dag 2-3</Text>
+          <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'center', marginTop: 4 }}>Kunskapsbas byggs</Text>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', paddingVertical: 12, borderLeftWidth: 1, borderLeftColor: colors.border }}>
+          <Text style={{ fontSize: 20, fontWeight: 700, color: colors.primary }}>Dag 4-7</Text>
+          <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'center', marginTop: 4 }}>Test & lansering</Text>
+        </View>
+      </View>
     </View>
 
-    {/* Monthly Fee */}
-    <View style={styles.priceCard}>
-      <Text style={styles.priceTitle}>Månadskostnad efter trial ({tier || 'Starter'})</Text>
-      <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-        <Text style={styles.priceAmount}>{monthlyFee?.toLocaleString('sv-SE') || '990'}</Text>
-        <Text style={styles.priceUnit}> kr/mån</Text>
+    <PageFooter pageNumber={5} />
+  </Page>
+)
+
+// SECTION 6: Pricing Page
+const PricingPage = ({ startupFee, monthlyFee, tier, discount }) => (
+  <Page size="A4" style={styles.page}>
+    <View style={styles.pageHeader}>
+      <Text style={styles.pageHeaderTitle}>Välj nivå för er nya kollega</Text>
+      <BobotMascotSmall size={36} />
+    </View>
+
+    <View style={styles.pricingGrid}>
+      {/* Bas */}
+      <View style={styles.pricingCard}>
+        <Text style={styles.pricingTier}>Bas</Text>
+        <Text style={styles.pricingPrice}>990</Text>
+        <Text style={styles.pricingUnit}>kr/mån</Text>
+        <View style={{ marginTop: 12 }}>
+          <Text style={styles.pricingFeature}>• 1 chattbot</Text>
+          <Text style={styles.pricingFeature}>• 500 konversationer/mån</Text>
+          <Text style={styles.pricingFeature}>• E-post support</Text>
+          <Text style={styles.pricingFeature}>• Grundläggande statistik</Text>
+        </View>
       </View>
-      <Text style={styles.priceDescription}>
-        {conversationLimit ? `Upp till ${conversationLimit.toLocaleString('sv-SE')} konversationer per månad ingår.` : 'Obegränsat antal konversationer ingår.'}{' '}
-        Inkluderar tillgång till admin-panel, statistik, och kontinuerliga uppdateringar.
+
+      {/* Standard - Highlighted */}
+      <View style={styles.pricingCardHighlight}>
+        <View style={styles.recommendedBadge}>
+          <Text style={styles.recommendedText}>Rekommenderad</Text>
+        </View>
+        <Text style={styles.pricingTier}>Standard</Text>
+        <Text style={styles.pricingPrice}>1 990</Text>
+        <Text style={styles.pricingUnit}>kr/mån</Text>
+        <View style={{ marginTop: 12 }}>
+          <Text style={styles.pricingFeature}>• 2 chattbotar (extern + intern)</Text>
+          <Text style={styles.pricingFeature}>• 2 000 konversationer/mån</Text>
+          <Text style={styles.pricingFeature}>• Prioriterad support</Text>
+          <Text style={styles.pricingFeature}>• Avancerad statistik</Text>
+          <Text style={styles.pricingFeature}>• Anpassningsbar design</Text>
+        </View>
+      </View>
+
+      {/* Pro */}
+      <View style={styles.pricingCard}>
+        <Text style={styles.pricingTier}>Pro</Text>
+        <Text style={styles.pricingPrice}>3 990</Text>
+        <Text style={styles.pricingUnit}>kr/mån</Text>
+        <View style={{ marginTop: 12 }}>
+          <Text style={styles.pricingFeature}>• Obegränsade botar</Text>
+          <Text style={styles.pricingFeature}>• Obegränsade konversationer</Text>
+          <Text style={styles.pricingFeature}>• Dedikerad support</Text>
+          <Text style={styles.pricingFeature}>• White-label möjlighet</Text>
+          <Text style={styles.pricingFeature}>• API-åtkomst</Text>
+        </View>
+      </View>
+    </View>
+
+    {/* Startup fee */}
+    <View style={{ marginTop: 30, backgroundColor: colors.white, borderRadius: 16, padding: 24, borderLeftWidth: 4, borderLeftColor: colors.primary }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View>
+          <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Uppstartsavgift (engångskostnad)</Text>
+          <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 4 }}>
+            Inkluderar onboarding, uppsättning och teknisk support under trial
+          </Text>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={{ fontSize: 24, fontWeight: 700, color: colors.primary }}>{startupFee?.toLocaleString('sv-SE') || '4 900'} kr</Text>
+          {discount > 0 && (
+            <View style={{ backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 2, paddingHorizontal: 8, marginTop: 4 }}>
+              <Text style={{ fontSize: 9, color: colors.white, fontWeight: 600 }}>{discount}% rabatt</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </View>
+
+    <Text style={styles.pricingNote}>
+      Ingen bindningstid. Full support ingår. Avsluta när som helst.
+    </Text>
+
+    <PageFooter pageNumber={6} />
+  </Page>
+)
+
+// SECTION 7: Contact Page
+const ContactPage = () => (
+  <Page size="A4" style={styles.page}>
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <BobotMascot size={100} />
+
+      <Text style={{ fontSize: 28, fontWeight: 700, color: colors.text, marginTop: 40, marginBottom: 16, textAlign: 'center' }}>
+        Redo att frigöra tid?
       </Text>
-      {discount > 0 && (
-        <View style={styles.discountBadge}>
-          <Text style={styles.discountText}>{discount}% rabatt aktiv</Text>
-        </View>
-      )}
-    </View>
 
-    {/* Hosting Options */}
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Hosting-alternativ</Text>
-      <View style={styles.twoColumn}>
-        <View style={styles.column}>
-          <View style={styles.hostingOption}>
-            <Text style={styles.hostingTitle}>Bobot Cloud</Text>
-            <Text style={styles.hostingPrice}>Ingår i månadspris</Text>
-            <Text style={styles.hostingDescription}>
-              Fullt hanterad lösning. Vi sköter drift, säkerhet och uppdateringar.
-              99.9% upptidsgaranti.
-            </Text>
-          </View>
-        </View>
-        <View style={styles.column}>
-          <View style={styles.hostingOption}>
-            <Text style={styles.hostingTitle}>Self-hosted</Text>
-            <Text style={styles.hostingPrice}>Reducerat månadspris</Text>
-            <Text style={styles.hostingDescription}>
-              Installera på egen infrastruktur. Kräver Docker.
-              Teknisk support tillkommer vid behov.
-            </Text>
-          </View>
-        </View>
-      </View>
-    </View>
-
-    {/* What's included */}
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Vad ingår</Text>
-      <View style={styles.twoColumn}>
-        <View style={styles.column}>
-          <View style={styles.listItem}>
-            <Text style={styles.listBullet}>✓</Text>
-            <Text style={styles.listText}>Obegränsade kunskapsposter</Text>
-          </View>
-          <View style={styles.listItem}>
-            <Text style={styles.listBullet}>✓</Text>
-            <Text style={styles.listText}>Multi-språkstöd (SV/EN/AR)</Text>
-          </View>
-          <View style={styles.listItem}>
-            <Text style={styles.listBullet}>✓</Text>
-            <Text style={styles.listText}>Anpassningsbar widget-design</Text>
-          </View>
-          <View style={styles.listItem}>
-            <Text style={styles.listBullet}>✓</Text>
-            <Text style={styles.listText}>Konversationshistorik</Text>
-          </View>
-        </View>
-        <View style={styles.column}>
-          <View style={styles.listItem}>
-            <Text style={styles.listBullet}>✓</Text>
-            <Text style={styles.listText}>Detaljerad statistik</Text>
-          </View>
-          <View style={styles.listItem}>
-            <Text style={styles.listBullet}>✓</Text>
-            <Text style={styles.listText}>GDPR-verktyg</Text>
-          </View>
-          <View style={styles.listItem}>
-            <Text style={styles.listBullet}>✓</Text>
-            <Text style={styles.listText}>E-post support</Text>
-          </View>
-          <View style={styles.listItem}>
-            <Text style={styles.listBullet}>✓</Text>
-            <Text style={styles.listText}>Kontinuerliga uppdateringar</Text>
-          </View>
-        </View>
-      </View>
-    </View>
-
-    {/* Contact */}
-    <View style={styles.contactBox}>
-      <Text style={styles.contactTitle}>Nästa steg</Text>
-      <Text style={styles.contactText}>
-        Kontakta oss för att påbörja er trial eller om ni har frågor om offerten.{'\n'}
-        E-post: hej@bobot.nu | Webb: www.bobot.nu
+      <Text style={{ fontSize: 14, color: colors.textLight, textAlign: 'center', maxWidth: 400, lineHeight: 1.6, marginBottom: 40 }}>
+        Låt oss börja med en provmånad. Ni testar Bobot i er verksamhet och bestämmer sedan om ni vill fortsätta.
       </Text>
+
+      <View style={styles.contactSection}>
+        <Text style={styles.contactTitle}>Ta kontakt</Text>
+        <Text style={styles.contactText}>
+          Vi svarar inom 24 timmar och hjälper er komma igång direkt.
+        </Text>
+        <Text style={styles.contactInfo}>
+          Marcus Widing{'\n'}
+          hej@bobot.nu{'\n'}
+          www.bobot.nu
+        </Text>
+      </View>
     </View>
 
-    <PageFooter pageNumber={5} totalPages={5} />
+    <PageFooter pageNumber={7} />
   </Page>
 )
 
@@ -867,24 +885,18 @@ const ProposalDocument = ({
 
   return (
     <Document>
-      <CoverPage
-        customerName={customerName}
-        contactPerson={contactPerson}
-        year={year}
-      />
-      <FeaturesPage />
-      <TrialDetailsPage
-        startDate={startDate}
-        hostingOption={hostingOption}
-      />
-      <TimelinePage />
+      <HeroPage customerName={customerName} year={year} />
+      <PhilosophyPage />
+      <JobDescriptionPage />
+      <CustomizationPage />
+      <ProcessPage />
       <PricingPage
         startupFee={startupFee}
         monthlyFee={monthlyFee}
         tier={tier}
         discount={discount}
-        conversationLimit={conversationLimit}
       />
+      <ContactPage />
     </Document>
   )
 }
@@ -909,5 +921,8 @@ export const downloadProposalPDF = async (props) => {
   URL.revokeObjectURL(url)
   return fileName
 }
+
+// Export colors and mascot for reuse in KPI report
+export { colors, BobotMascot, BobotMascotSmall }
 
 export default ProposalDocument
