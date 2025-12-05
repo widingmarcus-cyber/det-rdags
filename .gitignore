@@ -27,3 +27,6 @@ dist/
 .coverage
 htmlcov/
 *.db
+
+# Build artifacts
+admin-panel/public/widget.js
