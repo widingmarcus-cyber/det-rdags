@@ -3,7 +3,7 @@
  * Displays system architecture, guides, and security information
  */
 
-const DocsTab = ({ onShowAnnouncementModal, announcement }) => {
+const DocsTab = ({ onShowAnnouncementModal, announcements = [] }) => {
   return (
     <div className="animate-fade-in">
       <div className="mb-6">
@@ -209,11 +209,29 @@ const DocsTab = ({ onShowAnnouncementModal, announcement }) => {
             Skapa ett meddelande som visas för alla företagsadministratörer i deras dashboard.
             Användbart för systemunderhåll, nya funktioner eller viktiga uppdateringar.
           </p>
-          {announcement && (
-            <div className="mt-4 p-4 bg-accent/10 border border-accent/30 rounded-lg">
-              <p className="text-sm text-text-tertiary mb-1">Aktivt meddelande:</p>
-              <p className="font-medium text-text-primary">{announcement.title}</p>
-              <p className="text-sm text-text-secondary">{announcement.message}</p>
+          {announcements.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <p className="text-sm text-text-tertiary">{announcements.length} aktiva meddelanden:</p>
+              {announcements.slice(0, 3).map((announcement) => (
+                <div key={announcement.id} className={`p-3 rounded-lg border ${
+                  announcement.type === 'warning' ? 'bg-warning/10 border-warning/30' :
+                  announcement.type === 'maintenance' ? 'bg-error/10 border-error/30' :
+                  'bg-accent/10 border-accent/30'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-text-primary text-sm">{announcement.title}</p>
+                    {announcement.target_company_name && (
+                      <span className="text-xs px-1.5 py-0.5 bg-accent/20 text-accent rounded">
+                        {announcement.target_company_name}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-text-secondary truncate">{announcement.message}</p>
+                </div>
+              ))}
+              {announcements.length > 3 && (
+                <p className="text-xs text-text-tertiary">+{announcements.length - 3} fler...</p>
+              )}
             </div>
           )}
         </div>

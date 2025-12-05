@@ -55,8 +55,8 @@ function App() {
     return saved ? JSON.parse(saved) : null
   })
 
-  // Announcement state
-  const [announcement, setAnnouncement] = useState(null)
+  // Announcements state (supports multiple messages)
+  const [announcements, setAnnouncements] = useState([])
 
   // Admin auth
   const [adminAuth, setAdminAuth] = useState(() => {
@@ -230,8 +230,8 @@ function App() {
     return response
   }
 
-  // Fetch announcements for companies
-  const fetchAnnouncement = async () => {
+  // Fetch announcements for companies (supports multiple messages)
+  const fetchAnnouncements = async () => {
     if (!auth?.token) return
     try {
       const response = await fetch(`${API_BASE}/announcements`, {
@@ -239,34 +239,55 @@ function App() {
       })
       if (response.ok) {
         const data = await response.json()
-        setAnnouncement(data.announcement)
+        setAnnouncements(data.announcements || [])
       }
     } catch (e) {
       console.error('Could not fetch announcements:', e)
     }
   }
 
-  // Mark announcement as read (persists to backend)
-  const markAnnouncementAsRead = async () => {
+  // Mark a specific announcement as read
+  const markAnnouncementAsRead = async (announcementId) => {
     if (!auth?.token) return
     try {
       await fetch(`${API_BASE}/announcements/read`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${auth.token}` }
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ announcement_id: announcementId })
       })
-      setAnnouncement(null)
+      // Remove from local state
+      setAnnouncements(prev => prev.filter(a => a.id !== announcementId))
     } catch (e) {
       console.error('Could not mark announcement as read:', e)
-      setAnnouncement(null) // Still dismiss locally
+      // Still dismiss locally
+      setAnnouncements(prev => prev.filter(a => a.id !== announcementId))
+    }
+  }
+
+  // Mark all announcements as read
+  const markAllAnnouncementsAsRead = async () => {
+    if (!auth?.token) return
+    try {
+      await fetch(`${API_BASE}/announcements/read-all`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${auth.token}` }
+      })
+      setAnnouncements([])
+    } catch (e) {
+      console.error('Could not mark all announcements as read:', e)
+      setAnnouncements([])
     }
   }
 
   // Fetch announcements when authenticated
   useEffect(() => {
     if (auth) {
-      fetchAnnouncement()
+      fetchAnnouncements()
       // Refresh every 5 minutes
-      const interval = setInterval(fetchAnnouncement, 5 * 60 * 1000)
+      const interval = setInterval(fetchAnnouncements, 5 * 60 * 1000)
       return () => clearInterval(interval)
     }
   }, [auth])
@@ -335,8 +356,9 @@ function App() {
           onLogout={handleLogout}
           darkMode={darkMode}
           toggleDarkMode={toggleDarkMode}
-          announcement={announcement}
+          announcements={announcements}
           onDismissAnnouncement={markAnnouncementAsRead}
+          onDismissAllAnnouncements={markAllAnnouncementsAsRead}
         />
         <main id="main-content" className="flex-1 p-8 overflow-auto" role="main" aria-label="Huvudinnehåll">
           <Routes>

@@ -461,6 +461,43 @@ class GlobalSettings(Base):
     updated_by = Column(String)  # Admin username
 
 
+class Announcement(Base):
+    """Announcements from super admin to companies"""
+    __tablename__ = "announcements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    type = Column(String, default="info")  # info, warning, maintenance
+    target_company_id = Column(String, ForeignKey("companies.id"), nullable=True)  # NULL = all companies
+    created_at = Column(DateTime, default=datetime.utcnow)
+    created_by = Column(String)  # Admin username
+    is_active = Column(Boolean, default=True)
+    expires_at = Column(DateTime, nullable=True)  # Optional expiration
+
+    # Relationships
+    target_company = relationship("Company", foreign_keys=[target_company_id])
+    reads = relationship("AnnouncementRead", back_populates="announcement", cascade="all, delete-orphan")
+
+
+class AnnouncementRead(Base):
+    """Tracks which companies have read which announcements"""
+    __tablename__ = "announcement_reads"
+
+    id = Column(Integer, primary_key=True, index=True)
+    announcement_id = Column(Integer, ForeignKey("announcements.id", ondelete="CASCADE"), nullable=False)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    read_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    announcement = relationship("Announcement", back_populates="reads")
+
+    # Unique constraint to prevent duplicate reads
+    __table_args__ = (
+        Index('ix_announcement_read_unique', 'announcement_id', 'company_id', unique=True),
+    )
+
+
 class Subscription(Base):
     """Billing subscription for a company"""
     __tablename__ = "subscriptions"

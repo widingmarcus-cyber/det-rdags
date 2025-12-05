@@ -5,8 +5,9 @@
 
 const OverviewTab = ({
   setCommandPaletteOpen,
-  announcement,
+  announcements = [],
   onDeleteAnnouncement,
+  onToggleAnnouncement,
   systemHealth,
   maintenanceMode,
   totalCompanies,
@@ -51,36 +52,75 @@ const OverviewTab = ({
         <p className="text-text-secondary">Allt du behöver se för att förstå hur din verksamhet går</p>
       </div>
 
-      {/* Active Announcement Banner */}
-      {announcement && (
-        <div className={`rounded-xl p-4 mb-6 flex items-center justify-between ${
-          announcement.type === 'warning' ? 'bg-warning/10 border border-warning/30' :
-          announcement.type === 'maintenance' ? 'bg-info/10 border border-info/30' :
-          'bg-accent/10 border border-accent/30'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-              announcement.type === 'warning' ? 'bg-warning text-white' :
-              announcement.type === 'maintenance' ? 'bg-info text-white' :
-              'bg-accent text-white'
-            }`}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-              </svg>
-            </div>
-            <div>
-              <p className="font-medium text-text-primary">{announcement.title}</p>
-              <p className="text-sm text-text-secondary">{announcement.message}</p>
-            </div>
+      {/* Active Announcements List */}
+      {announcements.length > 0 && (
+        <div className="mb-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium text-text-secondary">Aktiva meddelanden ({announcements.length})</h3>
           </div>
-          <button
-            onClick={onDeleteAnnouncement}
-            className="p-2 rounded-lg hover:bg-bg-secondary text-text-tertiary hover:text-text-primary transition-colors"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-          </button>
+          {announcements.map((announcement) => (
+            <div key={announcement.id} className={`rounded-xl p-4 flex items-center justify-between ${
+              announcement.type === 'warning' ? 'bg-warning/10 border border-warning/30' :
+              announcement.type === 'maintenance' ? 'bg-error/10 border border-error/30' :
+              'bg-accent/10 border border-accent/30'
+            } ${!announcement.is_active ? 'opacity-50' : ''}`}>
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  announcement.type === 'warning' ? 'bg-warning text-white' :
+                  announcement.type === 'maintenance' ? 'bg-error text-white' :
+                  'bg-accent text-white'
+                }`}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-text-primary truncate">{announcement.title}</p>
+                    {announcement.target_company_name && (
+                      <span className="px-2 py-0.5 bg-accent/20 text-accent text-xs rounded-full flex-shrink-0">
+                        {announcement.target_company_name}
+                      </span>
+                    )}
+                    {!announcement.is_active && (
+                      <span className="px-2 py-0.5 bg-text-tertiary/20 text-text-tertiary text-xs rounded-full flex-shrink-0">
+                        Inaktivt
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-text-secondary truncate">{announcement.message}</p>
+                  <p className="text-xs text-text-tertiary mt-1">
+                    {announcement.read_count || 0} har läst • {new Date(announcement.created_at).toLocaleDateString('sv-SE')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 ml-3 flex-shrink-0">
+                <button
+                  onClick={() => onToggleAnnouncement(announcement.id)}
+                  className="p-2 rounded-lg hover:bg-bg-secondary text-text-tertiary hover:text-text-primary transition-colors"
+                  title={announcement.is_active ? 'Inaktivera' : 'Aktivera'}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    {announcement.is_active ? (
+                      <><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></>
+                    ) : (
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    )}
+                  </svg>
+                </button>
+                <button
+                  onClick={() => onDeleteAnnouncement(announcement.id)}
+                  className="p-2 rounded-lg hover:bg-error/10 text-text-tertiary hover:text-error transition-colors"
+                  title="Ta bort"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

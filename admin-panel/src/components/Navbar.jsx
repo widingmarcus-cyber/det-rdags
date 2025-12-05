@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 
-function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, announcement, onDismissAnnouncement }) {
+function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, announcements = [], onDismissAnnouncement, onDismissAllAnnouncements }) {
   const [showAnnouncement, setShowAnnouncement] = useState(false)
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: 'chart' },
@@ -13,6 +13,8 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
     { to: '/settings', label: 'Företagsinställningar', icon: 'settings' },
     { to: '/documentation', label: 'Dokumentation', icon: 'docs' },
   ]
+
+  const hasAnnouncements = announcements.length > 0
 
   const renderIcon = (icon) => {
     switch (icon) {
@@ -79,6 +81,60 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
         )
       default:
         return null
+    }
+  }
+
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case 'warning':
+        return (
+          <div className="w-8 h-8 rounded-lg bg-warning/20 flex items-center justify-center flex-shrink-0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-warning">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </div>
+        )
+      case 'maintenance':
+        return (
+          <div className="w-8 h-8 rounded-lg bg-error/20 flex items-center justify-center flex-shrink-0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-error">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+        )
+      default:
+        return (
+          <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center flex-shrink-0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+          </div>
+        )
+    }
+  }
+
+  const getTypeLabel = (type) => {
+    switch (type) {
+      case 'warning': return 'Varning'
+      case 'maintenance': return 'Underhåll'
+      default: return 'Information'
+    }
+  }
+
+  const getTypeStyles = (type) => {
+    switch (type) {
+      case 'warning':
+        return { border: 'border-warning/30 bg-warning/5', header: 'bg-warning/10' }
+      case 'maintenance':
+        return { border: 'border-error/30 bg-error/5', header: 'bg-error/10' }
+      default:
+        return { border: 'border-accent/30 bg-accent/5', header: 'bg-accent/10' }
     }
   }
 
@@ -181,21 +237,21 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
       <div className="px-3 py-2 relative">
         <button
           onClick={() => setShowAnnouncement(!showAnnouncement)}
-          className={`sidebar-item w-full text-left relative ${!announcement ? 'opacity-60' : ''}`}
-          aria-label={announcement ? "Visa meddelanden" : "Inga meddelanden"}
+          className={`sidebar-item w-full text-left relative ${!hasAnnouncements ? 'opacity-60' : ''}`}
+          aria-label={hasAnnouncements ? `Visa ${announcements.length} meddelanden` : "Inga meddelanden"}
         >
           <span className="relative">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
-            {announcement && (
+            {hasAnnouncements && (
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-accent rounded-full animate-pulse" />
             )}
           </span>
           <span>Meddelanden</span>
-          {announcement && (
-            <span className="ml-auto bg-accent text-white text-xs px-1.5 py-0.5 rounded-full">1</span>
+          {hasAnnouncements && (
+            <span className="ml-auto bg-accent text-white text-xs px-1.5 py-0.5 rounded-full">{announcements.length}</span>
           )}
         </button>
       </div>
@@ -222,7 +278,9 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
                 </div>
                 <div>
                   <h2 className="font-semibold text-text-primary">Meddelanden</h2>
-                  <p className="text-xs text-text-tertiary">Från administratören</p>
+                  <p className="text-xs text-text-tertiary">
+                    {hasAnnouncements ? `${announcements.length} olästa` : 'Inga nya meddelanden'}
+                  </p>
                 </div>
               </div>
               <button
@@ -236,83 +294,77 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
               </button>
             </div>
 
+            {/* Mark all as read button */}
+            {hasAnnouncements && announcements.length > 1 && (
+              <div className="px-6 py-3 border-b border-border-subtle bg-bg-secondary/50">
+                <button
+                  onClick={() => { onDismissAllAnnouncements(); setShowAnnouncement(false) }}
+                  className="text-sm text-accent hover:text-accent-hover transition-colors flex items-center gap-2"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Markera alla som lästa
+                </button>
+              </div>
+            )}
+
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              {announcement ? (
+            <div className="flex-1 overflow-y-auto p-4">
+              {hasAnnouncements ? (
                 <div className="space-y-4">
-                  {/* Message card */}
-                  <div className={`rounded-xl border overflow-hidden ${
-                    announcement.type === 'warning' ? 'border-warning/30 bg-warning/5' :
-                    announcement.type === 'maintenance' ? 'border-error/30 bg-error/5' : 'border-accent/30 bg-accent/5'
-                  }`}>
-                    {/* Message header */}
-                    <div className={`px-4 py-3 flex items-center gap-3 ${
-                      announcement.type === 'warning' ? 'bg-warning/10' :
-                      announcement.type === 'maintenance' ? 'bg-error/10' : 'bg-accent/10'
-                    }`}>
-                      {announcement.type === 'warning' ? (
-                        <div className="w-8 h-8 rounded-lg bg-warning/20 flex items-center justify-center">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-warning">
-                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                            <line x1="12" y1="9" x2="12" y2="13" />
-                            <line x1="12" y1="17" x2="12.01" y2="17" />
-                          </svg>
+                  {announcements.map((announcement) => {
+                    const styles = getTypeStyles(announcement.type)
+                    return (
+                      <div key={announcement.id} className={`rounded-xl border overflow-hidden ${styles.border}`}>
+                        {/* Message header */}
+                        <div className={`px-4 py-3 flex items-center gap-3 ${styles.header}`}>
+                          {getTypeIcon(announcement.type)}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-text-primary truncate">{announcement.title}</h3>
+                            <div className="flex items-center gap-2 text-xs text-text-tertiary">
+                              <span>{getTypeLabel(announcement.type)}</span>
+                              {announcement.is_targeted && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-accent">Direkt till dig</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      ) : announcement.type === 'maintenance' ? (
-                        <div className="w-8 h-8 rounded-lg bg-error/20 flex items-center justify-center">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-error">
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="12" y1="8" x2="12" y2="12" />
-                            <line x1="12" y1="16" x2="12.01" y2="16" />
-                          </svg>
+
+                        {/* Message body */}
+                        <div className="px-4 py-4">
+                          <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">{announcement.message}</p>
                         </div>
-                      ) : (
-                        <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="12" y1="16" x2="12" y2="12" />
-                            <line x1="12" y1="8" x2="12.01" y2="8" />
-                          </svg>
+
+                        {/* Message footer */}
+                        <div className="px-4 py-3 bg-bg-secondary/50 border-t border-border-subtle flex items-center justify-between">
+                          {announcement.created_at && (
+                            <p className="text-xs text-text-tertiary flex items-center gap-1.5">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                              </svg>
+                              {new Date(announcement.created_at).toLocaleDateString('sv-SE', {
+                                day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                              })}
+                            </p>
+                          )}
+                          <button
+                            onClick={() => onDismissAnnouncement(announcement.id)}
+                            className="text-xs font-medium text-accent hover:text-accent-hover transition-colors flex items-center gap-1"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            Markera som läst
+                          </button>
                         </div>
-                      )}
-                      <div className="flex-1">
-                        <h3 className="font-medium text-text-primary">{announcement.title}</h3>
-                        <p className="text-xs text-text-tertiary">
-                          {announcement.type === 'warning' ? 'Varning' :
-                           announcement.type === 'maintenance' ? 'Underhåll' : 'Information'}
-                        </p>
                       </div>
-                    </div>
-
-                    {/* Message body */}
-                    <div className="px-4 py-4">
-                      <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">{announcement.message}</p>
-                    </div>
-
-                    {/* Message footer */}
-                    <div className="px-4 py-3 bg-bg-secondary/50 border-t border-border-subtle flex items-center justify-between">
-                      {announcement.created_at && (
-                        <p className="text-xs text-text-tertiary flex items-center gap-1.5">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="10" />
-                            <polyline points="12 6 12 12 16 14" />
-                          </svg>
-                          {new Date(announcement.created_at).toLocaleDateString('sv-SE', {
-                            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                          })}
-                        </p>
-                      )}
-                      <button
-                        onClick={() => { onDismissAnnouncement(); setShowAnnouncement(false) }}
-                        className="text-xs font-medium text-accent hover:text-accent-hover transition-colors flex items-center gap-1"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        Markera som läst
-                      </button>
-                    </div>
-                  </div>
+                    )
+                  })}
                 </div>
               ) : (
                 /* Empty state */
