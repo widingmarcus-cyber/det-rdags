@@ -155,6 +155,49 @@ const IconCheck = ({ size = 12, color = colors.white }) => (
   </Svg>
 )
 
+// Decorative corner accent for visual interest
+const CornerAccent = ({ position = 'topRight' }) => {
+  const isTop = position.includes('top')
+  const isRight = position.includes('Right')
+  return (
+    <View style={{
+      position: 'absolute',
+      [isTop ? 'top' : 'bottom']: 0,
+      [isRight ? 'right' : 'left']: 0
+    }}>
+      <Svg width={120} height={120}>
+        <Circle cx={isRight ? 120 : 0} cy={isTop ? 0 : 120} r={100} fill={colors.primary} opacity={0.08} />
+        <Circle cx={isRight ? 120 : 0} cy={isTop ? 0 : 120} r={60} fill={colors.primary} opacity={0.06} />
+        <Circle cx={isRight ? 100 : 20} cy={isTop ? 20 : 100} r={8} fill={colors.primary} opacity={0.3} />
+      </Svg>
+    </View>
+  )
+}
+
+// Decorative divider with dot
+const DecorativeDivider = ({ width = 200 }) => (
+  <Svg width={width} height={20} style={{ marginVertical: 24 }}>
+    <Rect x={0} y={9} width={width * 0.4} height={2} fill={colors.border} rx={1} />
+    <Circle cx={width / 2} cy={10} r={5} fill={colors.primary} />
+    <Rect x={width * 0.6} y={9} width={width * 0.4} height={2} fill={colors.border} rx={1} />
+  </Svg>
+)
+
+// Fancy icon wrapper with decorative ring
+const FancyIconWrapper = ({ children, color = colors.primary, size = 56 }) => (
+  <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    <Svg width={size} height={size}>
+      {/* Outer decorative ring */}
+      <Circle cx={size/2} cy={size/2} r={size/2 - 2} fill="none" stroke={color} strokeWidth={1} opacity={0.3} />
+      {/* Inner filled circle */}
+      <Circle cx={size/2} cy={size/2} r={size/2 - 8} fill={color} />
+    </Svg>
+    <View style={{ position: 'absolute' }}>
+      {children}
+    </View>
+  </View>
+)
+
 // Create styles
 const styles = StyleSheet.create({
   // Base page
@@ -232,24 +275,29 @@ const styles = StyleSheet.create({
   },
   uspGrid: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 20,
     marginTop: 30,
   },
   uspCard: {
     flex: 1,
     backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 20,
+    padding: 24,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  uspCardAccent: {
+    flex: 1,
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.primary,
   },
   uspIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.primary,
-    marginBottom: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginBottom: 16,
   },
   uspIconText: {
     fontSize: 20,
@@ -554,44 +602,57 @@ const HeroPage = ({ customerName, year }) => (
 // SECTION 2: Philosophy Page
 const PhilosophyPage = () => (
   <Page size="A4" style={styles.page}>
+    <CornerAccent position="topRight" />
+
     <View style={styles.pageHeader}>
       <Text style={styles.pageHeaderTitle}>Varför anställa Bobot?</Text>
       <BobotMascotSmall size={36} />
     </View>
 
     <Text style={styles.sectionSubtitle}>
-      Att lära upp nyanställda tar tid. Att svara på kunders rutinfrågor tar energi. Bobot är lösningen på båda problemen. Han är inte ett IT-system, han är en kollega som läser in er information och delar med sig av den – dygnet runt.
+      Att lära upp nyanställda tar tid. Att svara på kunders rutinfrågor tar energi. Bobot är lösningen på båda problemen – en kollega som läser in er information och delar med sig av den, dygnet runt.
     </Text>
 
     {/* USP Grid */}
     <View style={styles.uspGrid}>
-      <View style={styles.uspCard}>
+      <View style={styles.uspCardAccent}>
         <View style={styles.uspIcon}>
-          <IconBolt size={20} color={colors.white} />
+          <FancyIconWrapper color={colors.primary} size={56}>
+            <IconBolt size={22} color={colors.white} />
+          </FancyIconWrapper>
         </View>
         <Text style={styles.uspTitle}>Supersnabb</Text>
-        <Text style={styles.uspDescription}>Läser in dokument på några sekunder och börjar svara direkt.</Text>
-      </View>
-
-      <View style={styles.uspCard}>
-        <View style={[styles.uspIcon, { backgroundColor: colors.accent }]}>
-          <IconHome size={20} color={colors.white} />
-        </View>
-        <Text style={styles.uspTitle}>Lokal</Text>
-        <Text style={styles.uspDescription}>All kunskap stannar hos er. Inga externa moln eller tredjeparter.</Text>
+        <Text style={styles.uspDescription}>Läser in dokument på sekunder och börjar svara direkt.</Text>
       </View>
 
       <View style={styles.uspCard}>
         <View style={styles.uspIcon}>
-          <IconMoon size={20} color={colors.white} />
+          <FancyIconWrapper color={colors.accent} size={56}>
+            <IconHome size={22} color={colors.white} />
+          </FancyIconWrapper>
+        </View>
+        <Text style={styles.uspTitle}>Lokal</Text>
+        <Text style={styles.uspDescription}>All kunskap stannar hos er. Inga externa moln.</Text>
+      </View>
+
+      <View style={styles.uspCard}>
+        <View style={styles.uspIcon}>
+          <FancyIconWrapper color={colors.primary} size={56}>
+            <IconMoon size={22} color={colors.white} />
+          </FancyIconWrapper>
         </View>
         <Text style={styles.uspTitle}>Vaken</Text>
-        <Text style={styles.uspDescription}>Jobbar dygnet runt. Tillgänglig 24/7, alla dagar.</Text>
+        <Text style={styles.uspDescription}>Tillgänglig dygnet runt, alla dagar om året.</Text>
       </View>
     </View>
 
+    {/* Decorative divider */}
+    <View style={{ alignItems: 'center', marginTop: 10 }}>
+      <DecorativeDivider width={200} />
+    </View>
+
     {/* Additional benefits */}
-    <View style={{ marginTop: 40 }}>
+    <View>
       <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 16 }}>
         Fördelar med en AI-kollega
       </Text>
@@ -622,6 +683,8 @@ const PhilosophyPage = () => (
 // SECTION 3: Job Description Page
 const JobDescriptionPage = () => (
   <Page size="A4" style={styles.page}>
+    <CornerAccent position="bottomLeft" />
+
     <View style={styles.pageHeader}>
       <Text style={styles.pageHeaderTitle}>Två roller i en anställning</Text>
       <BobotMascotSmall size={36} />
@@ -682,6 +745,8 @@ const JobDescriptionPage = () => (
 // SECTION 4: Customization Page
 const CustomizationPage = () => (
   <Page size="A4" style={styles.page}>
+    <CornerAccent position="topRight" />
+
     <View style={styles.pageHeader}>
       <Text style={styles.pageHeaderTitle}>Er stil, vår mascot</Text>
       <BobotMascotSmall size={36} />
@@ -751,6 +816,8 @@ const CustomizationPage = () => (
 // SECTION 5: Process Page
 const ProcessPage = () => (
   <Page size="A4" style={styles.page}>
+    <CornerAccent position="bottomLeft" />
+
     <View style={styles.pageHeader}>
       <Text style={styles.pageHeaderTitle}>Så här går det till</Text>
       <BobotMascotSmall size={36} />
@@ -826,6 +893,8 @@ const ProcessPage = () => (
 // SECTION 6: Pricing Page
 const PricingPage = ({ startupFee, monthlyFee, tier, discount }) => (
   <Page size="A4" style={styles.page}>
+    <CornerAccent position="topRight" />
+
     <View style={styles.pageHeader}>
       <Text style={styles.pageHeaderTitle}>Välj nivå för er nya kollega</Text>
       <BobotMascotSmall size={36} />
@@ -908,6 +977,9 @@ const PricingPage = ({ startupFee, monthlyFee, tier, discount }) => (
 // SECTION 7: Contact Page
 const ContactPage = () => (
   <Page size="A4" style={styles.page}>
+    <CornerAccent position="topRight" />
+    <CornerAccent position="bottomLeft" />
+
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
       <BobotMascot size={100} />
 
@@ -915,9 +987,11 @@ const ContactPage = () => (
         Redo att frigöra tid?
       </Text>
 
-      <Text style={{ fontSize: 14, color: colors.textLight, textAlign: 'center', maxWidth: 400, lineHeight: 1.6, marginBottom: 40 }}>
+      <Text style={{ fontSize: 14, color: colors.textLight, textAlign: 'center', maxWidth: 400, lineHeight: 1.6, marginBottom: 20 }}>
         Låt oss börja med en provmånad. Ni testar Bobot i er verksamhet och bestämmer sedan om ni vill fortsätta.
       </Text>
+
+      <DecorativeDivider width={200} />
 
       <View style={styles.contactSection}>
         <Text style={styles.contactTitle}>Ta kontakt</Text>
