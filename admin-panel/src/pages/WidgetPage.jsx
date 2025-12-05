@@ -562,14 +562,16 @@ function WidgetPage({ widgetType }) {
         body: formData
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setSuccess(`Importerade ${data.imported || data.count || 'flera'} poster!`)
+      const data = await response.json()
+
+      if (response.ok && data.success !== false && data.imported > 0) {
+        setSuccess(`Importerade ${data.imported} poster!`)
         fetchKnowledge(widget.id)
         setShowImportModal(false)
+      } else if (response.ok && data.imported === 0) {
+        setError(data.message || 'Kunde inte hitta några frågor/svar i filen. Kontrollera formatet.')
       } else {
-        const err = await response.json()
-        setError(err.detail || 'Import misslyckades')
+        setError(data.detail || data.message || 'Import misslyckades')
       }
     } catch (e) {
       setError('Kunde inte importera: ' + e.message)
@@ -592,15 +594,17 @@ function WidgetPage({ widgetType }) {
         body: JSON.stringify({ url: importUrl, widget_id: widget.id })
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setSuccess(`Importerade ${data.imported || data.count || 'flera'} poster!`)
+      const data = await response.json()
+
+      if (response.ok && data.success !== false && data.imported > 0) {
+        setSuccess(`Importerade ${data.imported} poster!`)
         fetchKnowledge(widget.id)
         setShowImportModal(false)
         setImportUrl('')
+      } else if (response.ok && data.imported === 0) {
+        setError(data.message || 'Kunde inte hitta några frågor/svar på sidan. Försök med en annan URL.')
       } else {
-        const err = await response.json()
-        setError(err.detail || 'Import misslyckades')
+        setError(data.detail || data.message || 'Import misslyckades')
       }
     } catch (e) {
       setError('Kunde inte importera: ' + e.message)
