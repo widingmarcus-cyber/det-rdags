@@ -29,4 +29,4 @@ htmlcov/
 *.db
 
 # Build artifacts
-admin-panel/public/widget.js
+# Note: widget.js is now tracked to ensure it's available for local development
