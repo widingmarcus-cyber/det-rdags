@@ -4222,7 +4222,7 @@ Example format:
 
     try:
         logger.info(f"[AI Extract] Sending request to Ollama at {OLLAMA_BASE_URL}")
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=180.0) as client:  # 3 min timeout for large pages
             response = await client.post(
                 f"{OLLAMA_BASE_URL}/api/generate",
                 json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
