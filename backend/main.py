@@ -17,6 +17,11 @@ import json
 import asyncio
 import uuid
 import time
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
@@ -3943,7 +3948,7 @@ async def delete_category(
 
 class UploadResponse(BaseModel):
     success: bool
-    items_added: int
+    imported: int  # Changed from items_added to match frontend expectations
     message: str
     items: List[KnowledgeItemResponse] = []
 
@@ -4033,7 +4038,7 @@ async def parse_excel_file(content: bytes) -> List[dict]:
                     "category": str(cat).strip() if cat else None
                 })
     except Exception as e:
-        print(f"Excel parse error: {e}")
+        logger.error(f"Excel parse error: {e}", exc_info=True)
 
     return items
 
@@ -4057,7 +4062,7 @@ async def parse_word_file(content: bytes) -> str:
                 text.append(para.text.strip())
         return "\n\n".join(text)
     except Exception as e:
-        print(f"Word parse error: {e}")
+        logger.error(f"Word parse error: {e}", exc_info=True)
         return ""
 
 
@@ -4081,7 +4086,7 @@ async def parse_pdf_file(content: bytes) -> str:
     try:
         from pypdf import PdfReader
     except ImportError:
-        print("pypdf not installed")
+        logger.error("pypdf not installed - PDF import disabled")
         return ""
 
     try:
@@ -4095,7 +4100,7 @@ async def parse_pdf_file(content: bytes) -> str:
 
         return "\n\n".join(text_parts)
     except Exception as e:
-        print(f"PDF parse error: {e}")
+        logger.error(f"PDF parse error: {e}", exc_info=True)
         return ""
 
 
@@ -4149,7 +4154,7 @@ async def fetch_url_content(url: str) -> str:
 
             return text
     except Exception as e:
-        print(f"URL fetch error: {e}")
+        logger.error(f"URL fetch error for: {e}", exc_info=True)
         return ""
 
 
@@ -4192,7 +4197,7 @@ Example format:
                 items = json.loads(json_match.group())
                 return [item for item in items if item.get("question") and item.get("answer")]
     except Exception as e:
-        print(f"AI extraction error: {e}")
+        logger.error(f"AI extraction error: {e}", exc_info=True)
 
     return []
 
@@ -4267,7 +4272,7 @@ async def upload_knowledge_file(
     if not items_to_add:
         return UploadResponse(
             success=False,
-            items_added=0,
+            imported=0,
             message="Kunde inte hitta några frågor/svar i filen. Kontrollera formatet."
         )
 
@@ -4277,7 +4282,7 @@ async def upload_knowledge_file(
     if not items_to_add:
         return UploadResponse(
             success=False,
-            items_added=0,
+            imported=0,
             message="Inga giltiga frågor/svar hittades efter validering."
         )
 
@@ -4310,7 +4315,7 @@ async def upload_knowledge_file(
 
     return UploadResponse(
         success=True,
-        items_added=len(added_items),
+        imported=len(added_items),
         message=f"{len(added_items)} frågor/svar har lagts till i kunskapsbasen",
         items=added_items
     )
@@ -4339,7 +4344,7 @@ async def import_knowledge_from_url(
     if not text or len(text) < 50:
         return UploadResponse(
             success=False,
-            items_added=0,
+            imported=0,
             message="Kunde inte hämta innehåll från URL:en. Kontrollera att sidan är tillgänglig."
         )
 
@@ -4350,7 +4355,7 @@ async def import_knowledge_from_url(
     if not items_to_add:
         return UploadResponse(
             success=False,
-            items_added=0,
+            imported=0,
             message="Kunde inte hitta några frågor/svar på sidan. Försök med en annan sida."
         )
 
@@ -4360,7 +4365,7 @@ async def import_knowledge_from_url(
     if not items_to_add:
         return UploadResponse(
             success=False,
-            items_added=0,
+            imported=0,
             message="Inga giltiga frågor/svar hittades efter validering."
         )
 
@@ -4393,7 +4398,7 @@ async def import_knowledge_from_url(
 
     return UploadResponse(
         success=True,
-        items_added=len(added_items),
+        imported=len(added_items),
         message=f"{len(added_items)} frågor/svar har importerats från {url}",
         items=added_items
     )
@@ -4614,7 +4619,7 @@ async def apply_template(
 
     return TemplateApplyResponse(
         success=True,
-        items_added=items_added,
+        imported=items_added,
         items_skipped=items_skipped,
         message=f"{items_added} frågor/svar har lagts till från mallen. {items_skipped} duplicerade poster hoppades över."
     )
