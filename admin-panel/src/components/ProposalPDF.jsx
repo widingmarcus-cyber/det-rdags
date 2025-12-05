@@ -407,7 +407,6 @@ const styles = StyleSheet.create({
     color: colors.textLight,
     textAlign: 'center',
     marginTop: 20,
-    fontStyle: 'italic',
   },
 
   // SECTION 7: CONTACT

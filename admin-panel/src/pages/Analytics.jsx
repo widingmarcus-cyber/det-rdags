@@ -353,7 +353,6 @@ const pdfStyles = StyleSheet.create({
     fontSize: 11,
     color: colors.stone,
     lineHeight: 1.7,
-    fontStyle: 'italic',
   },
 
   // Table styling - refined
