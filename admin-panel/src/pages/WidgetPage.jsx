@@ -550,7 +550,7 @@ function WidgetPage({ widgetType }) {
     if (!file || !widget) return
 
     setImporting(true)
-    setUploadProgress('Laddar upp...')
+    setUploadProgress('Laddar upp och analyserar med AI (kan ta upp till 2 minuter)...')
 
     const formData = new FormData()
     formData.append('file', file)
@@ -586,7 +586,7 @@ function WidgetPage({ widgetType }) {
     if (!importUrl.trim() || !widget) return
 
     setImporting(true)
-    setUploadProgress('Hämtar från URL...')
+    setUploadProgress('Hämtar och analyserar med AI (kan ta upp till 2 minuter)...')
 
     try {
       const response = await authFetch(`${API_BASE}/knowledge/import-url`, {

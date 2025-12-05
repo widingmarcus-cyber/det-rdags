@@ -4197,7 +4197,10 @@ async def ai_extract_qa_pairs(text: str, company_name: str = "") -> List[dict]:
         AIExtractionError: If Ollama is not available or AI extraction fails
     """
     if not text or len(text) < 20:
+        logger.info("[AI Extract] Text too short, skipping")
         return []
+
+    logger.info(f"[AI Extract] Starting extraction, text length: {len(text)}")
 
     prompt = f"""Analyze this document and extract question-answer pairs that would be useful for a customer service chatbot for a property management company.
 
@@ -4218,6 +4221,7 @@ Example format:
 ]"""
 
     try:
+        logger.info(f"[AI Extract] Sending request to Ollama at {OLLAMA_BASE_URL}")
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
                 f"{OLLAMA_BASE_URL}/api/generate",
@@ -4225,13 +4229,17 @@ Example format:
             )
             response.raise_for_status()
             result = response.json().get("response", "")
+            logger.info(f"[AI Extract] Got response, length: {len(result)}")
 
             # Try to parse JSON from response
             import re
             json_match = re.search(r'\[[\s\S]*\]', result)
             if json_match:
                 items = json.loads(json_match.group())
-                return [item for item in items if item.get("question") and item.get("answer")]
+                valid_items = [item for item in items if item.get("question") and item.get("answer")]
+                logger.info(f"[AI Extract] Parsed {len(valid_items)} Q&A pairs")
+                return valid_items
+            logger.warning("[AI Extract] No JSON array found in response")
             return []
     except httpx.ConnectError:
         logger.error("AI extraction failed: Cannot connect to Ollama")
@@ -4384,6 +4392,8 @@ async def import_knowledge_from_url(
     """Import knowledge base items from a URL"""
     import re
 
+    logger.info(f"[URL Import] Starting import from: {request.url}")
+
     # Validate URL
     url = request.url.strip()
     if not url.startswith(('http://', 'https://')):
@@ -4393,7 +4403,9 @@ async def import_knowledge_from_url(
         raise HTTPException(status_code=400, detail="Ogiltig URL")
 
     # Fetch content
+    logger.info(f"[URL Import] Fetching content from: {url}")
     text = await fetch_url_content(url)
+    logger.info(f"[URL Import] Fetched {len(text) if text else 0} characters")
 
     if not text or len(text) < 50:
         return UploadResponse(
@@ -4403,10 +4415,13 @@ async def import_knowledge_from_url(
         )
 
     # Use AI to extract Q&A pairs
+    logger.info("[URL Import] Starting AI extraction...")
     try:
         settings = get_or_create_settings(db, current["company_id"])
         items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
+        logger.info(f"[URL Import] AI extraction returned {len(items_to_add)} items")
     except AIExtractionError as e:
+        logger.error(f"[URL Import] AI extraction failed: {e}")
         raise HTTPException(status_code=503, detail=str(e))
 
     if not items_to_add:
