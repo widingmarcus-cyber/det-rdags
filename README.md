@@ -2,6 +2,8 @@
 
 En GDPR-säker AI-chatbot för fastighetsbolag där kunder själva bygger sin kunskapsbas.
 
+**Live:** [bobot.nu](https://bobot.nu)
+
 ## Arkitektur
 
 ```
@@ -15,7 +17,7 @@ En GDPR-säker AI-chatbot för fastighetsbolag där kunder själva bygger sin ku
           ▼
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │  Admin-panel    │────▶│  FastAPI Backend│────▶│     Ollama      │
-│  (React)        │     │   (Python)      │     │  (Llama 3.1)    │
+│  (React + Vite) │     │   (Python)      │     │  (Llama 3.1)    │
 └─────────────────┘     └────────┬────────┘     └─────────────────┘
                                  │
                         ┌────────▼────────┐
@@ -37,25 +39,25 @@ En GDPR-säker AI-chatbot för fastighetsbolag där kunder själva bygger sin ku
 ## Komponenter
 
 ### 1. Backend (`/backend`)
-- FastAPI REST API med 70+ endpoints
-- Multi-tenant databas med SQLAlchemy ORM
+- FastAPI REST API med ~80 endpoints
+- Multi-tenant databas med SQLAlchemy ORM (SQLite/PostgreSQL)
 - Ollama-integration för AI-svar
-- JWT-autentisering med bcrypt
-- GDPR-automatisk rensning
+- JWT-autentisering med bcrypt + 2FA (TOTP)
+- GDPR-automatisk rensning varje timme
 
 ### 2. Admin-panel (`/admin-panel`)
 - React 18 + Vite + Tailwind CSS
 - Inloggning per företag
-- CRUD för frågor/svar med filuppladdning
+- CRUD för frågor/svar med filuppladdning (Excel, Word, CSV, PDF)
 - Widget-hantering och förhandsgranskning
 - Detaljerad statistik och analys
-- Superadmin-dashboard
+- Superadmin-dashboard med företagshantering
 
 ### 3. Chattwidget (`/chat-widget`)
 - Fristående React-komponent (IIFE)
 - Inbäddningsbar på valfri hemsida
 - Mörkt läge och RTL-stöd
-- Sessionshantering med localStorage
+- GDPR-samtycke och datarättigheter
 
 ## Snabbstart
 
@@ -78,15 +80,9 @@ docker exec -it bobot-ollama-1 ollama pull llama3.1
 
 #### Backend
 ```bash
-# Installera Ollama
-curl -fsSL https://ollama.com/install.sh | sh
-ollama pull llama3.1
-
-# Starta backend
 cd backend
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
-# eller: venv\Scripts\activate  # Windows
 pip install -r requirements.txt
 python main.py
 ```
@@ -119,9 +115,10 @@ npm run dev
 | Metod | Endpoint | Beskrivning |
 |-------|----------|-------------|
 | POST | `/chat/{company_id}` | Skicka fråga, få AI-svar |
+| POST | `/chat/widget/{widget_key}` | Chatta via widget-nyckel |
 | POST | `/chat/{company_id}/feedback` | Lämna feedback på svar |
 | GET | `/widget/{company_id}/config` | Hämta widget-konfiguration |
-| POST | `/chat/widget/{widget_key}` | Chatta via widget-nyckel |
+| GET | `/widget/key/{widget_key}/config` | Hämta config via widget-nyckel |
 
 ### Autentisering
 
@@ -138,18 +135,16 @@ npm run dev
 | GET/PUT | `/settings` | Företagsinställningar |
 | GET/POST | `/knowledge` | Kunskapsbas CRUD |
 | PUT/DELETE | `/knowledge/{item_id}` | Redigera/ta bort fråga |
-| POST | `/knowledge/upload` | Ladda upp Excel/Word/CSV |
+| POST | `/knowledge/upload` | Ladda upp Excel/Word/CSV/PDF |
 | POST | `/knowledge/import-url` | Importera från URL |
 | GET | `/conversations` | Lista konversationer |
-| GET/DELETE | `/conversations/{id}` | Visa/ta bort konversation |
 | GET | `/stats` | Grundläggande statistik |
 | GET | `/analytics` | Detaljerad analys |
 | GET/POST | `/widgets` | Widget-hantering |
-| GET/PUT/DELETE | `/widgets/{id}` | Specifik widget |
+| GET | `/templates` | Kunskapsmallar |
 | GET | `/export/conversations` | Exportera som CSV |
-| GET | `/export/knowledge` | Exportera kunskapsbas |
 
-### GDPR (offentliga med samtycke)
+### GDPR (offentliga med session)
 
 | Metod | Endpoint | Beskrivning |
 |-------|----------|-------------|
@@ -164,10 +159,11 @@ npm run dev
 | GET/POST | `/admin/companies` | Lista/skapa företag |
 | DELETE | `/admin/companies/{id}` | Ta bort företag |
 | PUT | `/admin/companies/{id}/toggle` | Aktivera/inaktivera |
+| PUT | `/admin/companies/{id}/pricing` | Sätt prissättning |
 | GET | `/admin/system-health` | Systemstatus |
 | POST | `/admin/gdpr-cleanup` | Manuell GDPR-rensning |
 | GET | `/admin/revenue-dashboard` | Intäktsanalys |
-| GET/POST | `/admin/pricing-tiers` | Prissättning |
+| GET/POST | `/admin/pricing-tiers/db` | Prissättning |
 
 ### Exempel: Skicka fråga
 
@@ -188,11 +184,11 @@ curl -X POST http://localhost:8000/auth/login \
 ## Bädda in widget på hemsida
 
 ```html
-<script src="https://din-bobot-domän.se/widget.js"></script>
+<script src="https://bobot.nu/widget.js"></script>
 <script>
   Bobot.init({
-    companyId: "ditt-företags-id",
-    apiUrl: "https://din-bobot-domän.se"
+    widgetKey: "ditt-widget-key",
+    apiUrl: "https://bobot.nu/api"
   });
 </script>
 ```
@@ -204,11 +200,11 @@ Lägg till i `functions.php` eller via plugin:
 ```php
 function add_bobot_chatbot() {
     ?>
-    <script src="https://din-bobot-domän.se/widget.js"></script>
+    <script src="https://bobot.nu/widget.js"></script>
     <script>
         Bobot.init({
-            companyId: 'ditt-företags-id',
-            apiUrl: 'https://din-bobot-domän.se'
+            widgetKey: 'ditt-widget-key',
+            apiUrl: 'https://bobot.nu/api'
         });
     </script>
     <?php
@@ -221,18 +217,18 @@ add_action('wp_footer', 'add_bobot_chatbot');
 1. Starta tjänsterna (se Snabbstart ovan)
 2. Öppna admin-panelen: http://localhost:3000
 3. Logga in med företags-ID: `demo`, lösenord: `demo123`
-4. Gå till "Kunskapsbas" för att lägga till frågor/svar
-5. Gå till "Förhandsgranska" för att testa chatboten
+4. Gå till widgetsidan för att hantera frågor/svar
+5. Förhandsgranska chatboten i admin-panelen
 6. Eller besök widget-demon: http://localhost:3001
 
 ## Tech Stack
 
-- **Backend:** Python 3.11, FastAPI, SQLAlchemy, Pydantic v2
+- **Backend:** Python 3.11, FastAPI, SQLAlchemy 2.0, Pydantic v2
 - **AI:** Ollama, Llama 3.1
 - **Databas:** SQLite (PostgreSQL stöds)
 - **Admin-panel:** React 18, Vite, Tailwind CSS, React Router v6
 - **Widget:** React 18 (byggt som IIFE för inbäddning)
-- **Säkerhet:** bcrypt, JWT, rate limiting, 2FA (TOTP)
+- **Säkerhet:** bcrypt, JWT, TOTP (2FA), rate limiting
 - **Containerisering:** Docker, docker-compose
 
 ## Projektstruktur
@@ -240,36 +236,37 @@ add_action('wp_footer', 'add_bobot_chatbot');
 ```
 bobot/
 ├── backend/
-│   ├── main.py              # FastAPI-app (70+ endpoints)
-│   ├── database.py          # SQLAlchemy-modeller
-│   ├── auth.py              # JWT-autentisering
+│   ├── main.py              # FastAPI-app (~80 endpoints)
+│   ├── database.py          # SQLAlchemy-modeller (~25 tabeller)
+│   ├── auth.py              # JWT-autentisering + 2FA
+│   ├── email_service.py     # E-postnotifieringar
 │   ├── requirements.txt     # Python-beroenden
 │   ├── Dockerfile
-│   └── .env.example
+│   └── templates/           # Kunskapsmallar (JSON)
 ├── admin-panel/
 │   ├── src/
 │   │   ├── App.jsx          # Huvudapp med routing
 │   │   ├── components/
-│   │   │   ├── Navbar.jsx   # Navigeringssidofält
-│   │   │   └── ProposalPDF.jsx
+│   │   │   └── Navbar.jsx   # Navigeringssidofält
 │   │   └── pages/
 │   │       ├── Login.jsx         # Företagsinloggning
-│   │       ├── AdminLogin.jsx    # Superadmin-inloggning
+│   │       ├── AdminLogin.jsx    # Superadmin (2FA)
 │   │       ├── Dashboard.jsx     # Statistiköversikt
-│   │       ├── WidgetPage.jsx    # Widget + kunskapsbas-hantering
+│   │       ├── WidgetPage.jsx    # Widget + kunskapsbas
 │   │       ├── Conversations.jsx # Chatthistorik
 │   │       ├── Analytics.jsx     # Detaljerad analys
 │   │       ├── Settings.jsx      # Företagsinställningar
 │   │       ├── SuperAdmin.jsx    # Multi-tenant-hantering
-│   │       ├── LandingPage.jsx   # Publik landningssida
-│   │       └── Documentation.jsx # Användardokumentation
-│   ├── package.json
+│   │       └── LandingPage.jsx   # Publik landningssida
 │   └── Dockerfile
 ├── chat-widget/
 │   ├── src/
 │   │   └── widget.jsx       # Komplett widget-komponent
-│   ├── package.json
 │   └── Dockerfile
+├── deploy/
+│   ├── docker-compose.prod.yml
+│   ├── nginx.conf           # Nginx reverse proxy
+│   └── .env.prod            # Produktionsmiljö
 ├── docker-compose.yml
 ├── CLAUDE.md                # Utvecklingsdokumentation
 ├── bobot_specifikation.md   # Produktspecifikation
@@ -282,7 +279,7 @@ bobot/
 # Produktion (krävs)
 ENVIRONMENT=production
 SECRET_KEY=<generera-med-secrets-modulen>
-CORS_ORIGINS=https://app.bobot.se,https://admin.bobot.se
+CORS_ORIGINS=https://bobot.nu,https://www.bobot.nu
 
 # Valfritt
 OLLAMA_BASE_URL=http://localhost:11434

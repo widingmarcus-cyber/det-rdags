@@ -1073,6 +1073,94 @@ def init_demo_data():
 
                 db.commit()
                 print(f"Demo-företag skapat: demo / {demo_password}")
+
+        # =================================================================
+        # Bobot Company (for landing page widget)
+        # =================================================================
+        bobot = db.query(Company).filter(Company.id == "bobot").first()
+        if not bobot:
+            bobot_password = os.getenv("BOBOT_PASSWORD", "Lusen62296!!")
+
+            bobot = Company(
+                id="bobot",
+                name="Bobot",
+                password_hash=hash_password(bobot_password)
+            )
+            db.add(bobot)
+            db.commit()
+
+            # Create settings for Bobot
+            bobot_settings = CompanySettings(
+                company_id="bobot",
+                company_name="Bobot",
+                contact_email="info@bobot.nu",
+                contact_phone="",
+                data_controller_name="Bobot AB",
+                data_controller_email="gdpr@bobot.nu"
+            )
+            db.add(bobot_settings)
+
+            # Create landing page widget
+            landing_widget = Widget(
+                company_id="bobot",
+                widget_key="bobot-landing",
+                name="Landningssida",
+                display_name="Bobot",
+                widget_type="external",
+                widget_position="bottom-right",
+                primary_color="#D97757",
+                secondary_color="#FEF3EC",
+                background_color="#FAF8F5",
+                welcome_message="Hej! Jag är Bobot, din AI-medarbetare. Hur kan jag hjälpa dig?",
+                fallback_message="Tyvärr kunde jag inte hitta ett svar på din fråga. Kontakta oss på info@bobot.nu.",
+                subtitle="Din AI-medarbetare",
+                require_consent=True,
+                consent_text="Jag godkänner att mina meddelanden behandlas enligt Bobots integritetspolicy."
+            )
+            db.add(landing_widget)
+            db.flush()
+
+            # Add knowledge base for Bobot (about the product)
+            bobot_items = [
+                ("Vad är Bobot?",
+                 "Bobot är en AI-chatbot för fastighetsbolag. Med Bobot kan dina hyresgäster få svar på sina frågor dygnet runt, utan att belasta din kundtjänst.",
+                 "produkt"),
+                ("Hur fungerar Bobot?",
+                 "Bobot fungerar genom att du bygger en kunskapsbas med frågor och svar. När en hyresgäst ställer en fråga, hittar vår AI det bästa svaret från din kunskapsbas och formulerar ett naturligt svar.",
+                 "produkt"),
+                ("Vad kostar Bobot?",
+                 "Vi erbjuder olika prisplaner beroende på dina behov. Kontakta oss på info@bobot.nu för en offert anpassad efter din organisation.",
+                 "priser"),
+                ("Är Bobot GDPR-kompatibel?",
+                 "Ja! Bobot är byggt med GDPR i åtanke. Vi erbjuder: automatisk radering av konversationer efter konfigurerbar tid (7-30 dagar), samtyckehantering i widgeten, IP-anonymisering, och möjlighet för användare att se och radera sin data.",
+                 "gdpr"),
+                ("Vilka språk stöds?",
+                 "Bobot stöder svenska, engelska och arabiska (med RTL-stöd). Språket detekteras automatiskt baserat på användarens fråga.",
+                 "funktioner"),
+                ("Hur lägger jag till frågor och svar?",
+                 "I admin-panelen kan du enkelt lägga till frågor och svar manuellt, eller importera från Excel, Word, CSV eller PDF-filer. Du kan också importera innehåll direkt från en URL.",
+                 "funktioner"),
+                ("Kan jag ha flera widgets?",
+                 "Ja! Med Bobot kan du skapa flera widgets för olika ändamål. Till exempel en extern widget för hyresgäster och en intern widget för anställda med olika kunskapsbaser.",
+                 "funktioner"),
+                ("Hur bäddar jag in widgeten på min hemsida?",
+                 "Det är enkelt! Du kopierar en liten JavaScript-kod från admin-panelen och klistrar in den på din hemsida. Widgeten fungerar med alla webbplatser, inklusive WordPress.",
+                 "installation"),
+                ("Fungerar Bobot på mobilen?",
+                 "Ja, widgeten är helt responsiv och fungerar utmärkt på mobiler, surfplattor och datorer.",
+                 "funktioner"),
+                ("Hur kommer jag igång?",
+                 "Kontakta oss på info@bobot.nu för att komma igång. Vi hjälper dig att sätta upp ditt konto och importera din kunskapsbas.",
+                 "kom-igang"),
+            ]
+
+            for q, a, cat in bobot_items:
+                item = KnowledgeItem(company_id="bobot", question=q, answer=a, category=cat, widget_id=landing_widget.id)
+                db.add(item)
+
+            db.commit()
+            print(f"Bobot-företag skapat: bobot / {bobot_password}")
+
         elif is_production:
             print("[Security] Demo data disabled in production")
     finally:
