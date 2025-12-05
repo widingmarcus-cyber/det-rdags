@@ -14,7 +14,8 @@
         var isLanding = window.location.pathname === '/' || window.location.pathname === '/integritetspolicy';
         if (isLanding) {
           document.documentElement.classList.remove('dark');
-          localStorage.removeItem('bobot_dark_mode');
+          // Set data attribute on html since body doesn't exist yet
+          document.documentElement.setAttribute('data-landing-page', 'true');
         }
       })();
     </script>

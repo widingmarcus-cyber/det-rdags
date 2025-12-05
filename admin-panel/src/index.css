@@ -336,3 +336,27 @@ input[type="range"]:focus::-moz-range-thumb {
     scroll-behavior: auto !important;
   }
 }
+
+/* Force light mode on landing page - override dark mode even if dark class exists */
+html[data-landing-page="true"] .dark\:bg-stone-800,
+html[data-landing-page="true"] .dark\:bg-stone-800\/50,
+html[data-landing-page="true"] .dark\:bg-stone-700,
+html[data-landing-page="true"] .dark\:bg-stone-900,
+html[data-landing-page="true"] .dark\:from-stone-900,
+html[data-landing-page="true"] .dark\:via-stone-800,
+html[data-landing-page="true"] .dark\:to-stone-900 {
+  background: inherit !important;
+  background-color: inherit !important;
+}
+
+html[data-landing-page="true"] .dark\:text-stone-100,
+html[data-landing-page="true"] .dark\:text-stone-200,
+html[data-landing-page="true"] .dark\:text-stone-300,
+html[data-landing-page="true"] .dark\:text-stone-400 {
+  color: inherit !important;
+}
+
+html[data-landing-page="true"] .dark\:border-stone-700,
+html[data-landing-page="true"] .dark\:border-stone-700\/50 {
+  border-color: inherit !important;
+}

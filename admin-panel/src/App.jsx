@@ -40,6 +40,9 @@ function App() {
 
   // Apply dark mode class to html element - but NOT on landing page (always light)
   useEffect(() => {
+    // Set landing page data attribute for CSS overrides
+    document.documentElement.setAttribute('data-landing-page', isLandingPage ? 'true' : 'false')
+
     if (isLandingPage) {
       // Landing page is always light mode
       document.documentElement.classList.remove('dark')

@@ -1,8 +1,28 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: 'serve-widget',
+      configureServer(server) {
+        server.middlewares.use('/widget.js', (req, res) => {
+          try {
+            const widgetPath = resolve(__dirname, 'public/widget.js')
+            const content = readFileSync(widgetPath, 'utf-8')
+            res.setHeader('Content-Type', 'application/javascript')
+            res.end(content)
+          } catch (e) {
+            res.statusCode = 404
+            res.end('Widget not found')
+          }
+        })
+      }
+    }
+  ],
   publicDir: 'public',
   server: {
     port: 3000,
