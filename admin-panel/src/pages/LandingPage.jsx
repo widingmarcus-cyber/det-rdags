@@ -469,7 +469,7 @@ function formatPrice(price) {
 function PricingCard({ tier }) {
   const isEnterprise = tier.max_conversations === 0
   return (
-    <div className="rounded-2xl p-6 lg:p-8 transition-all duration-300 hover:scale-[1.02] bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 shadow-sm hover:shadow-lg">
+    <div className="rounded-2xl p-6 lg:p-8 transition-all duration-300 hover:scale-[1.02] bg-orange-50/70 dark:bg-stone-800 border border-orange-100 dark:border-stone-700 shadow-sm hover:shadow-lg">
       <h3 className="text-xl font-semibold mb-2 text-stone-900 dark:text-stone-100">{tier.name}</h3>
       <div className="mb-4">
         {isEnterprise ? (
@@ -759,6 +759,12 @@ function LandingPage() {
   return (
     <div ref={containerRef} className="bg-gradient-to-br from-stone-50 via-orange-50/30 to-stone-50 dark:from-stone-900 dark:via-stone-800 dark:to-stone-900 relative">
 
+      {/* Subtle dot pattern overlay (light mode only) */}
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.15] dark:opacity-0" style={{
+        backgroundImage: 'radial-gradient(circle, #D97757 1px, transparent 1px)',
+        backgroundSize: '24px 24px'
+      }} />
+
       {/* Fixed Navigation */}
       <nav className="fixed top-0 left-0 right-0 px-6 py-3 z-50 bg-white/80 dark:bg-stone-900/80 backdrop-blur-lg border-b border-stone-200/50 dark:border-stone-700/50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -851,7 +857,7 @@ function LandingPage() {
 
           <div ref={howItWorksRef} className="grid lg:grid-cols-3 gap-8 lg:gap-12 mb-16">
             {howItWorksSteps.map((step, idx) => (
-              <div key={step.number} className={`bg-white dark:bg-stone-800 rounded-2xl p-6 lg:p-8 shadow-lg border border-stone-200 dark:border-stone-700 hover:shadow-xl transition-all duration-500 hover:-translate-y-1 ${howItWorksVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`} style={{ transitionDelay: `${idx * 150}ms` }}>
+              <div key={step.number} className={`bg-orange-50/70 dark:bg-stone-800 rounded-2xl p-6 lg:p-8 shadow-lg border border-orange-100 dark:border-stone-700 hover:shadow-xl transition-all duration-500 hover:-translate-y-1 ${howItWorksVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`} style={{ transitionDelay: `${idx * 150}ms` }}>
                 <div className="flex items-start gap-4 mb-4">
                   <div className="w-16 h-16 bg-[#D97757]/10 dark:bg-[#D97757]/20 rounded-2xl flex items-center justify-center flex-shrink-0">{step.icon}</div>
                   <div className="w-10 h-10 bg-[#D97757] text-white rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0">{step.number}</div>
@@ -911,7 +917,7 @@ function LandingPage() {
             <p className="text-lg text-stone-600 dark:text-stone-400">Har du fler frågor? Kontakta oss gärna!</p>
           </div>
 
-          <div ref={faqRef} className={`bg-white dark:bg-stone-800 rounded-2xl shadow-lg border border-stone-200 dark:border-stone-700 px-6 transition-all duration-700 ${faqVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div ref={faqRef} className={`bg-orange-50/70 dark:bg-stone-800 rounded-2xl shadow-lg border border-orange-100 dark:border-stone-700 px-6 transition-all duration-700 ${faqVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             {faqs.map((faq, i) => (
               <FAQItem key={i} question={faq.q} answer={faq.a} isOpen={openFAQ === i} onClick={() => setOpenFAQ(openFAQ === i ? null : i)} />
             ))}

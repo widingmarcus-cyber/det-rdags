@@ -1157,18 +1157,11 @@ function SuperAdmin() {
       const company = showProposalModal
       const tier = company.pricing_tier || 'starter'
 
-      // Find the pricing tier details
-      let startupFee = 4900
-      let monthlyFee = 990
-      let conversationLimit = 0
-
-      // Try to get from dbPricingTiers if available
+      // Find the pricing tier details from database
       const tierInfo = dbPricingTiers.find(t => t.tier_key === tier)
-      if (tierInfo) {
-        startupFee = tierInfo.startup_fee || 4900
-        monthlyFee = tierInfo.monthly_fee || 990
-        conversationLimit = tierInfo.max_conversations || 0
-      }
+      const startupFee = tierInfo?.startup_fee ?? 0
+      const monthlyFee = tierInfo?.monthly_fee ?? 1500
+      const conversationLimit = tierInfo?.max_conversations ?? 0
 
       // Apply discount if any
       const discount = company.discount_percent || 0

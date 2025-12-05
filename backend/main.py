@@ -1324,9 +1324,16 @@ async def query_ollama(prompt: str, temperature: float = 0.7) -> str:
             response.raise_for_status()
             return response.json().get("response", "Kunde inte generera svar.")
         except httpx.ConnectError:
-            raise HTTPException(status_code=503, detail="Kan inte ansluta till Ollama")
+            raise HTTPException(status_code=503, detail="AI-tjänsten är inte tillgänglig. Kontrollera att Ollama körs på rätt adress.")
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise HTTPException(status_code=503, detail=f"AI-modellen '{OLLAMA_MODEL}' hittades inte. Kör: ollama pull {OLLAMA_MODEL}")
+            raise HTTPException(status_code=503, detail=f"AI-tjänstfel: {e.response.status_code}")
+        except httpx.TimeoutException:
+            raise HTTPException(status_code=503, detail="AI-tjänsten svarar inte. Försök igen om en stund.")
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            logger.error(f"Ollama query error: {e}", exc_info=True)
+            raise HTTPException(status_code=503, detail="AI-tjänsten är inte tillgänglig just nu.")
 
 
 def detect_language(text: str) -> str:
@@ -4178,10 +4185,22 @@ async def fetch_url_content(url: str) -> str:
         return ""
 
 
+class AIExtractionError(Exception):
+    """Raised when AI extraction fails due to Ollama issues"""
+    pass
+
+
 async def ai_extract_qa_pairs(text: str, company_name: str = "") -> List[dict]:
-    """Use AI to extract Q&A pairs from unstructured text"""
+    """Use AI to extract Q&A pairs from unstructured text
+
+    Raises:
+        AIExtractionError: If Ollama is not available or AI extraction fails
+    """
     if not text or len(text) < 20:
+        logger.info("[AI Extract] Text too short, skipping")
         return []
+
+    logger.info(f"[AI Extract] Starting extraction, text length: {len(text)}")
 
     prompt = f"""Analyze this document and extract question-answer pairs that would be useful for a customer service chatbot for a property management company.
 
@@ -4202,24 +4221,44 @@ Example format:
 ]"""
 
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        logger.info(f"[AI Extract] Sending request to Ollama at {OLLAMA_BASE_URL}")
+        async with httpx.AsyncClient(timeout=180.0) as client:  # 3 min timeout for large pages
             response = await client.post(
                 f"{OLLAMA_BASE_URL}/api/generate",
                 json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
             )
             response.raise_for_status()
             result = response.json().get("response", "")
+            logger.info(f"[AI Extract] Got response, length: {len(result)}")
 
             # Try to parse JSON from response
             import re
             json_match = re.search(r'\[[\s\S]*\]', result)
             if json_match:
                 items = json.loads(json_match.group())
-                return [item for item in items if item.get("question") and item.get("answer")]
+                valid_items = [item for item in items if item.get("question") and item.get("answer")]
+                logger.info(f"[AI Extract] Parsed {len(valid_items)} Q&A pairs")
+                return valid_items
+            logger.warning("[AI Extract] No JSON array found in response")
+            return []
+    except httpx.ConnectError:
+        logger.error("AI extraction failed: Cannot connect to Ollama")
+        raise AIExtractionError("AI-tjänsten är inte tillgänglig. Kontrollera att Ollama körs.")
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            logger.error(f"AI extraction failed: Model {OLLAMA_MODEL} not found")
+            raise AIExtractionError(f"AI-modellen '{OLLAMA_MODEL}' hittades inte. Kör: ollama pull {OLLAMA_MODEL}")
+        logger.error(f"AI extraction failed: HTTP {e.response.status_code}")
+        raise AIExtractionError(f"AI-tjänstfel: {e.response.status_code}")
+    except httpx.TimeoutException:
+        logger.error("AI extraction failed: Timeout")
+        raise AIExtractionError("AI-tjänsten svarar inte. Försök igen om en stund.")
+    except json.JSONDecodeError:
+        logger.warning("AI extraction returned invalid JSON, returning empty list")
+        return []
     except Exception as e:
         logger.error(f"AI extraction error: {e}", exc_info=True)
-
-    return []
+        raise AIExtractionError("AI-tjänsten är inte tillgänglig just nu.")
 
 
 @app.post("/knowledge/upload", response_model=UploadResponse)
@@ -4250,44 +4289,47 @@ async def upload_knowledge_file(
     items_to_add = []
 
     # Parse based on file type
-    if filename.endswith('.xlsx') or filename.endswith('.xls'):
-        items_to_add = await parse_excel_file(content)
-    elif filename.endswith('.docx'):
-        text = await parse_word_file(content)
-        if text:
-            # Use AI to extract Q&A from unstructured text
-            settings = get_or_create_settings(db, current["company_id"])
-            items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
-    elif filename.endswith('.pdf'):
-        text = await parse_pdf_file(content)
-        if text:
-            # Use AI to extract Q&A from PDF text
-            settings = get_or_create_settings(db, current["company_id"])
-            items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
-    elif filename.endswith('.txt') or filename.endswith('.csv'):
-        text = await parse_text_file(content)
-        if text:
-            # Check if it looks like CSV
-            if ',' in text or ';' in text:
-                # Simple CSV parsing
-                lines = text.strip().split('\n')
-                for line in lines[1:]:  # Skip header
-                    parts = line.split(',') if ',' in line else line.split(';')
-                    if len(parts) >= 2:
-                        items_to_add.append({
-                            "question": parts[0].strip().strip('"'),
-                            "answer": parts[1].strip().strip('"'),
-                            "category": parts[2].strip().strip('"') if len(parts) > 2 else None
-                        })
-            else:
-                # Use AI to extract Q&A
+    try:
+        if filename.endswith('.xlsx') or filename.endswith('.xls'):
+            items_to_add = await parse_excel_file(content)
+        elif filename.endswith('.docx'):
+            text = await parse_word_file(content)
+            if text:
+                # Use AI to extract Q&A from unstructured text
                 settings = get_or_create_settings(db, current["company_id"])
                 items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
-    else:
-        raise HTTPException(
-            status_code=400,
-            detail="Filformat stöds inte. Använd .xlsx, .docx, .pdf, .txt eller .csv"
-        )
+        elif filename.endswith('.pdf'):
+            text = await parse_pdf_file(content)
+            if text:
+                # Use AI to extract Q&A from PDF text
+                settings = get_or_create_settings(db, current["company_id"])
+                items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
+        elif filename.endswith('.txt') or filename.endswith('.csv'):
+            text = await parse_text_file(content)
+            if text:
+                # Check if it looks like CSV
+                if ',' in text or ';' in text:
+                    # Simple CSV parsing
+                    lines = text.strip().split('\n')
+                    for line in lines[1:]:  # Skip header
+                        parts = line.split(',') if ',' in line else line.split(';')
+                        if len(parts) >= 2:
+                            items_to_add.append({
+                                "question": parts[0].strip().strip('"'),
+                                "answer": parts[1].strip().strip('"'),
+                                "category": parts[2].strip().strip('"') if len(parts) > 2 else None
+                            })
+                else:
+                    # Use AI to extract Q&A
+                    settings = get_or_create_settings(db, current["company_id"])
+                    items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Filformat stöds inte. Använd .xlsx, .docx, .pdf, .txt eller .csv"
+            )
+    except AIExtractionError as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
     if not items_to_add:
         return UploadResponse(
@@ -4350,6 +4392,8 @@ async def import_knowledge_from_url(
     """Import knowledge base items from a URL"""
     import re
 
+    logger.info(f"[URL Import] Starting import from: {request.url}")
+
     # Validate URL
     url = request.url.strip()
     if not url.startswith(('http://', 'https://')):
@@ -4359,7 +4403,9 @@ async def import_knowledge_from_url(
         raise HTTPException(status_code=400, detail="Ogiltig URL")
 
     # Fetch content
+    logger.info(f"[URL Import] Fetching content from: {url}")
     text = await fetch_url_content(url)
+    logger.info(f"[URL Import] Fetched {len(text) if text else 0} characters")
 
     if not text or len(text) < 50:
         return UploadResponse(
@@ -4369,8 +4415,14 @@ async def import_knowledge_from_url(
         )
 
     # Use AI to extract Q&A pairs
-    settings = get_or_create_settings(db, current["company_id"])
-    items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
+    logger.info("[URL Import] Starting AI extraction...")
+    try:
+        settings = get_or_create_settings(db, current["company_id"])
+        items_to_add = await ai_extract_qa_pairs(text, settings.company_name)
+        logger.info(f"[URL Import] AI extraction returned {len(items_to_add)} items")
+    except AIExtractionError as e:
+        logger.error(f"[URL Import] AI extraction failed: {e}")
+        raise HTTPException(status_code=503, detail=str(e))
 
     if not items_to_add:
         return UploadResponse(
@@ -8272,20 +8324,38 @@ async def track_pageview(
 
 @app.post("/track/engagement")
 async def track_engagement(
-    data: PageViewUpdateRequest,
+    request: Request,
     db: Session = Depends(get_db)
 ):
-    """Update page view with engagement data (time on page, bounce status)"""
+    """Update page view with engagement data (time on page, bounce status)
+
+    Note: This endpoint handles both JSON and text/plain (from navigator.sendBeacon)
+    """
     try:
+        # Parse body - sendBeacon sends as text/plain, not application/json
+        body = await request.body()
+        try:
+            data = json.loads(body)
+        except json.JSONDecodeError:
+            return {"success": False, "error": "Invalid JSON"}
+
+        session_id = data.get("session_id")
+        page_url = data.get("page_url")
+        time_on_page_seconds = data.get("time_on_page_seconds", 0)
+        is_bounce = data.get("is_bounce", False)
+
+        if not session_id or not page_url:
+            return {"success": False, "error": "Missing required fields"}
+
         # Find the most recent page view for this session and URL
         page_view = db.query(PageView).filter(
-            PageView.session_id == data.session_id,
-            PageView.page_url == data.page_url
+            PageView.session_id == session_id,
+            PageView.page_url == page_url
         ).order_by(PageView.created_at.desc()).first()
 
         if page_view:
-            page_view.time_on_page_seconds = data.time_on_page_seconds
-            page_view.is_bounce = data.is_bounce
+            page_view.time_on_page_seconds = time_on_page_seconds
+            page_view.is_bounce = is_bounce
             db.commit()
             return {"success": True, "updated": True}
 
