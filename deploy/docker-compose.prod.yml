@@ -15,7 +15,7 @@ services:
       - OLLAMA_BASE_URL=http://ollama:11434
     volumes:
       - ./data:/app/data
-      - backend-db:/app
+      - backend-db:/app/data/db
     depends_on:
       - ollama
     networks:
