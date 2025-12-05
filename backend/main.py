@@ -1093,10 +1093,11 @@ def init_demo_data():
             bobot_settings = CompanySettings(
                 company_id="bobot",
                 company_name="Bobot",
-                contact_email="info@bobot.nu",
+                contact_email="hej@bobot.nu",
                 contact_phone="",
-                data_controller_name="Bobot AB",
-                data_controller_email="gdpr@bobot.nu"
+                privacy_policy_url="https://bobot.nu/integritetspolicy",
+                data_controller_name="Marcus Widing",
+                data_controller_email="hej@bobot.nu"
             )
             db.add(bobot_settings)
 
@@ -1160,8 +1161,17 @@ def init_demo_data():
 
             db.commit()
             print(f"Bobot-företag skapat: bobot / {bobot_password}")
+        else:
+            # Update existing Bobot company settings with latest GDPR info
+            bobot_settings = db.query(CompanySettings).filter(CompanySettings.company_id == "bobot").first()
+            if bobot_settings:
+                bobot_settings.privacy_policy_url = "https://bobot.nu/integritetspolicy"
+                bobot_settings.data_controller_name = "Marcus Widing"
+                bobot_settings.data_controller_email = "hej@bobot.nu"
+                bobot_settings.contact_email = "hej@bobot.nu"
+                db.commit()
 
-        elif is_production:
+        if is_production:
             print("[Security] Demo data disabled in production")
     finally:
         db.close()

@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useState, useEffect, createContext } from 'react'
 import LandingPage from './pages/LandingPage'
+import PrivacyPolicy from './pages/PrivacyPolicy'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import WidgetPage from './pages/WidgetPage'
@@ -294,6 +295,7 @@ function App() {
     return (
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/integritetspolicy" element={<PrivacyPolicy />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

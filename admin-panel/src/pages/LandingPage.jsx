@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -862,7 +862,7 @@ function LandingPage() {
         {/* Enhanced Footer */}
         <footer className="mt-auto pt-12 border-t border-stone-200 dark:border-stone-700">
           <div className="max-w-6xl mx-auto">
-            <div className="grid sm:grid-cols-3 gap-8 mb-8">
+            <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8 mb-8">
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <BobotMini />
@@ -882,6 +882,12 @@ function LandingPage() {
                 <h4 className="font-semibold text-stone-900 dark:text-stone-100 mb-4">Kontakt</h4>
                 <ul className="space-y-2 text-sm text-stone-500 dark:text-stone-400">
                   <li><a href="mailto:hej@bobot.nu" className="hover:text-[#D97757] transition-colors">hej@bobot.nu</a></li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-stone-900 dark:text-stone-100 mb-4">Juridiskt</h4>
+                <ul className="space-y-2 text-sm text-stone-500 dark:text-stone-400">
+                  <li><Link to="/integritetspolicy" className="hover:text-[#D97757] transition-colors">Integritetspolicy</Link></li>
                 </ul>
               </div>
             </div>
