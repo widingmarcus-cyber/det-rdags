@@ -49,6 +49,7 @@ function Knowledge() {
   const [applyingTemplate, setApplyingTemplate] = useState(false)
   const [replaceExisting, setReplaceExisting] = useState(false)
   const [selectedCategories, setSelectedCategories] = useState([])
+  const [templateWidgetId, setTemplateWidgetId] = useState(null) // null = shared knowledge
   // Widget states
   const [widgets, setWidgets] = useState([])
 
@@ -427,7 +428,8 @@ function Knowledge() {
           replace_existing: replaceExisting,
           categories_to_import: selectedCategories.length > 0 && selectedCategories.length < (templatePreview?.categories?.length || 0)
             ? selectedCategories
-            : null
+            : null,
+          widget_id: templateWidgetId
         })
       })
 
@@ -454,6 +456,7 @@ function Knowledge() {
         setTemplatePreview(null)
         setReplaceExisting(false)
         setSelectedCategories([])
+        setTemplateWidgetId(null)
         fetchKnowledge()
       } else {
         setUploadResult({
@@ -1341,6 +1344,38 @@ function Knowledge() {
                           : `${selectedCategories.length} av ${templatePreview.categories.length} valda`
                         }
                       </p>
+                    </div>
+                  )}
+
+                  {/* Widget selection */}
+                  {widgets.length > 0 && (
+                    <div>
+                      <label className="input-label">Importera till widget</label>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <button
+                          onClick={() => setTemplateWidgetId(null)}
+                          className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+                            templateWidgetId === null
+                              ? 'bg-accent text-white border-accent'
+                              : 'bg-bg-secondary text-text-secondary border-border-subtle hover:border-accent'
+                          }`}
+                        >
+                          Delad (alla widgets)
+                        </button>
+                        {widgets.map(w => (
+                          <button
+                            key={w.id}
+                            onClick={() => setTemplateWidgetId(w.id)}
+                            className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+                              templateWidgetId === w.id
+                                ? 'bg-accent text-white border-accent'
+                                : 'bg-bg-secondary text-text-secondary border-border-subtle hover:border-accent'
+                            }`}
+                          >
+                            {w.name || (w.widget_type === 'external' ? 'Extern' : 'Intern')}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
 

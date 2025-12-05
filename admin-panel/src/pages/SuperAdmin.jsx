@@ -91,9 +91,9 @@ function SuperAdmin() {
   const [activityLoading, setActivityLoading] = useState(false)
   const [aiInsights, setAiInsights] = useState({ insights: [], trending_topics: [] })
   const [insightsLoading, setInsightsLoading] = useState(false)
-  const [announcement, setAnnouncement] = useState(null)
+  const [announcements, setAnnouncements] = useState([])
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false)
-  const [announcementForm, setAnnouncementForm] = useState({ title: '', message: '', type: 'info' })
+  const [announcementForm, setAnnouncementForm] = useState({ title: '', message: '', type: 'info', target_company_id: '' })
   const [companyDocuments, setCompanyDocuments] = useState([])
   const [showDocumentUpload, setShowDocumentUpload] = useState(false)
   const [documentForm, setDocumentForm] = useState({ document_type: 'agreement', description: '' })
@@ -152,7 +152,7 @@ function SuperAdmin() {
     fetchMaintenanceMode()
     fetchActivityStream()
     fetchAiInsights()
-    fetchAnnouncement()
+    fetchAnnouncements()
     fetchAdminPrefs() // Fetch preferences including dark mode on load
   }, [])
 
@@ -680,44 +680,67 @@ function SuperAdmin() {
     }
   }
 
-  const fetchAnnouncement = async () => {
+  const fetchAnnouncements = async () => {
     try {
       const response = await adminFetch(`${API_BASE}/admin/announcements`)
       if (response.ok) {
         const data = await response.json()
-        setAnnouncement(data.announcement)
+        setAnnouncements(data.announcements || [])
       }
     } catch (error) {
-      console.error('Failed to fetch announcement:', error)
+      console.error('Failed to fetch announcements:', error)
     }
   }
 
   const handleCreateAnnouncement = async () => {
     try {
+      // Prepare payload - only include target_company_id if it's set
+      const payload = {
+        title: announcementForm.title,
+        message: announcementForm.message,
+        type: announcementForm.type,
+        target_company_id: announcementForm.target_company_id || null
+      }
       const response = await adminFetch(`${API_BASE}/admin/announcements`, {
         method: 'POST',
-        body: JSON.stringify(announcementForm)
+        body: JSON.stringify(payload)
       })
       if (response.ok) {
-        showNotification('Meddelande publicerat')
+        const targetName = announcementForm.target_company_id
+          ? companies.find(c => c.id === announcementForm.target_company_id)?.name || announcementForm.target_company_id
+          : 'alla företag'
+        showNotification(`Meddelande skickat till ${targetName}`)
         setShowAnnouncementModal(false)
-        setAnnouncementForm({ title: '', message: '', type: 'info' })
-        fetchAnnouncement()
+        setAnnouncementForm({ title: '', message: '', type: 'info', target_company_id: '' })
+        fetchAnnouncements()
       }
     } catch (error) {
       console.error('Failed to create announcement:', error)
     }
   }
 
-  const handleDeleteAnnouncement = async () => {
+  const handleDeleteAnnouncement = async (announcementId) => {
     try {
-      const response = await adminFetch(`${API_BASE}/admin/announcements`, { method: 'DELETE' })
+      const response = await adminFetch(`${API_BASE}/admin/announcements/${announcementId}`, { method: 'DELETE' })
       if (response.ok) {
         showNotification('Meddelande borttaget')
-        setAnnouncement(null)
+        setAnnouncements(prev => prev.filter(a => a.id !== announcementId))
       }
     } catch (error) {
       console.error('Failed to delete announcement:', error)
+    }
+  }
+
+  const handleToggleAnnouncement = async (announcementId) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/announcements/${announcementId}/toggle`, { method: 'PUT' })
+      if (response.ok) {
+        const data = await response.json()
+        showNotification(data.is_active ? 'Meddelande aktiverat' : 'Meddelande inaktiverat')
+        fetchAnnouncements()
+      }
+    } catch (error) {
+      console.error('Failed to toggle announcement:', error)
     }
   }
 
@@ -1159,7 +1182,8 @@ function SuperAdmin() {
         tier: tierInfo?.name || tier.charAt(0).toUpperCase() + tier.slice(1),
         discount,
         conversationLimit,
-        hostingOption: proposalForm.hostingOption
+        hostingOption: proposalForm.hostingOption,
+        pricingTiers: dbPricingTiers
       })
 
       showNotification(`PDF skapad: ${fileName}`)
@@ -1609,8 +1633,9 @@ function SuperAdmin() {
         {activeTab === 'overview' && (
           <OverviewTab
             setCommandPaletteOpen={setCommandPaletteOpen}
-            announcement={announcement}
+            announcements={announcements}
             onDeleteAnnouncement={handleDeleteAnnouncement}
+            onToggleAnnouncement={handleToggleAnnouncement}
             systemHealth={systemHealth}
             maintenanceMode={maintenanceMode}
             totalCompanies={totalCompanies}
@@ -1755,7 +1780,7 @@ function SuperAdmin() {
         {activeTab === 'docs' && (
           <DocsTab
             onShowAnnouncementModal={() => setShowAnnouncementModal(true)}
-            announcement={announcement}
+            announcements={announcements}
           />
         )}
         </main>
@@ -2768,10 +2793,29 @@ function SuperAdmin() {
           <div className="bg-bg-primary rounded-2xl shadow-2xl border border-border-subtle w-full max-w-lg overflow-hidden">
             <div className="p-6 border-b border-border-subtle">
               <h3 className="text-xl font-bold text-text-primary">Skicka meddelande</h3>
-              <p className="text-text-secondary text-sm mt-1">Meddelandet visas för alla administratörer som loggar in</p>
+              <p className="text-text-secondary text-sm mt-1">
+                {announcementForm.target_company_id
+                  ? `Meddelandet skickas till ${companies.find(c => c.id === announcementForm.target_company_id)?.name || announcementForm.target_company_id}`
+                  : 'Meddelandet visas för alla företag'}
+              </p>
             </div>
 
             <div className="p-6 space-y-4">
+              {/* Target selector */}
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Mottagare</label>
+                <select
+                  value={announcementForm.target_company_id}
+                  onChange={(e) => setAnnouncementForm(prev => ({ ...prev, target_company_id: e.target.value }))}
+                  className="input w-full"
+                >
+                  <option value="">Alla företag</option>
+                  {companies.map(company => (
+                    <option key={company.id} value={company.id}>{company.name} ({company.id})</option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1">Typ</label>
                 <select
@@ -2781,7 +2825,7 @@ function SuperAdmin() {
                 >
                   <option value="info">Information</option>
                   <option value="warning">Varning</option>
-                  <option value="success">Framgång</option>
+                  <option value="maintenance">Underhåll</option>
                 </select>
               </div>
 
@@ -2810,7 +2854,7 @@ function SuperAdmin() {
 
             <div className="p-6 border-t border-border-subtle flex justify-end gap-3">
               <button
-                onClick={() => { setShowAnnouncementModal(false); setAnnouncementForm({ title: '', message: '', type: 'info' }); }}
+                onClick={() => { setShowAnnouncementModal(false); setAnnouncementForm({ title: '', message: '', type: 'info', target_company_id: '' }); }}
                 className="btn btn-ghost"
               >
                 Avbryt

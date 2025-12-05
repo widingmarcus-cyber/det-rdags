@@ -1,5 +1,21 @@
 import { useNavigate, Link } from 'react-router-dom'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
+
+// Immediately remove dark class before any rendering (runs on module load)
+// Also disable transitions temporarily to prevent any flash
+if (typeof document !== 'undefined') {
+  document.documentElement.classList.remove('dark')
+  // Add a style to prevent any transitions during initial load
+  const style = document.createElement('style')
+  style.id = 'landing-no-transition'
+  style.textContent = '*, *::before, *::after { transition: none !important; }'
+  document.head.appendChild(style)
+  // Remove the style after a short delay to allow transitions again
+  setTimeout(() => {
+    const el = document.getElementById('landing-no-transition')
+    if (el) el.remove()
+  }, 100)
+}
 
 // Use /api prefix which is proxied to backend in both dev and production
 const API_BASE = '/api'
@@ -295,41 +311,60 @@ const LANDING_PAGE_WIDGET_KEY = import.meta.env.VITE_LANDING_WIDGET_KEY || 'bobo
 
 function LiveWidget() {
   const [loaded, setLoaded] = useState(false)
+  const [widgetContainerId, setWidgetContainerId] = useState(null)
 
   useEffect(() => {
-    // Don't load twice
-    if (window.Bobot || document.getElementById('bobot-widget-script')) {
-      if (window.Bobot) {
-        window.Bobot.init({
-          widgetKey: LANDING_PAGE_WIDGET_KEY,
-          apiUrl: API_URL
-        })
-      }
+    console.log('[LiveWidget] Initializing, widgetKey:', LANDING_PAGE_WIDGET_KEY)
+
+    let containerId = null
+
+    // Load or reuse widget
+    if (window.Bobot) {
+      console.log('[LiveWidget] Widget already loaded, initializing')
+      containerId = window.Bobot.init({
+        widgetKey: LANDING_PAGE_WIDGET_KEY,
+        apiUrl: API_URL
+      })
+      setWidgetContainerId(containerId)
       return
     }
 
     // Load the widget script
+    const existingScript = document.getElementById('bobot-widget-script')
+    if (existingScript) {
+      existingScript.remove()
+    }
+
     const script = document.createElement('script')
     script.id = 'bobot-widget-script'
-    script.src = `${API_URL.replace('/api', '')}/widget.js`
+    script.src = '/widget.js'
     script.async = true
+    console.log('[LiveWidget] Loading widget from /widget.js')
     script.onload = () => {
+      console.log('[LiveWidget] Script loaded successfully')
       setLoaded(true)
       if (window.Bobot) {
-        window.Bobot.init({
+        console.log('[LiveWidget] Initializing Bobot widget')
+        containerId = window.Bobot.init({
           widgetKey: LANDING_PAGE_WIDGET_KEY,
           apiUrl: API_URL
         })
+        setWidgetContainerId(containerId)
+      } else {
+        console.error('[LiveWidget] window.Bobot not available after script load')
       }
     }
-    script.onerror = () => {
-      console.error('Failed to load Bobot widget')
+    script.onerror = (e) => {
+      console.error('[LiveWidget] Failed to load widget script:', e)
     }
     document.body.appendChild(script)
 
-    // Cleanup on unmount
+    // Cleanup on unmount - remove widget from DOM
     return () => {
-      // Widget handles its own cleanup
+      console.log('[LiveWidget] Cleaning up widget')
+      // Remove all widget containers
+      const containers = document.querySelectorAll('[id^="bobot-widget-root"]')
+      containers.forEach(container => container.remove())
     }
   }, [])
 
@@ -570,12 +605,22 @@ function LandingPage() {
   const [isDark, setIsDark] = useState(false)
   const containerRef = useRef(null)
 
-  // Force light mode on landing page mount and set page title
-  useEffect(() => {
+  // Force light mode on landing page - useLayoutEffect runs before paint
+  useLayoutEffect(() => {
     document.title = 'Bobot - din AI-medarbetare'
-    // Start in light mode on landing page
+    // ALWAYS start in light mode on landing page - ignore localStorage
     document.documentElement.classList.remove('dark')
     setIsDark(false)
+  }, [])
+
+  // Cleanup: restore user preference when leaving landing page
+  useEffect(() => {
+    return () => {
+      const savedTheme = localStorage.getItem('theme')
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark')
+      }
+    }
   }, [])
   const sectionsRef = useRef([])
   const isScrollingRef = useRef(false)
@@ -646,8 +691,13 @@ function LandingPage() {
   const navigateToSection = (index) => {
     isScrollingRef.current = true
     setCurrentSection(index)
-    window.scrollTo({ top: index * window.innerHeight, behavior: 'smooth' })
-    setTimeout(() => { isScrollingRef.current = false }, 800)
+    const targetSection = sectionsRef.current[index]
+    if (targetSection) {
+      targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else {
+      window.scrollTo({ top: index * window.innerHeight, behavior: 'smooth' })
+    }
+    setTimeout(() => { isScrollingRef.current = false }, 1000)
   }
 
   const toggleTheme = () => {
@@ -930,10 +980,6 @@ function LandingPage() {
 
       <style>{`
         html { scroll-behavior: smooth; }
-        @media (min-width: 1024px) and (hover: hover) {
-          html { scroll-snap-type: y proximity; }
-          section { scroll-snap-align: start; }
-        }
         @keyframes float { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-10px) rotate(2deg); } }
         .animate-float { animation: float 4s ease-in-out infinite; }
         @keyframes sparkle { 0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; } 50% { transform: scale(1) rotate(180deg); opacity: 1; } }

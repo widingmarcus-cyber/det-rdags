@@ -1504,7 +1504,7 @@ function ChatWidget({ config }) {
 
 // Global init - supports multiple widget instances
 let widgetCounter = 0
-window.Bobot = {
+const Bobot = {
   init: function(config) {
     widgetCounter++
     const container = document.createElement('div')
@@ -1523,4 +1523,5 @@ window.Bobot = {
   }
 }
 
-export default ChatWidget
+// Export the Bobot object (not ChatWidget) so IIFE assigns it to window.Bobot
+export default Bobot

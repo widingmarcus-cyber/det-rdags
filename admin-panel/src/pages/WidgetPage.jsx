@@ -752,6 +752,18 @@ function WidgetPage({ widgetType }) {
         </div>
       )}
 
+      {success && (
+        <div className="bg-success/10 border border-success/30 text-success px-4 py-3 rounded-lg mb-4 flex items-center justify-between animate-fade-in">
+          <div className="flex items-center gap-2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            {success}
+          </div>
+          <button onClick={() => setSuccess('')} className="text-success hover:text-success/80">&times;</button>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="border-b border-border-subtle mb-6">
         <nav className="flex gap-1" role="tablist">

@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict
 from datetime import datetime, timedelta, date
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, text
 import httpx
 import os
 import json
@@ -30,7 +30,8 @@ from database import (
     CompanySettings, Conversation, Message, DailyStatistics, GDPRAuditLog,
     AdminAuditLog, GlobalSettings, CompanyActivityLog, Subscription, Invoice,
     CompanyNote, CompanyDocument, WidgetPerformance, EmailNotificationQueue,
-    RoadmapItem, PricingTier, Widget, PageView, DailyPageStats, Category
+    RoadmapItem, PricingTier, Widget, PageView, DailyPageStats, Category,
+    Announcement, AnnouncementRead
 )
 from auth import (
     hash_password, verify_password, create_token, create_2fa_pending_token,
@@ -2051,7 +2052,7 @@ async def health(db: Session = Depends(get_db)):
 
     # Check database connectivity
     try:
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         health_status["database"] = "connected"
     except Exception as e:
         health_status["status"] = "degraded"
@@ -4472,7 +4473,7 @@ class TemplateInfo(BaseModel):
 class TemplateApplyRequest(BaseModel):
     replace_existing: bool = False
     categories_to_import: Optional[List[str]] = None
-    widget_id: int  # REQUIRED: Target widget for the imported items (templates must be widget-specific)
+    widget_id: Optional[int] = None  # Optional: Target widget for imported items (None = shared knowledge)
 
 
 class TemplateApplyResponse(BaseModel):
@@ -4638,7 +4639,7 @@ async def apply_template(
 
     return TemplateApplyResponse(
         success=True,
-        imported=items_added,
+        items_added=items_added,
         items_skipped=items_skipped,
         message=f"{items_added} frågor/svar har lagts till från mallen. {items_skipped} duplicerade poster hoppades över."
     )
@@ -7300,13 +7301,18 @@ async def get_ai_insights(
 
 
 # =============================================================================
-# Broadcast Announcements Endpoints
+# Broadcast Announcements Endpoints (Multiple messages with targeting)
 # =============================================================================
 
 class AnnouncementCreate(BaseModel):
     title: str
     message: str
     type: str = "info"  # info, warning, maintenance
+    target_company_id: Optional[str] = None  # None = all companies
+
+
+class AnnouncementReadRequest(BaseModel):
+    announcement_id: int
 
 
 @app.get("/announcements")
@@ -7314,96 +7320,139 @@ async def get_company_announcements(
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db)
 ):
-    """Get active announcements for companies (excluding those marked as read)"""
-    announcement = db.query(GlobalSettings).filter(
-        GlobalSettings.key == "active_announcement"
-    ).first()
+    """Get all unread announcements for this company (global + targeted)"""
+    company_id = current["company_id"]
+    now = datetime.utcnow()
 
-    if announcement and announcement.value:
-        try:
-            data = json.loads(announcement.value)
-            announcement_id = data.get("created_at", "")
+    # Get all active announcements that:
+    # 1. Are active and not expired
+    # 2. Are either global (target_company_id is NULL) or targeted at this company
+    # 3. Have not been read by this company
+    announcements = db.query(Announcement).outerjoin(
+        AnnouncementRead,
+        (AnnouncementRead.announcement_id == Announcement.id) &
+        (AnnouncementRead.company_id == company_id)
+    ).filter(
+        Announcement.is_active == True,
+        (Announcement.expires_at == None) | (Announcement.expires_at > now),
+        (Announcement.target_company_id == None) | (Announcement.target_company_id == company_id),
+        AnnouncementRead.id == None  # Not read by this company
+    ).order_by(Announcement.created_at.desc()).all()
 
-            # Check if this company has read this announcement
-            company_settings = db.query(CompanySettings).filter(
-                CompanySettings.company_id == current["company_id"]
-            ).first()
+    result = []
+    for ann in announcements:
+        result.append({
+            "id": ann.id,
+            "title": ann.title,
+            "message": ann.message,
+            "type": ann.type,
+            "created_at": ann.created_at.isoformat() if ann.created_at else None,
+            "created_by": ann.created_by,
+            "is_targeted": ann.target_company_id is not None
+        })
 
-            if company_settings:
-                read_announcement = company_settings.extra_settings or {}
-                if read_announcement.get("read_announcement_id") == announcement_id:
-                    return {"announcement": None}  # Already read
-
-            return {"announcement": data}
-        except:
-            pass
-
-    return {"announcement": None}
+    return {"announcements": result, "count": len(result)}
 
 
 @app.post("/announcements/read")
 async def mark_announcement_read(
+    request: AnnouncementReadRequest,
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db)
 ):
-    """Mark the current announcement as read for this company"""
-    # Get the current announcement ID
-    announcement = db.query(GlobalSettings).filter(
-        GlobalSettings.key == "active_announcement"
+    """Mark a specific announcement as read for this company"""
+    company_id = current["company_id"]
+
+    # Check if announcement exists
+    announcement = db.query(Announcement).filter(Announcement.id == request.announcement_id).first()
+    if not announcement:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+
+    # Check if already read
+    existing_read = db.query(AnnouncementRead).filter(
+        AnnouncementRead.announcement_id == request.announcement_id,
+        AnnouncementRead.company_id == company_id
     ).first()
 
-    if not announcement or not announcement.value:
-        return {"message": "No active announcement"}
-
-    try:
-        data = json.loads(announcement.value)
-        announcement_id = data.get("created_at", "")
-
-        # Update company settings
-        company_settings = db.query(CompanySettings).filter(
-            CompanySettings.company_id == current["company_id"]
-        ).first()
-
-        if company_settings:
-            extra = company_settings.extra_settings or {}
-            extra["read_announcement_id"] = announcement_id
-            company_settings.extra_settings = extra
-            # Force update detection
-            from sqlalchemy.orm.attributes import flag_modified
-            flag_modified(company_settings, "extra_settings")
-        else:
-            # Create settings if they don't exist
-            company_settings = CompanySettings(
-                company_id=current["company_id"],
-                extra_settings={"read_announcement_id": announcement_id}
-            )
-            db.add(company_settings)
-
+    if not existing_read:
+        read_record = AnnouncementRead(
+            announcement_id=request.announcement_id,
+            company_id=company_id
+        )
+        db.add(read_record)
         db.commit()
-        return {"message": "Announcement marked as read"}
 
-    except Exception as e:
-        return {"message": f"Error: {str(e)}"}
+    return {"message": "Announcement marked as read"}
+
+
+@app.post("/announcements/read-all")
+async def mark_all_announcements_read(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Mark all announcements as read for this company"""
+    company_id = current["company_id"]
+    now = datetime.utcnow()
+
+    # Get all unread announcements for this company
+    announcements = db.query(Announcement).outerjoin(
+        AnnouncementRead,
+        (AnnouncementRead.announcement_id == Announcement.id) &
+        (AnnouncementRead.company_id == company_id)
+    ).filter(
+        Announcement.is_active == True,
+        (Announcement.expires_at == None) | (Announcement.expires_at > now),
+        (Announcement.target_company_id == None) | (Announcement.target_company_id == company_id),
+        AnnouncementRead.id == None
+    ).all()
+
+    for ann in announcements:
+        read_record = AnnouncementRead(
+            announcement_id=ann.id,
+            company_id=company_id
+        )
+        db.add(read_record)
+
+    db.commit()
+    return {"message": f"Marked {len(announcements)} announcements as read"}
 
 
 @app.get("/admin/announcements")
-async def get_announcements(
+async def get_all_announcements(
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db)
 ):
-    """Get active announcements"""
-    announcement = db.query(GlobalSettings).filter(
-        GlobalSettings.key == "active_announcement"
-    ).first()
+    """Get all announcements with read statistics"""
+    announcements = db.query(Announcement).order_by(Announcement.created_at.desc()).all()
 
-    if announcement and announcement.value:
-        try:
-            data = json.loads(announcement.value)
-            return {"announcement": data}
-        except:
-            pass
+    result = []
+    for ann in announcements:
+        # Count reads
+        read_count = db.query(AnnouncementRead).filter(
+            AnnouncementRead.announcement_id == ann.id
+        ).count()
 
-    return {"announcement": None}
+        # Get target company name if targeted
+        target_company_name = None
+        if ann.target_company_id:
+            target = db.query(Company).filter(Company.id == ann.target_company_id).first()
+            target_company_name = target.name if target else ann.target_company_id
+
+        result.append({
+            "id": ann.id,
+            "title": ann.title,
+            "message": ann.message,
+            "type": ann.type,
+            "target_company_id": ann.target_company_id,
+            "target_company_name": target_company_name,
+            "created_at": ann.created_at.isoformat() if ann.created_at else None,
+            "created_by": ann.created_by,
+            "is_active": ann.is_active,
+            "expires_at": ann.expires_at.isoformat() if ann.expires_at else None,
+            "read_count": read_count
+        })
+
+    return {"announcements": result}
 
 
 @app.post("/admin/announcements")
@@ -7412,55 +7461,74 @@ async def create_announcement(
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db)
 ):
-    """Create or update active announcement"""
-    existing = db.query(GlobalSettings).filter(
-        GlobalSettings.key == "active_announcement"
-    ).first()
+    """Create a new announcement (global or targeted)"""
+    # Validate target company if specified
+    if announcement.target_company_id:
+        company = db.query(Company).filter(Company.id == announcement.target_company_id).first()
+        if not company:
+            raise HTTPException(status_code=404, detail="Target company not found")
 
-    data = {
-        "title": announcement.title,
-        "message": announcement.message,
-        "type": announcement.type,
-        "created_at": datetime.utcnow().isoformat(),
-        "created_by": admin["username"]
-    }
-
-    if existing:
-        existing.value = json.dumps(data)
-        existing.updated_at = datetime.utcnow()
-        existing.updated_by = admin["username"]
-    else:
-        new_setting = GlobalSettings(
-            key="active_announcement",
-            value=json.dumps(data),
-            updated_by=admin["username"]
-        )
-        db.add(new_setting)
-
+    new_announcement = Announcement(
+        title=announcement.title,
+        message=announcement.message,
+        type=announcement.type,
+        target_company_id=announcement.target_company_id,
+        created_by=admin["username"]
+    )
+    db.add(new_announcement)
     db.commit()
+    db.refresh(new_announcement)
 
     # Log the action
-    log_admin_action(db, admin["username"], "create_announcement", None,
-                     f"Created announcement: {announcement.title}")
+    target_desc = f" to {announcement.target_company_id}" if announcement.target_company_id else " to all companies"
+    log_admin_action(db, admin["username"], "create_announcement", announcement.target_company_id,
+                     f"Created announcement: {announcement.title}{target_desc}")
 
-    return {"message": "Meddelande publicerat"}
+    return {"message": "Meddelande publicerat", "id": new_announcement.id}
 
 
-@app.delete("/admin/announcements")
+@app.delete("/admin/announcements/{announcement_id}")
 async def delete_announcement(
+    announcement_id: int,
     admin: dict = Depends(get_super_admin),
     db: Session = Depends(get_db)
 ):
-    """Delete active announcement"""
-    existing = db.query(GlobalSettings).filter(
-        GlobalSettings.key == "active_announcement"
-    ).first()
+    """Delete a specific announcement"""
+    announcement = db.query(Announcement).filter(Announcement.id == announcement_id).first()
 
-    if existing:
-        existing.value = None
-        db.commit()
+    if not announcement:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+
+    title = announcement.title
+    db.delete(announcement)
+    db.commit()
+
+    log_admin_action(db, admin["username"], "delete_announcement", None,
+                     f"Deleted announcement: {title}")
 
     return {"message": "Meddelande borttaget"}
+
+
+@app.put("/admin/announcements/{announcement_id}/toggle")
+async def toggle_announcement(
+    announcement_id: int,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Toggle announcement active status"""
+    announcement = db.query(Announcement).filter(Announcement.id == announcement_id).first()
+
+    if not announcement:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+
+    announcement.is_active = not announcement.is_active
+    db.commit()
+
+    status = "activated" if announcement.is_active else "deactivated"
+    log_admin_action(db, admin["username"], "toggle_announcement", None,
+                     f"Announcement {status}: {announcement.title}")
+
+    return {"message": f"Meddelande {status}", "is_active": announcement.is_active}
 
 
 # =============================================================================

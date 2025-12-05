@@ -7,7 +7,7 @@ export default defineConfig({
     lib: {
       entry: 'src/widget.jsx',
       name: 'Bobot',
-      fileName: 'widget',
+      fileName: () => 'widget.js',
       formats: ['iife']
     },
     rollupOptions: {

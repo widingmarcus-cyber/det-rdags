@@ -27,3 +27,6 @@ dist/
 .coverage
 htmlcov/
 *.db
+
+# Build artifacts
+# Note: widget.js is now tracked to ensure it's available for local development

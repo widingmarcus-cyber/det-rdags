@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { useState, useEffect, createContext } from 'react'
+import { useState, useEffect, useLayoutEffect, createContext } from 'react'
 import LandingPage from './pages/LandingPage'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import Login from './pages/Login'
@@ -29,23 +29,44 @@ function getSystemDarkMode() {
 function App() {
   const location = useLocation()
   const isAdminRoute = location.pathname.startsWith('/admin')
+  const isLandingPage = location.pathname === '/' || location.pathname === '/integritetspolicy'
 
   // Dark mode state - check localStorage first, then system preference
+  // But on landing page, always default to light mode
   const [darkMode, setDarkMode] = useState(() => {
+    // Landing page always starts light
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname
+      if (path === '/' || path === '/integritetspolicy') {
+        return false
+      }
+    }
     const saved = localStorage.getItem('bobot_dark_mode')
     if (saved !== null) return saved === 'true'
     return getSystemDarkMode()
   })
 
+  // Force light mode on landing page BEFORE paint
+  useLayoutEffect(() => {
+    if (isLandingPage) {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [isLandingPage])
+
   // Apply dark mode class to html element
   useEffect(() => {
+    // Skip on landing page - always light
+    if (isLandingPage) {
+      document.documentElement.classList.remove('dark')
+      return
+    }
     if (darkMode) {
       document.documentElement.classList.add('dark')
     } else {
       document.documentElement.classList.remove('dark')
     }
     localStorage.setItem('bobot_dark_mode', darkMode)
-  }, [darkMode])
+  }, [darkMode, isLandingPage])
 
   const toggleDarkMode = () => setDarkMode(!darkMode)
 
@@ -55,8 +76,8 @@ function App() {
     return saved ? JSON.parse(saved) : null
   })
 
-  // Announcement state
-  const [announcement, setAnnouncement] = useState(null)
+  // Announcements state (supports multiple messages)
+  const [announcements, setAnnouncements] = useState([])
 
   // Admin auth
   const [adminAuth, setAdminAuth] = useState(() => {
@@ -230,8 +251,8 @@ function App() {
     return response
   }
 
-  // Fetch announcements for companies
-  const fetchAnnouncement = async () => {
+  // Fetch announcements for companies (supports multiple messages)
+  const fetchAnnouncements = async () => {
     if (!auth?.token) return
     try {
       const response = await fetch(`${API_BASE}/announcements`, {
@@ -239,34 +260,55 @@ function App() {
       })
       if (response.ok) {
         const data = await response.json()
-        setAnnouncement(data.announcement)
+        setAnnouncements(data.announcements || [])
       }
     } catch (e) {
       console.error('Could not fetch announcements:', e)
     }
   }
 
-  // Mark announcement as read (persists to backend)
-  const markAnnouncementAsRead = async () => {
+  // Mark a specific announcement as read
+  const markAnnouncementAsRead = async (announcementId) => {
     if (!auth?.token) return
     try {
       await fetch(`${API_BASE}/announcements/read`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${auth.token}` }
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ announcement_id: announcementId })
       })
-      setAnnouncement(null)
+      // Remove from local state
+      setAnnouncements(prev => prev.filter(a => a.id !== announcementId))
     } catch (e) {
       console.error('Could not mark announcement as read:', e)
-      setAnnouncement(null) // Still dismiss locally
+      // Still dismiss locally
+      setAnnouncements(prev => prev.filter(a => a.id !== announcementId))
+    }
+  }
+
+  // Mark all announcements as read
+  const markAllAnnouncementsAsRead = async () => {
+    if (!auth?.token) return
+    try {
+      await fetch(`${API_BASE}/announcements/read-all`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${auth.token}` }
+      })
+      setAnnouncements([])
+    } catch (e) {
+      console.error('Could not mark all announcements as read:', e)
+      setAnnouncements([])
     }
   }
 
   // Fetch announcements when authenticated
   useEffect(() => {
     if (auth) {
-      fetchAnnouncement()
+      fetchAnnouncements()
       // Refresh every 5 minutes
-      const interval = setInterval(fetchAnnouncement, 5 * 60 * 1000)
+      const interval = setInterval(fetchAnnouncements, 5 * 60 * 1000)
       return () => clearInterval(interval)
     }
   }, [auth])
@@ -335,8 +377,9 @@ function App() {
           onLogout={handleLogout}
           darkMode={darkMode}
           toggleDarkMode={toggleDarkMode}
-          announcement={announcement}
+          announcements={announcements}
           onDismissAnnouncement={markAnnouncementAsRead}
+          onDismissAllAnnouncements={markAllAnnouncementsAsRead}
         />
         <main id="main-content" className="flex-1 p-8 overflow-auto" role="main" aria-label="Huvudinnehåll">
           <Routes>
