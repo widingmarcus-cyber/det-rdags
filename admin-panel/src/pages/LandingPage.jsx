@@ -356,11 +356,11 @@ function TypedText({ text, delay = 0, speed = 30, onComplete }) {
     }
   }, [displayedText, text, speed, hasStarted, onComplete])
 
-  // Always render full text for layout, show typed portion visibly
+  // Show typed text directly (simpler approach for better cross-browser support)
   return (
-    <span className="relative">
-      <span className="invisible">{text}</span>
-      <span className="absolute inset-0">{displayedText}{isTyping && <span className="animate-pulse">|</span>}</span>
+    <span>
+      {displayedText}
+      {isTyping && <span className="animate-pulse">|</span>}
     </span>
   )
 }
@@ -927,8 +927,11 @@ function LandingPage() {
       <LiveWidget />
 
       <style>{`
-        html { scroll-behavior: smooth; scroll-snap-type: y mandatory; }
-        section { scroll-snap-align: start; scroll-snap-stop: always; }
+        html { scroll-behavior: smooth; }
+        @media (min-width: 1024px) and (hover: hover) {
+          html { scroll-snap-type: y proximity; }
+          section { scroll-snap-align: start; }
+        }
         @keyframes float { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-10px) rotate(2deg); } }
         .animate-float { animation: float 4s ease-in-out infinite; }
         @keyframes sparkle { 0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; } 50% { transform: scale(1) rotate(180deg); opacity: 1; } }
