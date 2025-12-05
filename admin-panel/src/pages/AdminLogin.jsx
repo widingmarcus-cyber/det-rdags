@@ -222,10 +222,10 @@ function AdminLogin({ onLogin, onVerify2FA }) {
               backgroundSize: '20px 20px'
             }} />
 
-            {/* Bobot Mascot Logo - with white background for visibility */}
+            {/* Bobot Mascot Logo - subtle white background */}
             <div className="relative">
-              <div className="w-28 h-28 flex items-center justify-center mx-auto mb-4 bg-white rounded-2xl shadow-lg">
-                <svg width="80" height="80" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <div className="w-24 h-24 flex items-center justify-center mx-auto mb-4 bg-white/90 rounded-xl shadow">
+                <svg width="70" height="70" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
                   {/* Feet */}
                   <rect x="25" y="95" width="30" height="12" rx="6" fill="#78716C" />
                   <rect x="65" y="95" width="30" height="12" rx="6" fill="#78716C" />
@@ -262,18 +262,12 @@ function AdminLogin({ onLogin, onVerify2FA }) {
                   </circle>
                   {/* Nose */}
                   <rect x="56" y="30" width="8" height="8" rx="2" fill="#78716C" />
-                  {/* Left arm with waving animation */}
-                  <g>
-                    <animateTransform attributeName="transform" type="rotate" values="0 24 65;-25 24 65;0 24 65;-25 24 65;0 24 65" dur="1.5s" repeatCount="indefinite" />
-                    <rect x="15" y="62" width="18" height="6" rx="3" fill="#78716C" />
-                    <rect x="10" y="58" width="8" height="14" rx="2" fill="#57534E" />
-                  </g>
-                  {/* Right arm - subtle movement */}
-                  <g>
-                    <animateTransform attributeName="transform" type="rotate" values="0 96 65;5 96 65;0 96 65" dur="2s" repeatCount="indefinite" />
-                    <rect x="87" y="62" width="18" height="6" rx="3" fill="#78716C" />
-                    <rect x="102" y="58" width="8" height="14" rx="2" fill="#57534E" />
-                  </g>
+                  {/* Left arm - static */}
+                  <rect x="15" y="62" width="18" height="6" rx="3" fill="#78716C" />
+                  <rect x="10" y="58" width="8" height="14" rx="2" fill="#57534E" />
+                  {/* Right arm - static */}
+                  <rect x="87" y="62" width="18" height="6" rx="3" fill="#78716C" />
+                  <rect x="102" y="58" width="8" height="14" rx="2" fill="#57534E" />
                   {/* Antenna */}
                   <rect x="58" y="12" width="4" height="10" rx="2" fill="#78716C" />
                   <circle cx="60" cy="10" r="5" fill="#4A9D7C">
