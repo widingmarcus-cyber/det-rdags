@@ -965,14 +965,34 @@ const PricingPage = ({ startupFee, monthlyFee, tier, discount, pricingTiers = []
         </View>
       </View>
 
-      <Text style={styles.pricingNote}>
-        Ingen bindningstid. Full support ingår. Avsluta när som helst.
-      </Text>
-
       <PageFooter pageNumber={6} />
     </Page>
   )
 }
+
+// Icon for email
+const IconMail = ({ size = 20, color = colors.white }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke={color} strokeWidth={2} fill="none" />
+    <Path d="M22 6l-10 7L2 6" stroke={color} strokeWidth={2} fill="none" />
+  </Svg>
+)
+
+// Icon for web/globe
+const IconGlobe = ({ size = 20, color = colors.white }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Circle cx={12} cy={12} r={10} stroke={color} strokeWidth={2} fill="none" />
+    <Path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke={color} strokeWidth={2} fill="none" />
+  </Svg>
+)
+
+// Icon for phone/contact
+const IconUser = ({ size = 20, color = colors.white }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Circle cx={12} cy={8} r={4} stroke={color} strokeWidth={2} fill="none" />
+    <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke={color} strokeWidth={2} fill="none" />
+  </Svg>
+)
 
 // SECTION 7: Contact Page
 const ContactPage = () => (
@@ -980,30 +1000,103 @@ const ContactPage = () => (
     <CornerAccent position="topRight" />
     <CornerAccent position="bottomLeft" />
 
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <BobotMascot size={100} />
+    {/* Header */}
+    <View style={styles.pageHeader}>
+      <Text style={styles.pageHeaderTitle}>Nästa steg</Text>
+      <BobotMascotSmall size={36} />
+    </View>
 
-      <Text style={{ fontSize: 28, fontWeight: 700, color: colors.text, marginTop: 40, marginBottom: 16, textAlign: 'center' }}>
-        Redo att frigöra tid?
-      </Text>
-
-      <Text style={{ fontSize: 14, color: colors.textLight, textAlign: 'center', maxWidth: 400, lineHeight: 1.6, marginBottom: 20 }}>
-        Låt oss börja med en provmånad. Ni testar Bobot i er verksamhet och bestämmer sedan om ni vill fortsätta.
-      </Text>
-
-      <DecorativeDivider width={200} />
-
-      <View style={styles.contactSection}>
-        <Text style={styles.contactTitle}>Ta kontakt</Text>
-        <Text style={styles.contactText}>
-          Vi svarar inom 24 timmar och hjälper er komma igång direkt.
+    {/* Main content - two column layout */}
+    <View style={{ flexDirection: 'row', gap: 30, marginTop: 20 }}>
+      {/* Left column - Next steps */}
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontFamily: 'Playfair', fontSize: 24, fontWeight: 700, color: colors.text, marginBottom: 20 }}>
+          Så kommer ni igång
         </Text>
-        <Text style={styles.contactInfo}>
-          Marcus Widing{'\n'}
-          hej@bobot.nu{'\n'}
-          www.bobot.nu
-        </Text>
+
+        {/* Step 1 */}
+        <View style={{ flexDirection: 'row', marginBottom: 20 }}>
+          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+            <Text style={{ color: colors.white, fontWeight: 700, fontSize: 14 }}>1</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: 600, color: colors.text, marginBottom: 4 }}>Boka ett möte</Text>
+            <Text style={{ fontSize: 11, color: colors.textLight, lineHeight: 1.5 }}>Vi går igenom era behov och visar hur Bobot kan hjälpa er verksamhet.</Text>
+          </View>
+        </View>
+
+        {/* Step 2 */}
+        <View style={{ flexDirection: 'row', marginBottom: 20 }}>
+          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+            <Text style={{ color: colors.white, fontWeight: 700, fontSize: 14 }}>2</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: 600, color: colors.text, marginBottom: 4 }}>Skräddarsy lösningen</Text>
+            <Text style={{ fontSize: 11, color: colors.textLight, lineHeight: 1.5 }}>Vi anpassar Bobot efter era önskemål och bygger er kunskapsbas.</Text>
+          </View>
+        </View>
+
+        {/* Step 3 */}
+        <View style={{ flexDirection: 'row', marginBottom: 20 }}>
+          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+            <Text style={{ color: colors.white, fontWeight: 700, fontSize: 14 }}>3</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: 600, color: colors.text, marginBottom: 4 }}>Starta provperioden</Text>
+            <Text style={{ fontSize: 11, color: colors.textLight, lineHeight: 1.5 }}>4 veckors test utan risk. Bestäm sedan om ni vill fortsätta.</Text>
+          </View>
+        </View>
       </View>
+
+      {/* Right column - Contact card */}
+      <View style={{ flex: 1 }}>
+        <View style={{ backgroundColor: colors.primary, borderRadius: 20, padding: 30, height: '100%' }}>
+          <View style={{ alignItems: 'center', marginBottom: 24 }}>
+            <BobotMascot size={70} />
+          </View>
+
+          <Text style={{ fontFamily: 'Playfair', fontSize: 20, fontWeight: 700, color: colors.white, textAlign: 'center', marginBottom: 20 }}>
+            Kontakta oss
+          </Text>
+
+          {/* Contact details */}
+          <View style={{ gap: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <IconUser size={18} color={colors.white} />
+              </View>
+              <Text style={{ fontSize: 13, color: colors.white, fontWeight: 500 }}>Marcus Widing</Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <IconMail size={18} color={colors.white} />
+              </View>
+              <Text style={{ fontSize: 13, color: colors.white, fontWeight: 500 }}>hej@bobot.nu</Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <IconGlobe size={18} color={colors.white} />
+              </View>
+              <Text style={{ fontSize: 13, color: colors.white, fontWeight: 500 }}>www.bobot.nu</Text>
+            </View>
+          </View>
+
+          <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)' }}>
+            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', textAlign: 'center', lineHeight: 1.5 }}>
+              Vi svarar inom 24 timmar
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+
+    {/* Bottom quote */}
+    <View style={{ marginTop: 40, backgroundColor: colors.slateLight, borderRadius: 16, padding: 24, alignItems: 'center' }}>
+      <Text style={{ fontFamily: 'Playfair', fontSize: 16, color: colors.text, textAlign: 'center', lineHeight: 1.6 }}>
+        "Låt Bobot ta hand om rutinfrågorna så ni kan fokusera på det som verkligen räknas."
+      </Text>
     </View>
 
     <PageFooter pageNumber={7} />
