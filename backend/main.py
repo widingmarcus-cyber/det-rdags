@@ -4639,7 +4639,7 @@ async def apply_template(
 
     return TemplateApplyResponse(
         success=True,
-        imported=items_added,
+        items_added=items_added,
         items_skipped=items_skipped,
         message=f"{items_added} frågor/svar har lagts till från mallen. {items_skipped} duplicerade poster hoppades över."
     )
