@@ -1461,6 +1461,175 @@ def get_greeting_response(language: str, company_name: str = None) -> str:
     return responses.get(language, responses["sv"])
 
 
+# =============================================================================
+# Conversational Detection - Makes the bot feel more human
+# =============================================================================
+
+def is_thanks(text: str) -> bool:
+    """Detect if a message is expressing gratitude"""
+    text_lower = text.lower().strip().rstrip("!?.,")
+
+    thanks_phrases = [
+        # Swedish
+        "tack", "tackar", "tack så mycket", "tusen tack", "stort tack",
+        "tack för hjälpen", "tack för det", "jättebra", "perfekt", "toppen",
+        "superbra", "kanon", "bra jobbat", "tack för info", "tack för informationen",
+        # English
+        "thanks", "thank you", "thank you so much", "thanks a lot", "thx",
+        "thanks for your help", "great", "perfect", "awesome", "wonderful",
+        # Arabic
+        "شكرا", "شكرا جزيلا"
+    ]
+
+    return any(phrase in text_lower for phrase in thanks_phrases)
+
+
+def get_thanks_response(language: str) -> str:
+    """Generate a warm response to gratitude"""
+    responses = {
+        "sv": "Ingen orsak! Hör av dig om du har fler frågor.",
+        "en": "You're welcome! Feel free to ask if you have more questions.",
+        "ar": "على الرحب والسعة! لا تتردد في السؤال إذا كان لديك المزيد من الأسئلة."
+    }
+    return responses.get(language, responses["sv"])
+
+
+def is_goodbye(text: str) -> bool:
+    """Detect if a message is a farewell"""
+    text_lower = text.lower().strip().rstrip("!?.,")
+
+    goodbye_phrases = [
+        # Swedish
+        "hejdå", "hej då", "vi ses", "ha det bra", "ha det", "bye", "adjö",
+        "tack och hej", "det var allt", "inget mer",
+        # English
+        "goodbye", "bye", "bye bye", "see you", "have a nice day", "take care",
+        "that's all", "nothing else",
+        # Arabic
+        "مع السلامة", "إلى اللقاء"
+    ]
+
+    return any(phrase in text_lower for phrase in goodbye_phrases)
+
+
+def get_goodbye_response(language: str) -> str:
+    """Generate a warm farewell response"""
+    responses = {
+        "sv": "Ha det så bra! Tveka inte att höra av dig om du har fler frågor.",
+        "en": "Take care! Don't hesitate to reach out if you have more questions.",
+        "ar": "اعتني بنفسك! لا تتردد في التواصل معنا إذا كان لديك المزيد من الأسئلة."
+    }
+    return responses.get(language, responses["sv"])
+
+
+def is_identity_question(text: str) -> bool:
+    """Detect if user is asking who/what the bot is"""
+    text_lower = text.lower().strip().rstrip("!?.,")
+
+    identity_phrases = [
+        # Swedish
+        "vad heter du", "vem är du", "vad är du", "är du en robot",
+        "är du en bot", "är du en människa", "är du ai", "är du verklig",
+        "vad kan du göra", "vad kan du hjälpa mig med",
+        # English
+        "what is your name", "who are you", "what are you", "are you a robot",
+        "are you a bot", "are you human", "are you ai", "are you real",
+        "what can you do", "what can you help me with"
+    ]
+
+    return any(phrase in text_lower for phrase in identity_phrases)
+
+
+def get_identity_response(language: str, bot_name: str = "Bobot") -> str:
+    """Generate a response about the bot's identity"""
+    responses = {
+        "sv": f"Jag är {bot_name}, en AI-assistent som hjälper dig med frågor. Jag kan svara på vanliga frågor baserat på information som lagts in i min kunskapsbas. Vad kan jag hjälpa dig med?",
+        "en": f"I'm {bot_name}, an AI assistant here to help you with questions. I can answer common questions based on information in my knowledge base. How can I help you?",
+        "ar": f"أنا {bot_name}، مساعد ذكاء اصطناعي هنا لمساعدتك. يمكنني الإجابة على الأسئلة الشائعة بناءً على المعلومات الموجودة في قاعدة معرفتي. كيف يمكنني مساعدتك؟"
+    }
+    return responses.get(language, responses["sv"])
+
+
+def wants_human(text: str) -> bool:
+    """Detect if user wants to talk to a real human - often frustrated users"""
+    text_lower = text.lower().strip().rstrip("!?.,")
+
+    human_phrases = [
+        # Swedish - direct requests
+        "människa", "en människa", "riktig människa", "prata med människa",
+        "prata med någon", "tala med någon", "verklig person", "riktig person",
+        "mänsklig hjälp", "mänsklig support", "kundtjänst", "kundservice",
+        "jag vill prata med", "kan jag prata med", "koppla mig",
+        "jag vill ha hjälp av en människa", "kan jag få prata med en människa",
+        # Swedish - frustration indicators
+        "du förstår inte", "du fattar inte", "det funkar inte", "hjälper inte",
+        "värdelös", "dålig bot", "dum bot", "idiot", "meningslöst",
+        # English - direct requests
+        "human", "real person", "talk to someone", "speak to someone",
+        "customer service", "customer support", "real human", "actual person",
+        "i want to talk to", "can i talk to", "connect me", "transfer me",
+        # English - frustration
+        "you don't understand", "this isn't working", "useless", "stupid bot",
+        # Arabic
+        "أريد التحدث إلى شخص", "خدمة العملاء"
+    ]
+
+    return any(phrase in text_lower for phrase in human_phrases)
+
+
+def get_human_handoff_response(language: str, settings, widget=None) -> str:
+    """Generate a response offering human contact when user wants a real person.
+    Widget contact info takes priority over company settings if provided."""
+    # Build contact info - widget overrides settings if available
+    contact_parts = []
+    contact_phone = (widget.contact_phone if widget and widget.contact_phone else None) or (settings.contact_phone if settings else None)
+    contact_email = (widget.contact_email if widget and widget.contact_email else None) or (settings.contact_email if settings else None)
+
+    if contact_phone:
+        contact_parts.append(contact_phone)
+    if contact_email:
+        contact_parts.append(contact_email)
+
+    if contact_parts:
+        contact_info = " eller ".join(contact_parts) if language == "sv" else " or ".join(contact_parts)
+    else:
+        contact_info = None
+
+    if contact_info:
+        responses = {
+            "sv": f"Jag förstår att du vill prata med en riktig person. Du kan nå oss på {contact_info}. Vi hjälper dig gärna!",
+            "en": f"I understand you'd like to speak with a real person. You can reach us at {contact_info}. We're happy to help!",
+            "ar": f"أفهم أنك تريد التحدث مع شخص حقيقي. يمكنك التواصل معنا على {contact_info}. نحن سعداء بمساعدتك!"
+        }
+    else:
+        responses = {
+            "sv": "Jag förstår att du vill prata med en riktig person. Kontaktuppgifterna hittar du på vår hemsida. Vi hjälper dig gärna!",
+            "en": "I understand you'd like to speak with a real person. You can find our contact details on our website. We're happy to help!",
+            "ar": "أفهم أنك تريد التحدث مع شخص حقيقي. يمكنك العثور على تفاصيل الاتصال على موقعنا. نحن سعداء بمساعدتك!"
+        }
+
+    return responses.get(language, responses["sv"])
+
+
+def detect_conversational_type(text: str) -> tuple:
+    """
+    Detect what type of conversational message this is.
+    Returns (type, is_conversational) where type is one of:
+    - 'greeting', 'thanks', 'goodbye', 'identity', 'human_handoff', None
+    """
+    if wants_human(text):
+        return ('human_handoff', True)
+    if is_greeting(text):
+        return ('greeting', True)
+    if is_thanks(text):
+        return ('thanks', True)
+    if is_goodbye(text):
+        return ('goodbye', True)
+    if is_identity_question(text):
+        return ('identity', True)
+    return (None, False)
+
+
 def build_prompt(question: str, context: List[KnowledgeItem], settings: CompanySettings = None, language: str = None, category: str = None, has_knowledge_match: bool = False, widget_type: str = "external", widget = None) -> str:
     """Bygg prompt med kontext - använder specificerat eller detekterat språk
 
@@ -2185,13 +2354,31 @@ async def chat(
     # Mät svarstid
     start_time = datetime.utcnow()
 
-    # Check if this is just a greeting (no actual question)
-    if is_greeting(request.question):
-        # Respond warmly to greetings without hitting the knowledge base
-        answer = get_greeting_response(language, settings.company_name)
+    # Check if this is a conversational message (greeting, thanks, human request, etc.)
+    conv_type, is_conversational = detect_conversational_type(request.question)
+
+    if is_conversational:
+        # Handle conversational messages without hitting the knowledge base
+        context = []
         response_time = 0
         had_answer = True
-        context = []
+
+        # Get bot name from widget or settings
+        bot_name = widget.display_name if widget and widget.display_name else settings.company_name or "Bobot"
+
+        if conv_type == 'greeting':
+            answer = get_greeting_response(language, settings.company_name)
+        elif conv_type == 'thanks':
+            answer = get_thanks_response(language)
+        elif conv_type == 'goodbye':
+            answer = get_goodbye_response(language)
+        elif conv_type == 'identity':
+            answer = get_identity_response(language, bot_name)
+        elif conv_type == 'human_handoff':
+            answer = get_human_handoff_response(language, settings)
+        else:
+            # Fallback for unknown conversational type
+            answer = get_greeting_response(language, settings.company_name)
     else:
         # Hitta kontext i kunskapsbasen (with widget isolation if widget_key was provided)
         context = find_relevant_context(
@@ -2568,13 +2755,30 @@ async def chat_via_widget_key(
     db.add(user_message)
     conversation.message_count += 1
 
-    # Check if this is just a greeting (no actual question)
-    if is_greeting(request.question):
-        # Respond warmly to greetings without hitting the knowledge base
-        answer = get_greeting_response(language, settings.company_name)
+    # Check if this is a conversational message (greeting, thanks, human request, etc.)
+    conv_type, is_conversational = detect_conversational_type(request.question)
+
+    if is_conversational:
+        # Handle conversational messages without hitting the knowledge base
+        relevant_items = []
         response_time = 0
         had_answer = True
-        relevant_items = []
+
+        bot_name = widget.display_name if widget and widget.display_name else settings.company_name or "Bobot"
+
+        if conv_type == 'greeting':
+            answer = get_greeting_response(language, settings.company_name)
+        elif conv_type == 'thanks':
+            answer = get_thanks_response(language)
+        elif conv_type == 'goodbye':
+            answer = get_goodbye_response(language)
+        elif conv_type == 'identity':
+            answer = get_identity_response(language, bot_name)
+        elif conv_type == 'human_handoff':
+            # For widget endpoint, widget contact info takes priority
+            answer = get_human_handoff_response(language, settings, widget)
+        else:
+            answer = get_greeting_response(language, settings.company_name)
     else:
         # Find relevant context from widget-specific knowledge base
         start_time = time.time()
