@@ -999,7 +999,7 @@ const PricingPage = ({ startupFee, monthlyFee, tier, discount, pricingTiers = []
             </Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ fontSize: 20, fontWeight: 700, color: colors.primary }}>{formatPrice(startupFee) || '4 900'} kr</Text>
+            <Text style={{ fontSize: 20, fontWeight: 700, color: colors.primary }}>{formatPrice(startupFee)} kr</Text>
             {discount > 0 && (
               <View style={{ backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 2, paddingHorizontal: 8, marginTop: 4 }}>
                 <Text style={{ fontSize: 9, color: colors.white, fontWeight: 600 }}>{discount}% rabatt</Text>

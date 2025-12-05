@@ -370,7 +370,12 @@ function App() {
         Hoppa till navigation
       </a>
 
-      <div className="flex min-h-screen bg-bg-primary">
+      <div className="flex min-h-screen bg-bg-primary relative">
+        {/* Subtle dot pattern overlay (light mode only) */}
+        <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.08] dark:opacity-0" style={{
+          backgroundImage: 'radial-gradient(circle, #D97757 1px, transparent 1px)',
+          backgroundSize: '20px 20px'
+        }} />
         <Navbar
           companyId={auth.companyId}
           companyName={auth.companyName}
@@ -381,7 +386,7 @@ function App() {
           onDismissAnnouncement={markAnnouncementAsRead}
           onDismissAllAnnouncements={markAllAnnouncementsAsRead}
         />
-        <main id="main-content" className="flex-1 p-8 overflow-auto" role="main" aria-label="Huvudinnehåll">
+        <main id="main-content" className="flex-1 p-8 overflow-auto relative z-10" role="main" aria-label="Huvudinnehåll">
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />

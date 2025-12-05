@@ -759,6 +759,12 @@ function LandingPage() {
   return (
     <div ref={containerRef} className="bg-gradient-to-br from-stone-50 via-orange-50/30 to-stone-50 dark:from-stone-900 dark:via-stone-800 dark:to-stone-900 relative">
 
+      {/* Subtle dot pattern overlay (light mode only) */}
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.15] dark:opacity-0" style={{
+        backgroundImage: 'radial-gradient(circle, #D97757 1px, transparent 1px)',
+        backgroundSize: '24px 24px'
+      }} />
+
       {/* Fixed Navigation */}
       <nav className="fixed top-0 left-0 right-0 px-6 py-3 z-50 bg-white/80 dark:bg-stone-900/80 backdrop-blur-lg border-b border-stone-200/50 dark:border-stone-700/50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
