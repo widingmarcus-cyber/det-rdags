@@ -210,6 +210,18 @@ def migrate():
         cursor.execute("ALTER TABLE super_admins ADD COLUMN last_login_ip VARCHAR")
         cursor.execute("ALTER TABLE super_admins ADD COLUMN dark_mode INTEGER DEFAULT 0")
 
+    # Add self-hosting columns to companies
+    cursor.execute("PRAGMA table_info(companies)")
+    company_columns = {row[1] for row in cursor.fetchall()}
+
+    if "is_self_hosted" not in company_columns:
+        print("Adding self-hosting columns to companies...")
+        cursor.execute("ALTER TABLE companies ADD COLUMN is_self_hosted INTEGER DEFAULT 0")
+        cursor.execute("ALTER TABLE companies ADD COLUMN self_host_license_key VARCHAR UNIQUE")
+        cursor.execute("ALTER TABLE companies ADD COLUMN self_host_activated_at DATETIME")
+        cursor.execute("ALTER TABLE companies ADD COLUMN self_host_license_valid_until DATETIME")
+        cursor.execute("ALTER TABLE companies ADD COLUMN self_host_last_validated DATETIME")
+
     conn.commit()
     conn.close()
 

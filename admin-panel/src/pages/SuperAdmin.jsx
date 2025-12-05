@@ -96,6 +96,10 @@ function SuperAdmin() {
   const [roadmapForm, setRoadmapForm] = useState({ title: '', description: '', quarter: 'Q1 2026', status: 'planned' })
   const [editingRoadmapItem, setEditingRoadmapItem] = useState(null)
 
+  // Self-hosting
+  const [selfHostingStatus, setSelfHostingStatus] = useState(null)
+  const [selfHostingLoading, setSelfHostingLoading] = useState(false)
+
   // Editable Pricing Tiers
   const [dbPricingTiers, setDbPricingTiers] = useState([])
   const [showPricingTierModal, setShowPricingTierModal] = useState(false)
@@ -903,6 +907,41 @@ function SuperAdmin() {
     }
   }
 
+  const handleToggleSelfHosting = async (companyId, currentEnabled) => {
+    if (!currentEnabled) {
+      // Enabling self-hosting - confirm first
+      if (!window.confirm('Aktivera self-hosting för detta företag? En licensnyckel genereras automatiskt.')) {
+        return
+      }
+    }
+
+    setSelfHostingLoading(true)
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/companies/${companyId}/self-hosting`, {
+        method: 'PUT',
+        body: JSON.stringify({ enabled: !currentEnabled })
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setSelfHostingStatus({
+          ...selfHostingStatus,
+          is_self_hosted: data.is_self_hosted,
+          license_key: data.license_key,
+          valid_until: data.valid_until
+        })
+        showNotification(data.message)
+      } else {
+        const errData = await response.json()
+        showNotification(errData.detail || 'Kunde inte uppdatera self-hosting', 'error')
+      }
+    } catch (error) {
+      console.error('Failed to toggle self-hosting:', error)
+      showNotification('Kunde inte uppdatera self-hosting', 'error')
+    } finally {
+      setSelfHostingLoading(false)
+    }
+  }
+
   const handleDelete = async (companyId) => {
     if (!window.confirm(`Är du säker på att du vill ta bort företag "${companyId}"? All data kommer att raderas permanent.`)) {
       return
@@ -1110,15 +1149,17 @@ function SuperAdmin() {
     setCompanyNotes([])
     setCompanyDocuments([])
     setCompanyWidgets([])
+    setSelfHostingStatus(null)
 
     try {
       // Fetch all data in parallel
-      const [usageRes, activityRes, notesRes, docsRes, widgetsRes] = await Promise.all([
+      const [usageRes, activityRes, notesRes, docsRes, widgetsRes, selfHostRes] = await Promise.all([
         adminFetch(`${API_BASE}/admin/companies/${company.id}/usage`),
         adminFetch(`${API_BASE}/admin/company-activity/${company.id}?limit=10`),
         adminFetch(`${API_BASE}/admin/companies/${company.id}/notes`),
         adminFetch(`${API_BASE}/admin/companies/${company.id}/documents`),
-        adminFetch(`${API_BASE}/admin/companies/${company.id}/widgets`)
+        adminFetch(`${API_BASE}/admin/companies/${company.id}/widgets`),
+        adminFetch(`${API_BASE}/admin/companies/${company.id}/self-hosting`)
       ])
 
       if (usageRes.ok) {
@@ -1144,6 +1185,11 @@ function SuperAdmin() {
       if (widgetsRes.ok) {
         const widgetsData = await widgetsRes.json()
         setCompanyWidgets(widgetsData || [])
+      }
+
+      if (selfHostRes.ok) {
+        const selfHostData = await selfHostRes.json()
+        setSelfHostingStatus(selfHostData)
       }
     } catch (error) {
       console.error('Failed to fetch company details:', error)
@@ -3832,6 +3878,94 @@ function SuperAdmin() {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Self-Hosting Section */}
+                {selfHostingStatus && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-medium text-text-primary mb-3 flex items-center gap-2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                      </svg>
+                      Self-Hosting
+                    </h3>
+                    <div className="bg-bg-secondary rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${
+                            selfHostingStatus.is_self_hosted
+                              ? 'bg-success-soft text-success'
+                              : selfHostingStatus.self_host_available
+                                ? 'bg-gray-100 text-gray-600'
+                                : 'bg-gray-100 text-gray-400'
+                          }`}>
+                            {selfHostingStatus.is_self_hosted ? 'Aktiverat' : selfHostingStatus.self_host_available ? 'Tillgängligt' : 'Ej tillgängligt'}
+                          </span>
+                          <span className="text-xs text-text-tertiary">
+                            {selfHostingStatus.tier && `(${selfHostingStatus.tier})`}
+                          </span>
+                        </div>
+                        {selfHostingStatus.self_host_available && (
+                          <button
+                            onClick={() => handleToggleSelfHosting(showCompanyDashboard.id, selfHostingStatus.is_self_hosted)}
+                            disabled={selfHostingLoading}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                              selfHostingStatus.is_self_hosted
+                                ? 'bg-error-soft text-error hover:bg-error/20'
+                                : 'bg-accent text-white hover:bg-accent-hover'
+                            } disabled:opacity-50`}
+                          >
+                            {selfHostingLoading ? '...' : selfHostingStatus.is_self_hosted ? 'Inaktivera' : 'Aktivera'}
+                          </button>
+                        )}
+                      </div>
+
+                      {selfHostingStatus.is_self_hosted && (
+                        <div className="space-y-2 pt-3 border-t border-border-subtle">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-text-secondary">Licensnyckel:</span>
+                            <code className="text-xs font-mono bg-bg-primary px-2 py-1 rounded select-all">
+                              {selfHostingStatus.license_key}
+                            </code>
+                          </div>
+                          {selfHostingStatus.valid_until && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-text-secondary">Giltig till:</span>
+                              <span className="text-xs text-text-primary">
+                                {new Date(selfHostingStatus.valid_until).toLocaleDateString('sv-SE')}
+                              </span>
+                            </div>
+                          )}
+                          {selfHostingStatus.last_validated && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-text-secondary">Senast validerad:</span>
+                              <span className="text-xs text-text-primary">
+                                {new Date(selfHostingStatus.last_validated).toLocaleDateString('sv-SE')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {!selfHostingStatus.self_host_available && (
+                        <p className="text-xs text-text-tertiary">
+                          Self-hosting är endast tillgängligt för Professional, Business och Enterprise.
+                        </p>
+                      )}
+
+                      {selfHostingStatus.self_host_available && !selfHostingStatus.is_self_hosted && selfHostingStatus.license_fee > 0 && (
+                        <p className="text-xs text-text-tertiary mt-2">
+                          Licensavgift: {selfHostingStatus.license_fee.toLocaleString('sv-SE')} kr (engångsavgift)
+                        </p>
+                      )}
+
+                      {selfHostingStatus.self_host_available && !selfHostingStatus.is_self_hosted && selfHostingStatus.license_fee === 0 && (
+                        <p className="text-xs text-success mt-2">
+                          Self-hosting ingår i Enterprise-paketet utan extra kostnad.
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}

@@ -73,6 +73,13 @@ class Company(Base):
     discount_end_date = Column(Date)  # When discount expires (null = permanent)
     discount_note = Column(String, default="")  # Reason for discount
 
+    # Self-hosting
+    is_self_hosted = Column(Boolean, default=False)  # Whether self-hosting is enabled
+    self_host_license_key = Column(String, unique=True, nullable=True)  # Unique license key
+    self_host_activated_at = Column(DateTime, nullable=True)  # When self-hosting was activated
+    self_host_license_valid_until = Column(DateTime, nullable=True)  # License expiry for validation
+    self_host_last_validated = Column(DateTime, nullable=True)  # Last successful validation
+
     # Relations
     knowledge_items = relationship("KnowledgeItem", back_populates="company", cascade="all, delete-orphan")
     chat_logs = relationship("ChatLog", back_populates="company", cascade="all, delete-orphan")

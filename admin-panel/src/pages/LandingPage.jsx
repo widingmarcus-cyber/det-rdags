@@ -452,6 +452,20 @@ function PricingCard({ tier }) {
           </li>
         ))}
       </ul>
+      {tier.self_host_available && (
+        <div className="pt-4 border-t border-stone-200 dark:border-stone-700">
+          <div className="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-400">
+            <svg className="w-4 h-4 text-[#D97757]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+            </svg>
+            <span>
+              {tier.self_host_license_fee === 0
+                ? 'Self-hosting ingår'
+                : `Self-hosting: +${formatPrice(tier.self_host_license_fee)} kr`}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -573,10 +587,10 @@ function LandingPage() {
 
   // Fallback pricing tiers if API fails
   const fallbackPricingTiers = {
-    starter: { name: "Starter", monthly_fee: 1500, startup_fee: 0, max_conversations: 250, features: ["Grundläggande AI-chatt", "50 kunskapsartiklar", "250 konversationer/månad", "E-postsupport", "Gratis uppstart"] },
-    professional: { name: "Professional", monthly_fee: 3000, startup_fee: 8000, max_conversations: 2000, features: ["Allt i Starter", "250 kunskapsartiklar", "2000 konversationer/månad", "Prioriterad support", "Anpassad widget"] },
-    business: { name: "Business", monthly_fee: 6000, startup_fee: 16000, max_conversations: 5000, features: ["Allt i Professional", "500 kunskapsartiklar", "5000 konversationer/månad", "Dedikerad support", "API-åtkomst"] },
-    enterprise: { name: "Enterprise", monthly_fee: 10000, startup_fee: 32000, max_conversations: 0, features: ["Allt i Business", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling"] }
+    starter: { name: "Starter", monthly_fee: 1500, startup_fee: 0, max_conversations: 250, self_host_available: false, features: ["Grundläggande AI-chatt", "50 kunskapsartiklar", "250 konversationer/månad", "E-postsupport", "Gratis uppstart"] },
+    professional: { name: "Professional", monthly_fee: 3000, startup_fee: 8000, max_conversations: 2000, self_host_available: true, self_host_license_fee: 20000, features: ["Allt i Starter", "250 kunskapsartiklar", "2000 konversationer/månad", "Prioriterad support", "Anpassad widget"] },
+    business: { name: "Business", monthly_fee: 6000, startup_fee: 16000, max_conversations: 5000, self_host_available: true, self_host_license_fee: 35000, features: ["Allt i Professional", "500 kunskapsartiklar", "5000 konversationer/månad", "Dedikerad support", "API-åtkomst"] },
+    enterprise: { name: "Enterprise", monthly_fee: 10000, startup_fee: 32000, max_conversations: 0, self_host_available: true, self_host_license_fee: 0, features: ["Allt i Business", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling", "Self-hosting ingår"] }
   }
 
   useEffect(() => {
@@ -685,7 +699,7 @@ function LandingPage() {
     { q: 'Vad händer om Bobot inte kan svara?', a: 'Bobot visar ett anpassningsbart reservmeddelande och loggar frågan i analytics. Du kan sedan lägga till svaret i kunskapsbanken för framtida frågor.' },
     { q: 'Kan jag anpassa utseendet?', a: 'Absolut! Du kan välja primärfärg, bakgrundsfärg, typsnitt, teckenstorlek, rundade hörn och position. Allt anpassas i adminpanelen med live-förhandsgranskning.' },
     { q: 'Finns det statistik och rapporter?', a: 'Ja, du får detaljerad statistik över antal konversationer, vanligaste frågorna, obesvarade frågor, nöjdhetsbetyg och svarstider. Allt kan exporteras till CSV.' },
-    { q: 'Kan jag hosta Bobot själv?', a: 'Ja! Vi erbjuder en self-hosted licens där du kör Bobot på din egen server. Perfekt för organisationer med strikta datakrav. Kontakta oss för priser.' },
+    { q: 'Kan jag hosta Bobot själv?', a: 'Ja! Self-hosting finns som tillval för Professional (+20 000 kr engång), Business (+35 000 kr engång) och Enterprise (ingår). Du får fullständig källkod, installationsguide och licensnyckel för din egen server. Licensnyckeln valideras mot bobot.nu för att säkerställa aktiv prenumeration.' },
   ]
 
   const orderedTiers = pricingTiers ? Object.entries(pricingTiers).map(([key, tier]) => ({ key, ...tier })).sort((a, b) => (a.monthly_fee || 0) - (b.monthly_fee || 0)) : []

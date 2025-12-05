@@ -5830,7 +5830,7 @@ async def update_company_pricing(
     if not company:
         raise HTTPException(status_code=404, detail="Företag finns inte")
 
-    valid_tiers = ["starter", "professional", "business", "enterprise", "self_hosted"]
+    valid_tiers = ["starter", "professional", "business", "enterprise"]
     if update.pricing_tier not in valid_tiers:
         raise HTTPException(status_code=400, detail=f"Ogiltig prisnivå. Giltiga: {', '.join(valid_tiers)}")
 
@@ -5872,6 +5872,8 @@ PRICING_TIERS = {
         "startup_fee": 0,  # Free setup for starter
         "max_conversations": 250,
         "max_knowledge_items": 50,
+        "self_host_available": False,
+        "self_host_license_fee": None,
         "features": ["Grundläggande AI-chatt", "50 kunskapsartiklar", "250 konversationer/månad", "E-postsupport", "Standardanalytik", "Gratis uppstart"]
     },
     "professional": {
@@ -5880,6 +5882,8 @@ PRICING_TIERS = {
         "startup_fee": 8000,
         "max_conversations": 2000,
         "max_knowledge_items": 250,
+        "self_host_available": True,
+        "self_host_license_fee": 20000,  # One-time fee to enable self-hosting
         "features": ["Allt i Starter", "250 kunskapsartiklar", "2000 konversationer/månad", "Prioriterad support", "Avancerad analytik", "Anpassad widget"]
     },
     "business": {
@@ -5888,6 +5892,8 @@ PRICING_TIERS = {
         "startup_fee": 16000,
         "max_conversations": 5000,
         "max_knowledge_items": 500,
+        "self_host_available": True,
+        "self_host_license_fee": 35000,  # One-time fee to enable self-hosting
         "features": ["Allt i Professional", "500 kunskapsartiklar", "5000 konversationer/månad", "Dedikerad support", "API-åtkomst", "Anpassade integrationer", "Onboarding"]
     },
     "enterprise": {
@@ -5896,15 +5902,9 @@ PRICING_TIERS = {
         "startup_fee": 32000,
         "max_conversations": 0,  # 0 = unlimited
         "max_knowledge_items": 0,  # 0 = unlimited
-        "features": ["Allt i Business", "Obegränsade kunskapsartiklar", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling", "Dedikerad onboarding & utbildning"]
-    },
-    "self_hosted": {
-        "name": "Self-Hosted",
-        "monthly_fee": 0,  # No monthly fee - one-time license
-        "startup_fee": 50000,  # One-time license fee
-        "max_conversations": 0,  # 0 = unlimited
-        "max_knowledge_items": 0,  # 0 = unlimited
-        "features": ["Fullständig källkod", "Kör på din egen server", "Obegränsat allt", "Full datakontroll", "Installationsguide", "1 års uppdateringar", "E-postsupport"]
+        "self_host_available": True,
+        "self_host_license_fee": 0,  # Included in Enterprise
+        "features": ["Allt i Business", "Obegränsade kunskapsartiklar", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling", "Dedikerad onboarding & utbildning", "Self-hosting ingår"]
     }
 }
 
@@ -6331,6 +6331,238 @@ async def update_company_discount(
         "discount_percent": company.discount_percent,
         "discount_end_date": company.discount_end_date.isoformat() if company.discount_end_date else None,
         "discount_note": company.discount_note
+    }
+
+
+# =============================================================================
+# Self-Hosting Management
+# =============================================================================
+
+class SelfHostUpdate(BaseModel):
+    enabled: bool
+
+
+def generate_license_key():
+    """Generate a unique license key"""
+    import secrets
+    return f"BOBOT-{secrets.token_hex(4).upper()}-{secrets.token_hex(4).upper()}-{secrets.token_hex(4).upper()}"
+
+
+@app.put("/admin/companies/{company_id}/self-hosting")
+async def update_company_self_hosting(
+    company_id: str,
+    update: SelfHostUpdate,
+    admin: dict = Depends(get_super_admin),
+    req: Request = None,
+    db: Session = Depends(get_db)
+):
+    """Enable or disable self-hosting for a company"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    # Check if their tier supports self-hosting
+    pricing_tiers = get_pricing_tiers_dict(db)
+    tier = company.pricing_tier or "starter"
+    tier_info = pricing_tiers.get(tier, {})
+
+    if update.enabled and not tier_info.get("self_host_available", False):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Self-hosting är inte tillgängligt för {tier_info.get('name', tier)}. Uppgradera till Professional eller högre."
+        )
+
+    old_status = company.is_self_hosted
+
+    if update.enabled and not company.is_self_hosted:
+        # Enabling self-hosting - generate a new license key
+        company.is_self_hosted = True
+        company.self_host_license_key = generate_license_key()
+        company.self_host_activated_at = datetime.utcnow()
+        # License valid for 30 days, requires monthly renewal via validation
+        company.self_host_license_valid_until = datetime.utcnow() + timedelta(days=30)
+    elif not update.enabled:
+        # Disabling self-hosting
+        company.is_self_hosted = False
+        # Keep the license key in case they re-enable
+        company.self_host_license_valid_until = None
+
+    db.commit()
+
+    # Log admin action
+    log_admin_action(
+        db, admin["username"], "self_hosting_update",
+        target_company_id=company_id,
+        description=f"{'Enabled' if update.enabled else 'Disabled'} self-hosting for {company.name}",
+        details={
+            "old_status": old_status,
+            "new_status": update.enabled,
+            "license_key": company.self_host_license_key if update.enabled else None
+        },
+        ip_address=req.client.host if req else None
+    )
+
+    return {
+        "message": f"Self-hosting {'aktiverat' if update.enabled else 'inaktiverat'} för {company.name}",
+        "company_id": company_id,
+        "is_self_hosted": company.is_self_hosted,
+        "license_key": company.self_host_license_key if company.is_self_hosted else None,
+        "valid_until": company.self_host_license_valid_until.isoformat() if company.self_host_license_valid_until else None,
+        "license_fee": tier_info.get("self_host_license_fee", 0)
+    }
+
+
+@app.get("/admin/companies/{company_id}/self-hosting")
+async def get_company_self_hosting(
+    company_id: str,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Get self-hosting status for a company"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    pricing_tiers = get_pricing_tiers_dict(db)
+    tier = company.pricing_tier or "starter"
+    tier_info = pricing_tiers.get(tier, {})
+
+    return {
+        "company_id": company_id,
+        "is_self_hosted": company.is_self_hosted,
+        "license_key": company.self_host_license_key if company.is_self_hosted else None,
+        "activated_at": company.self_host_activated_at.isoformat() if company.self_host_activated_at else None,
+        "valid_until": company.self_host_license_valid_until.isoformat() if company.self_host_license_valid_until else None,
+        "last_validated": company.self_host_last_validated.isoformat() if company.self_host_last_validated else None,
+        "self_host_available": tier_info.get("self_host_available", False),
+        "license_fee": tier_info.get("self_host_license_fee", 0),
+        "tier": tier
+    }
+
+
+# License validation endpoint (called by self-hosted instances)
+class LicenseValidationRequest(BaseModel):
+    license_key: str
+    instance_info: Optional[Dict] = None  # Optional: hostname, version, etc.
+
+
+@app.post("/license/validate")
+async def validate_license(
+    request: LicenseValidationRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Validate a self-hosting license key.
+    Self-hosted instances should call this daily to verify their license.
+    Returns license status and company info needed for operation.
+    """
+    company = db.query(Company).filter(
+        Company.self_host_license_key == request.license_key
+    ).first()
+
+    if not company:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid license key"
+        )
+
+    if not company.is_self_hosted:
+        raise HTTPException(
+            status_code=403,
+            detail="Self-hosting is not enabled for this license"
+        )
+
+    if not company.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="Company account is inactive"
+        )
+
+    # Check if license is still within validity period
+    now = datetime.utcnow()
+    if company.self_host_license_valid_until and company.self_host_license_valid_until < now:
+        # License expired - provide grace period info
+        grace_period_end = company.self_host_license_valid_until + timedelta(days=7)
+        if now > grace_period_end:
+            raise HTTPException(
+                status_code=403,
+                detail="License has expired. Please contact hej@bobot.nu to renew."
+            )
+        else:
+            # In grace period - return warning but allow operation
+            days_remaining = (grace_period_end - now).days
+            license_status = "grace_period"
+            warning = f"License expired. {days_remaining} days of grace period remaining. Please renew to continue service."
+    else:
+        license_status = "valid"
+        warning = None
+
+    # Update last validated timestamp and extend validity
+    company.self_host_last_validated = now
+    # Each successful validation extends validity by 30 days
+    company.self_host_license_valid_until = now + timedelta(days=30)
+    db.commit()
+
+    # Get company settings for the response
+    settings = db.query(CompanySettings).filter(
+        CompanySettings.company_id == company.id
+    ).first()
+
+    pricing_tiers = get_pricing_tiers_dict(db)
+    tier_info = pricing_tiers.get(company.pricing_tier or "starter", {})
+
+    return {
+        "status": license_status,
+        "warning": warning,
+        "company_id": company.id,
+        "company_name": company.name,
+        "tier": company.pricing_tier,
+        "valid_until": company.self_host_license_valid_until.isoformat(),
+        "max_conversations": tier_info.get("max_conversations", 0),
+        "max_knowledge_items": tier_info.get("max_knowledge_items", 0),
+        "features": tier_info.get("features", []),
+        "check_interval_hours": 24  # How often client should re-validate
+    }
+
+
+@app.get("/license/status/{license_key}")
+async def get_license_status(
+    license_key: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Quick license status check (no validation/renewal).
+    Returns basic status without updating timestamps.
+    """
+    company = db.query(Company).filter(
+        Company.self_host_license_key == license_key
+    ).first()
+
+    if not company:
+        return {"valid": False, "reason": "unknown_license"}
+
+    if not company.is_self_hosted:
+        return {"valid": False, "reason": "self_hosting_disabled"}
+
+    if not company.is_active:
+        return {"valid": False, "reason": "account_inactive"}
+
+    now = datetime.utcnow()
+    if company.self_host_license_valid_until and company.self_host_license_valid_until < now:
+        grace_period_end = company.self_host_license_valid_until + timedelta(days=7)
+        if now > grace_period_end:
+            return {"valid": False, "reason": "license_expired"}
+        else:
+            return {
+                "valid": True,
+                "status": "grace_period",
+                "grace_days_remaining": (grace_period_end - now).days
+            }
+
+    return {
+        "valid": True,
+        "status": "active",
+        "valid_until": company.self_host_license_valid_until.isoformat() if company.self_host_license_valid_until else None
     }
 
 
