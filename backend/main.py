@@ -8309,20 +8309,38 @@ async def track_pageview(
 
 @app.post("/track/engagement")
 async def track_engagement(
-    data: PageViewUpdateRequest,
+    request: Request,
     db: Session = Depends(get_db)
 ):
-    """Update page view with engagement data (time on page, bounce status)"""
+    """Update page view with engagement data (time on page, bounce status)
+
+    Note: This endpoint handles both JSON and text/plain (from navigator.sendBeacon)
+    """
     try:
+        # Parse body - sendBeacon sends as text/plain, not application/json
+        body = await request.body()
+        try:
+            data = json.loads(body)
+        except json.JSONDecodeError:
+            return {"success": False, "error": "Invalid JSON"}
+
+        session_id = data.get("session_id")
+        page_url = data.get("page_url")
+        time_on_page_seconds = data.get("time_on_page_seconds", 0)
+        is_bounce = data.get("is_bounce", False)
+
+        if not session_id or not page_url:
+            return {"success": False, "error": "Missing required fields"}
+
         # Find the most recent page view for this session and URL
         page_view = db.query(PageView).filter(
-            PageView.session_id == data.session_id,
-            PageView.page_url == data.page_url
+            PageView.session_id == session_id,
+            PageView.page_url == page_url
         ).order_by(PageView.created_at.desc()).first()
 
         if page_view:
-            page_view.time_on_page_seconds = data.time_on_page_seconds
-            page_view.is_bounce = data.is_bounce
+            page_view.time_on_page_seconds = time_on_page_seconds
+            page_view.is_bounce = is_bounce
             db.commit()
             return {"success": True, "updated": True}
 
