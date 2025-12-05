@@ -1,9 +1,12 @@
 import { useState, useEffect, useContext, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AuthContext } from '../App'
-import { Document, Page, Text, View, StyleSheet, pdf, Svg, Rect, Circle, Path, Ellipse, Font } from '@react-pdf/renderer'
+import { Document, Page, Text, View, StyleSheet, pdf, Svg, Rect, Circle, Path, Ellipse, Font, Image } from '@react-pdf/renderer'
 
 const API_BASE = '/api'
+
+// Cover illustration - save your image as cover-illustration.png in public folder
+const COVER_IMAGE_URL = '/cover-illustration.png'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // DIGITAL CRAFTSMANSHIP DESIGN SYSTEM
@@ -830,54 +833,50 @@ const KPIReportPDF = ({ analytics, dateRange, companyName = 'Ert företag' }) =>
   return (
     <Document>
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* COVER PAGE - Magazine editorial feel */}
+      {/* COVER PAGE - With Cover Image */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      <Page size="A4" style={pdfStyles.coverPage}>
-        <View style={pdfStyles.coverInner}>
-          {/* Top accent bar */}
-          <View style={pdfStyles.coverAccentBar} />
+      <Page size="A4" style={{ backgroundColor: colors.slate, padding: 0 }}>
+        {/* Cover Image - takes most of the page */}
+        <View style={{ margin: 30, marginBottom: 0 }}>
+          <Image
+            src={COVER_IMAGE_URL}
+            style={{ width: '100%', height: 340, objectFit: 'cover', borderRadius: 20 }}
+          />
+        </View>
 
-          {/* Header with brand and date */}
-          <View style={pdfStyles.coverHeader}>
-            <View style={pdfStyles.coverBrand}>
-              <BobotSmall size={28} />
-              <Text style={pdfStyles.coverBrandText}>Bobot</Text>
-            </View>
-            <View style={pdfStyles.coverDateBadge}>
-              <Text style={pdfStyles.coverDateText}>{formatDateRange()}</Text>
-            </View>
+        {/* Content below image */}
+        <View style={{ padding: 30, paddingTop: 24, alignItems: 'center' }}>
+          {/* Title section */}
+          <Text style={{ fontFamily: 'Inter', fontSize: 10, color: colors.stone, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>
+            Prestationsrapport
+          </Text>
+          <Text style={{ fontFamily: 'Playfair', fontSize: 28, fontWeight: 700, color: colors.espresso, marginBottom: 8, textAlign: 'center' }}>
+            {getReportTitle()}
+          </Text>
+          <View style={{ backgroundColor: colors.slateLight, borderRadius: 16, paddingVertical: 6, paddingHorizontal: 14, marginBottom: 20 }}>
+            <Text style={{ fontFamily: 'Inter', fontSize: 10, color: colors.stone }}>{formatDateRange()}</Text>
           </View>
 
-          {/* Main content - dramatic center focus */}
-          <View style={pdfStyles.coverMain}>
-            <View style={pdfStyles.coverMascot}>
-              <BobotMascot size={120} />
+          {/* Stats preview row */}
+          <View style={{ flexDirection: 'row', gap: 20, backgroundColor: colors.cream, borderRadius: 16, padding: 20, width: '100%' }}>
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <Text style={{ fontFamily: 'Playfair', fontSize: 24, fontWeight: 700, color: colors.terracotta }}>{analytics.total_conversations}</Text>
+              <Text style={{ fontFamily: 'Inter', fontSize: 9, color: colors.stone, textTransform: 'uppercase', letterSpacing: 1 }}>Konversationer</Text>
             </View>
-            <View style={pdfStyles.coverTitleWrap}>
-              <Text style={pdfStyles.coverEyebrow}>Prestationsrapport</Text>
-              <Text style={pdfStyles.coverTitle}>{getReportTitle()}</Text>
-              <Text style={pdfStyles.coverSubtitle}>
-                En sammanfattning av hur Bobot har hjälpt er{'\n'}
-                och insikter för att förbättra kundupplevelsen.
-              </Text>
+            <View style={{ flex: 1, alignItems: 'center', borderLeftWidth: 1, borderLeftColor: colors.border }}>
+              <Text style={{ fontFamily: 'Playfair', fontSize: 24, fontWeight: 700, color: colors.terracotta }}>{answerRate}%</Text>
+              <Text style={{ fontFamily: 'Inter', fontSize: 9, color: colors.stone, textTransform: 'uppercase', letterSpacing: 1 }}>Svarsfrekvens</Text>
+            </View>
+            <View style={{ flex: 1, alignItems: 'center', borderLeftWidth: 1, borderLeftColor: colors.border }}>
+              <Text style={{ fontFamily: 'Playfair', fontSize: 24, fontWeight: 700, color: colors.terracotta }}>~{timeSaved}</Text>
+              <Text style={{ fontFamily: 'Inter', fontSize: 9, color: colors.stone, textTransform: 'uppercase', letterSpacing: 1 }}>Min sparad</Text>
             </View>
           </View>
+        </View>
 
-          {/* Footer stats preview */}
-          <View style={pdfStyles.coverFooter}>
-            <View>
-              <Text style={pdfStyles.coverFooterLabel}>Konversationer</Text>
-              <Text style={pdfStyles.coverFooterValue}>{analytics.total_conversations}</Text>
-            </View>
-            <View>
-              <Text style={pdfStyles.coverFooterLabel}>Svarsfrekvens</Text>
-              <Text style={pdfStyles.coverFooterValue}>{answerRate}%</Text>
-            </View>
-            <View>
-              <Text style={pdfStyles.coverFooterLabel}>Tid sparad</Text>
-              <Text style={pdfStyles.coverFooterValue}>~{timeSaved} min</Text>
-            </View>
-          </View>
+        {/* Footer */}
+        <View style={{ position: 'absolute', bottom: 20, left: 0, right: 0, alignItems: 'center' }}>
+          <Text style={{ fontFamily: 'Inter', fontSize: 9, color: colors.stone }}>Bobot AB | www.bobot.nu</Text>
         </View>
       </Page>
 

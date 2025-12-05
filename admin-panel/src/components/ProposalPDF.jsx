@@ -12,8 +12,12 @@ import {
   Circle,
   Rect,
   G,
-  Ellipse
+  Ellipse,
+  Image
 } from '@react-pdf/renderer'
+
+// Cover illustration - save your image as cover-illustration.png in public folder
+const COVER_IMAGE_URL = '/cover-illustration.png'
 
 // Register Playfair Display - Serif for "Human Voice" headlines
 // Using jsDelivr/fontsource CDN for reliable font loading with react-pdf
@@ -579,27 +583,38 @@ const PageFooter = ({ pageNumber }) => (
   </View>
 )
 
-// SECTION 1: Hero Page
+// SECTION 1: Hero Page with Cover Image
 const HeroPage = ({ customerName, year }) => (
-  <Page size="A4" style={styles.heroPage}>
-    <View style={styles.heroContainer}>
-      {/* Mascot */}
-      <View style={styles.heroMascotArea}>
-        <BobotMascot size={120} />
-      </View>
+  <Page size="A4" style={{ backgroundColor: colors.background, padding: 0 }}>
+    {/* Cover Image - takes most of the page */}
+    <View style={{ flex: 1, margin: 30, marginBottom: 0 }}>
+      <Image
+        src={COVER_IMAGE_URL}
+        style={{ width: '100%', height: 380, objectFit: 'cover', borderRadius: 20 }}
+      />
+    </View>
 
+    {/* Content below image */}
+    <View style={{ padding: 40, paddingTop: 30, alignItems: 'center' }}>
       {/* Title */}
-      <Text style={styles.heroTitle}>Hälsa på Bobot.</Text>
-      <Text style={styles.heroSubtitle}>
+      <Text style={{ fontFamily: 'Playfair', fontSize: 36, fontWeight: 700, color: colors.primary, marginBottom: 12, textAlign: 'center' }}>
+        Hälsa på Bobot.
+      </Text>
+      <Text style={{ fontSize: 13, color: colors.textLight, textAlign: 'center', lineHeight: 1.6, maxWidth: 400, marginBottom: 30 }}>
         Er nya digitala medarbetare. Han läser era manualer på sekunder, så att ni slipper svara på samma frågor två gånger.
       </Text>
 
-      {/* Customer name */}
-      <View style={{ marginTop: 40, alignItems: 'center' }}>
-        <Text style={{ fontSize: 11, color: colors.textLight, marginBottom: 8 }}>Förslag till</Text>
-        <Text style={{ fontSize: 20, fontWeight: 600, color: colors.text }}>{customerName}</Text>
-        <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 8 }}>{year}</Text>
+      {/* Customer name box */}
+      <View style={{ backgroundColor: colors.slateLight, borderRadius: 16, padding: 24, alignItems: 'center', width: '100%', maxWidth: 300 }}>
+        <Text style={{ fontSize: 10, color: colors.textLight, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Förslag till</Text>
+        <Text style={{ fontSize: 18, fontWeight: 600, color: colors.text }}>{customerName}</Text>
+        <Text style={{ fontSize: 10, color: colors.textLight, marginTop: 6 }}>{year}</Text>
       </View>
+    </View>
+
+    {/* Footer */}
+    <View style={{ position: 'absolute', bottom: 20, left: 0, right: 0, alignItems: 'center' }}>
+      <Text style={{ fontSize: 9, color: colors.textLight }}>Bobot AB | www.bobot.nu</Text>
     </View>
   </Page>
 )
