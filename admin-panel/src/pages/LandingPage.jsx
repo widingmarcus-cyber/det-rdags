@@ -311,23 +311,30 @@ const LANDING_PAGE_WIDGET_KEY = import.meta.env.VITE_LANDING_WIDGET_KEY || 'bobo
 
 function LiveWidget() {
   const [loaded, setLoaded] = useState(false)
+  const [widgetContainerId, setWidgetContainerId] = useState(null)
 
   useEffect(() => {
     console.log('[LiveWidget] Initializing, widgetKey:', LANDING_PAGE_WIDGET_KEY)
 
-    // Don't load twice
-    if (window.Bobot || document.getElementById('bobot-widget-script')) {
-      console.log('[LiveWidget] Widget already exists, reinitializing')
-      if (window.Bobot) {
-        window.Bobot.init({
-          widgetKey: LANDING_PAGE_WIDGET_KEY,
-          apiUrl: API_URL
-        })
-      }
+    let containerId = null
+
+    // Load or reuse widget
+    if (window.Bobot) {
+      console.log('[LiveWidget] Widget already loaded, initializing')
+      containerId = window.Bobot.init({
+        widgetKey: LANDING_PAGE_WIDGET_KEY,
+        apiUrl: API_URL
+      })
+      setWidgetContainerId(containerId)
       return
     }
 
     // Load the widget script
+    const existingScript = document.getElementById('bobot-widget-script')
+    if (existingScript) {
+      existingScript.remove()
+    }
+
     const script = document.createElement('script')
     script.id = 'bobot-widget-script'
     script.src = '/widget.js'
@@ -338,10 +345,11 @@ function LiveWidget() {
       setLoaded(true)
       if (window.Bobot) {
         console.log('[LiveWidget] Initializing Bobot widget')
-        window.Bobot.init({
+        containerId = window.Bobot.init({
           widgetKey: LANDING_PAGE_WIDGET_KEY,
           apiUrl: API_URL
         })
+        setWidgetContainerId(containerId)
       } else {
         console.error('[LiveWidget] window.Bobot not available after script load')
       }
@@ -351,9 +359,12 @@ function LiveWidget() {
     }
     document.body.appendChild(script)
 
-    // Cleanup on unmount
+    // Cleanup on unmount - remove widget from DOM
     return () => {
-      // Widget handles its own cleanup
+      console.log('[LiveWidget] Cleaning up widget')
+      // Remove all widget containers
+      const containers = document.querySelectorAll('[id^="bobot-widget-root"]')
+      containers.forEach(container => container.remove())
     }
   }, [])
 

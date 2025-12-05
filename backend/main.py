@@ -4473,7 +4473,7 @@ class TemplateInfo(BaseModel):
 class TemplateApplyRequest(BaseModel):
     replace_existing: bool = False
     categories_to_import: Optional[List[str]] = None
-    widget_id: int  # REQUIRED: Target widget for the imported items (templates must be widget-specific)
+    widget_id: Optional[int] = None  # Optional: Target widget for imported items (None = shared knowledge)
 
 
 class TemplateApplyResponse(BaseModel):
