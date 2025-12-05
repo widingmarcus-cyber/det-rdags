@@ -31,17 +31,20 @@ Font.register({
   ]
 })
 
-// The Color Palette - Warm, Human, Grounded
+// The Color Palette - Refined, Elegant, Professional
 const colors = {
-  terracotta: '#D97757',      // Primary - warm, energetic, human connection
-  warmSand: '#FDFCF0',        // Canvas - unbleached paper, editorial feel
-  espresso: '#1C1917',        // Ink - deep charcoal/brown, soft on eyes
-  stone: '#57534E',           // Secondary text
-  sage: '#81B29A',            // Growth/Success - calming, natural
-  cream: '#FFFFFF',           // Card backgrounds
-  linen: '#F5F3EE',           // Subtle backgrounds
-  border: '#E8E4DF',          // Soft dividers
-  warmGlow: '#FEF7F4',        // Warm highlight areas
+  terracotta: '#D97757',      // Primary accent - warm, confident
+  slate: '#F8FAFC',           // Canvas - clean, modern, professional
+  slateLight: '#F1F5F9',      // Subtle variation for depth
+  slateMid: '#E2E8F0',        // Borders and dividers
+  espresso: '#1E293B',        // Ink - slate-900, deep and readable
+  stone: '#64748B',           // Secondary text - slate-500
+  sage: '#10B981',            // Success/Growth - emerald
+  cream: '#FFFFFF',           // Card backgrounds - pure white
+  cardBg: '#FFFFFF',          // Card surfaces
+  border: '#E2E8F0',          // Clean dividers - slate-200
+  highlight: '#FFF7ED',       // Warm highlight - orange-50
+  accent: '#EA580C',          // Accent for emphasis - orange-600
 }
 
 // Bobot Mascot - Matching landing page design (matte, robot-like, friendly)
@@ -149,40 +152,52 @@ const ElegantDivider = ({ width = 80 }) => (
   </Svg>
 )
 
-// Visual progress bar for percentages
-const ProgressRing = ({ percent, size = 80, color = colors.terracotta }) => {
-  const strokeWidth = 8
-  const radius = (size - strokeWidth) / 2
-  const circumference = 2 * Math.PI * radius
-  const progress = circumference - (percent / 100) * circumference
+// Visual progress indicator - Elegant horizontal bar that works in react-pdf
+const ProgressBar = ({ percent, width = 100, height = 8, color = colors.terracotta }) => {
+  const fillWidth = Math.max((percent / 100) * width, 0)
 
   return (
-    <Svg width={size} height={size}>
-      {/* Background ring */}
-      <Circle
-        cx={size/2}
-        cy={size/2}
-        r={radius}
-        fill="none"
-        stroke={colors.border}
-        strokeWidth={strokeWidth}
+    <Svg width={width} height={height}>
+      {/* Background track */}
+      <Rect
+        x={0}
+        y={0}
+        width={width}
+        height={height}
+        rx={height / 2}
+        fill={colors.border}
       />
-      {/* Progress ring */}
-      <Circle
-        cx={size/2}
-        cy={size/2}
-        r={radius}
-        fill="none"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeDasharray={`${circumference} ${circumference}`}
-        strokeDashoffset={progress}
-        strokeLinecap="round"
-        transform={`rotate(-90 ${size/2} ${size/2})`}
-      />
+      {/* Progress fill */}
+      {fillWidth > 0 && (
+        <Rect
+          x={0}
+          y={0}
+          width={fillWidth}
+          height={height}
+          rx={height / 2}
+          fill={color}
+        />
+      )}
     </Svg>
   )
 }
+
+// Large percentage display with elegant styling
+const PercentageDisplay = ({ value, size = 70, color = colors.terracotta }) => (
+  <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    <Svg width={size} height={size}>
+      {/* Background circle */}
+      <Circle cx={size/2} cy={size/2} r={size/2 - 2} fill={colors.slateLight} />
+      {/* Inner white circle */}
+      <Circle cx={size/2} cy={size/2} r={size/2 - 8} fill={colors.cream} />
+      {/* Accent dot */}
+      <Circle cx={size/2} cy={8} r={4} fill={color} />
+    </Svg>
+    <View style={{ position: 'absolute', alignItems: 'center' }}>
+      <Text style={{ fontFamily: 'Playfair', fontSize: 18, fontWeight: 700, color: colors.espresso }}>{value}%</Text>
+    </View>
+  </View>
+)
 
 // Mini bar chart for visual data
 const MiniBarChart = ({ data, width = 200, height = 60 }) => {
@@ -214,7 +229,7 @@ const pdfStyles = StyleSheet.create({
   // COVER PAGE - Magazine editorial feel
   // ─────────────────────────────────────────────────────────────────────────
   coverPage: {
-    backgroundColor: colors.warmSand,
+    backgroundColor: colors.slate,
     padding: 0,
     position: 'relative',
   },
@@ -253,7 +268,7 @@ const pdfStyles = StyleSheet.create({
     color: colors.espresso,
   },
   coverDateBadge: {
-    backgroundColor: colors.warmSand,
+    backgroundColor: colors.slateLight,
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 16,
@@ -327,7 +342,7 @@ const pdfStyles = StyleSheet.create({
   // CONTENT PAGES - Refined grid layouts
   // ─────────────────────────────────────────────────────────────────────────
   page: {
-    backgroundColor: colors.warmSand,
+    backgroundColor: colors.slate,
     paddingTop: 50,
     paddingBottom: 70,
     paddingHorizontal: 50,
@@ -474,40 +489,46 @@ const pdfStyles = StyleSheet.create({
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // VISUAL METRICS - Circles, bars, progress
+  // VISUAL METRICS - Clean vertical layout for reliable rendering
   // ─────────────────────────────────────────────────────────────────────────
   visualMetricCard: {
     backgroundColor: colors.cream,
     borderRadius: 20,
     padding: 28,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 24,
     marginBottom: 20,
   },
+  visualMetricHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   visualMetricContent: {
-    flex: 1,
+    width: '100%',
   },
   visualMetricLabel: {
     fontFamily: 'Inter',
-    fontSize: 9,
+    fontSize: 10,
     color: colors.stone,
     textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 6,
+    letterSpacing: 1.5,
+    marginBottom: 8,
   },
   visualMetricValue: {
     fontFamily: 'Playfair',
-    fontSize: 28,
+    fontSize: 42,
     fontWeight: 700,
     color: colors.espresso,
+    marginBottom: 12,
+  },
+  visualMetricProgressRow: {
+    marginBottom: 12,
   },
   visualMetricDesc: {
     fontFamily: 'Inter',
-    fontSize: 10,
+    fontSize: 11,
     color: colors.stone,
-    marginTop: 8,
-    lineHeight: 1.5,
+    lineHeight: 1.6,
   },
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -550,7 +571,7 @@ const pdfStyles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: colors.warmSand,
+    backgroundColor: colors.slateLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -576,7 +597,7 @@ const pdfStyles = StyleSheet.create({
   dataRowBar: {
     width: 60,
     height: 6,
-    backgroundColor: colors.warmSand,
+    backgroundColor: colors.slateLight,
     borderRadius: 3,
     marginLeft: 12,
     overflow: 'hidden',
@@ -588,22 +609,26 @@ const pdfStyles = StyleSheet.create({
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // QUOTE/CALLOUT BOXES
+  // QUOTE/CALLOUT BOXES - Elegant, subtle design
   // ─────────────────────────────────────────────────────────────────────────
   calloutBox: {
-    backgroundColor: colors.warmGlow,
+    backgroundColor: colors.slateLight,
     borderRadius: 16,
-    padding: 28,
+    padding: 24,
     marginVertical: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.terracotta,
+  },
+  calloutBoxHighlight: {
+    backgroundColor: colors.highlight,
+    borderRadius: 16,
+    padding: 24,
+    marginVertical: 20,
   },
   calloutIcon: {
     marginBottom: 12,
   },
   calloutText: {
     fontFamily: 'Inter',
-    fontSize: 12,
+    fontSize: 11,
     color: colors.espresso,
     lineHeight: 1.7,
   },
@@ -880,34 +905,31 @@ const KPIReportPDF = ({ analytics, dateRange, companyName = 'Ert företag' }) =>
           </View>
         </View>
 
-        {/* Visual metrics with progress rings */}
+        {/* Visual metrics with clean progress bars */}
         <View style={pdfStyles.insightRow}>
           <View style={pdfStyles.visualMetricCard}>
-            <ProgressRing percent={Number(answerRate)} size={70} color={colors.sage} />
-            <View style={pdfStyles.visualMetricContent}>
-              <Text style={pdfStyles.visualMetricLabel}>Svarsfrekvens</Text>
-              <Text style={pdfStyles.visualMetricValue}>{answerRate}%</Text>
-              <Text style={pdfStyles.visualMetricDesc}>
-                {Number(answerRate) >= 80 ? 'Utmärkt! De flesta frågor besvaras.' :
-                 Number(answerRate) >= 60 ? 'Bra, men det finns utrymme för förbättring.' :
-                 'Överväg att utöka kunskapsbasen.'}
-              </Text>
+            <Text style={pdfStyles.visualMetricLabel}>Svarsfrekvens</Text>
+            <Text style={pdfStyles.visualMetricValue}>{answerRate}%</Text>
+            <View style={pdfStyles.visualMetricProgressRow}>
+              <ProgressBar percent={Number(answerRate)} width={200} height={10} color={colors.sage} />
             </View>
+            <Text style={pdfStyles.visualMetricDesc}>
+              {Number(answerRate) >= 80 ? 'Utmärkt! De flesta frågor besvaras.' :
+               Number(answerRate) >= 60 ? 'Bra, men det finns utrymme för förbättring.' :
+               'Överväg att utöka kunskapsbasen.'}
+            </Text>
           </View>
-        </View>
-
-        <View style={pdfStyles.insightRow}>
           <View style={pdfStyles.visualMetricCard}>
-            <ProgressRing percent={Number(satisfactionRate)} size={70} color={colors.terracotta} />
-            <View style={pdfStyles.visualMetricContent}>
-              <Text style={pdfStyles.visualMetricLabel}>Nöjdhetsgrad</Text>
-              <Text style={pdfStyles.visualMetricValue}>{satisfactionRate}%</Text>
-              <Text style={pdfStyles.visualMetricDesc}>
-                {Number(satisfactionRate) >= 80 ? 'Fantastiskt! Användarna uppskattar Bobot.' :
-                 Number(satisfactionRate) >= 60 ? 'Användarna är nöjda överlag.' :
-                 'Granska negativ feedback för förbättringar.'}
-              </Text>
+            <Text style={pdfStyles.visualMetricLabel}>Nöjdhetsgrad</Text>
+            <Text style={pdfStyles.visualMetricValue}>{satisfactionRate}%</Text>
+            <View style={pdfStyles.visualMetricProgressRow}>
+              <ProgressBar percent={Number(satisfactionRate)} width={200} height={10} color={colors.terracotta} />
             </View>
+            <Text style={pdfStyles.visualMetricDesc}>
+              {Number(satisfactionRate) >= 80 ? 'Fantastiskt! Användarna uppskattar Bobot.' :
+               Number(satisfactionRate) >= 60 ? 'Användarna är nöjda överlag.' :
+               'Granska negativ feedback för förbättringar.'}
+            </Text>
           </View>
         </View>
 
