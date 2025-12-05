@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**Bobot** is a GDPR-compliant AI chatbot platform for property management companies (Swedish: fastighetsbolag). Customers build their own knowledge base of Q&A pairs, which the AI uses to answer tenant questions via an embeddable chat widget.
+**Bobot** is a GDPR-compliant AI chatbot platform where businesses build their own knowledge base of Q&A pairs. The AI uses this knowledge to answer customer questions via an embeddable chat widget.
 
 **Production Domain:** bobot.nu
 
@@ -53,7 +53,6 @@ bobot/
 │   ├── requirements.txt        # Python dependencies
 │   ├── Dockerfile
 │   ├── templates/              # Knowledge base templates (JSON)
-│   │   ├── fastighetsbolag_sv.json
 │   │   └── arbetsplats_intern_sv.json
 │   └── tests/
 │       ├── test_auth.py

@@ -1,6 +1,6 @@
 # Bobot
 
-En GDPR-säker AI-chatbot för fastighetsbolag där kunder själva bygger sin kunskapsbas.
+En GDPR-säker AI-chatbot där företag bygger sin egen kunskapsbas för automatiserad kundservice.
 
 **Live:** [bobot.nu](https://bobot.nu)
 
@@ -8,7 +8,7 @@ En GDPR-säker AI-chatbot för fastighetsbolag där kunder själva bygger sin ku
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                     FASTIGHETSBOLAGETS HEMSIDA                      │
+│                       KUNDENS HEMSIDA                               │
 │  ┌──────────────┐                                                   │
 │  │ Chattwidget  │ ◀── Inbäddningsbar React-komponent               │
 │  └──────┬───────┘                                                   │
