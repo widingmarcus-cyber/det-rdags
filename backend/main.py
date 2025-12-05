@@ -952,12 +952,27 @@ def init_demo_data():
         # =================================================================
         # Super Admin Setup
         # =================================================================
-        admin = db.query(SuperAdmin).filter(SuperAdmin.username == "admin").first()
+        admin_username = os.getenv("ADMIN_USERNAME", "admin")
+        admin_password = os.getenv("ADMIN_PASSWORD")
+
+        # Check for existing admin with this username
+        admin = db.query(SuperAdmin).filter(SuperAdmin.username == admin_username).first()
+
+        # Also check for old "admin" user if we're using a different username
+        old_admin = None
+        if admin_username != "admin":
+            old_admin = db.query(SuperAdmin).filter(SuperAdmin.username == "admin").first()
+            if old_admin and not admin:
+                # Rename old admin to new username
+                old_admin.username = admin_username
+                if admin_password:
+                    old_admin.password_hash = hash_password(admin_password)
+                db.commit()
+                print(f"Super admin renamed: admin -> {admin_username}")
+                admin = old_admin
 
         if not admin:
             # Get admin password from environment or generate one
-            admin_password = os.getenv("ADMIN_PASSWORD")
-
             if not admin_password:
                 if is_production:
                     # In production, require explicit password
@@ -974,16 +989,21 @@ def init_demo_data():
                     print("[WARNING] Using default admin password - NOT for production!")
 
             admin = SuperAdmin(
-                username="admin",
+                username=admin_username,
                 password_hash=hash_password(admin_password)
             )
             db.add(admin)
             db.commit()
 
             if not is_production:
-                print(f"Super admin skapad: admin / {admin_password}")
+                print(f"Super admin skapad: {admin_username} / {admin_password}")
             else:
-                print("Super admin skapad (password from ADMIN_PASSWORD env)")
+                print(f"Super admin skapad: {admin_username} (password from ADMIN_PASSWORD env)")
+        elif admin_password and is_production:
+            # Update password if explicitly set in production (allows password rotation)
+            admin.password_hash = hash_password(admin_password)
+            db.commit()
+            print(f"Super admin password updated for: {admin_username}")
 
         # =================================================================
         # Demo Data (Optional)

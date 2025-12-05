@@ -222,6 +222,64 @@ def migrate():
         cursor.execute("ALTER TABLE companies ADD COLUMN self_host_license_valid_until DATETIME")
         cursor.execute("ALTER TABLE companies ADD COLUMN self_host_last_validated DATETIME")
 
+    # Check if page_views table exists (for landing page analytics)
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='page_views'")
+    if not cursor.fetchone():
+        print("Creating page_views table...")
+        cursor.execute("""
+            CREATE TABLE page_views (
+                id INTEGER PRIMARY KEY,
+                page_url VARCHAR NOT NULL,
+                page_name VARCHAR DEFAULT '',
+                visitor_id VARCHAR,
+                session_id VARCHAR,
+                ip_anonymous VARCHAR,
+                user_agent TEXT,
+                referrer TEXT,
+                device_type VARCHAR DEFAULT 'desktop',
+                utm_source VARCHAR,
+                utm_medium VARCHAR,
+                utm_campaign VARCHAR,
+                utm_content VARCHAR,
+                utm_term VARCHAR,
+                time_on_page_seconds INTEGER DEFAULT 0,
+                is_bounce INTEGER DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("CREATE INDEX ix_page_views_id ON page_views (id)")
+        cursor.execute("CREATE INDEX ix_pageview_date ON page_views (created_at)")
+        cursor.execute("CREATE INDEX ix_pageview_visitor ON page_views (visitor_id)")
+
+    # Check if daily_page_stats table exists
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='daily_page_stats'")
+    if not cursor.fetchone():
+        print("Creating daily_page_stats table...")
+        cursor.execute("""
+            CREATE TABLE daily_page_stats (
+                id INTEGER PRIMARY KEY,
+                date DATE NOT NULL,
+                page_url VARCHAR NOT NULL,
+                page_name VARCHAR DEFAULT '',
+                total_views INTEGER DEFAULT 0,
+                unique_visitors INTEGER DEFAULT 0,
+                avg_time_on_page REAL DEFAULT 0,
+                bounce_rate REAL DEFAULT 0,
+                desktop_views INTEGER DEFAULT 0,
+                mobile_views INTEGER DEFAULT 0,
+                tablet_views INTEGER DEFAULT 0,
+                direct_traffic INTEGER DEFAULT 0,
+                organic_traffic INTEGER DEFAULT 0,
+                paid_traffic INTEGER DEFAULT 0,
+                social_traffic INTEGER DEFAULT 0,
+                referral_traffic INTEGER DEFAULT 0,
+                top_referrers TEXT DEFAULT '{}',
+                hourly_breakdown TEXT DEFAULT '{}'
+            )
+        """)
+        cursor.execute("CREATE INDEX ix_daily_page_stats_id ON daily_page_stats (id)")
+        cursor.execute("CREATE INDEX ix_daily_page_stats_date ON daily_page_stats (date)")
+
     conn.commit()
     conn.close()
 

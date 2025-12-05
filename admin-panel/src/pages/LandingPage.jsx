@@ -1,7 +1,8 @@
 import { useNavigate, Link } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// Use /api prefix which is proxied to backend in both dev and production
+const API_BASE = '/api'
 
 // Page view tracking hook
 function usePageTracking() {
@@ -25,7 +26,7 @@ function usePageTracking() {
     const utmTerm = params.get('utm_term')
 
     // Track page view
-    fetch(`${API_URL}/track/pageview`, {
+    fetch(`${API_BASE}/track/pageview`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -47,7 +48,7 @@ function usePageTracking() {
       const timeOnPage = Math.round((Date.now() - startTime) / 1000)
       const isBounce = timeOnPage < 10
 
-      navigator.sendBeacon(`${API_URL}/track/engagement`, JSON.stringify({
+      navigator.sendBeacon(`${API_BASE}/track/engagement`, JSON.stringify({
         session_id: sessionId,
         page_url: window.location.href,
         time_on_page_seconds: timeOnPage,

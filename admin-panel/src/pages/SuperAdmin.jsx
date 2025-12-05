@@ -42,6 +42,14 @@ function SuperAdmin() {
   const [subscriptions, setSubscriptions] = useState([])
   const [invoices, setInvoices] = useState([])
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(null)
+  const [showCreateInvoiceModal, setShowCreateInvoiceModal] = useState(false)
+  const [invoiceForm, setInvoiceForm] = useState({
+    company_id: '',
+    amount: '',
+    description: '',
+    due_date: ''
+  })
+  const [creatingInvoice, setCreatingInvoice] = useState(false)
 
   // Company notes
   const [companyNotes, setCompanyNotes] = useState([])
@@ -276,6 +284,62 @@ function SuperAdmin() {
       }
     } catch (error) {
       console.error('Failed to fetch billing:', error)
+    }
+  }
+
+  const handleCreateInvoice = async () => {
+    if (!invoiceForm.company_id || !invoiceForm.amount) {
+      showNotification('Fyll i företag och belopp', 'error')
+      return
+    }
+
+    setCreatingInvoice(true)
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/invoices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company_id: invoiceForm.company_id,
+          amount: parseFloat(invoiceForm.amount),
+          description: invoiceForm.description || 'Månadsavgift',
+          due_date: invoiceForm.due_date || null,
+          currency: 'SEK'
+        })
+      })
+
+      if (response.ok) {
+        showNotification('Faktura skapad', 'success')
+        setShowCreateInvoiceModal(false)
+        setInvoiceForm({ company_id: '', amount: '', description: '', due_date: '' })
+        fetchBilling()
+      } else {
+        const error = await response.json()
+        showNotification(error.detail || 'Kunde inte skapa faktura', 'error')
+      }
+    } catch (error) {
+      console.error('Failed to create invoice:', error)
+      showNotification('Fel vid skapande av faktura', 'error')
+    } finally {
+      setCreatingInvoice(false)
+    }
+  }
+
+  const handleUpdateInvoiceStatus = async (invoiceId, status) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/invoices/${invoiceId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      })
+
+      if (response.ok) {
+        showNotification(`Faktura markerad som ${status === 'paid' ? 'betald' : status}`, 'success')
+        fetchBilling()
+      } else {
+        showNotification('Kunde inte uppdatera faktura', 'error')
+      }
+    } catch (error) {
+      console.error('Failed to update invoice:', error)
     }
   }
 
@@ -1333,41 +1397,185 @@ function SuperAdmin() {
         </div>
       </nav>
 
-      {/* Tabs */}
-      <div className="bg-bg-tertiary border-b border-border-subtle">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-1">
-            {[
-              { id: 'overview', label: 'Översikt', icon: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /> },
-              { id: 'companies', label: 'Företag', icon: <><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></> },
-              { id: 'pricing', label: 'Prissättning', icon: <><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></> },
-              { id: 'analytics', label: 'Analys', icon: <><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></> },
-              { id: 'billing', label: 'Fakturering', icon: <><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></> },
-              { id: 'audit', label: 'Logg', icon: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></> },
-              { id: 'system', label: 'System', icon: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></> },
-              { id: 'docs', label: 'Docs', icon: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></> },
-              { id: 'preferences', label: 'Konto', icon: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></> }
-            ].map(tab => (
+      {/* Sidebar + Content Layout */}
+      <div className="flex min-h-[calc(100vh-4rem)]">
+        {/* Sidebar Navigation */}
+        <aside className="w-64 bg-bg-tertiary border-r border-border-subtle flex-shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
+          <nav className="p-4 space-y-1">
+            {/* Dashboard */}
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'overview'
+                  ? 'bg-accent/10 text-accent'
+                  : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+              }`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+              Dashboard
+            </button>
+
+            {/* KUNDER Section */}
+            <div className="pt-4">
+              <span className="px-3 text-xs font-semibold text-text-tertiary uppercase tracking-wider">Kunder</span>
+            </div>
+            <button
+              onClick={() => setActiveTab('companies')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'companies'
+                  ? 'bg-accent/10 text-accent'
+                  : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+              }`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+              </svg>
+              Företag
+              <span className="ml-auto text-xs bg-bg-secondary px-2 py-0.5 rounded-full">{companies.length}</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('billing')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'billing'
+                  ? 'bg-accent/10 text-accent'
+                  : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+              }`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                <line x1="1" y1="10" x2="23" y2="10" />
+              </svg>
+              Fakturering
+            </button>
+
+            {/* PRODUKT Section */}
+            <div className="pt-4">
+              <span className="px-3 text-xs font-semibold text-text-tertiary uppercase tracking-wider">Produkt</span>
+            </div>
+            <button
+              onClick={() => setActiveTab('pricing')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'pricing'
+                  ? 'bg-accent/10 text-accent'
+                  : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+              }`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="1" x2="12" y2="23" />
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              </svg>
+              Prissättning
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'analytics'
+                  ? 'bg-accent/10 text-accent'
+                  : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+              }`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10" />
+                <line x1="12" y1="20" x2="12" y2="4" />
+                <line x1="6" y1="20" x2="6" y2="14" />
+              </svg>
+              Analys
+            </button>
+
+            {/* SYSTEM Section */}
+            <div className="pt-4">
+              <span className="px-3 text-xs font-semibold text-text-tertiary uppercase tracking-wider">System</span>
+            </div>
+            <button
+              onClick={() => setActiveTab('system')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'system'
+                  ? 'bg-accent/10 text-accent'
+                  : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+              }`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+              </svg>
+              Hälsa
+              {systemHealth && (
+                <span className={`ml-auto w-2 h-2 rounded-full ${
+                  systemHealth.ollama_status === 'online' ? 'bg-success' : 'bg-error'
+                }`} />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('audit')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'audit'
+                  ? 'bg-accent/10 text-accent'
+                  : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+              }`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+              Aktivitetslogg
+            </button>
+
+            {/* Divider */}
+            <div className="pt-4 border-t border-border-subtle mt-4">
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-accent text-accent'
-                    : 'border-transparent text-text-secondary hover:text-text-primary'
+                onClick={() => setActiveTab('preferences')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === 'preferences'
+                    ? 'bg-accent/10 text-accent'
+                    : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
                 }`}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  {tab.icon}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                 </svg>
-                {tab.label}
+                Inställningar
               </button>
-            ))}
-          </div>
-        </div>
-      </div>
+              <button
+                onClick={() => setActiveTab('docs')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === 'docs'
+                    ? 'bg-accent/10 text-accent'
+                    : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+                }`}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg>
+                Dokumentation
+              </button>
+            </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* User section at bottom */}
+            <div className="absolute bottom-4 left-4 right-4 pt-4 border-t border-border-subtle">
+              <div className="flex items-center gap-3 px-3 py-2">
+                <div className="w-8 h-8 rounded-full bg-warning/20 flex items-center justify-center">
+                  <span className="text-sm font-semibold text-warning">{adminAuth.username?.charAt(0).toUpperCase()}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-text-primary truncate">{adminAuth.username}</p>
+                  <p className="text-xs text-text-tertiary">Super Admin</p>
+                </div>
+              </div>
+            </div>
+          </nav>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 p-8 overflow-y-auto">
         {/* Overview Tab - COMMAND CENTER */}
         {activeTab === 'overview' && (
           <div className="animate-fade-in">
@@ -3151,21 +3359,115 @@ function SuperAdmin() {
         {/* Billing Tab */}
         {activeTab === 'billing' && (
           <div className="animate-fade-in">
-            <div className="mb-6">
-              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Fakturering</h1>
-              <p className="text-text-secondary mt-1">Hantera prenumerationer och fakturor</p>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Fakturering</h1>
+                <p className="text-text-secondary mt-1">Hantera prenumerationer och fakturor</p>
+              </div>
+              <button
+                onClick={() => setShowCreateInvoiceModal(true)}
+                className="btn btn-primary"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Skapa faktura
+              </button>
+            </div>
+
+            {/* Revenue Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="bg-bg-tertiary rounded-xl p-4 border border-border-subtle">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success">
+                      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    </svg>
+                  </div>
+                  <span className="text-sm text-text-secondary">MRR</span>
+                </div>
+                <p className="text-2xl font-bold text-text-primary">
+                  {revenueDashboard?.mrr?.toLocaleString('sv-SE') || 0} kr
+                </p>
+                <p className="text-xs text-text-tertiary mt-1">Månadsvis återkommande intäkt</p>
+              </div>
+
+              <div className="bg-bg-tertiary rounded-xl p-4 border border-border-subtle">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                  </div>
+                  <span className="text-sm text-text-secondary">ARR</span>
+                </div>
+                <p className="text-2xl font-bold text-text-primary">
+                  {revenueDashboard?.arr?.toLocaleString('sv-SE') || 0} kr
+                </p>
+                <p className="text-xs text-text-tertiary mt-1">Årlig återkommande intäkt</p>
+              </div>
+
+              <div className="bg-bg-tertiary rounded-xl p-4 border border-border-subtle">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-warning">
+                      <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                      <line x1="1" y1="10" x2="23" y2="10" />
+                    </svg>
+                  </div>
+                  <span className="text-sm text-text-secondary">Obetalda</span>
+                </div>
+                <p className="text-2xl font-bold text-text-primary">
+                  {invoices.filter(i => i.status === 'pending').length}
+                </p>
+                <p className="text-xs text-text-tertiary mt-1">Väntande fakturor</p>
+              </div>
+
+              <div className="bg-bg-tertiary rounded-xl p-4 border border-border-subtle">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-500">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                  </div>
+                  <span className="text-sm text-text-secondary">Aktiva pren.</span>
+                </div>
+                <p className="text-2xl font-bold text-text-primary">
+                  {subscriptions.filter(s => s.status === 'active').length}
+                </p>
+                <p className="text-xs text-text-tertiary mt-1">Betalande kunder</p>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Subscriptions */}
               <div className="card">
-                <h3 className="text-lg font-medium text-text-primary mb-4">Prenumerationer</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-text-primary">Prenumerationer</h3>
+                  <span className="text-sm text-text-secondary">{subscriptions.length} totalt</span>
+                </div>
                 {subscriptions.length === 0 ? (
-                  <p className="text-text-secondary text-center py-8">Inga prenumerationer ännu</p>
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary">
+                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                        <line x1="1" y1="10" x2="23" y2="10" />
+                      </svg>
+                    </div>
+                    <p className="text-text-secondary font-medium">Inga prenumerationer ännu</p>
+                    <p className="text-sm text-text-tertiary mt-1">Prenumerationer skapas automatiskt när kunder får en prisnivå</p>
+                  </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
                     {subscriptions.map(sub => (
-                      <div key={sub.id} className="p-4 bg-bg-secondary rounded-lg">
+                      <div key={sub.id} className="p-4 bg-bg-secondary rounded-lg hover:bg-bg-primary transition-colors">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-medium text-text-primary">{sub.company_name}</p>
@@ -3173,16 +3475,17 @@ function SuperAdmin() {
                           </div>
                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                             sub.plan_name === 'enterprise' ? 'bg-accent-soft text-accent' :
-                            sub.plan_name === 'professional' ? 'bg-success-soft text-success' :
+                            sub.plan_name === 'professional' || sub.plan_name === 'business' ? 'bg-success-soft text-success' :
                             sub.plan_name === 'starter' ? 'bg-warning-soft text-warning' :
                             'bg-bg-primary text-text-secondary'
                           }`}>
-                            {sub.plan_name}
+                            {sub.plan_name?.charAt(0).toUpperCase() + sub.plan_name?.slice(1)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-sm text-text-secondary">{sub.plan_price} SEK/{sub.billing_cycle === 'monthly' ? 'mån' : 'år'}</span>
-                          <span className={`text-xs ${sub.status === 'active' ? 'text-success' : 'text-warning'}`}>
+                          <span className="text-sm text-text-secondary">{sub.plan_price?.toLocaleString('sv-SE')} kr/{sub.billing_cycle === 'monthly' ? 'mån' : 'år'}</span>
+                          <span className={`text-xs flex items-center gap-1 ${sub.status === 'active' ? 'text-success' : 'text-warning'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${sub.status === 'active' ? 'bg-success' : 'bg-warning'}`} />
                             {sub.status === 'active' ? 'Aktiv' : sub.status}
                           </span>
                         </div>
@@ -3194,13 +3497,27 @@ function SuperAdmin() {
 
               {/* Recent Invoices */}
               <div className="card">
-                <h3 className="text-lg font-medium text-text-primary mb-4">Senaste fakturor</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-text-primary">Senaste fakturor</h3>
+                  <span className="text-sm text-text-secondary">{invoices.length} totalt</span>
+                </div>
                 {invoices.length === 0 ? (
-                  <p className="text-text-secondary text-center py-8">Inga fakturor ännu</p>
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-tertiary">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                      </svg>
+                    </div>
+                    <p className="text-text-secondary font-medium">Inga fakturor ännu</p>
+                    <p className="text-sm text-text-tertiary mt-1">Skapa din första faktura med knappen ovan</p>
+                  </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
                     {invoices.map(inv => (
-                      <div key={inv.id} className="p-4 bg-bg-secondary rounded-lg">
+                      <div key={inv.id} className="p-4 bg-bg-secondary rounded-lg hover:bg-bg-primary transition-colors group">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-medium text-text-primary">{inv.invoice_number}</p>
@@ -3215,13 +3532,41 @@ function SuperAdmin() {
                           </span>
                         </div>
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-lg font-medium text-text-primary">{inv.amount} {inv.currency}</span>
-                          <span className="text-xs text-text-tertiary">{new Date(inv.created_at).toLocaleDateString('sv-SE')}</span>
+                          <span className="text-lg font-medium text-text-primary">{inv.amount?.toLocaleString('sv-SE')} {inv.currency}</span>
+                          <div className="flex items-center gap-2">
+                            {inv.status === 'pending' && (
+                              <button
+                                onClick={() => handleUpdateInvoiceStatus(inv.id, 'paid')}
+                                className="opacity-0 group-hover:opacity-100 text-xs bg-success/10 text-success px-2 py-1 rounded hover:bg-success/20 transition-all"
+                              >
+                                Markera betald
+                              </button>
+                            )}
+                            <span className="text-xs text-text-tertiary">{new Date(inv.created_at).toLocaleDateString('sv-SE')}</span>
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Info box about billing */}
+            <div className="mt-6 p-4 bg-accent/5 border border-accent/20 rounded-xl">
+              <div className="flex items-start gap-3">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent flex-shrink-0 mt-0.5">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 16v-4" />
+                  <path d="M12 8h.01" />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-text-primary">Om fakturering</p>
+                  <p className="text-sm text-text-secondary mt-1">
+                    Prenumerationer skapas automatiskt när du tilldelar en prisnivå till ett företag under "Prissättning"-fliken.
+                    Fakturor kan skapas manuellt eller genereras automatiskt vid månadsslut.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -3544,7 +3889,8 @@ function SuperAdmin() {
             </div>
           </div>
         )}
-      </main>
+        </main>
+      </div>
 
       {/* Create Company Modal */}
       {showModal && (
@@ -4681,6 +5027,90 @@ function SuperAdmin() {
                 className="btn btn-primary"
               >
                 Spara ändringar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Invoice Modal */}
+      {showCreateInvoiceModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle">
+              <h2 className="text-lg font-semibold text-text-primary">Skapa faktura</h2>
+              <p className="text-sm text-text-secondary mt-1">Skapa en ny faktura för ett företag</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="input-label">Företag *</label>
+                <select
+                  value={invoiceForm.company_id}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, company_id: e.target.value })}
+                  className="input w-full"
+                >
+                  <option value="">Välj företag...</option>
+                  {companies.map(c => (
+                    <option key={c.id} value={c.id}>{c.name} ({c.id})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="input-label">Belopp (SEK) *</label>
+                <input
+                  type="number"
+                  value={invoiceForm.amount}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
+                  className="input w-full"
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
+              <div>
+                <label className="input-label">Beskrivning</label>
+                <input
+                  type="text"
+                  value={invoiceForm.description}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, description: e.target.value })}
+                  className="input w-full"
+                  placeholder="Månadsavgift"
+                />
+              </div>
+              <div>
+                <label className="input-label">Förfallodatum</label>
+                <input
+                  type="date"
+                  value={invoiceForm.due_date}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })}
+                  className="input w-full"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-border-subtle flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowCreateInvoiceModal(false)
+                  setInvoiceForm({ company_id: '', amount: '', description: '', due_date: '' })
+                }}
+                className="btn btn-ghost"
+                disabled={creatingInvoice}
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleCreateInvoice}
+                className="btn btn-primary"
+                disabled={creatingInvoice || !invoiceForm.company_id || !invoiceForm.amount}
+              >
+                {creatingInvoice ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Skapar...
+                  </>
+                ) : 'Skapa faktura'}
               </button>
             </div>
           </div>
