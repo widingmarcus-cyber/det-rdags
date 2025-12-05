@@ -117,7 +117,7 @@ function PrivacyPolicy() {
                 <li>Om vi är skyldiga enligt lag att lämna ut uppgifter till myndigheter</li>
               </ul>
               <p className="text-stone-600 dark:text-stone-300 leading-relaxed mt-3">
-                <strong>Viktigt:</strong> All AI-behandling sker lokalt på svenska servrar. Inga uppgifter skickas till externa AI-tjänster som OpenAI eller Google.
+                <strong>Viktigt:</strong> All AI-behandling sker lokalt på våra servrar inom EU. Inga uppgifter skickas till externa AI-tjänster som OpenAI eller Google. Dedikerad svensk hosting finns som tillval.
               </p>
             </section>
 
@@ -149,7 +149,7 @@ function PrivacyPolicy() {
                 <li>IP-anonymisering (sista oktetten av din IP-adress maskeras)</li>
                 <li>Begränsad åtkomst till personuppgifter</li>
                 <li>Automatisk radering av gamla konversationer</li>
-                <li>Servrar placerade i Sverige</li>
+                <li>Servrar placerade inom EU (dedikerad svensk hosting som tillval)</li>
               </ul>
             </section>
 

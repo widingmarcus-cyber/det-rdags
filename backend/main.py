@@ -1113,7 +1113,7 @@ def init_demo_data():
                 secondary_color="#FEF3EC",
                 background_color="#FAF8F5",
                 welcome_message="Hej! Jag är Bobot, din AI-medarbetare. Hur kan jag hjälpa dig?",
-                fallback_message="Tyvärr kunde jag inte hitta ett svar på din fråga. Kontakta oss på info@bobot.nu.",
+                fallback_message="Tyvärr kunde jag inte hitta ett svar på din fråga. Kontakta oss på hej@bobot.nu.",
                 subtitle="Din AI-medarbetare",
                 require_consent=True,
                 consent_text="Jag godkänner att mina meddelanden behandlas enligt Bobots integritetspolicy."
@@ -1130,7 +1130,7 @@ def init_demo_data():
                  "Bobot fungerar genom att du bygger en kunskapsbas med frågor och svar. När en hyresgäst ställer en fråga, hittar vår AI det bästa svaret från din kunskapsbas och formulerar ett naturligt svar.",
                  "produkt"),
                 ("Vad kostar Bobot?",
-                 "Vi erbjuder olika prisplaner beroende på dina behov. Kontakta oss på info@bobot.nu för en offert anpassad efter din organisation.",
+                 "Vi erbjuder olika prisplaner beroende på dina behov. Kontakta oss på hej@bobot.nu för en offert anpassad efter din organisation.",
                  "priser"),
                 ("Är Bobot GDPR-kompatibel?",
                  "Ja! Bobot är byggt med GDPR i åtanke. Vi erbjuder: automatisk radering av konversationer efter konfigurerbar tid (7-30 dagar), samtyckehantering i widgeten, IP-anonymisering, och möjlighet för användare att se och radera sin data.",
@@ -1151,7 +1151,7 @@ def init_demo_data():
                  "Ja, widgeten är helt responsiv och fungerar utmärkt på mobiler, surfplattor och datorer.",
                  "funktioner"),
                 ("Hur kommer jag igång?",
-                 "Kontakta oss på info@bobot.nu för att komma igång. Vi hjälper dig att sätta upp ditt konto och importera din kunskapsbas.",
+                 "Kontakta oss på hej@bobot.nu för att komma igång. Vi hjälper dig att sätta upp ditt konto och importera din kunskapsbas.",
                  "kom-igang"),
             ]
 
@@ -5830,7 +5830,7 @@ async def update_company_pricing(
     if not company:
         raise HTTPException(status_code=404, detail="Företag finns inte")
 
-    valid_tiers = ["starter", "professional", "business", "enterprise"]
+    valid_tiers = ["starter", "professional", "business", "enterprise", "self_hosted"]
     if update.pricing_tier not in valid_tiers:
         raise HTTPException(status_code=400, detail=f"Ogiltig prisnivå. Giltiga: {', '.join(valid_tiers)}")
 
@@ -5897,6 +5897,14 @@ PRICING_TIERS = {
         "max_conversations": 0,  # 0 = unlimited
         "max_knowledge_items": 0,  # 0 = unlimited
         "features": ["Allt i Business", "Obegränsade kunskapsartiklar", "Obegränsade konversationer", "SLA-garanti", "White-label", "Skräddarsydd utveckling", "Dedikerad onboarding & utbildning"]
+    },
+    "self_hosted": {
+        "name": "Self-Hosted",
+        "monthly_fee": 0,  # No monthly fee - one-time license
+        "startup_fee": 50000,  # One-time license fee
+        "max_conversations": 0,  # 0 = unlimited
+        "max_knowledge_items": 0,  # 0 = unlimited
+        "features": ["Fullständig källkod", "Kör på din egen server", "Obegränsat allt", "Full datakontroll", "Installationsguide", "1 års uppdateringar", "E-postsupport"]
     }
 }
 

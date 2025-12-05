@@ -677,14 +677,15 @@ function LandingPage() {
   ]
 
   const faqs = [
-    { q: 'Hur lång tid tar det att komma igång?', a: 'De flesta kunder är igång på under 10 minuter. Ladda upp din kunskapsbank, kopiera koden till din hemsida, och du är redo!' },
-    { q: 'Hur fungerar GDPR-efterlevnaden?', a: 'All data lagras på servrar i Sverige. Konversationer anonymiseras automatiskt och raderas enligt dina inställningar (7-30 dagar). Vi samlar aldrig in personuppgifter utan samtycke.' },
+    { q: 'Hur lång tid tar det att komma igång?', a: 'De flesta kunder är igång på cirka 15 minuter. Ladda upp din kunskapsbank, kopiera koden till din hemsida, och du är redo!' },
+    { q: 'Hur fungerar GDPR-efterlevnaden?', a: 'All data lagras på servrar inom EU. Konversationer anonymiseras automatiskt och raderas enligt dina inställningar (7-30 dagar). Vi samlar aldrig in personuppgifter utan samtycke. Dedikerad svensk hosting finns som tillval.' },
     { q: 'Kan jag ha flera chatbotar?', a: 'Ja! Du kan skapa separata widgets - t.ex. en för kundtjänst på din hemsida och en för internt medarbetarstöd. Varje widget kan ha egen kunskapsbas, utseende och ton.' },
     { q: 'Hur importerar jag befintlig FAQ?', a: 'Du kan importera direkt från Excel, Word, CSV eller TXT-filer. Du kan även extrahera Q&A automatiskt från en befintlig webbsida genom att ange URL:en.' },
-    { q: 'Vilken AI-teknik används?', a: 'Bobot drivs av Qwen 2.5 14B via Ollama - en kraftfull open source AI-modell med utmärkt flerspråksstöd. All AI-behandling sker lokalt på svenska servrar, så ingen data skickas till tredje part.' },
+    { q: 'Vilken AI-teknik används?', a: 'Bobot drivs av Qwen 2.5 14B via Ollama - en kraftfull open source AI-modell med utmärkt flerspråksstöd. All AI-behandling sker lokalt på våra servrar, så ingen data skickas till tredje part.' },
     { q: 'Vad händer om Bobot inte kan svara?', a: 'Bobot visar ett anpassningsbart reservmeddelande och loggar frågan i analytics. Du kan sedan lägga till svaret i kunskapsbanken för framtida frågor.' },
     { q: 'Kan jag anpassa utseendet?', a: 'Absolut! Du kan välja primärfärg, bakgrundsfärg, typsnitt, teckenstorlek, rundade hörn och position. Allt anpassas i adminpanelen med live-förhandsgranskning.' },
     { q: 'Finns det statistik och rapporter?', a: 'Ja, du får detaljerad statistik över antal konversationer, vanligaste frågorna, obesvarade frågor, nöjdhetsbetyg och svarstider. Allt kan exporteras till CSV.' },
+    { q: 'Kan jag hosta Bobot själv?', a: 'Ja! Vi erbjuder en self-hosted licens där du kör Bobot på din egen server. Perfekt för organisationer med strikta datakrav. Kontakta oss för priser.' },
   ]
 
   const orderedTiers = pricingTiers ? Object.entries(pricingTiers).map(([key, tier]) => ({ key, ...tier })).sort((a, b) => (a.monthly_fee || 0) - (b.monthly_fee || 0)) : []
@@ -900,7 +901,7 @@ function LandingPage() {
                 </span>
                 <span className="flex items-center gap-1">
                   <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /></svg>
-                  Data lagras i Sverige
+                  Data lagras inom EU
                 </span>
               </div>
             </div>
