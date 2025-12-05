@@ -112,214 +112,548 @@ const BobotSmall = ({ size = 28 }) => (
 )
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PDF STYLES - Editorial, Artful, "Cozy Office" Aesthetic
+// PDF STYLES - Artistic Editorial Design
+// "Like a beautiful magazine spread - every element intentional"
 // ═══════════════════════════════════════════════════════════════════════════
-const pdfStyles = StyleSheet.create({
-  // Base page - warm paper feel
-  page: {
-    backgroundColor: colors.warmSand,
-    paddingTop: 60,
-    paddingBottom: 80,
-    paddingHorizontal: 55,
-  },
 
-  // Cover page styling
+// Decorative corner element for pages
+const CornerAccent = ({ position = 'topLeft' }) => {
+  const size = 60
+  const transforms = {
+    topLeft: { x: 0, y: 0, rotate: 0 },
+    topRight: { x: 535, y: 0, rotate: 90 },
+    bottomLeft: { x: 0, y: 782, rotate: 270 },
+    bottomRight: { x: 535, y: 782, rotate: 180 },
+  }
+  const t = transforms[position]
+  return (
+    <Svg width={size} height={size} style={{ position: 'absolute', left: t.x, top: t.y }}>
+      <Path
+        d={t.rotate === 0 ? "M0 0 L60 0 L60 8 L8 8 L8 60 L0 60 Z" :
+           t.rotate === 90 ? "M60 0 L60 60 L52 60 L52 8 L0 8 L0 0 Z" :
+           t.rotate === 180 ? "M60 60 L0 60 L0 52 L52 52 L52 0 L60 0 Z" :
+           "M0 60 L0 0 L8 0 L8 52 L60 52 L60 60 Z"}
+        fill={colors.terracotta}
+        opacity={0.15}
+      />
+    </Svg>
+  )
+}
+
+// Elegant horizontal divider
+const ElegantDivider = ({ width = 80 }) => (
+  <Svg width={width} height={12} style={{ marginVertical: 16 }}>
+    <Circle cx={width/2} cy={6} r={3} fill={colors.terracotta} />
+    <Rect x={0} y={5} width={width/2 - 8} height={2} fill={colors.border} rx={1} />
+    <Rect x={width/2 + 8} y={5} width={width/2 - 8} height={2} fill={colors.border} rx={1} />
+  </Svg>
+)
+
+// Visual progress bar for percentages
+const ProgressRing = ({ percent, size = 80, color = colors.terracotta }) => {
+  const strokeWidth = 8
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const progress = circumference - (percent / 100) * circumference
+
+  return (
+    <Svg width={size} height={size}>
+      {/* Background ring */}
+      <Circle
+        cx={size/2}
+        cy={size/2}
+        r={radius}
+        fill="none"
+        stroke={colors.border}
+        strokeWidth={strokeWidth}
+      />
+      {/* Progress ring */}
+      <Circle
+        cx={size/2}
+        cy={size/2}
+        r={radius}
+        fill="none"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeDasharray={`${circumference} ${circumference}`}
+        strokeDashoffset={progress}
+        strokeLinecap="round"
+        transform={`rotate(-90 ${size/2} ${size/2})`}
+      />
+    </Svg>
+  )
+}
+
+// Mini bar chart for visual data
+const MiniBarChart = ({ data, width = 200, height = 60 }) => {
+  const maxVal = Math.max(...data.map(d => d.value), 1)
+  const barWidth = (width - (data.length - 1) * 4) / data.length
+
+  return (
+    <Svg width={width} height={height}>
+      {data.map((d, i) => {
+        const barHeight = (d.value / maxVal) * (height - 16)
+        return (
+          <Rect
+            key={i}
+            x={i * (barWidth + 4)}
+            y={height - 16 - barHeight}
+            width={barWidth}
+            height={barHeight}
+            fill={d.highlight ? colors.terracotta : colors.border}
+            rx={2}
+          />
+        )
+      })}
+    </Svg>
+  )
+}
+
+const pdfStyles = StyleSheet.create({
+  // ─────────────────────────────────────────────────────────────────────────
+  // COVER PAGE - Magazine editorial feel
+  // ─────────────────────────────────────────────────────────────────────────
   coverPage: {
     backgroundColor: colors.warmSand,
     padding: 0,
+    position: 'relative',
   },
-  coverContainer: {
+  coverInner: {
     flex: 1,
+    margin: 40,
+    backgroundColor: colors.cream,
+    borderRadius: 24,
     padding: 60,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  coverAccentBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 6,
+    backgroundColor: colors.terracotta,
+  },
+  coverHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  coverBrand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  coverBrandText: {
+    fontFamily: 'Playfair',
+    fontSize: 18,
+    fontWeight: 600,
+    color: colors.espresso,
+  },
+  coverDateBadge: {
+    backgroundColor: colors.warmSand,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  coverDateText: {
+    fontFamily: 'Inter',
+    fontSize: 10,
+    fontWeight: 500,
+    color: colors.stone,
+  },
+  coverMain: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  coverMascot: {
+    marginBottom: 48,
+  },
+  coverTitleWrap: {
     alignItems: 'center',
   },
-  coverMascotArea: {
-    marginBottom: 50,
+  coverEyebrow: {
+    fontFamily: 'Inter',
+    fontSize: 11,
+    fontWeight: 600,
+    color: colors.terracotta,
+    textTransform: 'uppercase',
+    letterSpacing: 3,
+    marginBottom: 16,
   },
   coverTitle: {
     fontFamily: 'Playfair',
-    fontSize: 44,
+    fontSize: 52,
     fontWeight: 700,
-    color: colors.terracotta,
+    color: colors.espresso,
     textAlign: 'center',
-    marginBottom: 16,
+    lineHeight: 1.1,
   },
   coverSubtitle: {
     fontFamily: 'Inter',
     fontSize: 14,
     color: colors.stone,
     textAlign: 'center',
-    lineHeight: 1.7,
-    maxWidth: 320,
+    marginTop: 20,
+    lineHeight: 1.6,
+    maxWidth: 340,
   },
-  coverDate: {
-    fontFamily: 'Inter',
-    fontSize: 11,
-    color: colors.stone,
-    marginTop: 60,
-    paddingTop: 20,
+  coverFooter: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
-  },
-
-  // Page header - elegant, minimal
-  pageHeader: {
+    paddingTop: 24,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginBottom: 40,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  pageTitle: {
-    fontFamily: 'Playfair',
-    fontSize: 26,
-    fontWeight: 600,
-    color: colors.espresso,
-  },
-  pageSubtitle: {
-    fontFamily: 'Inter',
-    fontSize: 10,
-    color: colors.stone,
-    marginTop: 4,
-  },
-
-  // Key metrics - large, editorial numbers
-  metricsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 36,
-  },
-  metricBox: {
     alignItems: 'center',
-    flex: 1,
   },
-  metricValue: {
-    fontFamily: 'Playfair',
-    fontSize: 42,
-    fontWeight: 700,
-    color: colors.terracotta,
-  },
-  metricValueSuccess: {
-    fontFamily: 'Playfair',
-    fontSize: 42,
-    fontWeight: 700,
-    color: colors.sage,
-  },
-  metricLabel: {
+  coverFooterLabel: {
     fontFamily: 'Inter',
     fontSize: 9,
     color: colors.stone,
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginTop: 6,
   },
-  metricDivider: {
-    width: 1,
-    backgroundColor: colors.border,
-    marginHorizontal: 20,
+  coverFooterValue: {
+    fontFamily: 'Inter',
+    fontSize: 11,
+    fontWeight: 600,
+    color: colors.espresso,
+    marginTop: 2,
   },
 
-  // Card styling - soft, tactile feel
-  card: {
+  // ─────────────────────────────────────────────────────────────────────────
+  // CONTENT PAGES - Refined grid layouts
+  // ─────────────────────────────────────────────────────────────────────────
+  page: {
+    backgroundColor: colors.warmSand,
+    paddingTop: 50,
+    paddingBottom: 70,
+    paddingHorizontal: 50,
+    position: 'relative',
+  },
+  pageHeader: {
+    marginBottom: 36,
+  },
+  pageNumber: {
+    fontFamily: 'Inter',
+    fontSize: 9,
+    color: colors.stone,
+    marginBottom: 8,
+  },
+  pageTitle: {
+    fontFamily: 'Playfair',
+    fontSize: 32,
+    fontWeight: 700,
+    color: colors.espresso,
+  },
+  pageDivider: {
+    height: 3,
+    width: 48,
+    backgroundColor: colors.terracotta,
+    marginTop: 16,
+    borderRadius: 2,
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // HERO METRICS - Large editorial numbers
+  // ─────────────────────────────────────────────────────────────────────────
+  heroMetricsGrid: {
+    flexDirection: 'row',
+    gap: 20,
+    marginBottom: 32,
+  },
+  heroMetricCard: {
+    flex: 1,
     backgroundColor: colors.cream,
     borderRadius: 20,
     padding: 28,
-    marginBottom: 20,
+    alignItems: 'center',
   },
-  cardHighlight: {
-    backgroundColor: colors.warmGlow,
+  heroMetricCardAccent: {
+    flex: 1,
+    backgroundColor: colors.terracotta,
     borderRadius: 20,
     padding: 28,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.terracotta,
+    alignItems: 'center',
   },
-  cardTitle: {
+  heroMetricValue: {
     fontFamily: 'Playfair',
-    fontSize: 16,
-    fontWeight: 600,
+    fontSize: 56,
+    fontWeight: 700,
     color: colors.espresso,
-    marginBottom: 16,
+    lineHeight: 1,
   },
-  cardText: {
+  heroMetricValueWhite: {
+    fontFamily: 'Playfair',
+    fontSize: 56,
+    fontWeight: 700,
+    color: colors.cream,
+    lineHeight: 1,
+  },
+  heroMetricLabel: {
     fontFamily: 'Inter',
-    fontSize: 11,
+    fontSize: 10,
     color: colors.stone,
-    lineHeight: 1.7,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginTop: 12,
+  },
+  heroMetricLabelWhite: {
+    fontFamily: 'Inter',
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.8)',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginTop: 12,
+  },
+  heroMetricSubtext: {
+    fontFamily: 'Inter',
+    fontSize: 9,
+    color: colors.stone,
+    marginTop: 6,
   },
 
-  // Data rows - clean, readable
-  dataRow: {
+  // ─────────────────────────────────────────────────────────────────────────
+  // INSIGHT CARDS - Visual data presentations
+  // ─────────────────────────────────────────────────────────────────────────
+  insightRow: {
+    flexDirection: 'row',
+    gap: 20,
+    marginBottom: 20,
+  },
+  insightCard: {
+    flex: 1,
+    backgroundColor: colors.cream,
+    borderRadius: 16,
+    padding: 24,
+  },
+  insightCardWide: {
+    backgroundColor: colors.cream,
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 20,
+  },
+  insightHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  insightTitle: {
+    fontFamily: 'Playfair',
+    fontSize: 14,
+    fontWeight: 600,
+    color: colors.espresso,
+  },
+  insightBadge: {
+    backgroundColor: colors.sage,
+    borderRadius: 10,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+  },
+  insightBadgeText: {
+    fontFamily: 'Inter',
+    fontSize: 8,
+    fontWeight: 600,
+    color: colors.cream,
+    textTransform: 'uppercase',
+  },
+  insightValue: {
+    fontFamily: 'Playfair',
+    fontSize: 36,
+    fontWeight: 700,
+    color: colors.terracotta,
+    marginBottom: 4,
+  },
+  insightSubtext: {
+    fontFamily: 'Inter',
+    fontSize: 10,
+    color: colors.stone,
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // VISUAL METRICS - Circles, bars, progress
+  // ─────────────────────────────────────────────────────────────────────────
+  visualMetricCard: {
+    backgroundColor: colors.cream,
+    borderRadius: 20,
+    padding: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 24,
+    marginBottom: 20,
+  },
+  visualMetricContent: {
+    flex: 1,
+  },
+  visualMetricLabel: {
+    fontFamily: 'Inter',
+    fontSize: 9,
+    color: colors.stone,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  visualMetricValue: {
+    fontFamily: 'Playfair',
+    fontSize: 28,
+    fontWeight: 700,
+    color: colors.espresso,
+  },
+  visualMetricDesc: {
+    fontFamily: 'Inter',
+    fontSize: 10,
+    color: colors.stone,
+    marginTop: 8,
+    lineHeight: 1.5,
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DATA LISTS - Refined rows
+  // ─────────────────────────────────────────────────────────────────────────
+  dataList: {
+    backgroundColor: colors.cream,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  dataListHeader: {
+    backgroundColor: colors.espresso,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+  },
+  dataListHeaderText: {
+    fontFamily: 'Inter',
+    fontSize: 9,
+    fontWeight: 600,
+    color: colors.cream,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  dataRow: {
+    flexDirection: 'row',
     paddingVertical: 14,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    alignItems: 'center',
   },
   dataRowLast: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
   },
-  dataLabel: {
+  dataRowNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.warmSand,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  dataRowNumberText: {
+    fontFamily: 'Inter',
+    fontSize: 10,
+    fontWeight: 600,
+    color: colors.stone,
+  },
+  dataRowLabel: {
+    flex: 1,
     fontFamily: 'Inter',
     fontSize: 11,
     color: colors.espresso,
   },
-  dataValue: {
+  dataRowValue: {
     fontFamily: 'Inter',
     fontSize: 11,
     fontWeight: 600,
     color: colors.terracotta,
   },
-  dataValueSuccess: {
-    fontFamily: 'Inter',
-    fontSize: 11,
-    fontWeight: 600,
-    color: colors.sage,
+  dataRowBar: {
+    width: 60,
+    height: 6,
+    backgroundColor: colors.warmSand,
+    borderRadius: 3,
+    marginLeft: 12,
+    overflow: 'hidden',
+  },
+  dataRowBarFill: {
+    height: '100%',
+    backgroundColor: colors.terracotta,
+    borderRadius: 3,
   },
 
-  // Feedback section - emotional, human
-  feedbackGrid: {
+  // ─────────────────────────────────────────────────────────────────────────
+  // QUOTE/CALLOUT BOXES
+  // ─────────────────────────────────────────────────────────────────────────
+  calloutBox: {
+    backgroundColor: colors.warmGlow,
+    borderRadius: 16,
+    padding: 28,
+    marginVertical: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.terracotta,
+  },
+  calloutIcon: {
+    marginBottom: 12,
+  },
+  calloutText: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    color: colors.espresso,
+    lineHeight: 1.7,
+  },
+  calloutAuthor: {
+    fontFamily: 'Inter',
+    fontSize: 10,
+    color: colors.stone,
+    marginTop: 12,
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // FEEDBACK SECTION - Visual emotional indicators
+  // ─────────────────────────────────────────────────────────────────────────
+  feedbackRow: {
     flexDirection: 'row',
     gap: 16,
-    marginBottom: 28,
+    marginBottom: 24,
   },
   feedbackCard: {
     flex: 1,
     backgroundColor: colors.cream,
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
   },
-  feedbackCardPositive: {
+  feedbackCardSuccess: {
     flex: 1,
     backgroundColor: colors.cream,
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: colors.sage,
   },
-  feedbackCardNegative: {
+  feedbackCardWarning: {
     flex: 1,
     backgroundColor: colors.cream,
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#C75D5D',
+    borderColor: '#E6A756',
   },
   feedbackEmoji: {
-    fontSize: 28,
-    marginBottom: 10,
+    fontSize: 32,
+    marginBottom: 12,
   },
   feedbackValue: {
     fontFamily: 'Playfair',
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 700,
     color: colors.espresso,
   },
@@ -329,113 +663,27 @@ const pdfStyles = StyleSheet.create({
     color: colors.stone,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginTop: 6,
+    marginTop: 8,
+    textAlign: 'center',
   },
 
-  // Section headers
-  sectionTitle: {
-    fontFamily: 'Playfair',
-    fontSize: 14,
-    fontWeight: 600,
-    color: colors.espresso,
-    marginBottom: 20,
-    marginTop: 10,
-  },
-
-  // Quote/insight box
-  insightBox: {
-    backgroundColor: colors.linen,
-    borderRadius: 16,
-    padding: 24,
-    marginTop: 20,
-  },
-  insightText: {
-    fontFamily: 'Inter',
-    fontSize: 11,
-    color: colors.stone,
-    lineHeight: 1.7,
-  },
-
-  // Table styling - refined
-  tableContainer: {
+  // ─────────────────────────────────────────────────────────────────────────
+  // QUESTIONS LIST - Numbered items
+  // ─────────────────────────────────────────────────────────────────────────
+  questionsList: {
     backgroundColor: colors.cream,
     borderRadius: 16,
-    overflow: 'hidden',
+    padding: 24,
   },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: colors.espresso,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-  },
-  tableHeaderCell: {
-    fontFamily: 'Inter',
-    fontSize: 9,
-    fontWeight: 600,
-    color: colors.cream,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  tableRowAlt: {
-    flexDirection: 'row',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.warmSand,
-  },
-  tableCell: {
-    fontFamily: 'Inter',
-    fontSize: 10,
-    color: colors.espresso,
-  },
-  tableCellRight: {
-    fontFamily: 'Inter',
-    fontSize: 10,
-    color: colors.espresso,
-    textAlign: 'right',
-  },
-
-  // Footer - subtle, professional
-  footer: {
-    position: 'absolute',
-    bottom: 30,
-    left: 55,
-    right: 55,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  footerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  footerText: {
-    fontFamily: 'Inter',
-    fontSize: 8,
-    color: colors.stone,
-  },
-  footerPage: {
-    fontFamily: 'Inter',
-    fontSize: 8,
-    color: colors.stone,
-  },
-
-  // Unanswered questions styling
   questionItem: {
     flexDirection: 'row',
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  questionItemLast: {
+    flexDirection: 'row',
   },
   questionNumber: {
     width: 28,
@@ -458,129 +706,216 @@ const pdfStyles = StyleSheet.create({
     fontSize: 11,
     color: colors.espresso,
     lineHeight: 1.6,
+    paddingTop: 4,
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // FOOTER - Minimal, elegant
+  // ─────────────────────────────────────────────────────────────────────────
+  footer: {
+    position: 'absolute',
+    bottom: 28,
+    left: 50,
+    right: 50,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 16,
+  },
+  footerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  footerBrand: {
+    fontFamily: 'Inter',
+    fontSize: 9,
+    fontWeight: 600,
+    color: colors.stone,
+  },
+  footerUrl: {
+    fontFamily: 'Inter',
+    fontSize: 8,
+    color: colors.stone,
+  },
+  footerPage: {
+    fontFamily: 'Inter',
+    fontSize: 9,
+    color: colors.stone,
   },
 })
 
 // ═══════════════════════════════════════════════════════════════════════════
-// KPI REPORT PDF - "Digital Craftsmanship" Editorial Design
-// "A helpful colleague who makes your work life calmer"
+// KPI REPORT PDF - Artistic Editorial Design
+// "Like a beautiful magazine spread - every element intentional"
 // ═══════════════════════════════════════════════════════════════════════════
-const KPIReportPDF = ({ analytics, date }) => {
+const KPIReportPDF = ({ analytics, dateRange, companyName = 'Ert företag' }) => {
+  // Calculate key metrics
   const satisfactionRate = analytics.feedback_stats
     ? ((analytics.feedback_stats.helpful || 0) /
         Math.max((analytics.feedback_stats.helpful || 0) + (analytics.feedback_stats.not_helpful || 0), 1) * 100).toFixed(0)
     : 0
 
+  const answerRate = analytics.answer_rate?.toFixed(0) || 0
+  const avgResponseTime = (analytics.avg_response_time_ms / 1000).toFixed(1)
+  const timeSaved = Math.round(analytics.total_conversations * 3) // ~3 min per conversation
   const langNames = { sv: 'Svenska', en: 'English', ar: 'العربية' }
   const langTotal = Object.values(analytics.language_stats || {}).reduce((a, b) => a + b, 0) || 1
+  const categoryTotal = Object.values(analytics.category_stats || {}).reduce((a, b) => a + b, 0) || 1
 
-  // Elegant footer
+  // Format date range for display
+  const formatDateRange = () => {
+    if (!dateRange || !dateRange.start || !dateRange.end) {
+      return new Date().toLocaleDateString('sv-SE')
+    }
+    const start = new Date(dateRange.start).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
+    const end = new Date(dateRange.end).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })
+    return `${start} – ${end}`
+  }
+
+  // Get report title based on date range
+  const getReportTitle = () => {
+    if (!dateRange || !dateRange.start || !dateRange.end) return 'Statistikrapport'
+    const days = Math.ceil((new Date(dateRange.end) - new Date(dateRange.start)) / (1000 * 60 * 60 * 24)) + 1
+    if (days === 1) return 'Dagsrapport'
+    if (days <= 7) return 'Veckorapport'
+    if (days <= 31) return 'Månadsrapport'
+    return 'Periodrapport'
+  }
+
+  // Elegant footer component
   const PageFooter = ({ pageNum }) => (
     <View style={pdfStyles.footer} fixed>
       <View style={pdfStyles.footerLeft}>
-        <BobotSmall size={20} />
-        <Text style={pdfStyles.footerText}>Bobot · www.bobot.nu</Text>
+        <BobotSmall size={18} />
+        <Text style={pdfStyles.footerBrand}>Bobot</Text>
+        <Text style={pdfStyles.footerUrl}>· www.bobot.nu</Text>
       </View>
-      <Text style={pdfStyles.footerPage}>{pageNum}</Text>
+      <Text style={pdfStyles.footerPage}>Sida {pageNum}</Text>
     </View>
   )
 
   return (
     <Document>
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* COVER PAGE - Editorial magazine feel */}
+      {/* COVER PAGE - Magazine editorial feel */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <Page size="A4" style={pdfStyles.coverPage}>
-        <View style={pdfStyles.coverContainer}>
-          {/* Mascot */}
-          <View style={pdfStyles.coverMascotArea}>
-            <BobotMascot size={100} />
+        <View style={pdfStyles.coverInner}>
+          {/* Top accent bar */}
+          <View style={pdfStyles.coverAccentBar} />
+
+          {/* Header with brand and date */}
+          <View style={pdfStyles.coverHeader}>
+            <View style={pdfStyles.coverBrand}>
+              <BobotSmall size={28} />
+              <Text style={pdfStyles.coverBrandText}>Bobot</Text>
+            </View>
+            <View style={pdfStyles.coverDateBadge}>
+              <Text style={pdfStyles.coverDateText}>{formatDateRange()}</Text>
+            </View>
           </View>
 
-          {/* Title - Serif, human */}
-          <Text style={pdfStyles.coverTitle}>Din veckorapport.</Text>
-          <Text style={pdfStyles.coverSubtitle}>
-            En sammanfattning av hur Bobot har hjälpt er{'\n'}
-            och vad som kan förbättras.
-          </Text>
+          {/* Main content - dramatic center focus */}
+          <View style={pdfStyles.coverMain}>
+            <View style={pdfStyles.coverMascot}>
+              <BobotMascot size={120} />
+            </View>
+            <View style={pdfStyles.coverTitleWrap}>
+              <Text style={pdfStyles.coverEyebrow}>Prestationsrapport</Text>
+              <Text style={pdfStyles.coverTitle}>{getReportTitle()}</Text>
+              <Text style={pdfStyles.coverSubtitle}>
+                En sammanfattning av hur Bobot har hjälpt er{'\n'}
+                och insikter för att förbättra kundupplevelsen.
+              </Text>
+            </View>
+          </View>
 
-          {/* Date */}
-          <Text style={pdfStyles.coverDate}>Genererad {date}</Text>
+          {/* Footer stats preview */}
+          <View style={pdfStyles.coverFooter}>
+            <View>
+              <Text style={pdfStyles.coverFooterLabel}>Konversationer</Text>
+              <Text style={pdfStyles.coverFooterValue}>{analytics.total_conversations}</Text>
+            </View>
+            <View>
+              <Text style={pdfStyles.coverFooterLabel}>Svarsfrekvens</Text>
+              <Text style={pdfStyles.coverFooterValue}>{answerRate}%</Text>
+            </View>
+            <View>
+              <Text style={pdfStyles.coverFooterLabel}>Tid sparad</Text>
+              <Text style={pdfStyles.coverFooterValue}>~{timeSaved} min</Text>
+            </View>
+          </View>
         </View>
       </Page>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* PAGE 1 - The Overview */}
+      {/* PAGE 1 - Executive Summary with Hero Metrics */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <Page size="A4" style={pdfStyles.page}>
-        {/* Header */}
+        <CornerAccent position="topRight" />
+
+        {/* Page header */}
         <View style={pdfStyles.pageHeader}>
-          <View>
-            <Text style={pdfStyles.pageTitle}>I korthet</Text>
-            <Text style={pdfStyles.pageSubtitle}>Nyckeltal för perioden</Text>
-          </View>
-          <BobotSmall size={32} />
+          <Text style={pdfStyles.pageNumber}>01</Text>
+          <Text style={pdfStyles.pageTitle}>Översikt</Text>
+          <View style={pdfStyles.pageDivider} />
         </View>
 
-        {/* Hero metrics - large editorial numbers */}
-        <View style={pdfStyles.metricsRow}>
-          <View style={pdfStyles.metricBox}>
-            <Text style={pdfStyles.metricValue}>{analytics.total_conversations}</Text>
-            <Text style={pdfStyles.metricLabel}>Samtal</Text>
+        {/* Hero metrics - large, dramatic numbers */}
+        <View style={pdfStyles.heroMetricsGrid}>
+          <View style={pdfStyles.heroMetricCardAccent}>
+            <Text style={pdfStyles.heroMetricValueWhite}>{analytics.total_conversations}</Text>
+            <Text style={pdfStyles.heroMetricLabelWhite}>Konversationer</Text>
           </View>
-          <View style={pdfStyles.metricDivider} />
-          <View style={pdfStyles.metricBox}>
-            <Text style={pdfStyles.metricValueSuccess}>{analytics.answer_rate?.toFixed(0) || 0}%</Text>
-            <Text style={pdfStyles.metricLabel}>Besvarade</Text>
+          <View style={pdfStyles.heroMetricCard}>
+            <Text style={pdfStyles.heroMetricValue}>{answerRate}%</Text>
+            <Text style={pdfStyles.heroMetricLabel}>Besvarade</Text>
           </View>
-          <View style={pdfStyles.metricDivider} />
-          <View style={pdfStyles.metricBox}>
-            <Text style={pdfStyles.metricValueSuccess}>{satisfactionRate}%</Text>
-            <Text style={pdfStyles.metricLabel}>Nöjda</Text>
+          <View style={pdfStyles.heroMetricCard}>
+            <Text style={pdfStyles.heroMetricValue}>{satisfactionRate}%</Text>
+            <Text style={pdfStyles.heroMetricLabel}>Nöjda</Text>
           </View>
         </View>
 
-        {/* Feedback - emotional, human */}
-        <Text style={pdfStyles.sectionTitle}>Vad tycker användarna?</Text>
-        <View style={pdfStyles.feedbackGrid}>
-          <View style={pdfStyles.feedbackCardPositive}>
-            <Text style={pdfStyles.feedbackEmoji}>👍</Text>
-            <Text style={pdfStyles.feedbackValue}>{analytics.feedback_stats?.helpful || 0}</Text>
-            <Text style={pdfStyles.feedbackLabel}>Hjälpte</Text>
-          </View>
-          <View style={pdfStyles.feedbackCardNegative}>
-            <Text style={pdfStyles.feedbackEmoji}>👎</Text>
-            <Text style={pdfStyles.feedbackValue}>{analytics.feedback_stats?.not_helpful || 0}</Text>
-            <Text style={pdfStyles.feedbackLabel}>Hjälpte ej</Text>
-          </View>
-          <View style={pdfStyles.feedbackCard}>
-            <Text style={pdfStyles.feedbackEmoji}>🤷</Text>
-            <Text style={pdfStyles.feedbackValue}>{analytics.feedback_stats?.no_feedback || 0}</Text>
-            <Text style={pdfStyles.feedbackLabel}>Ingen åsikt</Text>
+        {/* Visual metrics with progress rings */}
+        <View style={pdfStyles.insightRow}>
+          <View style={pdfStyles.visualMetricCard}>
+            <ProgressRing percent={Number(answerRate)} size={70} color={colors.sage} />
+            <View style={pdfStyles.visualMetricContent}>
+              <Text style={pdfStyles.visualMetricLabel}>Svarsfrekvens</Text>
+              <Text style={pdfStyles.visualMetricValue}>{answerRate}%</Text>
+              <Text style={pdfStyles.visualMetricDesc}>
+                {Number(answerRate) >= 80 ? 'Utmärkt! De flesta frågor besvaras.' :
+                 Number(answerRate) >= 60 ? 'Bra, men det finns utrymme för förbättring.' :
+                 'Överväg att utöka kunskapsbasen.'}
+              </Text>
+            </View>
           </View>
         </View>
 
-        {/* Activity card */}
-        <View style={pdfStyles.card}>
-          <Text style={pdfStyles.cardTitle}>Aktivitet</Text>
-          <View style={pdfStyles.dataRow}>
-            <Text style={pdfStyles.dataLabel}>Idag</Text>
-            <Text style={pdfStyles.dataValue}>{analytics.conversations_today} samtal · {analytics.messages_today} meddelanden</Text>
-          </View>
-          <View style={pdfStyles.dataRow}>
-            <Text style={pdfStyles.dataLabel}>Senaste 7 dagarna</Text>
-            <Text style={pdfStyles.dataValue}>{analytics.conversations_week} samtal · {analytics.messages_week} meddelanden</Text>
-          </View>
-          <View style={pdfStyles.dataRowLast}>
-            <Text style={pdfStyles.dataLabel}>Snittid per svar</Text>
-            <Text style={pdfStyles.dataValueSuccess}>{(analytics.avg_response_time_ms / 1000).toFixed(1)} sekunder</Text>
+        <View style={pdfStyles.insightRow}>
+          <View style={pdfStyles.visualMetricCard}>
+            <ProgressRing percent={Number(satisfactionRate)} size={70} color={colors.terracotta} />
+            <View style={pdfStyles.visualMetricContent}>
+              <Text style={pdfStyles.visualMetricLabel}>Nöjdhetsgrad</Text>
+              <Text style={pdfStyles.visualMetricValue}>{satisfactionRate}%</Text>
+              <Text style={pdfStyles.visualMetricDesc}>
+                {Number(satisfactionRate) >= 80 ? 'Fantastiskt! Användarna uppskattar Bobot.' :
+                 Number(satisfactionRate) >= 60 ? 'Användarna är nöjda överlag.' :
+                 'Granska negativ feedback för förbättringar.'}
+              </Text>
+            </View>
           </View>
         </View>
 
-        {/* Insight box */}
-        <View style={pdfStyles.insightBox}>
-          <Text style={pdfStyles.insightText}>
-            "Bobot har hanterat {analytics.total_conversations} samtal och sparat uppskattningsvis {Math.round(analytics.total_conversations * 3)} minuter av er arbetstid."
+        {/* Callout box */}
+        <View style={pdfStyles.calloutBox}>
+          <Text style={pdfStyles.calloutText}>
+            Under denna period har Bobot hanterat {analytics.total_conversations} konversationer och sparat
+            uppskattningsvis {timeSaved} minuter av er arbetstid – motsvarande cirka {Math.round(timeSaved / 60)} timmar.
           </Text>
         </View>
 
@@ -588,69 +923,82 @@ const KPIReportPDF = ({ analytics, date }) => {
       </Page>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* PAGE 2 - Deeper Analysis */}
+      {/* PAGE 2 - Feedback & Satisfaction */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <Page size="A4" style={pdfStyles.page}>
+        <CornerAccent position="topRight" />
+
         <View style={pdfStyles.pageHeader}>
-          <View>
-            <Text style={pdfStyles.pageTitle}>Under huven</Text>
-            <Text style={pdfStyles.pageSubtitle}>Språk, kategorier & trender</Text>
-          </View>
-          <BobotSmall size={32} />
+          <Text style={pdfStyles.pageNumber}>02</Text>
+          <Text style={pdfStyles.pageTitle}>Användarfeedback</Text>
+          <View style={pdfStyles.pageDivider} />
         </View>
 
-        {/* Language Distribution */}
+        {/* Feedback cards */}
+        <View style={pdfStyles.feedbackRow}>
+          <View style={pdfStyles.feedbackCardSuccess}>
+            <Text style={pdfStyles.feedbackEmoji}>👍</Text>
+            <Text style={pdfStyles.feedbackValue}>{analytics.feedback_stats?.helpful || 0}</Text>
+            <Text style={pdfStyles.feedbackLabel}>Hjälpsamma svar</Text>
+          </View>
+          <View style={pdfStyles.feedbackCardWarning}>
+            <Text style={pdfStyles.feedbackEmoji}>👎</Text>
+            <Text style={pdfStyles.feedbackValue}>{analytics.feedback_stats?.not_helpful || 0}</Text>
+            <Text style={pdfStyles.feedbackLabel}>Behöver förbättras</Text>
+          </View>
+          <View style={pdfStyles.feedbackCard}>
+            <Text style={pdfStyles.feedbackEmoji}>💬</Text>
+            <Text style={pdfStyles.feedbackValue}>{analytics.feedback_stats?.no_feedback || 0}</Text>
+            <Text style={pdfStyles.feedbackLabel}>Ingen feedback</Text>
+          </View>
+        </View>
+
+        {/* Activity breakdown */}
+        <View style={pdfStyles.insightCardWide}>
+          <View style={pdfStyles.insightHeader}>
+            <Text style={pdfStyles.insightTitle}>Aktivitet</Text>
+            <View style={pdfStyles.insightBadge}>
+              <Text style={pdfStyles.insightBadgeText}>Senaste data</Text>
+            </View>
+          </View>
+          <View style={pdfStyles.dataRow}>
+            <Text style={pdfStyles.dataRowLabel}>Idag</Text>
+            <Text style={pdfStyles.dataRowValue}>{analytics.conversations_today} konversationer</Text>
+          </View>
+          <View style={pdfStyles.dataRow}>
+            <Text style={pdfStyles.dataRowLabel}>Senaste 7 dagarna</Text>
+            <Text style={pdfStyles.dataRowValue}>{analytics.conversations_week} konversationer</Text>
+          </View>
+          <View style={pdfStyles.dataRowLast}>
+            <Text style={pdfStyles.dataRowLabel}>Genomsnittlig svarstid</Text>
+            <Text style={pdfStyles.dataRowValue}>{avgResponseTime} sekunder</Text>
+          </View>
+        </View>
+
+        {/* Language distribution */}
         {Object.keys(analytics.language_stats || {}).length > 0 && (
-          <View style={{ marginBottom: 28 }}>
-            <Text style={pdfStyles.sectionTitle}>Vilka språk pratas?</Text>
-            <View style={pdfStyles.card}>
-              {Object.entries(analytics.language_stats || {}).map(([lang, count], idx, arr) => (
-                <View style={idx === arr.length - 1 ? pdfStyles.dataRowLast : pdfStyles.dataRow} key={lang}>
-                  <Text style={pdfStyles.dataLabel}>{langNames[lang] || lang}</Text>
-                  <Text style={pdfStyles.dataValue}>{count} ({((count / langTotal) * 100).toFixed(0)}%)</Text>
-                </View>
-              ))}
+          <View style={pdfStyles.dataList}>
+            <View style={pdfStyles.dataListHeader}>
+              <Text style={[pdfStyles.dataListHeaderText, { flex: 1 }]}>Språkfördelning</Text>
+              <Text style={[pdfStyles.dataListHeaderText, { width: 80, textAlign: 'right' }]}>Andel</Text>
             </View>
-          </View>
-        )}
-
-        {/* Categories */}
-        {Object.keys(analytics.category_stats || {}).length > 0 && (
-          <View style={{ marginBottom: 28 }}>
-            <Text style={pdfStyles.sectionTitle}>Populära ämnen</Text>
-            <View style={pdfStyles.tableContainer}>
-              <View style={pdfStyles.tableHeader}>
-                <Text style={[pdfStyles.tableHeaderCell, { flex: 2 }]}>Kategori</Text>
-                <Text style={[pdfStyles.tableHeaderCell, { flex: 1, textAlign: 'right' }]}>Frågor</Text>
-              </View>
-              {Object.entries(analytics.category_stats)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 6)
-                .map(([cat, count], idx) => (
-                  <View style={idx % 2 === 0 ? pdfStyles.tableRow : pdfStyles.tableRowAlt} key={cat}>
-                    <Text style={[pdfStyles.tableCell, { flex: 2 }]}>{cat}</Text>
-                    <Text style={[pdfStyles.tableCellRight, { flex: 1 }]}>{count}</Text>
+            {Object.entries(analytics.language_stats || {})
+              .sort((a, b) => b[1] - a[1])
+              .map(([lang, count], idx, arr) => {
+                const percent = ((count / langTotal) * 100).toFixed(0)
+                return (
+                  <View style={idx === arr.length - 1 ? pdfStyles.dataRowLast : pdfStyles.dataRow} key={lang}>
+                    <View style={pdfStyles.dataRowNumber}>
+                      <Text style={pdfStyles.dataRowNumberText}>{idx + 1}</Text>
+                    </View>
+                    <Text style={pdfStyles.dataRowLabel}>{langNames[lang] || lang}</Text>
+                    <Text style={pdfStyles.dataRowValue}>{percent}%</Text>
+                    <View style={pdfStyles.dataRowBar}>
+                      <View style={[pdfStyles.dataRowBarFill, { width: `${percent}%` }]} />
+                    </View>
                   </View>
-                ))}
-            </View>
-          </View>
-        )}
-
-        {/* Hourly activity */}
-        {Object.keys(analytics.hourly_stats || {}).length > 0 && (
-          <View>
-            <Text style={pdfStyles.sectionTitle}>När är det mest aktivitet?</Text>
-            <View style={pdfStyles.card}>
-              {Object.entries(analytics.hourly_stats || {})
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 5)
-                .map(([hour, count], idx, arr) => (
-                  <View style={idx === arr.length - 1 ? pdfStyles.dataRowLast : pdfStyles.dataRow} key={hour}>
-                    <Text style={pdfStyles.dataLabel}>Klockan {hour}:00</Text>
-                    <Text style={pdfStyles.dataValue}>{count} samtal</Text>
-                  </View>
-                ))}
-            </View>
+                )
+              })}
           </View>
         )}
 
@@ -658,21 +1006,87 @@ const KPIReportPDF = ({ analytics, date }) => {
       </Page>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* PAGE 3 - Unanswered Questions (Growth Opportunities) */}
+      {/* PAGE 3 - Categories & Activity Patterns */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {(Object.keys(analytics.category_stats || {}).length > 0 || Object.keys(analytics.hourly_stats || {}).length > 0) && (
+        <Page size="A4" style={pdfStyles.page}>
+          <CornerAccent position="topRight" />
+
+          <View style={pdfStyles.pageHeader}>
+            <Text style={pdfStyles.pageNumber}>03</Text>
+            <Text style={pdfStyles.pageTitle}>Analys & Mönster</Text>
+            <View style={pdfStyles.pageDivider} />
+          </View>
+
+          {/* Categories */}
+          {Object.keys(analytics.category_stats || {}).length > 0 && (
+            <View style={[pdfStyles.dataList, { marginBottom: 24 }]}>
+              <View style={pdfStyles.dataListHeader}>
+                <Text style={[pdfStyles.dataListHeaderText, { flex: 1 }]}>Populära kategorier</Text>
+                <Text style={[pdfStyles.dataListHeaderText, { width: 60, textAlign: 'right' }]}>Frågor</Text>
+              </View>
+              {Object.entries(analytics.category_stats)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 8)
+                .map(([cat, count], idx, arr) => {
+                  const percent = ((count / categoryTotal) * 100).toFixed(0)
+                  return (
+                    <View style={idx === arr.length - 1 ? pdfStyles.dataRowLast : pdfStyles.dataRow} key={cat}>
+                      <View style={pdfStyles.dataRowNumber}>
+                        <Text style={pdfStyles.dataRowNumberText}>{idx + 1}</Text>
+                      </View>
+                      <Text style={pdfStyles.dataRowLabel}>{cat}</Text>
+                      <Text style={pdfStyles.dataRowValue}>{count}</Text>
+                      <View style={pdfStyles.dataRowBar}>
+                        <View style={[pdfStyles.dataRowBarFill, { width: `${percent}%` }]} />
+                      </View>
+                    </View>
+                  )
+                })}
+            </View>
+          )}
+
+          {/* Peak hours */}
+          {Object.keys(analytics.hourly_stats || {}).length > 0 && (
+            <View style={pdfStyles.insightCardWide}>
+              <View style={pdfStyles.insightHeader}>
+                <Text style={pdfStyles.insightTitle}>Mest aktiva tider</Text>
+              </View>
+              {Object.entries(analytics.hourly_stats || {})
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([hour, count], idx, arr) => (
+                  <View style={idx === arr.length - 1 ? pdfStyles.dataRowLast : pdfStyles.dataRow} key={hour}>
+                    <View style={pdfStyles.dataRowNumber}>
+                      <Text style={pdfStyles.dataRowNumberText}>{idx + 1}</Text>
+                    </View>
+                    <Text style={pdfStyles.dataRowLabel}>Klockan {hour}:00</Text>
+                    <Text style={pdfStyles.dataRowValue}>{count} konversationer</Text>
+                  </View>
+                ))}
+            </View>
+          )}
+
+          <PageFooter pageNum={3} />
+        </Page>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* PAGE 4 - Unanswered Questions (Growth Opportunities) */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {analytics.top_unanswered && analytics.top_unanswered.length > 0 && (
         <Page size="A4" style={pdfStyles.page}>
+          <CornerAccent position="topRight" />
+
           <View style={pdfStyles.pageHeader}>
-            <View>
-              <Text style={pdfStyles.pageTitle}>Kunskapsluckor</Text>
-              <Text style={pdfStyles.pageSubtitle}>Frågor som väntar på svar</Text>
-            </View>
-            <BobotSmall size={32} />
+            <Text style={pdfStyles.pageNumber}>04</Text>
+            <Text style={pdfStyles.pageTitle}>Kunskapsluckor</Text>
+            <View style={pdfStyles.pageDivider} />
           </View>
 
-          {/* Intro card */}
-          <View style={pdfStyles.cardHighlight}>
-            <Text style={pdfStyles.cardText}>
+          {/* Intro callout */}
+          <View style={pdfStyles.calloutBox}>
+            <Text style={pdfStyles.calloutText}>
               Dessa frågor har ställts av användare men Bobot kunde inte hitta ett bra svar.
               Genom att lägga till dessa i kunskapsbasen kan ni förbättra svarsfrekvensen och
               göra Bobot ännu mer hjälpsam.
@@ -680,11 +1094,11 @@ const KPIReportPDF = ({ analytics, date }) => {
           </View>
 
           {/* Questions list */}
-          <View style={pdfStyles.card}>
-            {analytics.top_unanswered.slice(0, 8).map((q, i) => (
+          <View style={pdfStyles.questionsList}>
+            {analytics.top_unanswered.slice(0, 10).map((q, i, arr) => (
               <View
                 key={i}
-                style={i < Math.min(analytics.top_unanswered.length, 8) - 1 ? pdfStyles.questionItem : { flexDirection: 'row' }}
+                style={i < arr.length - 1 ? pdfStyles.questionItem : pdfStyles.questionItemLast}
               >
                 <View style={pdfStyles.questionNumber}>
                   <Text style={pdfStyles.questionNumberText}>{i + 1}</Text>
@@ -694,15 +1108,15 @@ const KPIReportPDF = ({ analytics, date }) => {
             ))}
           </View>
 
-          {analytics.top_unanswered.length > 8 && (
-            <View style={pdfStyles.insightBox}>
-              <Text style={pdfStyles.insightText}>
-                ...och {analytics.top_unanswered.length - 8} fler frågor väntar på svar.
+          {analytics.top_unanswered.length > 10 && (
+            <View style={[pdfStyles.calloutBox, { marginTop: 20 }]}>
+              <Text style={pdfStyles.calloutText}>
+                ...och {analytics.top_unanswered.length - 10} fler frågor väntar på svar i kunskapsbasen.
               </Text>
             </View>
           )}
 
-          <PageFooter pageNum={3} />
+          <PageFooter pageNum={4} />
         </Page>
       )}
     </Document>
@@ -716,17 +1130,27 @@ function Analytics() {
   const [loading, setLoading] = useState(true)
   const [addingQuestion, setAddingQuestion] = useState(null)
   const [showExportMenu, setShowExportMenu] = useState(false)
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [exportType, setExportType] = useState(null) // 'pdf' or 'csv'
+  const [dateRange, setDateRange] = useState({
+    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days ago
+    end: new Date().toISOString().split('T')[0] // today
+  })
   const exportMenuRef = useRef(null)
+  const datePickerRef = useRef(null)
 
   useEffect(() => {
     fetchAnalytics()
   }, [])
 
-  // Close export menu when clicking outside
+  // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
         setShowExportMenu(false)
+      }
+      if (datePickerRef.current && !datePickerRef.current.contains(event.target)) {
+        setShowDatePicker(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -884,7 +1308,7 @@ function Analytics() {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `KPI-rapport-${today}.csv`
+      a.download = `KPI-rapport-${dateRange.start}-till-${dateRange.end}.csv`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
@@ -900,15 +1324,15 @@ function Analytics() {
   const handleExportKPIReportPDF = async () => {
     if (!analytics) return
     setExporting('kpi-pdf')
-    setShowExportMenu(false)
+    setShowDatePicker(false)
 
     try {
-      const today = new Date().toLocaleDateString('sv-SE')
-      const blob = await pdf(<KPIReportPDF analytics={analytics} date={today} />).toBlob()
+      const blob = await pdf(<KPIReportPDF analytics={analytics} dateRange={dateRange} />).toBlob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
+      const fileName = `KPI-rapport-${dateRange.start}-till-${dateRange.end}.pdf`
       a.href = url
-      a.download = `KPI-rapport-${today}.pdf`
+      a.download = fileName
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
@@ -922,8 +1346,54 @@ function Analytics() {
   }
 
   const handleExportCSV = () => {
-    setShowExportMenu(false)
+    setShowDatePicker(false)
     handleExportKPIReport()
+  }
+
+  // Open date picker for export type
+  const openDatePickerForExport = (type) => {
+    setExportType(type)
+    setShowExportMenu(false)
+    setShowDatePicker(true)
+  }
+
+  // Quick date range presets
+  const setDatePreset = (preset) => {
+    const end = new Date()
+    let start = new Date()
+    switch (preset) {
+      case 'today':
+        start = new Date()
+        break
+      case 'yesterday':
+        start = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
+        end.setTime(start.getTime())
+        break
+      case 'week':
+        start = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        break
+      case 'month':
+        start = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+        break
+      case 'quarter':
+        start = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+        break
+      default:
+        break
+    }
+    setDateRange({
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0]
+    })
+  }
+
+  // Execute export after date selection
+  const executeExport = () => {
+    if (exportType === 'pdf') {
+      handleExportKPIReportPDF()
+    } else if (exportType === 'csv') {
+      handleExportCSV()
+    }
   }
 
   if (loading) {
@@ -984,7 +1454,7 @@ function Analytics() {
           {showExportMenu && (
             <div className="absolute right-0 top-full mt-2 bg-bg-tertiary border border-border rounded-lg shadow-lg overflow-hidden z-50 min-w-[160px] animate-scale-in">
               <button
-                onClick={handleExportCSV}
+                onClick={() => openDatePickerForExport('csv')}
                 className="w-full flex items-center gap-3 px-4 py-3 text-sm text-text-primary hover:bg-bg-secondary transition-colors"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success">
@@ -997,7 +1467,7 @@ function Analytics() {
                 </div>
               </button>
               <button
-                onClick={handleExportKPIReportPDF}
+                onClick={() => openDatePickerForExport('pdf')}
                 className="w-full flex items-center gap-3 px-4 py-3 text-sm text-text-primary hover:bg-bg-secondary transition-colors border-t border-border-subtle"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-error">
@@ -1014,6 +1484,128 @@ function Analytics() {
           )}
         </div>
       </div>
+
+      {/* Date Range Picker Modal */}
+      {showDatePicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in">
+          <div ref={datePickerRef} className="bg-bg-primary rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-scale-in">
+            {/* Header */}
+            <div className="bg-accent px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">Välj period för export</h3>
+              <p className="text-white/80 text-sm mt-1">
+                {exportType === 'pdf' ? 'PDF-rapport' : 'CSV-export'}
+              </p>
+            </div>
+
+            {/* Quick presets */}
+            <div className="px-6 py-4 border-b border-border">
+              <p className="text-sm text-text-secondary mb-3">Snabbval</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setDatePreset('today')}
+                  className="px-3 py-1.5 text-sm bg-bg-secondary hover:bg-accent hover:text-white rounded-lg transition-colors"
+                >
+                  Idag
+                </button>
+                <button
+                  onClick={() => setDatePreset('yesterday')}
+                  className="px-3 py-1.5 text-sm bg-bg-secondary hover:bg-accent hover:text-white rounded-lg transition-colors"
+                >
+                  Igår
+                </button>
+                <button
+                  onClick={() => setDatePreset('week')}
+                  className="px-3 py-1.5 text-sm bg-bg-secondary hover:bg-accent hover:text-white rounded-lg transition-colors"
+                >
+                  7 dagar
+                </button>
+                <button
+                  onClick={() => setDatePreset('month')}
+                  className="px-3 py-1.5 text-sm bg-bg-secondary hover:bg-accent hover:text-white rounded-lg transition-colors"
+                >
+                  30 dagar
+                </button>
+                <button
+                  onClick={() => setDatePreset('quarter')}
+                  className="px-3 py-1.5 text-sm bg-bg-secondary hover:bg-accent hover:text-white rounded-lg transition-colors"
+                >
+                  90 dagar
+                </button>
+              </div>
+            </div>
+
+            {/* Custom date range */}
+            <div className="px-6 py-4">
+              <p className="text-sm text-text-secondary mb-3">Eller välj datum</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-text-tertiary mb-1.5">Från</label>
+                  <input
+                    type="date"
+                    value={dateRange.start}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                    max={dateRange.end}
+                    className="w-full px-3 py-2 bg-bg-secondary border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-text-tertiary mb-1.5">Till</label>
+                  <input
+                    type="date"
+                    value={dateRange.end}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                    min={dateRange.start}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 bg-bg-secondary border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                  />
+                </div>
+              </div>
+
+              {/* Selected range preview */}
+              <div className="mt-4 p-3 bg-bg-secondary rounded-lg">
+                <p className="text-sm text-text-secondary">
+                  Vald period: <span className="font-medium text-text-primary">
+                    {new Date(dateRange.start).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {' – '}
+                    {new Date(dateRange.end).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="px-6 py-4 bg-bg-secondary flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDatePicker(false)}
+                className="px-4 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={executeExport}
+                disabled={exporting !== null}
+                className="px-5 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {exporting ? (
+                  <>
+                    <span className="animate-spin">⏳</span>
+                    Exporterar...
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Exportera {exportType === 'pdf' ? 'PDF' : 'CSV'}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Overview Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
