@@ -493,12 +493,13 @@ const pdfStyles = StyleSheet.create({
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // VISUAL METRICS - Clean vertical layout for reliable rendering
+  // VISUAL METRICS - Clean vertical layout with explicit widths
   // ─────────────────────────────────────────────────────────────────────────
   visualMetricCard: {
+    width: 230,
     backgroundColor: colors.cream,
     borderRadius: 20,
-    padding: 28,
+    padding: 24,
     marginBottom: 20,
   },
   visualMetricHeader: {
@@ -909,13 +910,13 @@ const KPIReportPDF = ({ analytics, dateRange, companyName = 'Ert företag' }) =>
           </View>
         </View>
 
-        {/* Visual metrics with clean progress bars */}
+        {/* Visual metrics with full-width progress bars */}
         <View style={pdfStyles.insightRow}>
           <View style={pdfStyles.visualMetricCard}>
             <Text style={pdfStyles.visualMetricLabel}>Svarsfrekvens</Text>
             <Text style={pdfStyles.visualMetricValue}>{answerRate}%</Text>
             <View style={pdfStyles.visualMetricProgressRow}>
-              <ProgressBar percent={Number(answerRate)} width={200} height={10} color={colors.sage} />
+              <ProgressBar percent={Number(answerRate)} width={180} height={8} color={colors.sage} />
             </View>
             <Text style={pdfStyles.visualMetricDesc}>
               {Number(answerRate) >= 80 ? 'Utmärkt! De flesta frågor besvaras.' :
@@ -927,7 +928,7 @@ const KPIReportPDF = ({ analytics, dateRange, companyName = 'Ert företag' }) =>
             <Text style={pdfStyles.visualMetricLabel}>Nöjdhetsgrad</Text>
             <Text style={pdfStyles.visualMetricValue}>{satisfactionRate}%</Text>
             <View style={pdfStyles.visualMetricProgressRow}>
-              <ProgressBar percent={Number(satisfactionRate)} width={200} height={10} color={colors.terracotta} />
+              <ProgressBar percent={Number(satisfactionRate)} width={180} height={8} color={colors.terracotta} />
             </View>
             <Text style={pdfStyles.visualMetricDesc}>
               {Number(satisfactionRate) >= 80 ? 'Fantastiskt! Användarna uppskattar Bobot.' :
