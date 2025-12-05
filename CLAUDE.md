@@ -8,7 +8,7 @@
 
 ### Key Features
 - Multi-tenant architecture with tenant isolation
-- AI-powered responses using Ollama (Llama 3.1)
+- AI-powered responses using Ollama (Qwen 2.5 14B)
 - Multi-language support (Swedish, English, Arabic with RTL)
 - GDPR-compliant with automatic data retention cleanup
 - Real-time analytics and conversation tracking
@@ -31,7 +31,7 @@
           ▼
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │  Admin Panel    │────▶│  FastAPI Backend│────▶│     Ollama      │
-│  (React + Vite) │     │   (Python)      │     │  (Llama 3.1)    │
+│  (React + Vite) │     │   (Python)      │     │ (Qwen 2.5 14B)  │
 └─────────────────┘     └────────┬────────┘     └─────────────────┘
                                  │
                         ┌────────▼────────┐
@@ -108,7 +108,7 @@ bobot/
 - **Framework:** FastAPI with lifespan events
 - **Database:** SQLite (PostgreSQL supported via DATABASE_URL)
 - **ORM:** SQLAlchemy 2.0
-- **AI:** Ollama with Llama 3.1
+- **AI:** Ollama with Qwen 2.5 14B
 - **Auth:** JWT (PyJWT) + bcrypt + TOTP (pyotp)
 - **Validation:** Pydantic v2
 - **File parsing:** openpyxl, python-docx, pypdf, beautifulsoup4
@@ -144,7 +144,7 @@ bobot/
 docker-compose up -d
 
 # Download AI model (first time only)
-docker exec -it bobot-ollama-1 ollama pull llama3.1
+docker exec -it bobot-ollama-1 ollama pull qwen2.5:14b
 
 # View logs
 docker-compose logs -f
@@ -371,7 +371,7 @@ CORS_ORIGINS=https://bobot.nu,https://www.bobot.nu,https://demo.bobot.nu
 
 # Optional
 OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.1
+OLLAMA_MODEL=qwen2.5:14b
 DATABASE_URL=sqlite:///./bobot.db
 SENTRY_DSN=<your-sentry-dsn>
 ADMIN_PASSWORD=<strong-password>

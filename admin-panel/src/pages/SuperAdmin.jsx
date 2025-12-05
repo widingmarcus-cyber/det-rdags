@@ -2660,7 +2660,7 @@ function SuperAdmin() {
                 <div className="space-y-4">
                   <div className="p-3 rounded-lg bg-bg-secondary">
                     <p className="text-sm text-text-secondary">AI-modell</p>
-                    <p className="text-text-primary font-medium">Llama 3.1</p>
+                    <p className="text-text-primary font-medium">Qwen 2.5 14B</p>
                   </div>
                   <div className="p-3 rounded-lg bg-bg-secondary">
                     <p className="text-sm text-text-secondary">Max retention</p>
@@ -3304,7 +3304,7 @@ function SuperAdmin() {
           ▼
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │  Admin-panel    │────▶│  FastAPI Backend│────▶│     Ollama      │
-│  (React)        │     │   (Python)      │     │  (Llama 3.1)    │
+│  (React)        │     │   (Python)      │     │ (Qwen 2.5 14B)  │
 └─────────────────┘     └────────┬────────┘     └─────────────────┘
                                  │
                         ┌────────▼────────┐

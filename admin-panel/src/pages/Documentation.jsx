@@ -1191,9 +1191,9 @@ ADMIN_PASSWORD=starkt-adminlösenord`}
                       <div>
                         <p className="font-medium text-text-primary">Ladda ner AI-modellen (första gången)</p>
                         <div className="mt-2 bg-bg-secondary rounded-lg p-3 font-mono text-xs overflow-x-auto">
-                          docker exec -it bobot-ollama-1 ollama pull llama3.1
+                          docker exec -it bobot-ollama-1 ollama pull qwen2.5:14b
                         </div>
-                        <p className="text-xs mt-2">Detta tar några minuter beroende på er internetanslutning (modellen är ca 4 GB).</p>
+                        <p className="text-xs mt-2">Detta tar några minuter beroende på er internetanslutning (modellen är ca 8 GB).</p>
                       </div>
                     </li>
                     <li className="flex gap-3">

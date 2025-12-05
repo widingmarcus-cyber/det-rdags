@@ -17,7 +17,7 @@ En GDPR-säker AI-chatbot för fastighetsbolag där kunder själva bygger sin ku
           ▼
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │  Admin-panel    │────▶│  FastAPI Backend│────▶│     Ollama      │
-│  (React + Vite) │     │   (Python)      │     │  (Llama 3.1)    │
+│  (React + Vite) │     │   (Python)      │     │ (Qwen 2.5 14B)  │
 └─────────────────┘     └────────┬────────┘     └─────────────────┘
                                  │
                         ┌────────▼────────┐
@@ -29,7 +29,7 @@ En GDPR-säker AI-chatbot för fastighetsbolag där kunder själva bygger sin ku
 ## Funktioner
 
 - **Multi-tenant arkitektur** - Varje företag har isolerad data
-- **AI-drivna svar** - Ollama med Llama 3.1
+- **AI-drivna svar** - Ollama med Qwen 2.5 14B
 - **Flerspråksstöd** - Svenska, engelska, arabiska (med RTL)
 - **GDPR-kompatibel** - Automatisk dataradering, samtyckehantering
 - **Realtidsanalys** - Statistik och konversationshistorik
@@ -68,7 +68,7 @@ En GDPR-säker AI-chatbot för fastighetsbolag där kunder själva bygger sin ku
 docker-compose up -d
 
 # Ladda ner AI-modellen (kör efter första uppstarten)
-docker exec -it bobot-ollama-1 ollama pull llama3.1
+docker exec -it bobot-ollama-1 ollama pull qwen2.5:14b
 
 # Tjänster:
 # - Backend API: http://localhost:8000
@@ -224,7 +224,7 @@ add_action('wp_footer', 'add_bobot_chatbot');
 ## Tech Stack
 
 - **Backend:** Python 3.11, FastAPI, SQLAlchemy 2.0, Pydantic v2
-- **AI:** Ollama, Llama 3.1
+- **AI:** Ollama, Qwen 2.5 14B
 - **Databas:** SQLite (PostgreSQL stöds)
 - **Admin-panel:** React 18, Vite, Tailwind CSS, React Router v6
 - **Widget:** React 18 (byggt som IIFE för inbäddning)
@@ -283,7 +283,7 @@ CORS_ORIGINS=https://bobot.nu,https://www.bobot.nu
 
 # Valfritt
 OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.1
+OLLAMA_MODEL=qwen2.5:14b
 DATABASE_URL=sqlite:///./bobot.db
 SENTRY_DSN=<din-sentry-dsn>
 ADMIN_PASSWORD=<starkt-lösenord>
