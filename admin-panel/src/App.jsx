@@ -246,6 +246,21 @@ function App() {
     }
   }
 
+  // Mark announcement as read (persists to backend)
+  const markAnnouncementAsRead = async () => {
+    if (!auth?.token) return
+    try {
+      await fetch(`${API_BASE}/announcements/read`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${auth.token}` }
+      })
+      setAnnouncement(null)
+    } catch (e) {
+      console.error('Could not mark announcement as read:', e)
+      setAnnouncement(null) // Still dismiss locally
+    }
+  }
+
   // Fetch announcements when authenticated
   useEffect(() => {
     if (auth) {
@@ -321,7 +336,7 @@ function App() {
           darkMode={darkMode}
           toggleDarkMode={toggleDarkMode}
           announcement={announcement}
-          onDismissAnnouncement={() => setAnnouncement(null)}
+          onDismissAnnouncement={markAnnouncementAsRead}
         />
         <main id="main-content" className="flex-1 p-8 overflow-auto" role="main" aria-label="Huvudinnehåll">
           <Routes>

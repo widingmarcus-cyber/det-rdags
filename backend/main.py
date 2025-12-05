@@ -2098,6 +2098,13 @@ async def login(request: LoginRequest, req: Request, db: Session = Depends(get_d
 
     if not company or not verify_password(request.password, company.password_hash):
         record_failed_login(login_identifier)
+        # Log failed login attempt to audit log
+        log_admin_action(
+            db, "SYSTEM", "failed_company_login",
+            target_company_id=request.company_id,
+            description=f"Misslyckat inloggningsförsök för företag: {request.company_id}",
+            ip_address=client_ip
+        )
         raise HTTPException(
             status_code=401,
             detail="Fel företags-ID eller lösenord",
@@ -2159,6 +2166,12 @@ async def admin_login(request: AdminLoginRequest, req: Request, db: Session = De
 
     if not admin or not verify_password(request.password, admin.password_hash):
         record_failed_login(login_identifier)
+        # Log failed admin login attempt to audit log
+        log_admin_action(
+            db, "SYSTEM", "failed_admin_login",
+            description=f"Misslyckat admin-inloggningsförsök för: {request.username}",
+            ip_address=client_ip
+        )
         raise HTTPException(
             status_code=401,
             detail="Fel användarnamn eller lösenord",
@@ -2190,6 +2203,12 @@ async def admin_login(request: AdminLoginRequest, req: Request, db: Session = De
         totp = pyotp.TOTP(admin.totp_secret)
         if not totp.verify(request.totp_code, valid_window=1):
             record_failed_login(f"2fa:{request.username}:{client_ip}")
+            # Log failed 2FA attempt
+            log_admin_action(
+                db, "SYSTEM", "failed_2fa_verification",
+                description=f"Misslyckat 2FA-verifiering för: {request.username}",
+                ip_address=client_ip
+            )
             raise HTTPException(status_code=401, detail="Felaktig 2FA-kod")
 
     # Clear failed attempts on successful login
@@ -7295,7 +7314,7 @@ async def get_company_announcements(
     current: dict = Depends(get_current_company),
     db: Session = Depends(get_db)
 ):
-    """Get active announcements for companies"""
+    """Get active announcements for companies (excluding those marked as read)"""
     announcement = db.query(GlobalSettings).filter(
         GlobalSettings.key == "active_announcement"
     ).first()
@@ -7303,11 +7322,68 @@ async def get_company_announcements(
     if announcement and announcement.value:
         try:
             data = json.loads(announcement.value)
+            announcement_id = data.get("created_at", "")
+
+            # Check if this company has read this announcement
+            company_settings = db.query(CompanySettings).filter(
+                CompanySettings.company_id == current["company_id"]
+            ).first()
+
+            if company_settings:
+                read_announcement = company_settings.extra_settings or {}
+                if read_announcement.get("read_announcement_id") == announcement_id:
+                    return {"announcement": None}  # Already read
+
             return {"announcement": data}
         except:
             pass
 
     return {"announcement": None}
+
+
+@app.post("/announcements/read")
+async def mark_announcement_read(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Mark the current announcement as read for this company"""
+    # Get the current announcement ID
+    announcement = db.query(GlobalSettings).filter(
+        GlobalSettings.key == "active_announcement"
+    ).first()
+
+    if not announcement or not announcement.value:
+        return {"message": "No active announcement"}
+
+    try:
+        data = json.loads(announcement.value)
+        announcement_id = data.get("created_at", "")
+
+        # Update company settings
+        company_settings = db.query(CompanySettings).filter(
+            CompanySettings.company_id == current["company_id"]
+        ).first()
+
+        if company_settings:
+            extra = company_settings.extra_settings or {}
+            extra["read_announcement_id"] = announcement_id
+            company_settings.extra_settings = extra
+            # Force update detection
+            from sqlalchemy.orm.attributes import flag_modified
+            flag_modified(company_settings, "extra_settings")
+        else:
+            # Create settings if they don't exist
+            company_settings = CompanySettings(
+                company_id=current["company_id"],
+                extra_settings={"read_announcement_id": announcement_id}
+            )
+            db.add(company_settings)
+
+        db.commit()
+        return {"message": "Announcement marked as read"}
+
+    except Exception as e:
+        return {"message": f"Error: {str(e)}"}
 
 
 @app.get("/admin/announcements")

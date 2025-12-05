@@ -197,17 +197,26 @@ function WidgetPage({ widgetType }) {
         })
       })
 
+      // Try to parse response as JSON
+      const text = await response.text()
+      let data
+      try {
+        data = JSON.parse(text)
+      } catch {
+        // Not JSON - likely server error
+        setError('Serverfel: Kunde inte bearbeta svaret')
+        return
+      }
+
       if (response.ok) {
-        const data = await response.json()
-        setSuccess(`Importerade ${data.items_added || 'flera'} frågor och svar från mallen!`)
+        setSuccess(`Importerade ${data.imported || data.items_added || 'flera'} frågor och svar från mallen!`)
         fetchKnowledge(widget.id)
         setShowTemplateModal(false)
         setSelectedTemplate(null)
         setTemplatePreview(null)
         setSelectedCategories([])
       } else {
-        const err = await response.json()
-        setError(err.detail || 'Kunde inte applicera mallen')
+        setError(data.detail || 'Kunde inte applicera mallen')
       }
     } catch (e) {
       setError('Ett fel uppstod: ' + e.message)
@@ -641,7 +650,21 @@ function WidgetPage({ widgetType }) {
           id: Date.now()
         }])
       } else {
-        setPreviewMessages(prev => [...prev, { type: 'bot', text: 'Kunde inte få svar just nu.', error: true }])
+        // Try to get error details from response
+        let errorMsg = 'Kunde inte få svar just nu.'
+        try {
+          const errData = await response.json()
+          if (response.status === 503) {
+            errorMsg = errData.detail || 'AI-tjänsten är inte tillgänglig. Kontrollera att Ollama körs och att modellen är laddad.'
+          } else if (response.status === 429) {
+            errorMsg = errData.detail || 'För många förfrågningar. Vänta en stund och försök igen.'
+          } else {
+            errorMsg = errData.detail || errorMsg
+          }
+        } catch {
+          // Couldn't parse error response
+        }
+        setPreviewMessages(prev => [...prev, { type: 'bot', text: errorMsg, error: true }])
       }
     } catch (e) {
       console.error('Preview chat error:', e)

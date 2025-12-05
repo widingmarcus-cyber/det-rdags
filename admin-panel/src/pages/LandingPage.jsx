@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 
 // Use /api prefix which is proxied to backend in both dev and production
 const API_BASE = '/api'
+const API_URL = '/api'
 
 // Page view tracking hook
 function usePageTracking() {
