@@ -222,51 +222,65 @@ function AdminLogin({ onLogin, onVerify2FA }) {
               backgroundSize: '20px 20px'
             }} />
 
-            {/* Bobot Mascot Logo */}
+            {/* Bobot Mascot Logo - matches Landing page style */}
             <div className="relative">
               <div className="w-24 h-24 flex items-center justify-center mx-auto mb-4">
                 <svg width="80" height="80" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  {/* Antenna */}
-                  <rect x="56" y="8" width="8" height="14" rx="4" fill="white" opacity="0.6" />
-                  <circle cx="60" cy="6" r="6" fill="#4A9D7C">
-                    <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite" />
-                  </circle>
+                  {/* Feet */}
+                  <rect x="25" y="95" width="30" height="12" rx="6" fill="white" opacity="0.4" />
+                  <rect x="65" y="95" width="30" height="12" rx="6" fill="white" opacity="0.4" />
+                  <rect x="28" y="97" width="24" height="8" rx="4" fill="white" opacity="0.3" />
+                  <rect x="68" y="97" width="24" height="8" rx="4" fill="white" opacity="0.3" />
+                  {/* Body */}
+                  <rect x="30" y="55" width="60" height="42" rx="4" fill="white" />
+                  <rect x="33" y="58" width="54" height="36" rx="2" fill="white" opacity="0.8" />
+                  {/* Body screens */}
+                  <rect x="36" y="75" width="20" height="16" rx="2" fill="#1C1917" />
+                  <rect x="64" y="75" width="20" height="16" rx="2" fill="#1C1917" />
+                  {/* Neck */}
+                  <rect x="50" y="45" width="20" height="14" rx="2" fill="white" opacity="0.5" />
                   {/* Head */}
-                  <rect x="30" y="20" width="60" height="36" rx="6" fill="white" />
+                  <rect x="35" y="20" width="50" height="28" rx="4" fill="white" />
                   {/* Eyes */}
-                  <ellipse cx="45" cy="38" rx="10" ry="9" fill="#1C1917" />
-                  <ellipse cx="75" cy="38" rx="10" ry="9" fill="#1C1917" />
-                  <ellipse cx="45" cy="38" rx="7" ry="6" fill="#292524" />
-                  <ellipse cx="75" cy="38" rx="7" ry="6" fill="#292524" />
-                  <ellipse cx="45" cy="39" rx="4" ry="4" fill="#D97757">
-                    <animate attributeName="ry" values="4;0.5;4;4;4" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+                  <ellipse cx="48" cy="34" rx="12" ry="11" fill="#1C1917" />
+                  <ellipse cx="72" cy="34" rx="12" ry="11" fill="#1C1917" />
+                  <ellipse cx="48" cy="34" rx="9" ry="8" fill="#292524" />
+                  <ellipse cx="72" cy="34" rx="9" ry="8" fill="#292524" />
+                  {/* Pupils with blink animation */}
+                  <ellipse cx="48" cy="35" rx="5" ry="5" fill="#D97757">
+                    <animate attributeName="ry" values="5;0.5;5;5;5" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
                   </ellipse>
-                  <ellipse cx="75" cy="39" rx="4" ry="4" fill="#D97757">
-                    <animate attributeName="ry" values="4;0.5;4;4;4" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+                  <ellipse cx="72" cy="35" rx="5" ry="5" fill="#D97757">
+                    <animate attributeName="ry" values="5;0.5;5;5;5" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
                   </ellipse>
-                  <circle cx="47" cy="36" r="2" fill="white" opacity="0.8">
-                    <animate attributeName="opacity" values="0.8;0;0.8;0.8;0.8" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+                  {/* Eye highlights */}
+                  <circle cx="50" cy="32" r="2.5" fill="#FEF2EE">
+                    <animate attributeName="opacity" values="1;0;1;1;1" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
                   </circle>
-                  <circle cx="77" cy="36" r="2" fill="white" opacity="0.8">
-                    <animate attributeName="opacity" values="0.8;0;0.8;0.8;0.8" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
+                  <circle cx="74" cy="32" r="2.5" fill="#FEF2EE">
+                    <animate attributeName="opacity" values="1;0;1;1;1" dur="4s" repeatCount="indefinite" keyTimes="0;0.05;0.1;0.95;1" />
                   </circle>
                   {/* Nose */}
-                  <rect x="56" y="34" width="8" height="8" rx="2" fill="white" opacity="0.4" />
-                  {/* Neck */}
-                  <rect x="50" y="52" width="20" height="12" rx="3" fill="white" opacity="0.5" />
-                  {/* Body */}
-                  <rect x="32" y="60" width="56" height="38" rx="4" fill="white" />
-                  <rect x="36" y="64" width="48" height="30" rx="2" fill="white" opacity="0.7" />
-                  {/* Body lights */}
-                  <rect x="40" y="74" width="16" height="14" rx="2" fill="#1C1917" />
-                  <rect x="64" y="74" width="16" height="14" rx="2" fill="#1C1917" />
+                  <rect x="56" y="30" width="8" height="8" rx="2" fill="white" opacity="0.4" />
                   {/* Arms */}
-                  <rect x="18" y="68" width="16" height="6" rx="3" fill="white" opacity="0.5">
-                    <animateTransform attributeName="transform" type="rotate" values="0 26 71;-6 26 71;0 26 71" dur="3s" repeatCount="indefinite" />
+                  <rect x="15" y="62" width="18" height="6" rx="3" fill="white" opacity="0.5">
+                    <animateTransform attributeName="transform" type="rotate" values="0 24 65;-8 24 65;0 24 65" dur="3s" repeatCount="indefinite" />
                   </rect>
-                  <rect x="86" y="68" width="16" height="6" rx="3" fill="white" opacity="0.5">
-                    <animateTransform attributeName="transform" type="rotate" values="0 94 71;6 94 71;0 94 71" dur="3s" repeatCount="indefinite" />
+                  <rect x="87" y="62" width="18" height="6" rx="3" fill="white" opacity="0.5">
+                    <animateTransform attributeName="transform" type="rotate" values="0 96 65;8 96 65;0 96 65" dur="3s" repeatCount="indefinite" />
                   </rect>
+                  {/* Hands */}
+                  <rect x="10" y="58" width="8" height="14" rx="2" fill="white" opacity="0.4">
+                    <animateTransform attributeName="transform" type="rotate" values="0 14 65;-8 14 65;0 14 65" dur="3s" repeatCount="indefinite" />
+                  </rect>
+                  <rect x="102" y="58" width="8" height="14" rx="2" fill="white" opacity="0.4">
+                    <animateTransform attributeName="transform" type="rotate" values="0 106 65;8 106 65;0 106 65" dur="3s" repeatCount="indefinite" />
+                  </rect>
+                  {/* Antenna */}
+                  <rect x="58" y="12" width="4" height="10" rx="2" fill="white" opacity="0.5" />
+                  <circle cx="60" cy="10" r="5" fill="#4A9D7C">
+                    <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite" />
+                  </circle>
                 </svg>
               </div>
               <h1 className="text-2xl font-bold text-white tracking-tight">Bobot</h1>
