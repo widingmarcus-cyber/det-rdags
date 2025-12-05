@@ -29,7 +29,6 @@ function getSystemDarkMode() {
 function App() {
   const location = useLocation()
   const isAdminRoute = location.pathname.startsWith('/admin')
-  const isLandingPage = location.pathname === '/' || location.pathname === '/integritetspolicy'
 
   // Dark mode state - check localStorage first, then system preference
   const [darkMode, setDarkMode] = useState(() => {
@@ -38,24 +37,15 @@ function App() {
     return getSystemDarkMode()
   })
 
-  // Apply dark mode class to html element - but NOT on landing page (always light)
+  // Apply dark mode class to html element
   useEffect(() => {
-    // Set landing page data attribute for CSS overrides
-    document.documentElement.setAttribute('data-landing-page', isLandingPage ? 'true' : 'false')
-
-    if (isLandingPage) {
-      // Landing page is always light mode
-      document.documentElement.classList.remove('dark')
-    } else if (darkMode) {
+    if (darkMode) {
       document.documentElement.classList.add('dark')
     } else {
       document.documentElement.classList.remove('dark')
     }
-    // Only save preference when not on landing page
-    if (!isLandingPage) {
-      localStorage.setItem('bobot_dark_mode', darkMode)
-    }
-  }, [darkMode, isLandingPage])
+    localStorage.setItem('bobot_dark_mode', darkMode)
+  }, [darkMode])
 
   const toggleDarkMode = () => setDarkMode(!darkMode)
 

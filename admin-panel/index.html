@@ -8,17 +8,6 @@
     <meta name="theme-color" content="#D97757" />
     <meta name="description" content="Bobot - din AI-medarbetare för kundservice" />
     <title>Bobot - din AI-medarbetare</title>
-    <script>
-      // Force light mode on landing page BEFORE React loads
-      (function() {
-        var isLanding = window.location.pathname === '/' || window.location.pathname === '/integritetspolicy';
-        if (isLanding) {
-          document.documentElement.classList.remove('dark');
-          // Set data attribute on html since body doesn't exist yet
-          document.documentElement.setAttribute('data-landing-page', 'true');
-        }
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>

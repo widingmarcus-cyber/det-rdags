@@ -1,7 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { readFileSync } from 'fs'
-import { resolve } from 'path'
+import { fileURLToPath } from 'url'
+import { dirname, resolve } from 'path'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 export default defineConfig({
   plugins: [
@@ -16,8 +20,9 @@ export default defineConfig({
             res.setHeader('Content-Type', 'application/javascript')
             res.end(content)
           } catch (e) {
+            console.error('Widget serve error:', e)
             res.statusCode = 404
-            res.end('Widget not found')
+            res.end('Widget not found: ' + e.message)
           }
         })
       }
