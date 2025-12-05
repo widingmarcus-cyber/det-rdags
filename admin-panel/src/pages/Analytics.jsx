@@ -1,8 +1,298 @@
-import { useState, useEffect, useContext } from 'react'
+import { useState, useEffect, useContext, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AuthContext } from '../App'
+import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer'
 
 const API_BASE = '/api'
+
+// PDF Styles
+const pdfStyles = StyleSheet.create({
+  page: {
+    padding: 40,
+    fontFamily: 'Helvetica',
+    fontSize: 10,
+  },
+  header: {
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#D97757',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 10,
+    color: '#57534E',
+  },
+  section: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#1C1917',
+    backgroundColor: '#F5F3F0',
+    padding: 8,
+    marginBottom: 8,
+  },
+  row: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E4DF',
+    paddingVertical: 6,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 2,
+    borderBottomColor: '#D97757',
+    paddingVertical: 6,
+    backgroundColor: '#FAF9F7',
+  },
+  col1: {
+    flex: 2,
+    paddingRight: 8,
+  },
+  col2: {
+    flex: 1,
+    textAlign: 'right',
+    paddingRight: 8,
+  },
+  col3: {
+    flex: 2,
+    color: '#57534E',
+    fontSize: 9,
+  },
+  boldText: {
+    fontWeight: 'bold',
+  },
+  statBox: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 16,
+  },
+  statItem: {
+    width: '50%',
+    padding: 8,
+    marginBottom: 8,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#D97757',
+  },
+  statLabel: {
+    fontSize: 9,
+    color: '#57534E',
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 30,
+    left: 40,
+    right: 40,
+    textAlign: 'center',
+    fontSize: 8,
+    color: '#A8A29E',
+  },
+})
+
+// PDF Document Component
+const KPIReportPDF = ({ analytics, date }) => {
+  const satisfactionRate = analytics.feedback_stats
+    ? ((analytics.feedback_stats.helpful || 0) /
+        Math.max((analytics.feedback_stats.helpful || 0) + (analytics.feedback_stats.not_helpful || 0), 1) * 100).toFixed(1)
+    : 0
+
+  const langNames = { sv: 'Svenska', en: 'English', ar: 'العربية' }
+  const langTotal = Object.values(analytics.language_stats || {}).reduce((a, b) => a + b, 0) || 1
+
+  return (
+    <Document>
+      <Page size="A4" style={pdfStyles.page}>
+        {/* Header */}
+        <View style={pdfStyles.header}>
+          <Text style={pdfStyles.title}>KPI-Rapport</Text>
+          <Text style={pdfStyles.subtitle}>Bobot Chattstatistik - Genererad {date}</Text>
+        </View>
+
+        {/* Overview Stats */}
+        <View style={pdfStyles.section}>
+          <Text style={pdfStyles.sectionTitle}>Översikt</Text>
+          <View style={pdfStyles.statBox}>
+            <View style={pdfStyles.statItem}>
+              <Text style={pdfStyles.statValue}>{analytics.total_conversations}</Text>
+              <Text style={pdfStyles.statLabel}>Totala konversationer</Text>
+            </View>
+            <View style={pdfStyles.statItem}>
+              <Text style={pdfStyles.statValue}>{analytics.total_messages}</Text>
+              <Text style={pdfStyles.statLabel}>Totalt meddelanden</Text>
+            </View>
+            <View style={pdfStyles.statItem}>
+              <Text style={pdfStyles.statValue}>{analytics.answer_rate?.toFixed(1) || 0}%</Text>
+              <Text style={pdfStyles.statLabel}>Svarsfrekvens</Text>
+            </View>
+            <View style={pdfStyles.statItem}>
+              <Text style={pdfStyles.statValue}>{(analytics.avg_response_time_ms / 1000).toFixed(1)}s</Text>
+              <Text style={pdfStyles.statLabel}>Svarstid (snitt)</Text>
+            </View>
+            <View style={pdfStyles.statItem}>
+              <Text style={pdfStyles.statValue}>{satisfactionRate}%</Text>
+              <Text style={pdfStyles.statLabel}>Nöjdhetsgrad</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Activity */}
+        <View style={pdfStyles.section}>
+          <Text style={pdfStyles.sectionTitle}>Aktivitet</Text>
+          <View style={pdfStyles.headerRow}>
+            <Text style={[pdfStyles.col1, pdfStyles.boldText]}>Period</Text>
+            <Text style={[pdfStyles.col2, pdfStyles.boldText]}>Konversationer</Text>
+            <Text style={[pdfStyles.col2, pdfStyles.boldText]}>Meddelanden</Text>
+          </View>
+          <View style={pdfStyles.row}>
+            <Text style={pdfStyles.col1}>Idag</Text>
+            <Text style={pdfStyles.col2}>{analytics.conversations_today}</Text>
+            <Text style={pdfStyles.col2}>{analytics.messages_today}</Text>
+          </View>
+          <View style={pdfStyles.row}>
+            <Text style={pdfStyles.col1}>Senaste 7 dagarna</Text>
+            <Text style={pdfStyles.col2}>{analytics.conversations_week}</Text>
+            <Text style={pdfStyles.col2}>{analytics.messages_week}</Text>
+          </View>
+        </View>
+
+        {/* Question Analysis */}
+        <View style={pdfStyles.section}>
+          <Text style={pdfStyles.sectionTitle}>Frågeanalys</Text>
+          <View style={pdfStyles.headerRow}>
+            <Text style={[pdfStyles.col1, pdfStyles.boldText]}>Typ</Text>
+            <Text style={[pdfStyles.col2, pdfStyles.boldText]}>Antal</Text>
+            <Text style={[pdfStyles.col2, pdfStyles.boldText]}>Andel</Text>
+          </View>
+          <View style={pdfStyles.row}>
+            <Text style={pdfStyles.col1}>Besvarade frågor</Text>
+            <Text style={pdfStyles.col2}>{analytics.total_answered}</Text>
+            <Text style={pdfStyles.col2}>{((analytics.total_answered / Math.max(analytics.total_answered + analytics.total_unanswered, 1)) * 100).toFixed(1)}%</Text>
+          </View>
+          <View style={pdfStyles.row}>
+            <Text style={pdfStyles.col1}>Obesvarade frågor</Text>
+            <Text style={pdfStyles.col2}>{analytics.total_unanswered}</Text>
+            <Text style={pdfStyles.col2}>{((analytics.total_unanswered / Math.max(analytics.total_answered + analytics.total_unanswered, 1)) * 100).toFixed(1)}%</Text>
+          </View>
+        </View>
+
+        {/* User Feedback */}
+        <View style={pdfStyles.section}>
+          <Text style={pdfStyles.sectionTitle}>Användarfeedback</Text>
+          <View style={pdfStyles.headerRow}>
+            <Text style={[pdfStyles.col1, pdfStyles.boldText]}>Typ</Text>
+            <Text style={[pdfStyles.col2, pdfStyles.boldText]}>Antal</Text>
+          </View>
+          <View style={pdfStyles.row}>
+            <Text style={pdfStyles.col1}>Positiv (hjälpsam)</Text>
+            <Text style={pdfStyles.col2}>{analytics.feedback_stats?.helpful || 0}</Text>
+          </View>
+          <View style={pdfStyles.row}>
+            <Text style={pdfStyles.col1}>Negativ (inte hjälpsam)</Text>
+            <Text style={pdfStyles.col2}>{analytics.feedback_stats?.not_helpful || 0}</Text>
+          </View>
+          <View style={pdfStyles.row}>
+            <Text style={pdfStyles.col1}>Ingen feedback</Text>
+            <Text style={pdfStyles.col2}>{analytics.feedback_stats?.no_feedback || 0}</Text>
+          </View>
+        </View>
+
+        {/* Language Distribution */}
+        {Object.keys(analytics.language_stats || {}).length > 0 && (
+          <View style={pdfStyles.section}>
+            <Text style={pdfStyles.sectionTitle}>Språkfördelning</Text>
+            <View style={pdfStyles.headerRow}>
+              <Text style={[pdfStyles.col1, pdfStyles.boldText]}>Språk</Text>
+              <Text style={[pdfStyles.col2, pdfStyles.boldText]}>Antal</Text>
+              <Text style={[pdfStyles.col2, pdfStyles.boldText]}>Andel</Text>
+            </View>
+            {Object.entries(analytics.language_stats || {}).map(([lang, count]) => (
+              <View style={pdfStyles.row} key={lang}>
+                <Text style={pdfStyles.col1}>{langNames[lang] || lang}</Text>
+                <Text style={pdfStyles.col2}>{count}</Text>
+                <Text style={pdfStyles.col2}>{((count / langTotal) * 100).toFixed(1)}%</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Categories */}
+        {Object.keys(analytics.category_stats || {}).length > 0 && (
+          <View style={pdfStyles.section}>
+            <Text style={pdfStyles.sectionTitle}>Populära kategorier</Text>
+            <View style={pdfStyles.headerRow}>
+              <Text style={[pdfStyles.col1, pdfStyles.boldText]}>Kategori</Text>
+              <Text style={[pdfStyles.col2, pdfStyles.boldText]}>Antal frågor</Text>
+            </View>
+            {Object.entries(analytics.category_stats)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 10)
+              .map(([cat, count]) => (
+                <View style={pdfStyles.row} key={cat}>
+                  <Text style={pdfStyles.col1}>{cat}</Text>
+                  <Text style={pdfStyles.col2}>{count}</Text>
+                </View>
+              ))}
+          </View>
+        )}
+
+        {/* Footer */}
+        <Text style={pdfStyles.footer}>
+          Genererad av Bobot - GDPR-säker anonymiserad data
+        </Text>
+      </Page>
+
+      {/* Page 2: Unanswered Questions and Hourly Stats */}
+      {(analytics.top_unanswered?.length > 0 || Object.keys(analytics.hourly_stats || {}).length > 0) && (
+        <Page size="A4" style={pdfStyles.page}>
+          {/* Peak Hours */}
+          {Object.keys(analytics.hourly_stats || {}).length > 0 && (
+            <View style={pdfStyles.section}>
+              <Text style={pdfStyles.sectionTitle}>Aktivitet per timme</Text>
+              <View style={pdfStyles.headerRow}>
+                <Text style={[pdfStyles.col1, pdfStyles.boldText]}>Timme</Text>
+                <Text style={[pdfStyles.col2, pdfStyles.boldText]}>Konversationer</Text>
+              </View>
+              {Object.entries(analytics.hourly_stats || {})
+                .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+                .map(([hour, count]) => (
+                  <View style={pdfStyles.row} key={hour}>
+                    <Text style={pdfStyles.col1}>{hour}:00</Text>
+                    <Text style={pdfStyles.col2}>{count}</Text>
+                  </View>
+                ))}
+            </View>
+          )}
+
+          {/* Unanswered Questions */}
+          {analytics.top_unanswered && analytics.top_unanswered.length > 0 && (
+            <View style={pdfStyles.section}>
+              <Text style={pdfStyles.sectionTitle}>Vanligaste obesvarade frågor</Text>
+              <Text style={{ fontSize: 9, color: '#57534E', marginBottom: 8 }}>
+                Dessa frågor saknas i kunskapsbasen:
+              </Text>
+              {analytics.top_unanswered.map((q, i) => (
+                <View style={pdfStyles.row} key={i}>
+                  <Text style={pdfStyles.col1}>{i + 1}. {q}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <Text style={pdfStyles.footer}>
+            Genererad av Bobot - GDPR-säker anonymiserad data
+          </Text>
+        </Page>
+      )}
+    </Document>
+  )
+}
 
 function Analytics() {
   const { authFetch, token } = useContext(AuthContext)
@@ -10,9 +300,22 @@ function Analytics() {
   const [analytics, setAnalytics] = useState(null)
   const [loading, setLoading] = useState(true)
   const [addingQuestion, setAddingQuestion] = useState(null)
+  const [showExportMenu, setShowExportMenu] = useState(false)
+  const exportMenuRef = useRef(null)
 
   useEffect(() => {
     fetchAnalytics()
+  }, [])
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
+        setShowExportMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   const fetchAnalytics = async () => {
@@ -179,6 +482,35 @@ function Analytics() {
     }
   }
 
+  const handleExportKPIReportPDF = async () => {
+    if (!analytics) return
+    setExporting('kpi-pdf')
+    setShowExportMenu(false)
+
+    try {
+      const today = new Date().toLocaleDateString('sv-SE')
+      const blob = await pdf(<KPIReportPDF analytics={analytics} date={today} />).toBlob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `KPI-rapport-${today}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      a.remove()
+    } catch (error) {
+      console.error('PDF export failed:', error)
+      alert('PDF-export misslyckades: ' + error.message)
+    } finally {
+      setExporting(null)
+    }
+  }
+
+  const handleExportCSV = () => {
+    setShowExportMenu(false)
+    handleExportKPIReport()
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -210,13 +542,13 @@ function Analytics() {
           <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Statistik</h1>
           <p className="text-text-secondary mt-1">Anonymiserad data - GDPR-säker</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 relative" ref={exportMenuRef}>
           <button
-            onClick={() => handleExportKPIReport()}
+            onClick={() => setShowExportMenu(!showExportMenu)}
             disabled={exporting !== null}
             className="btn btn-primary text-sm disabled:opacity-50"
           >
-            {exporting === 'kpi' ? (
+            {exporting === 'kpi' || exporting === 'kpi-pdf' ? (
               <span className="animate-spin">⏳</span>
             ) : (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -228,7 +560,43 @@ function Analytics() {
               </svg>
             )}
             KPI-rapport
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`ml-1 transition-transform ${showExportMenu ? 'rotate-180' : ''}`}>
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
           </button>
+
+          {/* Export dropdown menu */}
+          {showExportMenu && (
+            <div className="absolute right-0 top-full mt-2 bg-bg-tertiary border border-border rounded-lg shadow-lg overflow-hidden z-50 min-w-[160px] animate-scale-in">
+              <button
+                onClick={handleExportCSV}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-text-primary hover:bg-bg-secondary transition-colors"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-success">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+                <div className="text-left">
+                  <div className="font-medium">CSV-format</div>
+                  <div className="text-xs text-text-tertiary">Excel-kompatibel</div>
+                </div>
+              </button>
+              <button
+                onClick={handleExportKPIReportPDF}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-text-primary hover:bg-bg-secondary transition-colors border-t border-border-subtle"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-error">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <text x="6" y="18" fontSize="7" fill="currentColor" fontWeight="bold">PDF</text>
+                </svg>
+                <div className="text-left">
+                  <div className="font-medium">PDF-format</div>
+                  <div className="text-xs text-text-tertiary">Formaterad rapport</div>
+                </div>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
