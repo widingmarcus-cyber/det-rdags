@@ -53,6 +53,7 @@ bobot/
 │   ├── requirements.txt        # Python dependencies
 │   ├── Dockerfile
 │   ├── templates/              # Knowledge base templates (JSON)
+│   │   ├── fastighetsbolag_sv.json
 │   │   └── arbetsplats_intern_sv.json
 │   └── tests/
 │       ├── test_auth.py
