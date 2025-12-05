@@ -372,55 +372,59 @@ const pdfStyles = StyleSheet.create({
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // HERO METRICS - Large editorial numbers
+  // HERO METRICS - Large editorial numbers (explicit widths prevent text wrap)
   // ─────────────────────────────────────────────────────────────────────────
   heroMetricsGrid: {
     flexDirection: 'row',
-    gap: 20,
+    justifyContent: 'space-between',
     marginBottom: 32,
   },
   heroMetricCard: {
-    flex: 1,
+    width: 150,
     backgroundColor: colors.cream,
     borderRadius: 20,
-    padding: 28,
+    padding: 24,
     alignItems: 'center',
   },
   heroMetricCardAccent: {
-    flex: 1,
+    width: 150,
     backgroundColor: colors.terracotta,
     borderRadius: 20,
-    padding: 28,
+    padding: 24,
     alignItems: 'center',
   },
   heroMetricValue: {
     fontFamily: 'Playfair',
-    fontSize: 56,
+    fontSize: 44,
     fontWeight: 700,
     color: colors.espresso,
     lineHeight: 1,
+    textAlign: 'center',
   },
   heroMetricValueWhite: {
     fontFamily: 'Playfair',
-    fontSize: 56,
+    fontSize: 44,
     fontWeight: 700,
     color: colors.cream,
     lineHeight: 1,
+    textAlign: 'center',
   },
   heroMetricLabel: {
     fontFamily: 'Inter',
-    fontSize: 10,
+    fontSize: 9,
     color: colors.stone,
     textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    marginTop: 12,
+    letterSpacing: 1,
+    marginTop: 10,
+    textAlign: 'center',
   },
   heroMetricLabelWhite: {
     fontFamily: 'Inter',
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.8)',
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.85)',
     textTransform: 'uppercase',
-    letterSpacing: 1.5,
+    letterSpacing: 1,
+    textAlign: 'center',
     marginTop: 12,
   },
   heroMetricSubtext: {
