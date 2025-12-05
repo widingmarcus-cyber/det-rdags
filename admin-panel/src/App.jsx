@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { useState, useEffect, createContext } from 'react'
+import { useState, useEffect, useLayoutEffect, createContext } from 'react'
 import LandingPage from './pages/LandingPage'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import Login from './pages/Login'
@@ -29,23 +29,44 @@ function getSystemDarkMode() {
 function App() {
   const location = useLocation()
   const isAdminRoute = location.pathname.startsWith('/admin')
+  const isLandingPage = location.pathname === '/' || location.pathname === '/integritetspolicy'
 
   // Dark mode state - check localStorage first, then system preference
+  // But on landing page, always default to light mode
   const [darkMode, setDarkMode] = useState(() => {
+    // Landing page always starts light
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname
+      if (path === '/' || path === '/integritetspolicy') {
+        return false
+      }
+    }
     const saved = localStorage.getItem('bobot_dark_mode')
     if (saved !== null) return saved === 'true'
     return getSystemDarkMode()
   })
 
+  // Force light mode on landing page BEFORE paint
+  useLayoutEffect(() => {
+    if (isLandingPage) {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [isLandingPage])
+
   // Apply dark mode class to html element
   useEffect(() => {
+    // Skip on landing page - always light
+    if (isLandingPage) {
+      document.documentElement.classList.remove('dark')
+      return
+    }
     if (darkMode) {
       document.documentElement.classList.add('dark')
     } else {
       document.documentElement.classList.remove('dark')
     }
     localStorage.setItem('bobot_dark_mode', darkMode)
-  }, [darkMode])
+  }, [darkMode, isLandingPage])
 
   const toggleDarkMode = () => setDarkMode(!darkMode)
 
