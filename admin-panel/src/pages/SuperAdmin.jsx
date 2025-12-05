@@ -1182,7 +1182,8 @@ function SuperAdmin() {
         tier: tierInfo?.name || tier.charAt(0).toUpperCase() + tier.slice(1),
         discount,
         conversationLimit,
-        hostingOption: proposalForm.hostingOption
+        hostingOption: proposalForm.hostingOption,
+        pricingTiers: dbPricingTiers
       })
 
       showNotification(`PDF skapad: ${fileName}`)

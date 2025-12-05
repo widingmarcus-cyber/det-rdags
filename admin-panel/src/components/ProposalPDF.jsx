@@ -793,19 +793,10 @@ const CustomizationPage = () => (
       <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 16 }}>
         Språkstöd
       </Text>
-      <View style={{ flexDirection: 'row', gap: 16 }}>
-        <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 20, alignItems: 'center' }}>
-          <Text style={{ fontSize: 14, fontWeight: 700, color: colors.primary, marginBottom: 8 }}>SV</Text>
-          <Text style={{ fontSize: 12, fontWeight: 500, color: colors.text }}>Svenska</Text>
-        </View>
-        <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 20, alignItems: 'center' }}>
-          <Text style={{ fontSize: 14, fontWeight: 700, color: colors.primary, marginBottom: 8 }}>EN</Text>
-          <Text style={{ fontSize: 12, fontWeight: 500, color: colors.text }}>English</Text>
-        </View>
-        <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 20, alignItems: 'center' }}>
-          <Text style={{ fontSize: 14, fontWeight: 700, color: colors.primary, marginBottom: 8 }}>AR</Text>
-          <Text style={{ fontSize: 12, fontWeight: 500, color: colors.text }}>Arabic</Text>
-        </View>
+      <View style={{ backgroundColor: colors.white, borderRadius: 12, padding: 24 }}>
+        <Text style={{ fontSize: 12, color: colors.text, lineHeight: 1.6 }}>
+          Bobot stödjer flera språk och kan anpassas efter era behov. Kontakta oss för att diskutera vilka språk som passar er verksamhet.
+        </Text>
       </View>
     </View>
 
@@ -865,23 +856,27 @@ const ProcessPage = () => (
       </View>
     </View>
 
-    {/* Timeline */}
+    {/* Timeline - 4 week trial */}
     <View style={{ marginTop: 40, backgroundColor: colors.white, borderRadius: 16, padding: 24 }}>
       <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 16 }}>
-        Typisk tidplan för uppstart
+        4 veckors provperiod
       </Text>
       <View style={{ flexDirection: 'row' }}>
         <View style={{ flex: 1, alignItems: 'center', paddingVertical: 12 }}>
-          <Text style={{ fontSize: 20, fontWeight: 700, color: colors.primary }}>Dag 1</Text>
-          <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'center', marginTop: 4 }}>Avtal & uppstart</Text>
+          <Text style={{ fontSize: 18, fontWeight: 700, color: colors.primary }}>Vecka 1</Text>
+          <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'center', marginTop: 4 }}>Uppstart & setup</Text>
         </View>
         <View style={{ flex: 1, alignItems: 'center', paddingVertical: 12, borderLeftWidth: 1, borderLeftColor: colors.border }}>
-          <Text style={{ fontSize: 20, fontWeight: 700, color: colors.primary }}>Dag 2-3</Text>
-          <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'center', marginTop: 4 }}>Kunskapsbas byggs</Text>
+          <Text style={{ fontSize: 18, fontWeight: 700, color: colors.primary }}>Vecka 2</Text>
+          <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'center', marginTop: 4 }}>Kunskapsbas</Text>
         </View>
         <View style={{ flex: 1, alignItems: 'center', paddingVertical: 12, borderLeftWidth: 1, borderLeftColor: colors.border }}>
-          <Text style={{ fontSize: 20, fontWeight: 700, color: colors.primary }}>Dag 4-7</Text>
-          <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'center', marginTop: 4 }}>Test & lansering</Text>
+          <Text style={{ fontSize: 18, fontWeight: 700, color: colors.primary }}>Vecka 3</Text>
+          <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'center', marginTop: 4 }}>Test & justering</Text>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', paddingVertical: 12, borderLeftWidth: 1, borderLeftColor: colors.border }}>
+          <Text style={{ fontSize: 18, fontWeight: 700, color: colors.primary }}>Vecka 4</Text>
+          <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'center', marginTop: 4 }}>Utvärdering</Text>
         </View>
       </View>
     </View>
@@ -890,89 +885,94 @@ const ProcessPage = () => (
   </Page>
 )
 
+// Helper to format price with Swedish locale
+const formatPrice = (price) => {
+  if (!price && price !== 0) return '0'
+  return price.toLocaleString('sv-SE')
+}
+
 // SECTION 6: Pricing Page
-const PricingPage = ({ startupFee, monthlyFee, tier, discount }) => (
-  <Page size="A4" style={styles.page}>
-    <CornerAccent position="topRight" />
+const PricingPage = ({ startupFee, monthlyFee, tier, discount, pricingTiers = [] }) => {
+  // Sort tiers by price (lowest first)
+  const sortedTiers = [...pricingTiers].sort((a, b) => (a.monthly_fee || 0) - (b.monthly_fee || 0))
 
-    <View style={styles.pageHeader}>
-      <Text style={styles.pageHeaderTitle}>Välj nivå för er nya kollega</Text>
-      <BobotMascotSmall size={36} />
-    </View>
+  // Find the recommended tier (middle one, or the one marked as recommended)
+  const recommendedIndex = sortedTiers.length > 1 ? 1 : 0
 
-    <View style={styles.pricingGrid}>
-      {/* Bas */}
-      <View style={styles.pricingCard}>
-        <Text style={styles.pricingTier}>Bas</Text>
-        <Text style={styles.pricingPrice}>990</Text>
-        <Text style={styles.pricingUnit}>kr/mån</Text>
-        <View style={{ marginTop: 12 }}>
-          <Text style={styles.pricingFeature}>• 1 chattbot</Text>
-          <Text style={styles.pricingFeature}>• 500 konversationer/mån</Text>
-          <Text style={styles.pricingFeature}>• E-post support</Text>
-          <Text style={styles.pricingFeature}>• Grundläggande statistik</Text>
+  return (
+    <Page size="A4" style={styles.page}>
+      <CornerAccent position="topRight" />
+
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageHeaderTitle}>Välj nivå för er nya kollega</Text>
+        <BobotMascotSmall size={36} />
+      </View>
+
+      <View style={styles.pricingGrid}>
+        {sortedTiers.length > 0 ? (
+          sortedTiers.map((tierItem, index) => {
+            const isRecommended = index === recommendedIndex
+            return (
+              <View key={tierItem.tier_key || index} style={isRecommended ? styles.pricingCardHighlight : styles.pricingCard}>
+                {isRecommended && (
+                  <View style={styles.recommendedBadge}>
+                    <Text style={styles.recommendedText}>Rekommenderad</Text>
+                  </View>
+                )}
+                <Text style={styles.pricingTier}>{tierItem.name || tierItem.tier_key}</Text>
+                <Text style={styles.pricingPrice}>{formatPrice(tierItem.monthly_fee)}</Text>
+                <Text style={styles.pricingUnit}>kr/mån</Text>
+                <View style={{ marginTop: 12 }}>
+                  {tierItem.max_conversations > 0 ? (
+                    <Text style={styles.pricingFeature}>• {formatPrice(tierItem.max_conversations)} konversationer/mån</Text>
+                  ) : (
+                    <Text style={styles.pricingFeature}>• Obegränsade konversationer</Text>
+                  )}
+                  {tierItem.features && tierItem.features.map((feature, fIndex) => (
+                    <Text key={fIndex} style={styles.pricingFeature}>• {feature}</Text>
+                  ))}
+                </View>
+              </View>
+            )
+          })
+        ) : (
+          // Fallback if no pricing tiers provided
+          <View style={styles.pricingCard}>
+            <Text style={styles.pricingTier}>{tier || 'Standard'}</Text>
+            <Text style={styles.pricingPrice}>{formatPrice(monthlyFee)}</Text>
+            <Text style={styles.pricingUnit}>kr/mån</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Startup fee */}
+      <View style={{ marginTop: 30, backgroundColor: colors.slateLight, borderRadius: 16, padding: 24 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Uppstartsavgift (engångskostnad)</Text>
+            <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 4 }}>
+              Inkluderar onboarding, uppsättning och support under provperiod
+            </Text>
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={{ fontSize: 24, fontWeight: 700, color: colors.primary }}>{formatPrice(startupFee) || '4 900'} kr</Text>
+            {discount > 0 && (
+              <View style={{ backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 2, paddingHorizontal: 8, marginTop: 4 }}>
+                <Text style={{ fontSize: 9, color: colors.white, fontWeight: 600 }}>{discount}% rabatt</Text>
+              </View>
+            )}
+          </View>
         </View>
       </View>
 
-      {/* Standard - Highlighted */}
-      <View style={styles.pricingCardHighlight}>
-        <View style={styles.recommendedBadge}>
-          <Text style={styles.recommendedText}>Rekommenderad</Text>
-        </View>
-        <Text style={styles.pricingTier}>Standard</Text>
-        <Text style={styles.pricingPrice}>1 990</Text>
-        <Text style={styles.pricingUnit}>kr/mån</Text>
-        <View style={{ marginTop: 12 }}>
-          <Text style={styles.pricingFeature}>• 2 chattbotar (extern + intern)</Text>
-          <Text style={styles.pricingFeature}>• 2 000 konversationer/mån</Text>
-          <Text style={styles.pricingFeature}>• Prioriterad support</Text>
-          <Text style={styles.pricingFeature}>• Avancerad statistik</Text>
-          <Text style={styles.pricingFeature}>• Anpassningsbar design</Text>
-        </View>
-      </View>
+      <Text style={styles.pricingNote}>
+        Ingen bindningstid. Full support ingår. Avsluta när som helst.
+      </Text>
 
-      {/* Pro */}
-      <View style={styles.pricingCard}>
-        <Text style={styles.pricingTier}>Pro</Text>
-        <Text style={styles.pricingPrice}>3 990</Text>
-        <Text style={styles.pricingUnit}>kr/mån</Text>
-        <View style={{ marginTop: 12 }}>
-          <Text style={styles.pricingFeature}>• Obegränsade botar</Text>
-          <Text style={styles.pricingFeature}>• Obegränsade konversationer</Text>
-          <Text style={styles.pricingFeature}>• Dedikerad support</Text>
-          <Text style={styles.pricingFeature}>• White-label möjlighet</Text>
-          <Text style={styles.pricingFeature}>• API-åtkomst</Text>
-        </View>
-      </View>
-    </View>
-
-    {/* Startup fee */}
-    <View style={{ marginTop: 30, backgroundColor: colors.slateLight, borderRadius: 16, padding: 24 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <View>
-          <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Uppstartsavgift (engångskostnad)</Text>
-          <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 4 }}>
-            Inkluderar onboarding, uppsättning och teknisk support under trial
-          </Text>
-        </View>
-        <View style={{ alignItems: 'flex-end' }}>
-          <Text style={{ fontSize: 24, fontWeight: 700, color: colors.primary }}>{startupFee?.toLocaleString('sv-SE') || '4 900'} kr</Text>
-          {discount > 0 && (
-            <View style={{ backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 2, paddingHorizontal: 8, marginTop: 4 }}>
-              <Text style={{ fontSize: 9, color: colors.white, fontWeight: 600 }}>{discount}% rabatt</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    </View>
-
-    <Text style={styles.pricingNote}>
-      Ingen bindningstid. Full support ingår. Avsluta när som helst.
-    </Text>
-
-    <PageFooter pageNumber={6} />
-  </Page>
-)
+      <PageFooter pageNumber={6} />
+    </Page>
+  )
+}
 
 // SECTION 7: Contact Page
 const ContactPage = () => (
@@ -1020,7 +1020,8 @@ const ProposalDocument = ({
   tier,
   discount,
   conversationLimit,
-  hostingOption
+  hostingOption,
+  pricingTiers
 }) => {
   const year = new Date().getFullYear()
 
@@ -1036,6 +1037,7 @@ const ProposalDocument = ({
         monthlyFee={monthlyFee}
         tier={tier}
         discount={discount}
+        pricingTiers={pricingTiers}
       />
       <ContactPage />
     </Document>
