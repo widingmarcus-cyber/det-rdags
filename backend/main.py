@@ -937,6 +937,215 @@ class AnalyticsResponse(BaseModel):
 
 
 # =============================================================================
+# Bobot Knowledge Base Content
+# =============================================================================
+
+def get_bobot_knowledge_items():
+    """Comprehensive knowledge base for Bobot landing page widget"""
+    return [
+        # === PRODUCT OVERVIEW ===
+        ("Vad är Bobot?",
+         "Bobot är en GDPR-säker AI-chatbot där företag bygger sin egen kunskapsbas med frågor och svar. Chatboten bäddas in på företagets hemsida och besvarar kundfrågor automatiskt med AI-stöd, dygnet runt. Perfekt för kundtjänst, intern kunskapsbank och introduktion av nyanställda.",
+         "produkt"),
+
+        ("Vem är Bobot för?",
+         "Bobot passar företag som vill avlasta sin kundtjänst och erbjuda snabbare svar. Vanliga användare är fastighetsbolag, e-handlare, B2B-företag, kommuner och organisationer med mycket kundkontakt. Bobot fungerar även utmärkt som intern kunskapsassistent för medarbetare.",
+         "produkt"),
+
+        ("Vad kan Bobot hjälpa till med?",
+         "Bobot kan svara på kundfrågor dygnet runt, fungera som intern kunskapsbank för medarbetare, hjälpa nyanställda att snabbt komma in i jobbet, minska belastningen på kundtjänst, och ge snabbare svar till kunder utan väntetid.",
+         "produkt"),
+
+        ("Hur skiljer sig Bobot från andra chatbotar?",
+         "Bobot använder en lokal AI-modell (Qwen 2.5 14B) som körs på våra egna servrar i EU. Det betyder att ingen data skickas till tredje part som OpenAI eller Google. Dessutom är Bobot byggt specifikt för GDPR-efterlevnad med automatisk dataradering, samtyckehantering och IP-anonymisering.",
+         "produkt"),
+
+        # === HOW IT WORKS ===
+        ("Hur fungerar Bobot?",
+         "Bobot fungerar i tre steg: 1) Du bygger en kunskapsbas med frågor och svar genom att lägga till manuellt eller importera från filer. 2) Du bäddar in widgeten på din hemsida med två rader kod. 3) Bobot svarar automatiskt på kundfrågor baserat på din kunskapsbas, dygnet runt.",
+         "hur-det-fungerar"),
+
+        ("Hur lång tid tar det att komma igång?",
+         "De flesta kunder är igång på cirka 15 minuter. Ladda upp din kunskapsbas (t.ex. befintlig FAQ), kopiera koden till din hemsida, och du är redo! Vi hjälper gärna till om du behöver assistans.",
+         "hur-det-fungerar"),
+
+        ("Hur bygger jag en kunskapsbas?",
+         "Det finns flera sätt att bygga din kunskapsbas: 1) Lägg till frågor och svar manuellt i admin-panelen. 2) Importera från Excel, Word, PDF eller CSV-filer. 3) Importera automatiskt från en befintlig FAQ-sida genom att ange URL. Admin-panelen har en användarvänlig editor där du enkelt kan organisera allt i kategorier.",
+         "hur-det-fungerar"),
+
+        ("Vad händer om Bobot inte kan svara?",
+         "Om Bobot inte hittar ett svar i kunskapsbasen visas ett anpassningsbart reservmeddelande, t.ex. 'Kontakta oss på support@dittforetag.se'. Frågan loggas i analytics så du kan se vilka frågor som behöver läggas till i kunskapsbasen.",
+         "hur-det-fungerar"),
+
+        # === FEATURES ===
+        ("Vilka funktioner har Bobot?",
+         "Bobot erbjuder: AI-drivna svar baserade på din kunskapsbas, import från Excel/Word/PDF/CSV/URL, flera widgets (intern/extern), flerspråksstöd (svenska, engelska, arabiska med RTL), GDPR-verktyg med automatisk dataradering, realtidsstatistik och analytics, anpassningsbar design, dark mode, och responsiv mobildesign.",
+         "funktioner"),
+
+        ("Vilka språk stöds?",
+         "Bobot stöder svenska, engelska och arabiska (inklusive RTL-stöd för höger-till-vänster-text). Språket detekteras automatiskt baserat på kundens fråga, så du behöver inte göra något speciellt.",
+         "funktioner"),
+
+        ("Kan jag ha flera chatbotar?",
+         "Ja! Du kan skapa separata widgets för olika ändamål. Exempelvis en extern widget för kundtjänst på hemsidan och en intern widget för medarbetarstöd på intranätet. Varje widget kan ha egen kunskapsbas, eget utseende och egen ton.",
+         "funktioner"),
+
+        ("Kan jag anpassa utseendet?",
+         "Absolut! I admin-panelen kan du anpassa: primärfärg och bakgrundsfärg, typsnitt och teckenstorlek, rundade hörn, position på skärmen (höger/vänster), välkomstmeddelande och reservmeddelande, samt aktivera dark mode. Allt med live-förhandsgranskning.",
+         "funktioner"),
+
+        ("Finns det statistik och rapporter?",
+         "Ja, Bobot ger detaljerad statistik: antal konversationer (dag/vecka/månad), vanligaste frågorna, obesvarade frågor som behöver läggas till, nöjdhetsbetyg (tumme upp/ner), svarstider, och fördelning per språk och kategori. Du kan exportera data till CSV.",
+         "funktioner"),
+
+        ("Stöder Bobot dark mode?",
+         "Ja, widgeten har inbyggt stöd för dark mode. Användare kan växla mellan ljust och mörkt läge, eller så kan det följa systemets inställningar automatiskt.",
+         "funktioner"),
+
+        ("Fungerar Bobot på mobilen?",
+         "Ja, widgeten är helt responsiv och fungerar utmärkt på mobiler, surfplattor och datorer. Designen anpassas automatiskt efter skärmstorlek.",
+         "funktioner"),
+
+        # === IMPORT & CONTENT ===
+        ("Hur importerar jag befintlig FAQ?",
+         "Du kan importera på flera sätt: 1) Excel-fil (.xlsx) med frågor i en kolumn och svar i en annan. 2) Word-dokument (.docx) där AI extraherar Q&A automatiskt. 3) PDF-fil med FAQ-innehåll. 4) CSV-fil med semikolon- eller kommaseparerade frågor/svar. 5) URL till befintlig FAQ-sida för automatisk extraktion.",
+         "import"),
+
+        ("Vilka filformat stöds för import?",
+         "Bobot stöder import från: Excel (.xlsx, .xls), Word (.docx), PDF (.pdf), CSV (.csv), och vanlig text (.txt). Du kan också importera direkt från en webbadress (URL).",
+         "import"),
+
+        ("Kan jag importera från min befintliga hemsida?",
+         "Ja! Ange URL:en till din befintliga FAQ-sida så extraherar Bobot automatiskt frågor och svar därifrån. Det sparar mycket tid om du redan har dokumenterat FAQ någon annanstans.",
+         "import"),
+
+        # === INTEGRATION ===
+        ("Hur bäddar jag in widgeten på min hemsida?",
+         "Det är enkelt! Kopiera två rader JavaScript-kod från admin-panelen och klistra in före </body>-taggen på din hemsida: <script src='https://bobot.nu/widget.js'></script> <script>Bobot.init({ widgetKey: 'ditt-widget-key' })</script>",
+         "integration"),
+
+        ("Fungerar Bobot med WordPress?",
+         "Ja! Du kan antingen klistra in koden i ditt temas footer.php-fil, använda ett plugin för anpassad kod, eller lägga till koden via WordPress Customizer. Vi har en guide som visar steg för steg.",
+         "integration"),
+
+        ("Vilka plattformar stöds?",
+         "Bobot fungerar med alla webbplattformar: WordPress, Wix, Squarespace, Shopify, Webflow, och valfri custom-byggd hemsida. Allt som krävs är att du kan lägga till JavaScript-kod på sidan.",
+         "integration"),
+
+        ("Finns det ett API?",
+         "Ja, Bobot har ett REST API för avancerade integrationer. Du kan programmatiskt hantera kunskapsbas, widgets, och hämta analytics. API-dokumentation finns i admin-panelen för Business- och Enterprise-kunder.",
+         "integration"),
+
+        # === PRICING ===
+        ("Vad kostar Bobot?",
+         "Vi har fyra prisplaner: Starter (1 500 kr/mån, 250 konversationer), Professional (3 000 kr/mån, 2000 konv.), Business (6 000 kr/mån, 5000 konv.), och Enterprise (offert, obegränsat). Alla planer har gratis uppstart för Starter, eller engångsavgift för övriga. Se bobot.nu för aktuella priser.",
+         "priser"),
+
+        ("Finns det en gratis provperiod?",
+         "Vi erbjuder en kostnadsfri demo där vi visar hur Bobot fungerar för just din verksamhet. Kontakta oss på hej@bobot.nu för att boka en demo.",
+         "priser"),
+
+        ("Vad ingår i de olika planerna?",
+         "Starter: Grundläggande AI-chatt, 50 kunskapsartiklar, 250 konv/månad, e-postsupport. Professional: 250 artiklar, 2000 konv, prioriterad support, anpassad widget. Business: 500 artiklar, 5000 konv, dedikerad support, API-åtkomst. Enterprise: Obegränsat, SLA-garanti, white-label, skräddarsydd utveckling.",
+         "priser"),
+
+        ("Finns det bindningstid?",
+         "Nej, våra planer har ingen bindningstid. Du betalar månadsvis och kan uppgradera, nedgradera eller avsluta när som helst.",
+         "priser"),
+
+        ("Kan jag uppgradera min plan?",
+         "Ja, du kan uppgradera eller nedgradera din plan när som helst. Ändringen träder i kraft direkt och du betalar bara mellanskillnaden för innevarande månad.",
+         "priser"),
+
+        # === SELF-HOSTING ===
+        ("Kan jag hosta Bobot själv?",
+         "Ja! Self-hosting finns som tillval för Professional, Business och Enterprise-planer. Du får fullständig källkod, installationsguide och licensnyckel för din egen server. Enterprise-kunder får self-hosting utan extra kostnad.",
+         "self-hosting"),
+
+        ("Vad kostar self-hosting?",
+         "Self-hosting kostar en engångsavgift: Professional +20 000 kr, Business +35 000 kr, Enterprise ingår. Du får källkoden och kan köra Bobot på din egen infrastruktur med full kontroll över data.",
+         "self-hosting"),
+
+        ("Vilka krav har self-hosting?",
+         "För self-hosting behöver du: Docker och Docker Compose, minst 8 GB RAM (16 GB rekommenderas för bästa AI-prestanda), 20 GB diskutrymme, och en server med Linux. Vi tillhandahåller fullständig dokumentation och support vid installation.",
+         "self-hosting"),
+
+        # === GDPR & SECURITY ===
+        ("Är Bobot GDPR-kompatibel?",
+         "Ja! Bobot är byggt med GDPR i fokus. Vi erbjuder: automatisk radering av konversationer (konfigurerbar 7-30 dagar), samtyckehantering i widgeten, IP-anonymisering, möjlighet för användare att se och radera sin data, och komplett audit-logg. All data lagras på servrar inom EU.",
+         "gdpr"),
+
+        ("Var lagras min data?",
+         "All data lagras på servrar inom EU. Vi använder aldrig molntjänster utanför Europa för känslig data. Med self-hosting kan du välja att lagra all data på din egen infrastruktur.",
+         "gdpr"),
+
+        ("Hur hanteras personuppgifter?",
+         "Bobot minimerar insamling av personuppgifter. IP-adresser anonymiseras, konversationer raderas automatiskt efter vald period, och vi samlar aldrig in personuppgifter utan samtycke. Användare kan begära export eller radering av sin data.",
+         "gdpr"),
+
+        ("Finns det samtyckehantering?",
+         "Ja, widgeten har inbyggd samtyckehantering. Användare måste godkänna behandling av sina meddelanden innan de kan chatta. Du kan anpassa samtyckestexten efter dina behov.",
+         "gdpr"),
+
+        ("Vilken säkerhet har Bobot?",
+         "Bobot har: bcrypt-hashning av lösenord, JWT-tokens med 24 timmars livstid, tvåfaktorsautentisering (2FA) för administratörer, rate limiting (15 förfrågningar/minut för chatt), brute force-skydd (lås efter 5 försök), HTTPS med HSTS, och skydd mot SQL-injection och XSS.",
+         "säkerhet"),
+
+        # === AI & TECHNOLOGY ===
+        ("Vilken AI-teknik används?",
+         "Bobot drivs av Qwen 2.5 14B via Ollama - en kraftfull open source AI-modell med utmärkt flerspråksstöd. All AI-behandling sker lokalt på våra servrar, så ingen data skickas till tredje part som OpenAI eller Google.",
+         "teknik"),
+
+        ("Skickas min data till OpenAI eller andra AI-tjänster?",
+         "Nej! Bobot använder en lokal AI-modell (Qwen 2.5) som körs på våra egna servrar. Ingen data lämnar våra system eller skickas till externa AI-tjänster. Detta är en viktig skillnad mot chatbotar som använder ChatGPT.",
+         "teknik"),
+
+        ("Hur bra är AI:n på att svara?",
+         "Bobot kombinerar semantisk matchning med generativ AI. Först hittar systemet relevanta svar i din kunskapsbas, sedan formulerar AI:n ett naturligt svar baserat på den informationen. Kvaliteten beror på din kunskapsbas - ju bättre frågor och svar du lägger in, desto bättre blir svaren.",
+         "teknik"),
+
+        ("Vilken teknikstack använder Bobot?",
+         "Bobot är byggt med: Python/FastAPI för backend, React/Vite/Tailwind CSS för admin-panel, SQLite/PostgreSQL för databas, Ollama/Qwen 2.5 för AI, Docker för deployment, och Nginx för SSL och lastbalansering.",
+         "teknik"),
+
+        # === SUPPORT ===
+        ("Hur kontaktar jag support?",
+         "Du kan nå oss på hej@bobot.nu. Vi svarar normalt inom en arbetsdag. Professional-kunder har prioriterad support, Business och Enterprise har dedikerad support med snabbare svarstider.",
+         "support"),
+
+        ("Finns det dokumentation?",
+         "Ja, vi har omfattande dokumentation i admin-panelen som täcker: komma igång-guide, import av kunskapsbas, widget-anpassning, API-dokumentation, och felsökning. Enterprise-kunder får även personlig onboarding.",
+         "support"),
+
+        ("Hjälper ni till med installation?",
+         "Ja! Vi hjälper gärna till att komma igång. Kontakta oss på hej@bobot.nu så bokar vi ett möte där vi hjälper dig att sätta upp ditt konto, importera din kunskapsbas och bädda in widgeten.",
+         "support"),
+
+        # === USE CASES ===
+        ("Hur använder fastighetsbolag Bobot?",
+         "Fastighetsbolag använder Bobot för att svara på hyresgästfrågor om: felanmälan, regler för andrahandsuthyrning, husdjur, parkering, tvättstuga, och mycket mer. Det avlastar kundtjänst och ger hyresgäster snabbare svar dygnet runt.",
+         "användningsfall"),
+
+        ("Hur kan e-handlare använda Bobot?",
+         "E-handlare använder Bobot för: frågor om frakt och leverans, returer och byten, produktinformation, öppettider, och orderstatusförfrågningar. Chatboten kan svara direkt utan att kunder behöver vänta på mejlsvar.",
+         "användningsfall"),
+
+        ("Kan Bobot användas internt?",
+         "Absolut! Många företag använder Bobot som intern kunskapsassistent för medarbetare. Det kan hjälpa med: HR-frågor (semester, förmåner), IT-support, onboarding av nyanställda, och interna processer.",
+         "användningsfall"),
+
+        # === CONTACT ===
+        ("Hur bokar jag en demo?",
+         "Kontakta oss på hej@bobot.nu så bokar vi ett möte där vi visar hur Bobot kan hjälpa just din verksamhet. Demo är helt kostnadsfri och utan förpliktelser.",
+         "kontakt"),
+
+        ("Vart ska jag skicka fakturafrågor?",
+         "Fakturafrågor skickas till hej@bobot.nu. Ange ditt företagsnamn och fakturanummer så hjälper vi dig.",
+         "kontakt"),
+    ]
+
+
+# =============================================================================
 # Init Functions - Security Hardened
 # =============================================================================
 
@@ -1147,39 +1356,8 @@ def init_demo_data():
             db.add(landing_widget)
             db.flush()
 
-            # Add knowledge base for Bobot (about the product)
-            bobot_items = [
-                ("Vad är Bobot?",
-                 "Bobot är en AI-chatbot för fastighetsbolag. Med Bobot kan dina hyresgäster få svar på sina frågor dygnet runt, utan att belasta din kundtjänst.",
-                 "produkt"),
-                ("Hur fungerar Bobot?",
-                 "Bobot fungerar genom att du bygger en kunskapsbas med frågor och svar. När en hyresgäst ställer en fråga, hittar vår AI det bästa svaret från din kunskapsbas och formulerar ett naturligt svar.",
-                 "produkt"),
-                ("Vad kostar Bobot?",
-                 "Vi erbjuder olika prisplaner beroende på dina behov. Kontakta oss på hej@bobot.nu för en offert anpassad efter din organisation.",
-                 "priser"),
-                ("Är Bobot GDPR-kompatibel?",
-                 "Ja! Bobot är byggt med GDPR i åtanke. Vi erbjuder: automatisk radering av konversationer efter konfigurerbar tid (7-30 dagar), samtyckehantering i widgeten, IP-anonymisering, och möjlighet för användare att se och radera sin data.",
-                 "gdpr"),
-                ("Vilka språk stöds?",
-                 "Bobot stöder svenska, engelska och arabiska (med RTL-stöd). Språket detekteras automatiskt baserat på användarens fråga.",
-                 "funktioner"),
-                ("Hur lägger jag till frågor och svar?",
-                 "I admin-panelen kan du enkelt lägga till frågor och svar manuellt, eller importera från Excel, Word, CSV eller PDF-filer. Du kan också importera innehåll direkt från en URL.",
-                 "funktioner"),
-                ("Kan jag ha flera widgets?",
-                 "Ja! Med Bobot kan du skapa flera widgets för olika ändamål. Till exempel en extern widget för hyresgäster och en intern widget för anställda med olika kunskapsbaser.",
-                 "funktioner"),
-                ("Hur bäddar jag in widgeten på min hemsida?",
-                 "Det är enkelt! Du kopierar en liten JavaScript-kod från admin-panelen och klistrar in den på din hemsida. Widgeten fungerar med alla webbplatser, inklusive WordPress.",
-                 "installation"),
-                ("Fungerar Bobot på mobilen?",
-                 "Ja, widgeten är helt responsiv och fungerar utmärkt på mobiler, surfplattor och datorer.",
-                 "funktioner"),
-                ("Hur kommer jag igång?",
-                 "Kontakta oss på hej@bobot.nu för att komma igång. Vi hjälper dig att sätta upp ditt konto och importera din kunskapsbas.",
-                 "kom-igang"),
-            ]
+            # Add comprehensive knowledge base for Bobot (about the product)
+            bobot_items = get_bobot_knowledge_items()
 
             for q, a, cat in bobot_items:
                 item = KnowledgeItem(company_id="bobot", question=q, answer=a, category=cat, widget_id=landing_widget.id)
@@ -1195,7 +1373,30 @@ def init_demo_data():
                 bobot_settings.data_controller_name = "Marcus Widing"
                 bobot_settings.data_controller_email = "hej@bobot.nu"
                 bobot_settings.contact_email = "hej@bobot.nu"
-                db.commit()
+
+            # Sync knowledge base - add any missing items
+            landing_widget = db.query(Widget).filter(
+                Widget.company_id == "bobot",
+                Widget.widget_key == "bobot-landing"
+            ).first()
+
+            if landing_widget:
+                existing_questions = {item.question for item in db.query(KnowledgeItem).filter(
+                    KnowledgeItem.company_id == "bobot"
+                ).all()}
+
+                bobot_items = get_bobot_knowledge_items()
+                added_count = 0
+                for q, a, cat in bobot_items:
+                    if q not in existing_questions:
+                        item = KnowledgeItem(company_id="bobot", question=q, answer=a, category=cat, widget_id=landing_widget.id)
+                        db.add(item)
+                        added_count += 1
+
+                if added_count > 0:
+                    print(f"[Bobot] Added {added_count} new knowledge items")
+
+            db.commit()
 
         if is_production:
             print("[Security] Demo data disabled in production")
@@ -5761,8 +5962,14 @@ async def impersonate_company(
     if not company:
         raise HTTPException(status_code=404, detail="Företag finns inte")
 
-    # Create token for company
-    token = create_token({"company_id": company_id, "impersonated_by": admin["username"]})
+    # Create token for company - must match the format expected by get_current_company
+    # which requires: type="company", sub=company_id, name=company_name
+    token = create_token({
+        "sub": company_id,
+        "name": company.name,
+        "type": "company",
+        "impersonated_by": admin["username"]
+    })
 
     # Log admin action
     log_admin_action(
