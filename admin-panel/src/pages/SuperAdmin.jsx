@@ -87,6 +87,7 @@ function SuperAdmin() {
   const [companyModalTab, setCompanyModalTab] = useState('overview') // overview, widgets, billing, activity, notes
   const [activityPage, setActivityPage] = useState(1)
   const activityPerPage = 10
+  const [activityFilter, setActivityFilter] = useState('all') // all, login, create, update, delete
   const [companyUsage, setCompanyUsage] = useState(null)
   const [companyActivity, setCompanyActivity] = useState([])
   const [companyWidgets, setCompanyWidgets] = useState([])
@@ -1578,6 +1579,8 @@ function SuperAdmin() {
   const openCompanyDashboard = async (company) => {
     setShowCompanyDashboard(company)
     setCompanyModalTab('overview') // Reset to overview tab
+    setActivityPage(1) // Reset activity pagination
+    setActivityFilter('all') // Reset activity filter
     setCompanyLoading(true)
     setCompanyUsage(null)
     setCompanyActivity([])
@@ -1591,7 +1594,7 @@ function SuperAdmin() {
       // Fetch all data in parallel
       const [usageRes, activityRes, notesRes, docsRes, widgetsRes, selfHostRes, invoicesRes] = await Promise.all([
         adminFetch(`${API_BASE}/admin/companies/${company.id}/usage`),
-        adminFetch(`${API_BASE}/admin/company-activity/${company.id}?limit=10`),
+        adminFetch(`${API_BASE}/admin/company-activity/${company.id}?limit=100`),
         adminFetch(`${API_BASE}/admin/companies/${company.id}/notes`),
         adminFetch(`${API_BASE}/admin/companies/${company.id}/documents`),
         adminFetch(`${API_BASE}/admin/companies/${company.id}/widgets`),
@@ -3098,9 +3101,31 @@ function SuperAdmin() {
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-semibold text-text-primary">Aktivitetslogg</h3>
-                    <span className="text-xs text-text-tertiary">{companyActivity.length} händelser</span>
+                    <div className="flex items-center gap-3">
+                      <select
+                        value={activityFilter}
+                        onChange={(e) => {
+                          setActivityFilter(e.target.value)
+                          setActivityPage(1) // Reset to first page when filter changes
+                        }}
+                        className="input text-xs py-1 px-2"
+                      >
+                        <option value="all">Alla aktiviteter</option>
+                        <option value="login">Inloggningar</option>
+                        <option value="create">Skapade</option>
+                        <option value="update">Uppdaterade</option>
+                        <option value="delete">Borttagna</option>
+                      </select>
+                      <span className="text-xs text-text-tertiary">
+                        {companyActivity.filter(log =>
+                          activityFilter === 'all' || log.action_type.includes(activityFilter)
+                        ).length} händelser
+                      </span>
+                    </div>
                   </div>
-                  {companyActivity.length === 0 ? (
+                  {companyActivity.filter(log =>
+                    activityFilter === 'all' || log.action_type.includes(activityFilter)
+                  ).length === 0 ? (
                     <div className="bg-bg-secondary rounded-xl p-6 text-center">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-2 text-text-tertiary">
                         <circle cx="12" cy="12" r="10" />
@@ -3109,69 +3134,77 @@ function SuperAdmin() {
                       <p className="text-sm text-text-secondary">Ingen aktivitet registrerad</p>
                     </div>
                   ) : (
-                    <>
-                      <div className="space-y-2">
-                        {companyActivity
-                          .slice((activityPage - 1) * activityPerPage, activityPage * activityPerPage)
-                          .map((log) => (
-                          <div key={log.id} className="flex items-center gap-3 p-3 rounded-lg bg-bg-secondary">
-                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                              log.action_type.includes('create') ? 'bg-green-500' :
-                              log.action_type.includes('delete') ? 'bg-red-500' :
-                              log.action_type.includes('update') ? 'bg-amber-500' :
-                              log.action_type.includes('login') ? 'bg-blue-500' :
-                              'bg-accent'
-                            }`} />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-text-primary">{log.description}</p>
-                              {log.ip_address && (
-                                <p className="text-xs text-text-tertiary mt-0.5">IP: {log.ip_address}</p>
-                              )}
-                            </div>
-                            <div className="text-right flex-shrink-0">
-                              <span className="text-xs text-text-tertiary block">
-                                {new Date(log.timestamp).toLocaleDateString('sv-SE')}
-                              </span>
-                              <span className="text-xs text-text-tertiary">
-                                {new Date(log.timestamp).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </div>
+                    (() => {
+                      const filteredActivity = companyActivity.filter(log =>
+                        activityFilter === 'all' || log.action_type.includes(activityFilter)
+                      )
+                      const totalPages = Math.ceil(filteredActivity.length / activityPerPage)
+                      return (
+                        <>
+                          <div className="space-y-2">
+                            {filteredActivity
+                              .slice((activityPage - 1) * activityPerPage, activityPage * activityPerPage)
+                              .map((log) => (
+                              <div key={log.id} className="flex items-center gap-3 p-3 rounded-lg bg-bg-secondary">
+                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                                  log.action_type.includes('create') ? 'bg-green-500' :
+                                  log.action_type.includes('delete') ? 'bg-red-500' :
+                                  log.action_type.includes('update') ? 'bg-amber-500' :
+                                  log.action_type.includes('login') ? 'bg-blue-500' :
+                                  'bg-accent'
+                                }`} />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm text-text-primary">{log.description}</p>
+                                  {log.ip_address && (
+                                    <p className="text-xs text-text-tertiary mt-0.5">IP: {log.ip_address}</p>
+                                  )}
+                                </div>
+                                <div className="text-right flex-shrink-0">
+                                  <span className="text-xs text-text-tertiary block">
+                                    {new Date(log.timestamp).toLocaleDateString('sv-SE')}
+                                  </span>
+                                  <span className="text-xs text-text-tertiary">
+                                    {new Date(log.timestamp).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
 
-                      {/* Pagination */}
-                      {companyActivity.length > activityPerPage && (
-                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-border-subtle">
-                          <p className="text-xs text-text-tertiary">
-                            Visar {(activityPage - 1) * activityPerPage + 1}-{Math.min(activityPage * activityPerPage, companyActivity.length)} av {companyActivity.length}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => setActivityPage(p => Math.max(1, p - 1))}
-                              disabled={activityPage === 1}
-                              className="p-1.5 rounded-lg bg-bg-secondary hover:bg-bg-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="15 18 9 12 15 6" />
-                              </svg>
-                            </button>
-                            <span className="text-xs text-text-secondary px-2">
-                              {activityPage} / {Math.ceil(companyActivity.length / activityPerPage)}
-                            </span>
-                            <button
-                              onClick={() => setActivityPage(p => Math.min(Math.ceil(companyActivity.length / activityPerPage), p + 1))}
-                              disabled={activityPage >= Math.ceil(companyActivity.length / activityPerPage)}
-                              className="p-1.5 rounded-lg bg-bg-secondary hover:bg-bg-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="9 18 15 12 9 6" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </>
+                          {/* Pagination */}
+                          {filteredActivity.length > activityPerPage && (
+                            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border-subtle">
+                              <p className="text-xs text-text-tertiary">
+                                Visar {(activityPage - 1) * activityPerPage + 1}-{Math.min(activityPage * activityPerPage, filteredActivity.length)} av {filteredActivity.length}
+                              </p>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setActivityPage(p => Math.max(1, p - 1))}
+                                  disabled={activityPage === 1}
+                                  className="p-1.5 rounded-lg bg-bg-secondary hover:bg-bg-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="15 18 9 12 15 6" />
+                                  </svg>
+                                </button>
+                                <span className="text-xs text-text-secondary px-2">
+                                  {activityPage} / {totalPages}
+                                </span>
+                                <button
+                                  onClick={() => setActivityPage(p => Math.min(totalPages, p + 1))}
+                                  disabled={activityPage >= totalPages}
+                                  className="p-1.5 rounded-lg bg-bg-secondary hover:bg-bg-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="9 18 15 12 9 6" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )
+                    })()
                   )}
                 </div>
                   </>
