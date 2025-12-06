@@ -7335,12 +7335,18 @@ async def get_all_subscriptions(
     result = []
     for sub in subscriptions:
         company = db.query(Company).filter(Company.id == sub.company_id).first()
+        discount_percent = company.discount_percent if company else 0
+        discount_end_date = company.discount_end_date.isoformat() if company and company.discount_end_date else None
+        effective_price = sub.plan_price * (1 - discount_percent / 100) if discount_percent > 0 else sub.plan_price
         result.append({
             "id": sub.id,
             "company_id": sub.company_id,
             "company_name": company.name if company else "Unknown",
             "plan_name": sub.plan_name,
             "plan_price": sub.plan_price,
+            "effective_price": round(effective_price, 2),
+            "discount_percent": discount_percent,
+            "discount_end_date": discount_end_date,
             "billing_cycle": sub.billing_cycle,
             "status": sub.status,
             "current_period_end": sub.current_period_end.isoformat() if sub.current_period_end else None

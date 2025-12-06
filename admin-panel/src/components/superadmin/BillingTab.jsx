@@ -143,17 +143,33 @@ const BillingTab = ({
                       <p className="font-medium text-text-primary">{sub.company_name}</p>
                       <p className="text-xs text-text-secondary">{sub.company_id}</p>
                     </div>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      sub.plan_name === 'enterprise' ? 'bg-accent-soft text-accent' :
-                      sub.plan_name === 'professional' || sub.plan_name === 'business' ? 'bg-success-soft text-success' :
-                      sub.plan_name === 'starter' ? 'bg-warning-soft text-warning' :
-                      'bg-bg-primary text-text-secondary'
-                    }`}>
-                      {sub.plan_name?.charAt(0).toUpperCase() + sub.plan_name?.slice(1)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {sub.discount_percent > 0 && (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                          -{sub.discount_percent}%
+                        </span>
+                      )}
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        sub.plan_name === 'enterprise' ? 'bg-accent-soft text-accent' :
+                        sub.plan_name === 'professional' || sub.plan_name === 'business' ? 'bg-success-soft text-success' :
+                        sub.plan_name === 'starter' ? 'bg-warning-soft text-warning' :
+                        'bg-bg-primary text-text-secondary'
+                      }`}>
+                        {sub.plan_name?.charAt(0).toUpperCase() + sub.plan_name?.slice(1)}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between mt-2">
-                    <span className="text-sm text-text-secondary">{sub.plan_price?.toLocaleString('sv-SE')} kr/{sub.billing_cycle === 'monthly' ? 'mån' : 'år'}</span>
+                    <div className="flex items-center gap-2">
+                      {sub.discount_percent > 0 ? (
+                        <>
+                          <span className="text-sm text-text-tertiary line-through">{sub.plan_price?.toLocaleString('sv-SE')} kr</span>
+                          <span className="text-sm font-medium text-green-600">{sub.effective_price?.toLocaleString('sv-SE')} kr/{sub.billing_cycle === 'monthly' ? 'mån' : 'år'}</span>
+                        </>
+                      ) : (
+                        <span className="text-sm text-text-secondary">{sub.plan_price?.toLocaleString('sv-SE')} kr/{sub.billing_cycle === 'monthly' ? 'mån' : 'år'}</span>
+                      )}
+                    </div>
                     <span className={`text-xs flex items-center gap-1 ${sub.status === 'active' ? 'text-success' : 'text-warning'}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${sub.status === 'active' ? 'bg-success' : 'bg-warning'}`} />
                       {sub.status === 'active' ? 'Aktiv' : sub.status}
