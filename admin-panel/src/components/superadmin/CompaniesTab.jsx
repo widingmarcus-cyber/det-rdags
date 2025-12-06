@@ -118,7 +118,10 @@ const CompaniesTab = ({
                     type="checkbox"
                     checked={selectedCompanies.size === filteredCompanies.length && filteredCompanies.length > 0}
                     onChange={toggleSelectAll}
-                    className="w-4 h-4 rounded cursor-pointer accent-[#D97757]"
+                    className="w-4 h-4 rounded border-2 border-stone-500 bg-transparent checked:bg-accent checked:border-accent cursor-pointer appearance-none relative
+                      after:content-[''] after:absolute after:left-[3px] after:top-[1px] after:w-[5px] after:h-[8px]
+                      after:border-white after:border-r-2 after:border-b-2 after:rotate-45
+                      after:opacity-0 checked:after:opacity-100 transition-all"
                   />
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Företag</th>
@@ -154,7 +157,10 @@ const CompaniesTab = ({
                         type="checkbox"
                         checked={selectedCompanies.has(company.id)}
                         onChange={() => toggleSelectCompany(company.id)}
-                        className="w-4 h-4 rounded cursor-pointer accent-[#D97757]"
+                        className="w-4 h-4 rounded border-2 border-stone-500 bg-transparent checked:bg-accent checked:border-accent cursor-pointer appearance-none relative
+                          after:content-[''] after:absolute after:left-[3px] after:top-[1px] after:w-[5px] after:h-[8px]
+                          after:border-white after:border-r-2 after:border-b-2 after:rotate-45
+                          after:opacity-0 checked:after:opacity-100 transition-all"
                       />
                     </td>
                     <td className="px-4 py-4">

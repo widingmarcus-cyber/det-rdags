@@ -1142,14 +1142,15 @@ function SuperAdmin() {
       const response = await adminFetch(`${API_BASE}/admin/impersonate/${companyId}`, { method: 'POST' })
       if (response.ok) {
         const data = await response.json()
-        // Store the impersonation token and redirect to company admin
-        localStorage.setItem('auth', JSON.stringify({
+        // Store the impersonation token and redirect to company dashboard
+        // Must use 'bobot_auth' key to match App.jsx
+        localStorage.setItem('bobot_auth', JSON.stringify({
           token: data.token,
           companyId: data.company_id,
           companyName: data.company_name,
           isImpersonated: true
         }))
-        window.location.href = '/'
+        window.location.href = '/dashboard'
       } else {
         showNotification('Kunde inte impersonera företag', 'error')
       }
