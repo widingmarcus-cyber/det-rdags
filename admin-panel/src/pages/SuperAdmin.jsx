@@ -2747,84 +2747,95 @@ function SuperAdmin() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-wrap gap-3 pt-6 border-t border-border-subtle mt-2">
+                <div className="pt-6 border-t border-border-subtle mt-2 space-y-4">
+                  {/* Primary Action */}
                   <button
                     onClick={() => { setShowCompanyDashboard(null); handleImpersonate(showCompanyDashboard.id) }}
-                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-accent text-white font-medium hover:bg-accent-hover transition-colors"
+                    className="w-full flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl bg-accent text-white font-medium hover:bg-accent-hover transition-colors"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                       <circle cx="12" cy="7" r="4" />
                     </svg>
-                    Logga in som
+                    Logga in som detta företag
                   </button>
-                  <button
-                    onClick={() => { setShowCompanyDashboard(null); openUsageLimitModal(showCompanyDashboard) }}
-                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
-                      <path d="M12 20V10" />
-                      <path d="M18 20V4" />
-                      <path d="M6 20v-4" />
-                    </svg>
-                    Ändra gränser
-                  </button>
-                  <button
-                    onClick={() => handleExport(showCompanyDashboard.id)}
-                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                    Exportera
-                  </button>
-                  <button
-                    onClick={() => { setShowCompanyDashboard(null); openProposalModal(showCompanyDashboard) }}
-                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                      <line x1="16" y1="13" x2="8" y2="13" />
-                      <line x1="16" y1="17" x2="8" y2="17" />
-                    </svg>
-                    Skapa offert
-                  </button>
-                  <button
-                    onClick={() => handleToggle(showCompanyDashboard.id)}
-                    className={`flex items-center gap-2.5 px-5 py-2.5 rounded-lg font-medium transition-colors ${
-                      showCompanyDashboard.is_active
-                        ? 'bg-warning/10 hover:bg-warning/20 border border-warning/30 text-warning'
-                        : 'bg-success/10 hover:bg-success/20 border border-success/30 text-success'
-                    }`}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10" />
-                      {showCompanyDashboard.is_active ? <path d="M15 9l-6 6M9 9l6 6" /> : <polyline points="9 12 11 14 15 10" />}
-                    </svg>
-                    {showCompanyDashboard.is_active ? 'Inaktivera' : 'Aktivera'}
-                  </button>
-                  <button
-                    onClick={() => setShowPasswordModal(showCompanyDashboard)}
-                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                    Ändra lösenord
-                  </button>
-                  <button
-                    onClick={() => setDeleteConfirmCompany(showCompanyDashboard)}
-                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-error/10 hover:bg-error/20 border border-error/30 text-error font-medium transition-colors"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    </svg>
-                    Ta bort
-                  </button>
+
+                  {/* Management Actions - Grid */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => { setShowCompanyDashboard(null); openUsageLimitModal(showCompanyDashboard) }}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary text-sm font-medium transition-colors"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary flex-shrink-0">
+                        <path d="M12 20V10" />
+                        <path d="M18 20V4" />
+                        <path d="M6 20v-4" />
+                      </svg>
+                      Ändra gränser
+                    </button>
+                    <button
+                      onClick={() => setShowPasswordModal(showCompanyDashboard)}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary text-sm font-medium transition-colors"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary flex-shrink-0">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+                      Ändra lösenord
+                    </button>
+                    <button
+                      onClick={() => handleExport(showCompanyDashboard.id)}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary text-sm font-medium transition-colors"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary flex-shrink-0">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Exportera data
+                    </button>
+                    <button
+                      onClick={() => { setShowCompanyDashboard(null); openProposalModal(showCompanyDashboard) }}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary text-sm font-medium transition-colors"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary flex-shrink-0">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                      </svg>
+                      Skapa offert
+                    </button>
+                  </div>
+
+                  {/* Status & Danger Actions */}
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => handleToggle(showCompanyDashboard.id)}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                        showCompanyDashboard.is_active
+                          ? 'bg-warning/10 hover:bg-warning/20 border border-warning/30 text-warning'
+                          : 'bg-success/10 hover:bg-success/20 border border-success/30 text-success'
+                      }`}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        {showCompanyDashboard.is_active
+                          ? <><circle cx="12" cy="12" r="10" /><path d="M15 9l-6 6M9 9l6 6" /></>
+                          : <><circle cx="12" cy="12" r="10" /><polyline points="9 12 11 14 15 10" /></>
+                        }
+                      </svg>
+                      {showCompanyDashboard.is_active ? 'Inaktivera' : 'Aktivera'}
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmCompany(showCompanyDashboard)}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-error/10 hover:bg-error/20 border border-error/30 text-error text-sm font-medium transition-colors"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                      Ta bort
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
