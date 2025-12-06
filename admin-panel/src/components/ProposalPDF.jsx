@@ -178,6 +178,34 @@ const CornerAccent = ({ position = 'topRight' }) => {
   )
 }
 
+// Subtle dot pattern background - like landing page
+const DotPattern = ({ opacity = 0.15, color = colors.textLight, spacing = 24 }) => {
+  const dots = []
+  const cols = Math.ceil(595 / spacing) // A4 width in points
+  const rows = Math.ceil(842 / spacing) // A4 height in points
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      dots.push(
+        <Circle
+          key={`${row}-${col}`}
+          cx={col * spacing + spacing / 2}
+          cy={row * spacing + spacing / 2}
+          r={1}
+          fill={color}
+          opacity={opacity}
+        />
+      )
+    }
+  }
+  return (
+    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+      <Svg width={595} height={842}>
+        {dots}
+      </Svg>
+    </View>
+  )
+}
+
 // Decorative divider with dot
 const DecorativeDivider = ({ width = 200 }) => (
   <Svg width={width} height={20} style={{ marginVertical: 24 }}>
@@ -340,8 +368,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 20,
     padding: 24,
-    borderWidth: 2,
-    borderColor: colors.primary,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   roleTitle: {
     fontSize: 16,
@@ -631,6 +659,7 @@ const HeroPage = ({ customerName, contactPerson, startDate }) => (
 // SECTION 2: Philosophy Page
 const PhilosophyPage = () => (
   <Page size="A4" style={styles.page}>
+    <DotPattern opacity={0.12} spacing={28} />
     <CornerAccent position="topRight" />
 
     <View style={styles.pageHeader}>
@@ -804,13 +833,13 @@ const JobDescriptionPage = () => (
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 4 }}>Lokal AI-modell</Text>
           <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
-            Bobot drivs av en lokal språkmodell (LLM) som körs på våra svenska servrar. Ingen data skickas till externa molntjänster som OpenAI eller Google.
+            Bobot drivs av en lokal språkmodell (LLM) som körs på EU-servrar. Ingen data skickas till externa molntjänster som OpenAI eller Google.
           </Text>
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 4 }}>GDPR-säker</Text>
           <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
-            All data lagras i Sverige med automatisk radering. Ni behåller full kontroll över er information och uppfyller GDPR-kraven.
+            All data lagras inom EU med automatisk radering. Möjlighet till dedikerad svensk hosting för extra säkerhet.
           </Text>
         </View>
         <View style={{ flex: 1 }}>
@@ -829,6 +858,7 @@ const JobDescriptionPage = () => (
 // SECTION 4: Customization Page
 const CustomizationPage = () => (
   <Page size="A4" style={styles.page}>
+    <DotPattern opacity={0.1} spacing={32} />
     <CornerAccent position="topRight" />
 
     <View style={styles.pageHeader}>
@@ -1232,6 +1262,7 @@ const IconUser = ({ size = 20, color = colors.white }) => (
 // SECTION 7: Contact Page
 const ContactPage = () => (
   <Page size="A4" style={styles.page}>
+    <DotPattern opacity={0.08} spacing={30} />
     <CornerAccent position="topRight" />
 
     {/* Header */}
@@ -1319,10 +1350,14 @@ const ContactPage = () => (
       </View>
     </View>
 
-    {/* Bottom quote - positioned with fixed distance from footer */}
-    <View style={{ marginTop: 24, backgroundColor: colors.slateLight, borderRadius: 12, padding: 20, alignItems: 'center' }}>
-      <Text style={{ fontFamily: 'Playfair', fontSize: 14, color: colors.text, textAlign: 'center', lineHeight: 1.5 }}>
-        "Låt Bobot ta hand om rutinfrågorna så ni kan fokusera på det som verkligen räknas."
+    {/* Bottom quote - redesigned */}
+    <View style={{ marginTop: 24, backgroundColor: colors.slateLight, borderRadius: 12, padding: 24, alignItems: 'center' }}>
+      <View style={{ width: 40, height: 2, backgroundColor: colors.primary, marginBottom: 16, borderRadius: 1 }} />
+      <Text style={{ fontFamily: 'Playfair', fontSize: 16, color: colors.text, textAlign: 'center', marginBottom: 8 }}>
+        Låt Bobot sköta rutinfrågorna.
+      </Text>
+      <Text style={{ fontSize: 11, color: colors.textLight, textAlign: 'center' }}>
+        Så ni kan fokusera på det som verkligen räknas.
       </Text>
     </View>
 
