@@ -1552,5 +1552,10 @@ const Bobot = {
   }
 }
 
+// Expose Bobot globally for both development (Vite) and production (IIFE)
+if (typeof window !== 'undefined') {
+  window.Bobot = Bobot
+}
+
 // Export the Bobot object (not ChatWidget) so IIFE assigns it to window.Bobot
 export default Bobot

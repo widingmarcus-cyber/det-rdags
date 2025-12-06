@@ -136,7 +136,8 @@ const AnalyticsTab = ({
                 setLandingAnalyticsDays(days)
                 fetchLandingAnalytics(days)
               }}
-              className="input-field text-sm py-1 px-2"
+              className="px-3 py-1.5 text-sm bg-bg-tertiary text-text-primary border border-border rounded-md hover:border-text-tertiary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all cursor-pointer appearance-none pr-8"
+              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23A8A29E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
             >
               <option value={7}>7 dagar</option>
               <option value={30}>30 dagar</option>
