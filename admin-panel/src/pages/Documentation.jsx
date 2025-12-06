@@ -22,18 +22,18 @@ function Documentation() {
         <p className="text-text-secondary mt-1">Lär dig hur Bobot fungerar och skyddar dina data</p>
       </div>
 
-      <div className="flex gap-8">
-        {/* Sidebar navigation */}
-        <nav className="w-48 flex-shrink-0" aria-label="Dokumentationsnavigation">
-          <ul className="space-y-1 sticky top-8">
+      <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+        {/* Sidebar navigation - horizontal scroll on mobile, sidebar on desktop */}
+        <nav className="w-full md:w-48 flex-shrink-0 overflow-hidden" aria-label="Dokumentationsnavigation">
+          <ul className="flex md:flex-col gap-1.5 md:gap-1 overflow-x-auto pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 md:sticky md:top-8" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
             {sections.map(section => (
-              <li key={section.id}>
+              <li key={section.id} className="flex-shrink-0">
                 <button
                   onClick={() => setActiveSection(section.id)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                  className={`w-full text-left px-3 py-2 rounded-lg text-xs md:text-sm transition-colors whitespace-nowrap ${
                     activeSection === section.id
                       ? 'bg-accent-soft text-accent font-medium'
-                      : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+                      : 'text-text-secondary bg-bg-secondary md:bg-transparent hover:bg-bg-tertiary hover:text-text-primary'
                   }`}
                   aria-current={activeSection === section.id ? 'true' : undefined}
                 >
@@ -45,7 +45,7 @@ function Documentation() {
         </nav>
 
         {/* Content */}
-        <main className="flex-1 max-w-3xl" role="article">
+        <main className="flex-1 max-w-3xl min-w-0" role="article">
           {activeSection === 'overview' && (
             <section aria-labelledby="overview-heading">
               <h2 id="overview-heading" className="text-xl font-semibold text-text-primary mb-4">Översikt</h2>

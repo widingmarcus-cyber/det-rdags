@@ -395,11 +395,11 @@ function App() {
   // Authenticated company routes
   return (
     <AuthContext.Provider value={{ auth, authFetch, darkMode, toggleDarkMode, companyStatus }}>
-      {/* Skip links for keyboard navigation */}
-      <a href="#main-content" className="skip-link">
+      {/* Skip links for keyboard navigation - hidden on mobile */}
+      <a href="#main-content" className="skip-link hidden md:block">
         Hoppa till huvudinnehåll
       </a>
-      <a href="#main-nav" className="skip-link" style={{ left: '200px' }}>
+      <a href="#main-nav" className="skip-link hidden md:block" style={{ left: '200px' }}>
         Hoppa till navigation
       </a>
 
