@@ -1359,27 +1359,6 @@ function SuperAdmin() {
     }
   }
 
-  const handleCleanupWidgets = async () => {
-    if (!confirm('Detta kommer ta bort alla widgets utöver 2 (1 intern, 1 extern) för varje företag. Fortsätt?')) {
-      return
-    }
-    try {
-      const response = await adminFetch(`${API_BASE}/admin/cleanup-widgets`, {
-        method: 'POST'
-      })
-      if (response.ok) {
-        const data = await response.json()
-        showNotification(`${data.message}`, 'success')
-        fetchCompanies() // Refresh company list
-      } else {
-        showNotification('Kunde inte rensa widgets', 'error')
-      }
-    } catch (error) {
-      console.error('Failed to cleanup widgets:', error)
-      showNotification('Kunde inte rensa widgets', 'error')
-    }
-  }
-
   const handleSetUsageLimit = async (companyId) => {
     try {
       const response = await adminFetch(`${API_BASE}/admin/companies/${companyId}/usage-limit`, {
@@ -1464,7 +1443,7 @@ function SuperAdmin() {
 
       if (invoicesRes.ok) {
         const invoicesData = await invoicesRes.json()
-        setCompanyInvoices(invoicesData || [])
+        setCompanyInvoices(invoicesData.invoices || [])
       }
     } catch (error) {
       console.error('Failed to fetch company details:', error)
@@ -1900,7 +1879,6 @@ function SuperAdmin() {
             systemHealth={systemHealth}
             maintenanceMode={maintenanceMode}
             onToggleMaintenance={handleToggleMaintenance}
-            onCleanupWidgets={handleCleanupWidgets}
           />
         )}
 
@@ -2492,6 +2470,11 @@ function SuperAdmin() {
                           {showCompanyDashboard.contract_start_date && (
                             <div className="text-xs text-text-tertiary mb-3">
                               Avtal startade: {showCompanyDashboard.contract_start_date}
+                            </div>
+                          )}
+                          {showCompanyDashboard.billing_email && (
+                            <div className="text-xs text-text-tertiary mb-3">
+                              <span className="text-text-secondary">Faktureringsmejl:</span> {showCompanyDashboard.billing_email}
                             </div>
                           )}
                           <div className="flex gap-2 pt-3 border-t border-border-subtle">

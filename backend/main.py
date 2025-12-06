@@ -1400,6 +1400,26 @@ def init_demo_data():
                 if added_count > 0:
                     print(f"[Bobot] Added {added_count} new knowledge items")
 
+            # Cleanup extra widgets for Bobot (keep max 2: 1 internal, 1 external)
+            bobot_widgets = db.query(Widget).filter(Widget.company_id == "bobot").order_by(Widget.created_at.asc()).all()
+            if len(bobot_widgets) > 2:
+                # Keep the landing widget (external) and max 1 internal
+                widgets_to_keep = []
+                external_kept = False
+                internal_kept = False
+                for w in bobot_widgets:
+                    if w.widget_type in ["external", "custom"] and not external_kept:
+                        widgets_to_keep.append(w.id)
+                        external_kept = True
+                    elif w.widget_type == "internal" and not internal_kept:
+                        widgets_to_keep.append(w.id)
+                        internal_kept = True
+                # Delete extras
+                for w in bobot_widgets:
+                    if w.id not in widgets_to_keep:
+                        db.delete(w)
+                        print(f"[Bobot] Deleted extra widget: {w.name}")
+
             db.commit()
 
         # =================================================================
@@ -1465,6 +1485,25 @@ def init_demo_data():
             else:
                 print("SFAB-företag skapat: sfab / sbab (utan kunskapsbas - mall saknas)")
 
+            db.commit()
+
+        # Cleanup extra widgets for SFAB (keep max 2: 1 internal, 1 external)
+        sfab_widgets = db.query(Widget).filter(Widget.company_id == "sfab").order_by(Widget.created_at.asc()).all()
+        if len(sfab_widgets) > 2:
+            widgets_to_keep = []
+            external_kept = False
+            internal_kept = False
+            for w in sfab_widgets:
+                if w.widget_type in ["external", "custom"] and not external_kept:
+                    widgets_to_keep.append(w.id)
+                    external_kept = True
+                elif w.widget_type == "internal" and not internal_kept:
+                    widgets_to_keep.append(w.id)
+                    internal_kept = True
+            for w in sfab_widgets:
+                if w.id not in widgets_to_keep:
+                    db.delete(w)
+                    print(f"[SFAB] Deleted extra widget: {w.name}")
             db.commit()
 
         if is_production:
@@ -6065,72 +6104,6 @@ async def admin_delete_widget(
     )
 
     return {"message": f"Widget '{widget_name}' raderad"}
-
-
-@app.post("/admin/cleanup-widgets")
-async def cleanup_extra_widgets(
-    admin: dict = Depends(get_super_admin),
-    db: Session = Depends(get_db)
-):
-    """
-    One-time cleanup to remove extra widgets from companies.
-    Keeps max 2 widgets per company (1 internal, 1 external).
-    """
-    results = []
-
-    # Get all companies with more than 2 widgets
-    companies = db.query(Company).all()
-
-    for company in companies:
-        widgets = db.query(Widget).filter(Widget.company_id == company.id).order_by(Widget.created_at.asc()).all()
-
-        if len(widgets) <= 2:
-            continue
-
-        # Separate by type
-        internal_widgets = [w for w in widgets if w.widget_type == "internal"]
-        external_widgets = [w for w in widgets if w.widget_type in ["external", "custom"]]
-
-        widgets_to_delete = []
-
-        # Keep only the first internal widget (oldest)
-        if len(internal_widgets) > 1:
-            widgets_to_delete.extend(internal_widgets[1:])
-
-        # Keep only the first external widget (oldest)
-        if len(external_widgets) > 1:
-            widgets_to_delete.extend(external_widgets[1:])
-
-        # If we still have more than 2 after type filtering, delete the newest ones
-        remaining = [w for w in widgets if w not in widgets_to_delete]
-        if len(remaining) > 2:
-            # Sort by created_at and keep the 2 oldest
-            remaining_sorted = sorted(remaining, key=lambda x: x.created_at or datetime.min)
-            widgets_to_delete.extend(remaining_sorted[2:])
-
-        # Delete the extra widgets
-        for widget in widgets_to_delete:
-            results.append({
-                "company_id": company.id,
-                "company_name": company.name,
-                "deleted_widget": widget.name,
-                "widget_type": widget.widget_type
-            })
-            db.delete(widget)
-
-    db.commit()
-
-    # Log admin action
-    if results:
-        log_admin_action(
-            db, admin["username"], "cleanup_widgets",
-            description=f"Cleaned up {len(results)} extra widgets from {len(set(r['company_id'] for r in results))} companies"
-        )
-
-    return {
-        "message": f"Cleaned up {len(results)} extra widgets",
-        "deleted": results
-    }
 
 
 # =============================================================================
