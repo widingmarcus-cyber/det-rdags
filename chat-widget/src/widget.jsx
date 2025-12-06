@@ -384,15 +384,22 @@ const injectStyles = (fontFamily, borderRadius) => {
       background: rgba(0,0,0,0.25);
     }
 
-    @media (max-width: 480px) {
+    @media (max-width: 640px) {
       .bobot-widget-window {
-        width: calc(100vw - 24px) !important;
-        height: 80vh !important;
-        max-height: 600px !important;
-        bottom: 72px !important;
-        right: 12px !important;
-        left: 12px !important;
-        border-radius: ${borderRadius}px !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        max-height: none !important;
+        border-radius: 0 !important;
+        z-index: 100000 !important;
+      }
+      .bobot-widget-trigger {
+        bottom: 16px !important;
+        right: 16px !important;
       }
     }
 
@@ -1428,7 +1435,7 @@ function ChatWidget({ config }) {
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={isOpen ? '' : 'bobot-glow'}
+        className={`bobot-widget-trigger ${isOpen ? '' : 'bobot-glow'}`}
         style={{
           width: 56, height: 56, borderRadius: '50%', border: 'none',
           background: `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(primaryColor, -15)} 100%)`,

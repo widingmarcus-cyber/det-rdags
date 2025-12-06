@@ -1,9 +1,17 @@
-import { NavLink } from 'react-router-dom'
-import { useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
-function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, announcements = [], onDismissAnnouncement, onDismissAllAnnouncements }) {
+function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, announcements = [], onDismissAnnouncement, onDismissAllAnnouncements, mobileOpen, setMobileOpen }) {
   const [showAnnouncement, setShowAnnouncement] = useState(false)
+  const location = useLocation()
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    if (mobileOpen && setMobileOpen) {
+      setMobileOpen(false)
+    }
+  }, [location.pathname])
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: 'chart' },
     { to: '/widget/external', label: 'Kundtjänst', icon: 'external' },
@@ -139,15 +147,38 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
   }
 
   return (
-    <aside
-      id="main-nav"
-      className="w-60 bg-bg-secondary border-r border-border-subtle flex flex-col h-screen sticky top-0"
-      role="complementary"
-      aria-label="Sidomeny"
-    >
+    <>
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+      <aside
+        id="main-nav"
+        className={`w-60 bg-bg-secondary border-r border-border-subtle flex flex-col h-screen fixed md:sticky top-0 z-50 transition-transform duration-300 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+        role="complementary"
+        aria-label="Sidomeny"
+      >
       {/* Logo & Mascot */}
       <div className="p-4 mb-2">
         <div className="flex items-center gap-3 px-3 py-2">
+          {/* Close button for mobile */}
+          {mobileOpen && (
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="md:hidden p-1.5 -ml-1.5 rounded-lg hover:bg-bg-tertiary transition-colors text-text-secondary"
+              aria-label="Stäng meny"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          )}
           {/* Mini Bobot Mascot - matches Landing page style */}
           <div className="w-10 h-10 relative" aria-hidden="true">
             <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
@@ -437,6 +468,7 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
         </button>
       </div>
     </aside>
+    </>
   )
 }
 

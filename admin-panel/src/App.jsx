@@ -79,6 +79,9 @@ function App() {
   // Announcements state (supports multiple messages)
   const [announcements, setAnnouncements] = useState([])
 
+  // Mobile sidebar state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
   // Admin auth
   const [adminAuth, setAdminAuth] = useState(() => {
     const saved = localStorage.getItem('bobot_admin_auth')
@@ -385,8 +388,36 @@ function App() {
           announcements={announcements}
           onDismissAnnouncement={markAnnouncementAsRead}
           onDismissAllAnnouncements={markAllAnnouncementsAsRead}
+          mobileOpen={mobileMenuOpen}
+          setMobileOpen={setMobileMenuOpen}
         />
-        <main id="main-content" className="flex-1 p-8 overflow-auto relative z-10" role="main" aria-label="Huvudinnehåll">
+        <main id="main-content" className="flex-1 p-4 md:p-8 overflow-auto relative z-10 w-full" role="main" aria-label="Huvudinnehåll">
+          {/* Mobile header with hamburger menu */}
+          <div className="md:hidden flex items-center gap-3 mb-4 -mt-1">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="p-2 -ml-2 rounded-lg hover:bg-bg-secondary transition-colors"
+              aria-label="Öppna meny"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8">
+                <svg viewBox="0 0 48 48" fill="none" className="w-full h-full">
+                  <rect x="14" y="8" width="20" height="11" rx="2" fill="#D97757" />
+                  <ellipse cx="19" cy="13.5" rx="3.5" ry="3" fill="#292524" />
+                  <ellipse cx="29" cy="13.5" rx="3.5" ry="3" fill="#292524" />
+                  <ellipse cx="19" cy="14" rx="2" ry="2" fill="#D97757" />
+                  <ellipse cx="29" cy="14" rx="2" ry="2" fill="#D97757" />
+                </svg>
+              </div>
+              <span className="font-semibold text-text-primary">Bobot</span>
+            </div>
+          </div>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
