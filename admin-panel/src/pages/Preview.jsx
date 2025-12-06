@@ -261,9 +261,17 @@ function Preview() {
 
   const theme = darkMode ? darkTheme : lightTheme
 
-  const handleFeedback = (msgIndex, helpful) => {
+  const handleFeedback = async (msgIndex, helpful) => {
     setFeedbackGiven(prev => ({ ...prev, [msgIndex]: helpful }))
     announce(helpful ? 'Tack för positiv feedback' : 'Tack för feedback')
+    // Send feedback to backend
+    try {
+      await fetch(`${API_BASE}/chat/${auth.companyId}/feedback?session_id=${sessionId}&helpful=${helpful}`, {
+        method: 'POST'
+      })
+    } catch (e) {
+      console.error('Failed to send feedback:', e)
+    }
   }
 
   // Handle keyboard navigation

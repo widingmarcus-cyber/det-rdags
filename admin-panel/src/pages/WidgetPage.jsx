@@ -31,7 +31,7 @@ const loadGoogleFont = (fontFamily) => {
 }
 
 function WidgetPage({ widgetType }) {
-  const { authFetch } = useContext(AuthContext)
+  const { auth, authFetch } = useContext(AuthContext)
   const [activeTab, setActiveTab] = useState('settings')
   const [widget, setWidget] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -687,8 +687,16 @@ function WidgetPage({ widgetType }) {
     setFeedbackGiven({})
   }
 
-  const handlePreviewFeedback = (msgIndex, helpful) => {
+  const handlePreviewFeedback = async (msgIndex, helpful) => {
     setFeedbackGiven(prev => ({ ...prev, [msgIndex]: helpful }))
+    // Send feedback to backend
+    try {
+      await fetch(`${API_BASE}/chat/${auth.companyId}/feedback?session_id=${sessionId}&helpful=${helpful}`, {
+        method: 'POST'
+      })
+    } catch (e) {
+      console.error('Failed to send feedback:', e)
+    }
   }
 
   useEffect(() => {
