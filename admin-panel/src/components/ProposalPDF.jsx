@@ -776,106 +776,146 @@ const PhilosophyPage = () => (
   </Page>
 )
 
-// SECTION 3: Job Description Page
+// SECTION 3: Job Description Page - Two roles section with visual appeal
 const JobDescriptionPage = () => (
   <Page size="A4" style={styles.page}>
+    <DotPattern opacity={0.06} spacing={28} />
     <CornerAccent position="bottomLeft" />
 
-    <View style={styles.pageHeader}>
-      <Text style={styles.pageHeaderTitle}>Två roller i en anställning</Text>
-      <BobotMascotSmall size={36} />
+    {/* Header with mascot */}
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontFamily: 'Playfair', fontSize: 26, fontWeight: 700, color: colors.text, marginBottom: 8 }}>
+          Två roller i en anställning
+        </Text>
+        <Text style={{ fontSize: 11, color: colors.textLight, lineHeight: 1.6 }}>
+          Bobot är flexibel och kan hjälpa till på flera fronter. Välj att använda honom för kundservice, intern support, eller båda.
+        </Text>
+      </View>
+      <View style={{ marginLeft: 16 }}>
+        <BobotMascotSmall size={50} />
+      </View>
     </View>
 
-    <Text style={styles.sectionSubtitle}>
-      Bobot är flexibel och kan hjälpa till på flera fronter. Välj att använda honom för kundservice, intern support, eller båda.
-    </Text>
-
-    <View style={styles.twoColumnGrid}>
+    {/* Two role cards side by side */}
+    <View style={{ flexDirection: 'row', gap: 16, marginBottom: 20 }}>
       {/* External Role */}
-      <View style={styles.roleCardHighlight}>
-        <Text style={{ fontSize: 10, color: colors.primary, fontWeight: 600, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
-          Utåtriktad
-        </Text>
-        <Text style={styles.roleTitle}>Extern Kundservice</Text>
-        <Text style={styles.roleDescription}>
+      <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 20, borderWidth: 2, borderColor: colors.primary }}>
+        <View style={{ backgroundColor: colors.primary, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 10, alignSelf: 'flex-start', marginBottom: 12 }}>
+          <Text style={{ fontSize: 9, color: colors.white, fontWeight: 600 }}>UTÅTRIKTAD</Text>
+        </View>
+        <Text style={{ fontSize: 15, fontWeight: 700, color: colors.text, marginBottom: 8 }}>Extern Kundservice</Text>
+        <Text style={{ fontSize: 10, color: colors.textLight, lineHeight: 1.5, marginBottom: 12 }}>
           Svarar direkt på hemsidan. Era kunder slipper telefonkö och får hjälp med priser, öppettider och bokningar oavsett tid på dygnet.
         </Text>
-        <View style={{ marginTop: 16 }}>
-          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Besvarar vanliga frågor</Text>
-          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Guidar besökare på hemsidan</Text>
-          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Tillgänglig dygnet runt</Text>
+        <View style={{ gap: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+              <IconCheck size={8} color={colors.white} />
+            </View>
+            <Text style={{ fontSize: 9, color: colors.text }}>Besvarar vanliga frågor</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+              <IconCheck size={8} color={colors.white} />
+            </View>
+            <Text style={{ fontSize: 9, color: colors.text }}>Guidar besökare på hemsidan</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+              <IconCheck size={8} color={colors.white} />
+            </View>
+            <Text style={{ fontSize: 9, color: colors.text }}>Tillgänglig dygnet runt</Text>
+          </View>
         </View>
       </View>
 
       {/* Internal Role */}
-      <View style={styles.roleCard}>
-        <Text style={{ fontSize: 10, color: colors.accent, fontWeight: 600, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
-          Inåtriktad
+      <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 20, borderWidth: 2, borderColor: colors.accent }}>
+        <View style={{ backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 10, alignSelf: 'flex-start', marginBottom: 12 }}>
+          <Text style={{ fontSize: 9, color: colors.white, fontWeight: 600 }}>INÅTRIKTAD</Text>
+        </View>
+        <Text style={{ fontSize: 15, fontWeight: 700, color: colors.text, marginBottom: 8 }}>Intern Mentor</Text>
+        <Text style={{ fontSize: 10, color: colors.textLight, lineHeight: 1.5, marginBottom: 12 }}>
+          Ny på jobbet? Bobot svarar på frågor om rutiner och system. Senior personal slipper bli avbruten med samma frågor.
         </Text>
-        <Text style={styles.roleTitle}>Intern Mentor</Text>
-        <Text style={styles.roleDescription}>
-          Ny på jobbet? Bobot svarar på frågor om rutiner och system. Senior personal slipper bli avbruten med samma frågor, och nyanställda blir självgående direkt.
-        </Text>
-        <View style={{ marginTop: 16 }}>
-          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Onboarding av nyanställda</Text>
-          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Svar på rutinfrågor</Text>
-          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Intern kunskapsbas</Text>
+        <View style={{ gap: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+              <IconCheck size={8} color={colors.white} />
+            </View>
+            <Text style={{ fontSize: 9, color: colors.text }}>Onboarding av nyanställda</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+              <IconCheck size={8} color={colors.white} />
+            </View>
+            <Text style={{ fontSize: 9, color: colors.text }}>Svar på rutinfrågor</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+              <IconCheck size={8} color={colors.white} />
+            </View>
+            <Text style={{ fontSize: 9, color: colors.text }}>Intern kunskapsbas</Text>
+          </View>
         </View>
       </View>
     </View>
 
-    {/* Technical info - How it works */}
-    <View style={{ marginTop: 30, backgroundColor: colors.slateLight, borderRadius: 16, padding: 20 }}>
-      <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text, marginBottom: 12 }}>
+    {/* Technical info - Visual boxes */}
+    <View style={{ backgroundColor: colors.slateLight, borderRadius: 16, padding: 20, marginBottom: 16 }}>
+      <Text style={{ fontSize: 13, fontWeight: 600, color: colors.text, marginBottom: 16, textAlign: 'center' }}>
         Så fungerar tekniken
       </Text>
-      <View style={{ flexDirection: 'row', gap: 16 }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 4 }}>Lokal AI-modell</Text>
-          <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
-            Bobot drivs av en lokal språkmodell (LLM) som körs på EU-servrar. Ingen data skickas till externa molntjänster som OpenAI eller Google.
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 14, alignItems: 'center' }}>
+          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+            <Text style={{ fontSize: 14, color: colors.white, fontWeight: 700 }}>AI</Text>
+          </View>
+          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.text, marginBottom: 4, textAlign: 'center' }}>Lokal AI-modell</Text>
+          <Text style={{ fontSize: 8, color: colors.textLight, textAlign: 'center', lineHeight: 1.4 }}>
+            Körs på EU-servrar. Ingen data till OpenAI eller Google.
           </Text>
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 4 }}>GDPR-säker</Text>
-          <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
-            All data lagras inom EU med automatisk radering. Möjlighet till dedikerad svensk hosting för extra säkerhet.
+        <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 14, alignItems: 'center' }}>
+          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+            <Text style={{ fontSize: 10, color: colors.white, fontWeight: 700 }}>EU</Text>
+          </View>
+          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.text, marginBottom: 4, textAlign: 'center' }}>GDPR-säker</Text>
+          <Text style={{ fontSize: 8, color: colors.textLight, textAlign: 'center', lineHeight: 1.4 }}>
+            All data inom EU med automatisk radering.
           </Text>
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 4 }}>Er kunskapsbas</Text>
-          <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
-            Bobot svarar endast baserat på den information ni laddar upp. Separata kunskapsbaser för extern och intern användning.
+        <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 14, alignItems: 'center' }}>
+          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+            <Text style={{ fontSize: 12, color: colors.white, fontWeight: 700 }}>KB</Text>
+          </View>
+          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.text, marginBottom: 4, textAlign: 'center' }}>Er kunskapsbas</Text>
+          <Text style={{ fontSize: 8, color: colors.textLight, textAlign: 'center', lineHeight: 1.4 }}>
+            Svarar endast baserat på er information.
           </Text>
         </View>
       </View>
+    </View>
 
-      {/* Hosting options */}
-      <View style={{ marginTop: 16, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 16 }}>
-        <Text style={{ fontSize: 10, fontWeight: 600, color: colors.text, marginBottom: 10 }}>Hosting-alternativ</Text>
-        <View style={{ flexDirection: 'row', gap: 16 }}>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-              <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 6 }}>
-                <IconBolt size={8} color={colors.white} />
-              </View>
-              <Text style={{ fontSize: 9, fontWeight: 600, color: colors.text }}>Bobot Cloud (rekommenderat)</Text>
-            </View>
-            <Text style={{ fontSize: 8, color: colors.textLight, lineHeight: 1.4 }}>
-              Vi hanterar allt – hosting ingår i månadspriset. EU-servrar med 99.9% SLA.
-            </Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-              <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 6 }}>
-                <IconHome size={8} color={colors.white} />
-              </View>
-              <Text style={{ fontSize: 9, fontWeight: 600, color: colors.text }}>Självhostad</Text>
-            </View>
-            <Text style={{ fontSize: 8, color: colors.textLight, lineHeight: 1.4 }}>
-              Full kontroll. Kräver: 16+ GB RAM, 8 CPU, 100 GB SSD, Docker, Linux.
-            </Text>
-          </View>
+    {/* Hosting options - Simplified */}
+    <View style={{ flexDirection: 'row', gap: 12 }}>
+      <View style={{ flex: 1, backgroundColor: colors.primary, borderRadius: 12, padding: 14 }}>
+        <Text style={{ fontSize: 10, fontWeight: 600, color: colors.white, marginBottom: 4 }}>Bobot Cloud</Text>
+        <Text style={{ fontSize: 8, color: 'rgba(255,255,255,0.8)', lineHeight: 1.4 }}>
+          Vi hanterar allt – hosting ingår. EU-servrar, 99.9% SLA.
+        </Text>
+        <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 6, paddingVertical: 3, paddingHorizontal: 8, marginTop: 8, alignSelf: 'flex-start' }}>
+          <Text style={{ fontSize: 8, color: colors.white, fontWeight: 600 }}>REKOMMENDERAT</Text>
+        </View>
+      </View>
+      <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: colors.border }}>
+        <Text style={{ fontSize: 10, fontWeight: 600, color: colors.text, marginBottom: 4 }}>Självhostad</Text>
+        <Text style={{ fontSize: 8, color: colors.textLight, lineHeight: 1.4 }}>
+          Full kontroll på egen server. Kräver: 16GB RAM, Docker, Linux.
+        </Text>
+        <View style={{ backgroundColor: colors.slateLight, borderRadius: 6, paddingVertical: 3, paddingHorizontal: 8, marginTop: 8, alignSelf: 'flex-start' }}>
+          <Text style={{ fontSize: 8, color: colors.textLight, fontWeight: 600 }}>FÖR ENTERPRISE</Text>
         </View>
       </View>
     </View>
@@ -1012,163 +1052,148 @@ const CustomizationPage = () => (
   </Page>
 )
 
-// SECTION 5: Process Page
+// SECTION 5: Process Page - Redesigned to be visually engaging
 const ProcessPage = () => (
   <Page size="A4" style={styles.page}>
+    <DotPattern opacity={0.08} spacing={24} />
     <CornerAccent position="bottomLeft" />
 
-    <View style={styles.pageHeader}>
-      <Text style={styles.pageHeaderTitle}>Så här går det till</Text>
-      <BobotMascotSmall size={36} />
-    </View>
-
-    <Text style={styles.sectionSubtitle}>
-      Kom igång snabbt med tre enkla steg.
-    </Text>
-
-    <View style={styles.processSteps}>
-      <View style={styles.processStep}>
-        <View style={styles.stepNumber}>
-          <Text style={styles.stepNumberText}>1</Text>
-        </View>
-        <View style={styles.stepContent}>
-          <Text style={styles.stepTitle}>Ge honom material</Text>
-          <Text style={styles.stepDescription}>
-            Ladda upp PDF, Word, Excel eller peka på er hemsida. Bobot accepterar de vanligaste filformaten och kan även läsa innehåll direkt från URL:er.
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.processStep}>
-        <View style={[styles.stepNumber, { backgroundColor: colors.accent }]}>
-          <Text style={styles.stepNumberText}>2</Text>
-        </View>
-        <View style={styles.stepContent}>
-          <Text style={styles.stepTitle}>Han läser på</Text>
-          <Text style={styles.stepDescription}>
-            Bobot analyserar och lär sig allt på några sekunder. All information indexeras och blir sökbar. Ingen manuell kategorisering krävs.
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.processStep}>
-        <View style={styles.stepNumber}>
-          <Text style={styles.stepNumberText}>3</Text>
-        </View>
-        <View style={styles.stepContent}>
-          <Text style={styles.stepTitle}>Han börjar jobba</Text>
-          <Text style={styles.stepDescription}>
-            Redo att svara direkt. Ni kan alltid justera vad han säger genom admin-panelen. Testa internt först, sedan live när ni är nöjda.
-          </Text>
-        </View>
-      </View>
-    </View>
-
-    {/* Timeline - 4 week trial - 2x2 grid with more detail */}
-    <View wrap={false} style={{ marginTop: 30, backgroundColor: colors.white, borderRadius: 16, padding: 20 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>
-          4 veckors provperiod
+    {/* Hero section with mascot */}
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontFamily: 'Playfair', fontSize: 28, fontWeight: 700, color: colors.text, marginBottom: 8 }}>
+          Kom igång på nolltid
         </Text>
-        <View style={{ backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 3, paddingHorizontal: 10 }}>
-          <Text style={{ fontSize: 9, color: colors.white, fontWeight: 600 }}>Ingen bindningstid</Text>
-        </View>
+        <Text style={{ fontSize: 12, color: colors.textLight, lineHeight: 1.6 }}>
+          Tre enkla steg och fyra veckor – det är allt som behövs för att ge era kunder och medarbetare tillgång till en smart AI-assistent.
+        </Text>
       </View>
+      <View style={{ marginLeft: 20 }}>
+        <BobotMascot size={80} />
+      </View>
+    </View>
 
-      <Text style={{ fontSize: 10, color: colors.textLight, marginBottom: 16, lineHeight: 1.5 }}>
-        Under provperioden får ni full tillgång till alla funktioner och personlig support. Vi hjälper er att bygga en kunskapsbas som svarar på era vanligaste frågor. Efter 4 veckor utvärderar vi tillsammans och ni bestämmer om ni vill fortsätta.
+    {/* 3 Steps - Horizontal cards */}
+    <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+      <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, borderWidth: 2, borderColor: colors.primary }}>
+        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+          <Text style={{ fontSize: 16, color: colors.white, fontWeight: 700 }}>1</Text>
+        </View>
+        <Text style={{ fontSize: 13, fontWeight: 700, color: colors.text, marginBottom: 6 }}>Ge honom material</Text>
+        <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
+          Ladda upp PDF, Word eller peka på er hemsida. Bobot accepterar alla vanliga format.
+        </Text>
+      </View>
+      <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, borderWidth: 2, borderColor: colors.accent }}>
+        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+          <Text style={{ fontSize: 16, color: colors.white, fontWeight: 700 }}>2</Text>
+        </View>
+        <Text style={{ fontSize: 13, fontWeight: 700, color: colors.text, marginBottom: 6 }}>Han läser på</Text>
+        <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
+          Bobot analyserar och lär sig allt på några sekunder. Ingen manuell kategorisering krävs.
+        </Text>
+      </View>
+      <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 16, padding: 16, borderWidth: 2, borderColor: colors.primary }}>
+        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+          <Text style={{ fontSize: 16, color: colors.white, fontWeight: 700 }}>3</Text>
+        </View>
+        <Text style={{ fontSize: 13, fontWeight: 700, color: colors.text, marginBottom: 6 }}>Han börjar jobba</Text>
+        <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
+          Redo att svara direkt. Testa internt först, sedan live när ni är nöjda.
+        </Text>
+      </View>
+    </View>
+
+    {/* Divider with text */}
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+      <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+      <View style={{ backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 6, paddingHorizontal: 16, marginHorizontal: 16 }}>
+        <Text style={{ fontSize: 10, color: colors.white, fontWeight: 600 }}>4 VECKORS PROVPERIOD</Text>
+      </View>
+      <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+    </View>
+
+    {/* 4 Week Timeline - Visual timeline */}
+    <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 20, marginBottom: 16 }}>
+      <Text style={{ fontSize: 11, color: colors.textLight, marginBottom: 16, textAlign: 'center' }}>
+        Vi hjälper er bygga en kunskapsbas som svarar på era vanligaste frågor. Efter 4 veckor utvärderar vi tillsammans.
       </Text>
 
-      <View style={{ flexDirection: 'row', gap: 12 }}>
-        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
-              <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>1</Text>
+      {/* Timeline visualization */}
+      <View style={{ flexDirection: 'row', marginBottom: 16 }}>
+        {[1, 2, 3, 4].map((week) => (
+          <View key={week} style={{ flex: 1, alignItems: 'center' }}>
+            <View style={{
+              width: 40, height: 40, borderRadius: 20,
+              backgroundColor: week % 2 === 1 ? colors.primary : colors.accent,
+              alignItems: 'center', justifyContent: 'center',
+              marginBottom: 8
+            }}>
+              <Text style={{ fontSize: 14, color: colors.white, fontWeight: 700 }}>{week}</Text>
             </View>
-            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 1: Uppstart</Text>
+            <Text style={{ fontSize: 10, fontWeight: 600, color: colors.text, marginBottom: 2 }}>
+              {week === 1 ? 'Uppstart' : week === 2 ? 'Bygga' : week === 3 ? 'Testa' : 'Utvärdera'}
+            </Text>
           </View>
-          <View style={{ gap: 3 }}>
-            <Text style={{ fontSize: 9, color: colors.textLight }}>• Skapa konto och widget</Text>
-            <Text style={{ fontSize: 9, color: colors.textLight }}>• Anpassa design efter ert varumärke</Text>
-            <Text style={{ fontSize: 9, color: colors.textLight }}>• Installera widget på hemsidan</Text>
-          </View>
-        </View>
-        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
-              <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>2</Text>
-            </View>
-            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 2: Kunskapsbas</Text>
-          </View>
-          <View style={{ gap: 3 }}>
-            <Text style={{ fontSize: 9, color: colors.textLight }}>• Ladda upp dokument och manualer</Text>
-            <Text style={{ fontSize: 9, color: colors.textLight }}>• Skapa frågor och svar</Text>
-            <Text style={{ fontSize: 9, color: colors.textLight }}>• Testa och finjustera svar</Text>
-          </View>
-        </View>
-      </View>
-      <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
-        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
-              <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>3</Text>
-            </View>
-            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 3: Intern test</Text>
-          </View>
-          <View style={{ gap: 3 }}>
-            <Text style={{ fontSize: 9, color: colors.textLight }}>• Testa internt med personalen</Text>
-            <Text style={{ fontSize: 9, color: colors.textLight }}>• Samla feedback och förbättra</Text>
-            <Text style={{ fontSize: 9, color: colors.textLight }}>• Förbereda för lansering</Text>
-          </View>
-        </View>
-        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
-              <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>4</Text>
-            </View>
-            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 4: Utvärdering</Text>
-          </View>
-          <View style={{ gap: 3 }}>
-            <Text style={{ fontSize: 9, color: colors.textLight }}>• Analysera statistik och resultat</Text>
-            <Text style={{ fontSize: 9, color: colors.textLight }}>• Diskutera nästa steg</Text>
-            <Text style={{ fontSize: 9, color: colors.textLight }}>• Bestäm om fortsättning</Text>
-          </View>
-        </View>
+        ))}
       </View>
 
-      {/* What's included */}
-      <View style={{ marginTop: 16, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 14 }}>
-        <Text style={{ fontSize: 10, fontWeight: 600, color: colors.text, marginBottom: 8 }}>Ingår i provperioden:</Text>
-        <View style={{ flexDirection: 'row', gap: 16 }}>
-          <View style={{ flex: 1, gap: 4 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 6 }}>
-                <IconCheck size={8} color={colors.white} />
-              </View>
-              <Text style={{ fontSize: 9, color: colors.text }}>Full tillgång till alla funktioner</Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 6 }}>
-                <IconCheck size={8} color={colors.white} />
-              </View>
-              <Text style={{ fontSize: 9, color: colors.text }}>Personlig onboarding och support</Text>
-            </View>
-          </View>
-          <View style={{ flex: 1, gap: 4 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 6 }}>
-                <IconCheck size={8} color={colors.white} />
-              </View>
-              <Text style={{ fontSize: 9, color: colors.text }}>Hjälp att bygga kunskapsbasen</Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 6 }}>
-                <IconCheck size={8} color={colors.white} />
-              </View>
-              <Text style={{ fontSize: 9, color: colors.text }}>Ingen bindningstid – avsluta när som helst</Text>
-            </View>
-          </View>
+      {/* Week details in 2x2 grid */}
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 10, padding: 12 }}>
+          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 4 }}>Vecka 1</Text>
+          <Text style={{ fontSize: 8, color: colors.textLight }}>• Skapa konto och widget</Text>
+          <Text style={{ fontSize: 8, color: colors.textLight }}>• Anpassa design</Text>
+          <Text style={{ fontSize: 8, color: colors.textLight }}>• Installera på hemsidan</Text>
         </View>
+        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 10, padding: 12 }}>
+          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.accent, marginBottom: 4 }}>Vecka 2</Text>
+          <Text style={{ fontSize: 8, color: colors.textLight }}>• Ladda upp dokument</Text>
+          <Text style={{ fontSize: 8, color: colors.textLight }}>• Skapa frågor och svar</Text>
+          <Text style={{ fontSize: 8, color: colors.textLight }}>• Finjustera svar</Text>
+        </View>
+      </View>
+      <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 10, padding: 12 }}>
+          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 4 }}>Vecka 3</Text>
+          <Text style={{ fontSize: 8, color: colors.textLight }}>• Testa internt</Text>
+          <Text style={{ fontSize: 8, color: colors.textLight }}>• Samla feedback</Text>
+          <Text style={{ fontSize: 8, color: colors.textLight }}>• Förbereda lansering</Text>
+        </View>
+        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 10, padding: 12 }}>
+          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.accent, marginBottom: 4 }}>Vecka 4</Text>
+          <Text style={{ fontSize: 8, color: colors.textLight }}>• Analysera statistik</Text>
+          <Text style={{ fontSize: 8, color: colors.textLight }}>• Diskutera nästa steg</Text>
+          <Text style={{ fontSize: 8, color: colors.textLight }}>• Bestäm fortsättning</Text>
+        </View>
+      </View>
+    </View>
+
+    {/* Benefits banner */}
+    <View style={{ backgroundColor: colors.primary, borderRadius: 12, padding: 16, flexDirection: 'row', justifyContent: 'space-around' }}>
+      <View style={{ alignItems: 'center' }}>
+        <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+          <IconCheck size={12} color={colors.primary} />
+        </View>
+        <Text style={{ fontSize: 8, color: colors.white, textAlign: 'center' }}>Full tillgång</Text>
+      </View>
+      <View style={{ alignItems: 'center' }}>
+        <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+          <IconCheck size={12} color={colors.primary} />
+        </View>
+        <Text style={{ fontSize: 8, color: colors.white, textAlign: 'center' }}>Personlig support</Text>
+      </View>
+      <View style={{ alignItems: 'center' }}>
+        <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+          <IconCheck size={12} color={colors.primary} />
+        </View>
+        <Text style={{ fontSize: 8, color: colors.white, textAlign: 'center' }}>Hjälp med setup</Text>
+      </View>
+      <View style={{ alignItems: 'center' }}>
+        <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+          <IconCheck size={12} color={colors.primary} />
+        </View>
+        <Text style={{ fontSize: 8, color: colors.white, textAlign: 'center' }}>Ingen bindningstid</Text>
       </View>
     </View>
 
