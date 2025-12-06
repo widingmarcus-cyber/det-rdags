@@ -1975,25 +1975,25 @@ function SuperAdmin() {
 
       {/* Company Dashboard Modal */}
       {showCompanyDashboard && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-3xl animate-scale-in max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-2xl shadow-xl w-full max-w-4xl animate-scale-in max-h-[90vh] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-5 border-b border-border-subtle flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center text-accent">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <div className="flex items-center justify-between p-6 border-b border-border-subtle flex-shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center text-accent">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
                     <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-text-primary">{showCompanyDashboard.name}</h2>
-                  <p className="text-xs text-text-tertiary font-mono">{showCompanyDashboard.id}</p>
+                  <h2 className="text-xl font-semibold text-text-primary">{showCompanyDashboard.name}</h2>
+                  <p className="text-sm text-text-tertiary font-mono">{showCompanyDashboard.id}</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowCompanyDashboard(null)}
-                className="p-2 rounded-lg text-text-tertiary hover:text-text-primary hover:bg-bg-secondary transition-colors"
+                className="p-2.5 rounded-lg text-text-tertiary hover:text-text-primary hover:bg-bg-secondary transition-colors"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M18 6L6 18M6 6l12 12" />
@@ -2002,63 +2002,63 @@ function SuperAdmin() {
             </div>
 
             {companyLoading ? (
-              <div className="p-12 text-center">
+              <div className="p-16 text-center">
                 <div className="animate-spin w-10 h-10 border-3 border-accent border-t-transparent rounded-full mx-auto mb-4" />
                 <p className="text-text-secondary">Laddar företagsdata...</p>
               </div>
             ) : (
-              <div className="p-5 overflow-y-auto flex-1">
+              <div className="p-6 overflow-y-auto flex-1 space-y-6">
                 {/* Stats Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-                  <div className="bg-bg-secondary rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-7 h-7 bg-accent/10 rounded flex items-center justify-center text-accent">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-bg-secondary rounded-xl p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center text-accent">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
                           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
                         </svg>
                       </div>
-                      <span className="text-xs text-text-tertiary">Kunskapsposter</span>
+                      <span className="text-sm text-text-tertiary">Kunskapsposter</span>
                     </div>
-                    <p className="text-2xl font-semibold text-text-primary">{showCompanyDashboard.knowledge_count || 0}</p>
+                    <p className="text-3xl font-bold text-text-primary">{showCompanyDashboard.knowledge_count || 0}</p>
                   </div>
-                  <div className="bg-bg-secondary rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-7 h-7 bg-success/10 rounded flex items-center justify-center text-success">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="bg-bg-secondary rounded-xl p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 bg-success/10 rounded-lg flex items-center justify-center text-success">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                         </svg>
                       </div>
-                      <span className="text-xs text-text-tertiary">Konversationer</span>
+                      <span className="text-sm text-text-tertiary">Konversationer</span>
                     </div>
-                    <p className="text-2xl font-semibold text-text-primary">{showCompanyDashboard.chat_count || 0}</p>
+                    <p className="text-3xl font-bold text-text-primary">{showCompanyDashboard.chat_count || 0}</p>
                   </div>
-                  <div className="bg-bg-secondary rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-7 h-7 bg-warning/10 rounded flex items-center justify-center text-warning">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="bg-bg-secondary rounded-xl p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                           <line x1="16" y1="2" x2="16" y2="6" />
                           <line x1="8" y1="2" x2="8" y2="6" />
                           <line x1="3" y1="10" x2="21" y2="10" />
                         </svg>
                       </div>
-                      <span className="text-xs text-text-tertiary">Skapad</span>
+                      <span className="text-sm text-text-tertiary">Skapad</span>
                     </div>
-                    <p className="text-2xl font-semibold text-text-primary">{formatDate(showCompanyDashboard.created_at)}</p>
+                    <p className="text-xl font-bold text-text-primary">{formatDate(showCompanyDashboard.created_at)}</p>
                   </div>
-                  <div className="bg-bg-secondary rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-7 h-7 rounded flex items-center justify-center ${showCompanyDashboard.is_active ? 'bg-success/10 text-success' : 'bg-error/10 text-error'}`}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="bg-bg-secondary rounded-xl p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${showCompanyDashboard.is_active ? 'bg-success/10 text-success' : 'bg-error/10 text-error'}`}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <circle cx="12" cy="12" r="10" />
                           {showCompanyDashboard.is_active && <polyline points="9 12 11 14 15 10" />}
                           {!showCompanyDashboard.is_active && <path d="M15 9l-6 6M9 9l6 6" />}
                         </svg>
                       </div>
-                      <span className="text-xs text-text-tertiary">Status</span>
+                      <span className="text-sm text-text-tertiary">Status</span>
                     </div>
-                    <p className={`text-2xl font-semibold ${showCompanyDashboard.is_active ? 'text-success' : 'text-error'}`}>
+                    <p className={`text-3xl font-bold ${showCompanyDashboard.is_active ? 'text-success' : 'text-error'}`}>
                       {showCompanyDashboard.is_active ? 'Aktiv' : 'Inaktiv'}
                     </p>
                   </div>
@@ -2066,8 +2066,8 @@ function SuperAdmin() {
 
                 {/* Usage Meters */}
                 {companyUsage && (companyUsage.max_conversations_month > 0 || (showCompanyDashboard.max_knowledge_items || 0) > 0) && (
-                  <div className="mb-6">
-                    <h3 className="text-sm font-medium text-text-primary mb-3">Användningsgränser</h3>
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary mb-4">Användningsgränser</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {companyUsage.max_conversations_month > 0 && (
                         <div className={`p-4 rounded-xl border ${companyUsage.usage_percent >= 90 ? 'border-red-200 bg-red-50' : companyUsage.usage_percent >= 75 ? 'border-amber-200 bg-amber-50' : 'border-border-default bg-bg-primary'}`}>
@@ -2112,9 +2112,9 @@ function SuperAdmin() {
 
                 {/* Widgets Section */}
                 {companyWidgets.length > 0 && (
-                  <div className="mb-6">
+                  <div>
                     <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
-                      <div className="w-7 h-7 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                      <div className="w-8 h-8 bg-purple-500/10 rounded-lg flex items-center justify-center">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-purple-500">
                           <rect x="3" y="3" width="7" height="7" rx="1" />
                           <rect x="14" y="3" width="7" height="7" rx="1" />
@@ -2169,8 +2169,8 @@ function SuperAdmin() {
 
                 {/* Self-Hosting Section */}
                 {selfHostingStatus && (
-                  <div className="mb-6">
-                    <h3 className="text-sm font-medium text-text-primary mb-3 flex items-center gap-2">
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                         <path d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
                       </svg>
@@ -2256,8 +2256,8 @@ function SuperAdmin() {
                 )}
 
                 {/* Recent Activity */}
-                <div className="mb-6">
-                  <h3 className="text-sm font-medium text-text-primary mb-3">Senaste aktivitet</h3>
+                <div>
+                  <h3 className="text-sm font-semibold text-text-primary mb-4">Senaste aktivitet</h3>
                   {companyActivity.length === 0 ? (
                     <div className="bg-bg-secondary rounded-xl p-6 text-center">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-2 text-text-tertiary">
@@ -2443,12 +2443,12 @@ function SuperAdmin() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-wrap gap-2 pt-4 border-t border-border-subtle">
+                <div className="flex flex-wrap gap-3 pt-6 border-t border-border-subtle mt-2">
                   <button
                     onClick={() => { setShowCompanyDashboard(null); handleImpersonate(showCompanyDashboard.id) }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-hover transition-colors"
+                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-accent text-white font-medium hover:bg-accent-hover transition-colors"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                       <circle cx="12" cy="7" r="4" />
                     </svg>
@@ -2456,9 +2456,9 @@ function SuperAdmin() {
                   </button>
                   <button
                     onClick={() => { setShowCompanyDashboard(null); openUsageLimitModal(showCompanyDashboard) }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary text-sm font-medium transition-colors"
+                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
                       <path d="M12 20V10" />
                       <path d="M18 20V4" />
                       <path d="M6 20v-4" />
@@ -2467,9 +2467,9 @@ function SuperAdmin() {
                   </button>
                   <button
                     onClick={() => handleExport(showCompanyDashboard.id)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary text-sm font-medium transition-colors"
+                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                       <polyline points="7 10 12 15 17 10" />
                       <line x1="12" y1="15" x2="12" y2="3" />
@@ -2478,9 +2478,9 @@ function SuperAdmin() {
                   </button>
                   <button
                     onClick={() => { setShowCompanyDashboard(null); openProposalModal(showCompanyDashboard) }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary text-sm font-medium transition-colors"
+                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                       <polyline points="14 2 14 8 20 8" />
                       <line x1="16" y1="13" x2="8" y2="13" />
@@ -2490,8 +2490,15 @@ function SuperAdmin() {
                   </button>
                   <button
                     onClick={() => { setShowCompanyDashboard(null); handleToggle(showCompanyDashboard.id) }}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${showCompanyDashboard.is_active ? 'bg-warning/10 text-warning hover:bg-warning/20' : 'bg-success/10 text-success hover:bg-success/20'}`}
+                    className={`flex items-center gap-2.5 px-5 py-2.5 rounded-lg font-medium transition-colors border ${showCompanyDashboard.is_active ? 'bg-bg-secondary border-border-subtle text-warning hover:bg-warning/10' : 'bg-bg-secondary border-border-subtle text-success hover:bg-success/10'}`}
                   >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      {showCompanyDashboard.is_active ? (
+                        <><circle cx="12" cy="12" r="10" /><path d="M15 9l-6 6M9 9l6 6" /></>
+                      ) : (
+                        <><circle cx="12" cy="12" r="10" /><polyline points="9 12 11 14 15 10" /></>
+                      )}
+                    </svg>
                     {showCompanyDashboard.is_active ? 'Inaktivera' : 'Aktivera'}
                   </button>
                 </div>
