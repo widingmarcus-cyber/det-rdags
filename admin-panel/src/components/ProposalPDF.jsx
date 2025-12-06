@@ -1143,7 +1143,7 @@ const TrialPeriodPage = () => (
           <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Soft launch för externa besökare (valfritt)</Text>
           <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Analysera resultat och ROI-potential</Text>
           <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Avslutande möte för att gå igenom upplevelsen</Text>
-          <Text style={{ fontSize: 10, color: colors.text }}>• Beslut om fortsatt samarbete – helt utan bindningstid</Text>
+          <Text style={{ fontSize: 10, color: colors.text }}>• Beslut om fortsatt samarbete</Text>
         </View>
       </View>
     </View>
