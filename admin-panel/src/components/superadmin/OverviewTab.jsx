@@ -24,7 +24,12 @@ const OverviewTab = ({
   fetchAiInsights,
   activityStream,
   activityLoading,
-  fetchActivityStream
+  fetchActivityStream,
+  // Roadmap props
+  roadmapItems = [],
+  onOpenRoadmapModalNew,
+  onOpenEditRoadmapModal,
+  onDeleteRoadmapItem
 }) => {
   const inactiveCount = companies.filter(c => !c.is_active).length
   const lowContentCount = companies.filter(c => (c.knowledge_count || 0) < 5).length
@@ -749,6 +754,96 @@ const OverviewTab = ({
             <p className="text-xs text-text-tertiary mt-3">Fördelning av chattsamtal</p>
           </div>
         </div>
+      </div>
+
+      {/* ROADMAP */}
+      <div className="bg-bg-tertiary rounded-2xl p-6 border border-dashed border-accent/30">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
+            <div className="w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+            </div>
+            Kommande funktioner
+          </h2>
+          {onOpenRoadmapModalNew && (
+            <button
+              onClick={onOpenRoadmapModalNew}
+              className="btn btn-primary text-sm"
+            >
+              + Ny punkt
+            </button>
+          )}
+        </div>
+        <p className="text-sm text-text-secondary mb-4">Funktioner som planeras för framtida versioner</p>
+        {roadmapItems.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {roadmapItems.map(item => {
+              const quarterColor = item.quarter?.includes('Q1') ? 'blue' :
+                                    item.quarter?.includes('Q2') ? 'green' :
+                                    item.quarter?.includes('Q3') ? 'purple' :
+                                    item.quarter?.includes('Backlog') ? 'amber' : 'gray'
+              const statusBadge = item.status === 'completed' ? 'bg-success-soft text-success' :
+                                  item.status === 'in_progress' ? 'bg-accent-soft text-accent' :
+                                  item.status === 'cancelled' ? 'bg-error-soft text-error' : ''
+              return (
+                <div key={item.id} className="p-4 bg-bg-secondary rounded-xl border border-border-subtle group relative">
+                  <div className="flex items-start justify-between">
+                    <span className={`text-xs font-semibold text-${quarterColor}-600 bg-${quarterColor}-100 px-2 py-1 rounded`}>
+                      {item.quarter}
+                    </span>
+                    {(onOpenEditRoadmapModal || onDeleteRoadmapItem) && (
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        {onOpenEditRoadmapModal && (
+                          <button
+                            onClick={() => onOpenEditRoadmapModal(item)}
+                            className="p-1 hover:bg-bg-tertiary rounded"
+                            title="Redigera"
+                          >
+                            <svg className="w-4 h-4 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                          </button>
+                        )}
+                        {onDeleteRoadmapItem && (
+                          <button
+                            onClick={() => onDeleteRoadmapItem(item.id)}
+                            className="p-1 hover:bg-error-soft rounded"
+                            title="Radera"
+                          >
+                            <svg className="w-4 h-4 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <h4 className="font-medium text-text-primary mt-2">{item.title}</h4>
+                  <p className="text-sm text-text-secondary mt-1">{item.description}</p>
+                  {item.status !== 'planned' && (
+                    <span className={`mt-2 inline-flex px-2 py-0.5 text-xs rounded-full ${statusBadge}`}>
+                      {item.status === 'completed' ? 'Klar' : item.status === 'in_progress' ? 'Pågående' : 'Avbruten'}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-text-secondary mb-4">Ingen roadmap definierad ännu.</p>
+            {onOpenRoadmapModalNew && (
+              <button
+                onClick={onOpenRoadmapModalNew}
+                className="btn btn-primary"
+              >
+                Lägg till första punkten
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

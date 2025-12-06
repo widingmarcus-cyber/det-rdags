@@ -1,22 +1,15 @@
 /**
  * SuperAdmin Pricing Tab Component
- * Manages pricing tiers, revenue dashboard, and feature roadmap
+ * Manages pricing tiers and revenue dashboard
  */
 
 const PricingTab = ({
   revenueDashboard,
   pricingTiers,
   dbPricingTiers,
-  companies,
-  roadmapItems,
-  onOpenPricingModal,
-  onOpenDiscountModal,
   onInitPricingTiers,
   onOpenEditPricingTierModal,
-  onOpenPricingTierModalNew,
-  onOpenRoadmapModalNew,
-  onOpenEditRoadmapModal,
-  onDeleteRoadmapItem
+  onOpenPricingTierModalNew
 }) => {
   return (
     <div className="animate-fade-in">
@@ -104,102 +97,6 @@ const PricingTab = ({
         </div>
       </div>
 
-      {/* Companies by Tier */}
-      <div className="card mb-8">
-        <h2 className="text-lg font-semibold text-text-primary mb-4">Företag per prisnivå</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border-subtle">
-                <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Företag</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Prisnivå</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Månadskostnad</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Rabatt</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Uppstart betald</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Startdatum</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-text-tertiary uppercase">Åtgärder</th>
-              </tr>
-            </thead>
-            <tbody>
-              {companies.map(company => {
-                const tier = pricingTiers[company.pricing_tier || 'starter'] || pricingTiers.starter
-                return (
-                  <tr key={company.id} className="border-b border-border-subtle hover:bg-bg-secondary/50">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-text-primary">{company.name}</div>
-                      <div className="text-xs text-text-tertiary">{company.id}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        company.pricing_tier === 'enterprise' ? 'bg-purple-100 text-purple-800' :
-                        company.pricing_tier === 'business' ? 'bg-blue-100 text-blue-800' :
-                        company.pricing_tier === 'professional' ? 'bg-green-100 text-green-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {tier?.name || 'Starter'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-text-primary font-medium">
-                      {tier?.monthly_fee?.toLocaleString('sv-SE')} kr
-                    </td>
-                    <td className="px-4 py-3">
-                      {company.discount_percent > 0 ? (
-                        <span className="text-green-600 font-medium">
-                          {company.discount_percent}%
-                          {company.discount_end_date && (
-                            <span className="text-xs text-text-tertiary ml-1">
-                              (t.o.m. {company.discount_end_date})
-                            </span>
-                          )}
-                        </span>
-                      ) : (
-                        <span className="text-text-tertiary">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {company.startup_fee_paid ? (
-                        <span className="text-green-600 flex items-center gap-1">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          Ja
-                        </span>
-                      ) : (
-                        <span className="text-amber-600 flex items-center gap-1">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Nej ({tier?.startup_fee?.toLocaleString('sv-SE')} kr)
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-text-secondary">
-                      {company.contract_start_date || '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => onOpenPricingModal(company)}
-                          className="btn btn-ghost text-sm"
-                        >
-                          Ändra nivå
-                        </button>
-                        <button
-                          onClick={() => onOpenDiscountModal(company)}
-                          className="btn btn-ghost text-sm"
-                        >
-                          Rabatt
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       {/* Editable Pricing Tiers */}
       <div className="card mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -266,83 +163,6 @@ const PricingTab = ({
         )}
       </div>
 
-      {/* Upcoming Features Roadmap */}
-      <div className="card border-dashed border-2 border-accent/30 bg-accent/5">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-            Kommande funktioner (Roadmap)
-          </h2>
-          <button
-            onClick={onOpenRoadmapModalNew}
-            className="btn btn-primary text-sm"
-          >
-            + Ny punkt
-          </button>
-        </div>
-        <p className="text-sm text-text-secondary mb-4">Funktioner som planeras för framtida versioner</p>
-        {roadmapItems.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {roadmapItems.map(item => {
-              const quarterColor = item.quarter?.includes('Q1') ? 'blue' :
-                                    item.quarter?.includes('Q2') ? 'green' :
-                                    item.quarter?.includes('Q3') ? 'purple' :
-                                    item.quarter?.includes('Backlog') ? 'amber' : 'gray'
-              const statusBadge = item.status === 'completed' ? 'bg-success-soft text-success' :
-                                  item.status === 'in_progress' ? 'bg-accent-soft text-accent' :
-                                  item.status === 'cancelled' ? 'bg-error-soft text-error' : ''
-              return (
-                <div key={item.id} className="p-4 bg-white rounded-lg border border-border-subtle group relative">
-                  <div className="flex items-start justify-between">
-                    <span className={`text-xs font-semibold text-${quarterColor}-600 bg-${quarterColor}-100 px-2 py-1 rounded`}>
-                      {item.quarter}
-                    </span>
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                      <button
-                        onClick={() => onOpenEditRoadmapModal(item)}
-                        className="p-1 hover:bg-bg-secondary rounded"
-                        title="Redigera"
-                      >
-                        <svg className="w-4 h-4 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => onDeleteRoadmapItem(item.id)}
-                        className="p-1 hover:bg-error-soft rounded"
-                        title="Radera"
-                      >
-                        <svg className="w-4 h-4 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                  <h4 className="font-medium text-text-primary mt-2">{item.title}</h4>
-                  <p className="text-sm text-text-secondary mt-1">{item.description}</p>
-                  {item.status !== 'planned' && (
-                    <span className={`mt-2 inline-flex px-2 py-0.5 text-xs rounded-full ${statusBadge}`}>
-                      {item.status === 'completed' ? 'Klar' : item.status === 'in_progress' ? 'Pågående' : 'Avbruten'}
-                    </span>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-text-secondary mb-4">Ingen roadmap definierad ännu.</p>
-            <button
-              onClick={onOpenRoadmapModalNew}
-              className="btn btn-primary"
-            >
-              Lägg till första punkten
-            </button>
-          </div>
-        )}
-      </div>
     </div>
   )
 }

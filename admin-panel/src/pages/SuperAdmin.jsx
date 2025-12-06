@@ -1776,6 +1776,14 @@ function SuperAdmin() {
             activityStream={activityStream}
             activityLoading={activityLoading}
             fetchActivityStream={fetchActivityStream}
+            roadmapItems={roadmapItems}
+            onOpenRoadmapModalNew={() => {
+              setRoadmapForm({ title: '', description: '', quarter: 'Q1 2026', status: 'planned' })
+              setEditingRoadmapItem(null)
+              setShowRoadmapModal(true)
+            }}
+            onOpenEditRoadmapModal={openEditRoadmapModal}
+            onDeleteRoadmapItem={handleDeleteRoadmapItem}
           />
         )}
 
@@ -1808,10 +1816,6 @@ function SuperAdmin() {
             revenueDashboard={revenueDashboard}
             pricingTiers={pricingTiers}
             dbPricingTiers={dbPricingTiers}
-            companies={companies}
-            roadmapItems={roadmapItems}
-            onOpenPricingModal={openPricingModal}
-            onOpenDiscountModal={openDiscountModal}
             onInitPricingTiers={handleInitPricingTiers}
             onOpenEditPricingTierModal={openEditPricingTierModal}
             onOpenPricingTierModalNew={() => {
@@ -1819,13 +1823,6 @@ function SuperAdmin() {
               setEditingPricingTier(null)
               setShowPricingTierModal(true)
             }}
-            onOpenRoadmapModalNew={() => {
-              setRoadmapForm({ title: '', description: '', quarter: 'Q1 2026', status: 'planned' })
-              setEditingRoadmapItem(null)
-              setShowRoadmapModal(true)
-            }}
-            onOpenEditRoadmapModal={openEditRoadmapModal}
-            onDeleteRoadmapItem={handleDeleteRoadmapItem}
           />
         )}
 
@@ -2339,6 +2336,95 @@ function SuperAdmin() {
                     <p className={`text-3xl font-bold ${showCompanyDashboard.is_active ? 'text-success' : 'text-error'}`}>
                       {showCompanyDashboard.is_active ? 'Aktiv' : 'Inaktiv'}
                     </p>
+                  </div>
+                </div>
+
+                {/* Pricing Tier Info */}
+                <div>
+                  <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
+                    <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500">
+                        <line x1="12" y1="1" x2="12" y2="23" />
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                      </svg>
+                    </div>
+                    Prissättning
+                  </h3>
+                  <div className="bg-bg-secondary rounded-xl p-4">
+                    {(() => {
+                      const tier = pricingTiers[showCompanyDashboard.pricing_tier || 'starter'] || pricingTiers.starter || { name: 'Starter', monthly_fee: 0, startup_fee: 0 }
+                      return (
+                        <>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                            <div>
+                              <span className="text-xs text-text-tertiary block mb-1">Prisnivå</span>
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                                showCompanyDashboard.pricing_tier === 'enterprise' ? 'bg-purple-100 text-purple-800' :
+                                showCompanyDashboard.pricing_tier === 'business' ? 'bg-blue-100 text-blue-800' :
+                                showCompanyDashboard.pricing_tier === 'professional' ? 'bg-green-100 text-green-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {tier?.name || 'Starter'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-xs text-text-tertiary block mb-1">Månadskostnad</span>
+                              <span className="text-lg font-bold text-text-primary">{tier?.monthly_fee?.toLocaleString('sv-SE')} kr</span>
+                            </div>
+                            <div>
+                              <span className="text-xs text-text-tertiary block mb-1">Rabatt</span>
+                              {showCompanyDashboard.discount_percent > 0 ? (
+                                <div>
+                                  <span className="text-lg font-bold text-green-600">{showCompanyDashboard.discount_percent}%</span>
+                                  {showCompanyDashboard.discount_end_date && (
+                                    <span className="text-xs text-text-tertiary block">t.o.m. {showCompanyDashboard.discount_end_date}</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-text-tertiary">Ingen rabatt</span>
+                              )}
+                            </div>
+                            <div>
+                              <span className="text-xs text-text-tertiary block mb-1">Uppstart betald</span>
+                              {showCompanyDashboard.startup_fee_paid ? (
+                                <span className="inline-flex items-center gap-1 text-green-600 font-medium">
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  Ja
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-amber-600 font-medium">
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  Nej ({tier?.startup_fee?.toLocaleString('sv-SE')} kr)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {showCompanyDashboard.contract_start_date && (
+                            <div className="text-xs text-text-tertiary mb-3">
+                              Avtal startade: {showCompanyDashboard.contract_start_date}
+                            </div>
+                          )}
+                          <div className="flex gap-2 pt-3 border-t border-border-subtle">
+                            <button
+                              onClick={() => { setShowCompanyDashboard(null); openPricingModal(showCompanyDashboard) }}
+                              className="btn btn-secondary text-sm"
+                            >
+                              Ändra prisnivå
+                            </button>
+                            <button
+                              onClick={() => { setShowCompanyDashboard(null); openDiscountModal(showCompanyDashboard) }}
+                              className="btn btn-ghost text-sm"
+                            >
+                              Hantera rabatt
+                            </button>
+                          </div>
+                        </>
+                      )
+                    })()}
                   </div>
                 </div>
 
