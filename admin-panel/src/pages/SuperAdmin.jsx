@@ -84,9 +84,11 @@ function SuperAdmin() {
   const [showUsageLimitModal, setShowUsageLimitModal] = useState(null)
   const [usageLimitValue, setUsageLimitValue] = useState({ conversations: 0, knowledge: 0 })
   const [showCompanyDashboard, setShowCompanyDashboard] = useState(null)
+  const [companyModalTab, setCompanyModalTab] = useState('overview') // overview, widgets, billing, activity
   const [companyUsage, setCompanyUsage] = useState(null)
   const [companyActivity, setCompanyActivity] = useState([])
   const [companyWidgets, setCompanyWidgets] = useState([])
+  const [companyInvoices, setCompanyInvoices] = useState([])
   const [companyLoading, setCompanyLoading] = useState(false)
 
   // Analytics state
@@ -208,6 +210,7 @@ function SuperAdmin() {
     fetchAiInsights()
     fetchAnnouncements()
     fetchAdminPrefs() // Fetch preferences including dark mode on load
+    fetchPricingTiers() // Always fetch pricing tiers for company modals
   }, [])
 
   // Apply dark mode when preferences change
@@ -1386,23 +1389,26 @@ function SuperAdmin() {
 
   const openCompanyDashboard = async (company) => {
     setShowCompanyDashboard(company)
+    setCompanyModalTab('overview') // Reset to overview tab
     setCompanyLoading(true)
     setCompanyUsage(null)
     setCompanyActivity([])
     setCompanyNotes([])
     setCompanyDocuments([])
     setCompanyWidgets([])
+    setCompanyInvoices([])
     setSelfHostingStatus(null)
 
     try {
       // Fetch all data in parallel
-      const [usageRes, activityRes, notesRes, docsRes, widgetsRes, selfHostRes] = await Promise.all([
+      const [usageRes, activityRes, notesRes, docsRes, widgetsRes, selfHostRes, invoicesRes] = await Promise.all([
         adminFetch(`${API_BASE}/admin/companies/${company.id}/usage`),
         adminFetch(`${API_BASE}/admin/company-activity/${company.id}?limit=10`),
         adminFetch(`${API_BASE}/admin/companies/${company.id}/notes`),
         adminFetch(`${API_BASE}/admin/companies/${company.id}/documents`),
         adminFetch(`${API_BASE}/admin/companies/${company.id}/widgets`),
-        adminFetch(`${API_BASE}/admin/companies/${company.id}/self-hosting`)
+        adminFetch(`${API_BASE}/admin/companies/${company.id}/self-hosting`),
+        adminFetch(`${API_BASE}/admin/invoices?company_id=${company.id}&limit=10`)
       ])
 
       if (usageRes.ok) {
@@ -1433,6 +1439,11 @@ function SuperAdmin() {
       if (selfHostRes.ok) {
         const selfHostData = await selfHostRes.json()
         setSelfHostingStatus(selfHostData)
+      }
+
+      if (invoicesRes.ok) {
+        const invoicesData = await invoicesRes.json()
+        setCompanyInvoices(invoicesData || [])
       }
     } catch (error) {
       console.error('Failed to fetch company details:', error)
@@ -2292,6 +2303,31 @@ function SuperAdmin() {
               </button>
             </div>
 
+            {/* Tab Navigation */}
+            <div className="flex border-b border-border-subtle px-6 flex-shrink-0">
+              {[
+                { id: 'overview', label: 'Översikt', icon: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /> },
+                { id: 'widgets', label: 'Widgets', icon: <><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></> },
+                { id: 'billing', label: 'Fakturering', icon: <><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></> },
+                { id: 'activity', label: 'Aktivitet', icon: <><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></> }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setCompanyModalTab(tab.id)}
+                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    companyModalTab === tab.id
+                      ? 'border-accent text-accent'
+                      : 'border-transparent text-text-tertiary hover:text-text-primary'
+                  }`}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    {tab.icon}
+                  </svg>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
             {companyLoading ? (
               <div className="p-16 text-center">
                 <div className="animate-spin w-10 h-10 border-3 border-accent border-t-transparent rounded-full mx-auto mb-4" />
@@ -2299,6 +2335,9 @@ function SuperAdmin() {
               </div>
             ) : (
               <div className="p-6 overflow-y-auto flex-1 space-y-6">
+                {/* OVERVIEW TAB */}
+                {companyModalTab === 'overview' && (
+                  <>
                 {/* Stats Grid */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="bg-bg-secondary rounded-xl p-5">
@@ -2385,7 +2424,16 @@ function SuperAdmin() {
                             </div>
                             <div>
                               <span className="text-xs text-text-tertiary block mb-1">Månadskostnad</span>
-                              <span className="text-lg font-bold text-text-primary">{tier?.monthly_fee?.toLocaleString('sv-SE')} kr</span>
+                              {showCompanyDashboard.discount_percent > 0 ? (
+                                <div>
+                                  <span className="text-sm text-text-tertiary line-through">{tier?.monthly_fee?.toLocaleString('sv-SE')} kr</span>
+                                  <span className="text-lg font-bold text-green-600 ml-2">
+                                    {Math.round((tier?.monthly_fee || 0) * (1 - showCompanyDashboard.discount_percent / 100)).toLocaleString('sv-SE')} kr
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-lg font-bold text-text-primary">{tier?.monthly_fee?.toLocaleString('sv-SE')} kr</span>
+                              )}
                             </div>
                             <div>
                               <span className="text-xs text-text-tertiary block mb-1">Rabatt</span>
@@ -2489,9 +2537,14 @@ function SuperAdmin() {
                     </div>
                   </div>
                 )}
+                  </>
+                )}
 
+                {/* WIDGETS TAB */}
+                {companyModalTab === 'widgets' && (
+                  <>
                 {/* Widgets Section */}
-                {companyWidgets.length > 0 && (
+                {companyWidgets.length > 0 ? (
                   <div>
                     <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
                       <div className="w-8 h-8 bg-purple-500/10 rounded-lg flex items-center justify-center">
@@ -2584,9 +2637,19 @@ function SuperAdmin() {
                       </p>
                     )}
                   </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto text-text-tertiary mb-3">
+                      <rect x="3" y="3" width="7" height="7" rx="1" />
+                      <rect x="14" y="3" width="7" height="7" rx="1" />
+                      <rect x="14" y="14" width="7" height="7" rx="1" />
+                      <rect x="3" y="14" width="7" height="7" rx="1" />
+                    </svg>
+                    <p className="text-text-secondary">Inga widgets ännu</p>
+                  </div>
                 )}
 
-                {/* Self-Hosting Section */}
+                {/* Self-Hosting Section in Widgets tab */}
                 {selfHostingStatus && (
                   <div>
                     <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
@@ -2673,7 +2736,122 @@ function SuperAdmin() {
                     </div>
                   </div>
                 )}
+                  </>
+                )}
 
+                {/* BILLING TAB */}
+                {companyModalTab === 'billing' && (
+                  <>
+                    {/* Invoices Section */}
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
+                          <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500">
+                              <rect x="1" y="4" width="22" height="16" rx="2" />
+                              <line x1="1" y1="10" x2="23" y2="10" />
+                            </svg>
+                          </div>
+                          Fakturor
+                        </h3>
+                        <button
+                          onClick={() => {
+                            setInvoiceForm({
+                              company_id: showCompanyDashboard.id,
+                              amount: pricingTiers[showCompanyDashboard.pricing_tier]?.monthly_fee || 0,
+                              description: `Månadsavgift ${new Date().toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' })}`,
+                              due_date: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0]
+                            })
+                            setShowCreateInvoiceModal(true)
+                          }}
+                          className="btn btn-sm btn-secondary"
+                        >
+                          Skapa faktura
+                        </button>
+                      </div>
+                      {companyInvoices.length === 0 ? (
+                        <div className="bg-bg-secondary rounded-xl p-6 text-center">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-2 text-text-tertiary">
+                            <rect x="1" y="4" width="22" height="16" rx="2" />
+                            <line x1="1" y1="10" x2="23" y2="10" />
+                          </svg>
+                          <p className="text-sm text-text-secondary">Inga fakturor ännu</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {companyInvoices.map((invoice) => (
+                            <div key={invoice.id} className="flex items-center justify-between p-3 rounded-lg bg-bg-secondary">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-2 h-2 rounded-full ${
+                                  invoice.status === 'paid' ? 'bg-green-500' :
+                                  invoice.status === 'overdue' ? 'bg-red-500' :
+                                  'bg-amber-500'
+                                }`} />
+                                <div>
+                                  <p className="text-sm text-text-primary font-medium">{invoice.invoice_number}</p>
+                                  <p className="text-xs text-text-tertiary">{invoice.description}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <div className="text-right">
+                                  <p className="text-sm font-medium text-text-primary">{invoice.amount?.toLocaleString('sv-SE')} kr</p>
+                                  <p className="text-xs text-text-tertiary">
+                                    {invoice.status === 'paid' ? 'Betald' : invoice.status === 'overdue' ? 'Förfallen' : 'Obetald'}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => handleUpdateInvoiceStatus(invoice.id, invoice.status === 'paid' ? 'pending' : 'paid')}
+                                  className={`px-2 py-1 rounded text-xs font-medium ${
+                                    invoice.status === 'paid'
+                                      ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                                      : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  }`}
+                                >
+                                  {invoice.status === 'paid' ? 'Markera obetald' : 'Markera betald'}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Pricing Summary */}
+                    <div className="bg-bg-secondary rounded-xl p-4 mt-4">
+                      <h4 className="text-sm font-medium text-text-primary mb-3">Prissummering</h4>
+                      {(() => {
+                        const tier = pricingTiers[showCompanyDashboard.pricing_tier || 'starter'] || { monthly_fee: 0 }
+                        const discount = showCompanyDashboard.discount_percent || 0
+                        const monthlyFee = tier.monthly_fee || 0
+                        const discountedFee = monthlyFee * (1 - discount / 100)
+                        return (
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-text-secondary">Grundpris:</span>
+                              <span className="text-text-primary">{monthlyFee.toLocaleString('sv-SE')} kr/mån</span>
+                            </div>
+                            {discount > 0 && (
+                              <>
+                                <div className="flex justify-between text-green-600">
+                                  <span>Rabatt ({discount}%):</span>
+                                  <span>-{(monthlyFee - discountedFee).toLocaleString('sv-SE')} kr</span>
+                                </div>
+                                <div className="flex justify-between font-medium border-t border-border-subtle pt-2 mt-2">
+                                  <span className="text-text-primary">Att betala:</span>
+                                  <span className="text-accent">{discountedFee.toLocaleString('sv-SE')} kr/mån</span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  </>
+                )}
+
+                {/* ACTIVITY TAB */}
+                {companyModalTab === 'activity' && (
+                  <>
                 {/* Recent Activity */}
                 <div>
                   <h3 className="text-sm font-semibold text-text-primary mb-4">Senaste aktivitet</h3>
@@ -2860,8 +3038,10 @@ function SuperAdmin() {
                     </div>
                   </div>
                 </div>
+                  </>
+                )}
 
-                {/* Actions */}
+                {/* Actions - Always visible */}
                 <div className="pt-6 border-t border-border-subtle mt-2 space-y-4">
                   {/* Primary Action */}
                   <button
