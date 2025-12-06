@@ -2053,10 +2053,10 @@ function SuperAdmin() {
                       value={usageLimitValue.conversations}
                       onChange={(e) => setUsageLimitValue({ ...usageLimitValue, conversations: parseInt(e.target.value) || 0 })}
                       placeholder="0"
-                      className="w-full px-4 py-3 rounded-xl bg-bg-secondary border border-border-subtle focus:border-accent focus:ring-1 focus:ring-accent outline-none text-text-primary"
+                      className="w-full pl-4 pr-28 py-3 rounded-xl bg-bg-secondary border border-border-subtle focus:border-accent focus:ring-1 focus:ring-accent outline-none text-text-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       min="0"
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-text-tertiary">
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-text-tertiary pointer-events-none">
                       {usageLimitValue.conversations === 0 ? '∞ obegränsat' : 'per månad'}
                     </span>
                   </div>
@@ -2070,10 +2070,10 @@ function SuperAdmin() {
                       value={usageLimitValue.knowledge}
                       onChange={(e) => setUsageLimitValue({ ...usageLimitValue, knowledge: parseInt(e.target.value) || 0 })}
                       placeholder="0"
-                      className="w-full px-4 py-3 rounded-xl bg-bg-secondary border border-border-subtle focus:border-accent focus:ring-1 focus:ring-accent outline-none text-text-primary"
+                      className="w-full pl-4 pr-28 py-3 rounded-xl bg-bg-secondary border border-border-subtle focus:border-accent focus:ring-1 focus:ring-accent outline-none text-text-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       min="0"
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-text-tertiary">
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-text-tertiary pointer-events-none">
                       {usageLimitValue.knowledge === 0 ? '∞ obegränsat' : 'totalt'}
                     </span>
                   </div>
