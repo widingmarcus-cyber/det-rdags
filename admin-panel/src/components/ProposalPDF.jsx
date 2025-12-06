@@ -657,7 +657,7 @@ const HeroPage = ({ customerName, contactPerson, startDate }) => (
 
 // SECTION 2: Philosophy Page
 const PhilosophyPage = () => (
-  <Page size="A4" style={styles.page}>
+  <Page size="A4" style={styles.page} wrap={false}>
     <DotPattern opacity={0.12} spacing={28} />
     <CornerAccent position="topRight" />
 
@@ -777,7 +777,7 @@ const PhilosophyPage = () => (
 
 // SECTION 3: Job Description Page
 const JobDescriptionPage = () => (
-  <Page size="A4" style={styles.page}>
+  <Page size="A4" style={styles.page} wrap={false}>
     <CornerAccent position="bottomLeft" />
 
     <View style={styles.pageHeader}>
@@ -885,7 +885,7 @@ const JobDescriptionPage = () => (
 
 // SECTION 4: Customization Page
 const CustomizationPage = () => (
-  <Page size="A4" style={styles.page}>
+  <Page size="A4" style={styles.page} wrap={false}>
     <DotPattern opacity={0.1} spacing={32} />
     <CornerAccent position="topRight" />
 
@@ -1013,7 +1013,7 @@ const CustomizationPage = () => (
 
 // SECTION 5: Process Page
 const ProcessPage = () => (
-  <Page size="A4" style={styles.page}>
+  <Page size="A4" style={styles.page} wrap={false}>
     <CornerAccent position="bottomLeft" />
 
     <View style={styles.pageHeader}>
@@ -1126,7 +1126,7 @@ const PricingPage = ({ startupFee, monthlyFee, tier, discount, pricingTiers = []
   const sortedTiers = [...pricingTiers].sort((a, b) => (a.monthly_fee || 0) - (b.monthly_fee || 0))
 
   return (
-    <Page size="A4" style={styles.page}>
+    <Page size="A4" style={styles.page} wrap={false}>
       <CornerAccent position="topRight" />
 
       <View style={styles.pageHeader}>
@@ -1234,7 +1234,7 @@ const IconUser = ({ size = 20, color = colors.white }) => (
 
 // SECTION 7: Contact Page
 const ContactPage = () => (
-  <Page size="A4" style={styles.page}>
+  <Page size="A4" style={styles.page} wrap={false}>
     <DotPattern opacity={0.08} spacing={30} />
     <CornerAccent position="topRight" />
 
