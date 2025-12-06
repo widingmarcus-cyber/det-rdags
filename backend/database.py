@@ -867,6 +867,30 @@ def run_migrations():
 
             conn.commit()
 
+        # Migrate company_activity_log table (ip_address column)
+        if 'company_activity_log' in inspector.get_table_names():
+            activity_columns = [col['name'] for col in inspector.get_columns('company_activity_log')]
+
+            if 'ip_address' not in activity_columns:
+                conn.execute(text("ALTER TABLE company_activity_log ADD COLUMN ip_address VARCHAR"))
+                print("[Migration] Added 'ip_address' column to company_activity_log table")
+
+            conn.commit()
+
+        # Migrate pricing_tiers table (new columns)
+        if 'pricing_tiers' in inspector.get_table_names():
+            tier_columns = [col['name'] for col in inspector.get_columns('pricing_tiers')]
+
+            if 'description' not in tier_columns:
+                conn.execute(text("ALTER TABLE pricing_tiers ADD COLUMN description TEXT DEFAULT ''"))
+                print("[Migration] Added 'description' column to pricing_tiers table")
+
+            if 'max_widgets' not in tier_columns:
+                conn.execute(text("ALTER TABLE pricing_tiers ADD COLUMN max_widgets INTEGER DEFAULT 0"))
+                print("[Migration] Added 'max_widgets' column to pricing_tiers table")
+
+            conn.commit()
+
         # Fix orphaned knowledge items (widget_id is NULL) by assigning to external widget
         # This prevents knowledge from being "shared" across widgets unintentionally
         if 'knowledge_items' in inspector.get_table_names() and 'widgets' in inspector.get_table_names():

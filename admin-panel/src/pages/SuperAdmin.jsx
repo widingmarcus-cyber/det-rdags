@@ -1613,6 +1613,8 @@ function SuperAdmin() {
       if (activityRes.ok) {
         const activityData = await activityRes.json()
         setCompanyActivity(activityData.logs || [])
+      } else {
+        console.error('Activity fetch failed:', activityRes.status, await activityRes.text().catch(() => ''))
       }
 
       if (notesRes.ok) {

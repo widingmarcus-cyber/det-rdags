@@ -7223,23 +7223,27 @@ async def get_company_activity(
     db: Session = Depends(get_db)
 ):
     """Get activity logs for a specific company"""
-    logs = db.query(CompanyActivityLog).filter(
-        CompanyActivityLog.company_id == company_id
-    ).order_by(CompanyActivityLog.timestamp.desc()).limit(limit).all()
+    try:
+        logs = db.query(CompanyActivityLog).filter(
+            CompanyActivityLog.company_id == company_id
+        ).order_by(CompanyActivityLog.timestamp.desc()).limit(limit).all()
 
-    return {
-        "logs": [
-            {
-                "id": log.id,
-                "action_type": log.action_type,
-                "description": log.description,
-                "details": log.details,
-                "ip_address": log.ip_address,
-                "timestamp": log.timestamp.isoformat() if log.timestamp else None
-            }
-            for log in logs
-        ]
-    }
+        return {
+            "logs": [
+                {
+                    "id": log.id,
+                    "action_type": log.action_type,
+                    "description": log.description,
+                    "details": log.details,
+                    "ip_address": getattr(log, 'ip_address', None),
+                    "timestamp": log.timestamp.isoformat() if log.timestamp else None
+                }
+                for log in logs
+            ]
+        }
+    except Exception as e:
+        print(f"[Error] Failed to fetch company activity: {e}")
+        return {"logs": [], "error": str(e)}
 
 
 # =============================================================================
