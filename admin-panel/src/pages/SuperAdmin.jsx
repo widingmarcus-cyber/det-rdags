@@ -411,7 +411,7 @@ function SuperAdmin() {
         fetchBilling()
         // Also refresh company modal invoices if open
         if (showCompanyDashboard) {
-          const invoicesRes = await adminFetch(`${API_BASE}/admin/companies/${showCompanyDashboard.id}/invoices`)
+          const invoicesRes = await adminFetch(`${API_BASE}/admin/invoices?company_id=${showCompanyDashboard.id}&limit=10`)
           if (invoicesRes.ok) {
             const invoicesData = await invoicesRes.json()
             setCompanyInvoices(invoicesData.invoices || [])

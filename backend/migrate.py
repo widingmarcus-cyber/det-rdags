@@ -280,6 +280,13 @@ def migrate():
         cursor.execute("CREATE INDEX ix_daily_page_stats_id ON daily_page_stats (id)")
         cursor.execute("CREATE INDEX ix_daily_page_stats_date ON daily_page_stats (date)")
 
+    # Add ip_address column to company_activity_log if it doesn't exist
+    cursor.execute("PRAGMA table_info(company_activity_log)")
+    columns = [col[1] for col in cursor.fetchall()]
+    if 'ip_address' not in columns:
+        print("Adding ip_address column to company_activity_log...")
+        cursor.execute("ALTER TABLE company_activity_log ADD COLUMN ip_address VARCHAR")
+
     conn.commit()
     conn.close()
 
