@@ -276,6 +276,8 @@ function WidgetPage({ widgetType }) {
           })
           fetchKnowledge(existingWidget.id)
           setPreviewMessages([{ type: 'bot', text: existingWidget.welcome_message || 'Hej! Hur kan jag hjälpa dig idag?' }])
+          setFeedbackGiven({}) // Reset feedback state when loading widget
+          setExpandedSources({}) // Reset expanded sources state when loading widget
         } else {
           await createWidget()
         }
@@ -333,6 +335,8 @@ function WidgetPage({ widgetType }) {
           start_expanded: newWidget.start_expanded ?? false
         })
         setPreviewMessages([{ type: 'bot', text: newWidget.welcome_message }])
+        setFeedbackGiven({}) // Reset feedback state when creating widget
+        setExpandedSources({}) // Reset expanded sources state when creating widget
       }
     } catch (e) {
       setError('Kunde inte skapa widget: ' + e.message)
@@ -690,6 +694,7 @@ function WidgetPage({ widgetType }) {
   const resetPreview = () => {
     setPreviewMessages([{ type: 'bot', text: formData?.welcome_message || 'Hej! Hur kan jag hjälpa dig?' }])
     setFeedbackGiven({})
+    setExpandedSources({})
   }
 
   const handlePreviewFeedback = async (msgIndex, helpful) => {
@@ -1617,20 +1622,20 @@ function WidgetPage({ widgetType }) {
                 />
               </div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => setShowCategoryModal(true)} className="btn btn-secondary">
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setShowCategoryModal(true)} className="btn btn-secondary text-sm md:text-base">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />
                 </svg>
-                Kategorier
+                <span className="hidden sm:inline">Kategorier</span>
               </button>
-              <button onClick={() => setShowImportModal(true)} className="btn btn-secondary">
+              <button onClick={() => setShowImportModal(true)} className="btn btn-secondary text-sm md:text-base">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                   <polyline points="17 8 12 3 7 8" />
                   <line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
-                Importera
+                <span className="hidden sm:inline">Importera</span>
               </button>
               <button
                 onClick={() => {
@@ -1638,13 +1643,13 @@ function WidgetPage({ widgetType }) {
                   setKnowledgeForm({ question: '', answer: '', category: '' })
                   setShowKnowledgeModal(true)
                 }}
-                className="btn btn-primary"
+                className="btn btn-primary text-sm md:text-base"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
-                Lägg till
+                <span className="hidden sm:inline">Lägg till</span>
               </button>
             </div>
           </div>

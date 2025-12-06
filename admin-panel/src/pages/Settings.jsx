@@ -202,13 +202,13 @@ function Settings() {
       {/* Tabs + Content Layout */}
       <div className="flex flex-col md:flex-row gap-6">
         {/* Tabs - horizontal scroll on mobile, sidebar on desktop */}
-        <div className="w-full md:w-48 flex-shrink-0">
-          <nav className="flex md:flex-col gap-2 md:gap-1 overflow-x-auto pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0">
+        <div className="w-full md:w-48 flex-shrink-0 overflow-hidden">
+          <nav className="flex md:flex-col gap-1.5 md:gap-1 overflow-x-auto pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 md:gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 md:w-full ${
+                className={`flex items-center gap-1.5 md:gap-3 px-3 md:px-4 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 md:w-full ${
                   activeTab === tab.id
                     ? 'bg-accent text-white'
                     : 'text-text-secondary bg-bg-secondary md:bg-transparent hover:bg-bg-tertiary hover:text-text-primary'

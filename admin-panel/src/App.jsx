@@ -395,11 +395,11 @@ function App() {
   // Authenticated company routes
   return (
     <AuthContext.Provider value={{ auth, authFetch, darkMode, toggleDarkMode, companyStatus }}>
-      {/* Skip links for keyboard navigation */}
-      <a href="#main-content" className="skip-link">
+      {/* Skip links for keyboard navigation - hidden on mobile */}
+      <a href="#main-content" className="skip-link hidden md:block">
         Hoppa till huvudinnehåll
       </a>
-      <a href="#main-nav" className="skip-link" style={{ left: '200px' }}>
+      <a href="#main-nav" className="skip-link hidden md:block" style={{ left: '200px' }}>
         Hoppa till navigation
       </a>
 
@@ -424,30 +424,43 @@ function App() {
         />
         <main id="main-content" className="flex-1 p-4 md:p-8 overflow-auto relative z-10 w-full" role="main" aria-label="Huvudinnehåll">
           {/* Mobile header with hamburger menu */}
-          <div className="md:hidden flex items-center gap-3 mb-4 -mt-1">
+          <div className="md:hidden flex items-center justify-between mb-4 -mt-1">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className="p-2 -ml-2 rounded-lg hover:bg-bg-secondary transition-colors"
+                aria-label="Öppna meny"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+              </button>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8">
+                  <svg viewBox="0 0 48 48" fill="none" className="w-full h-full">
+                    <rect x="14" y="8" width="20" height="11" rx="2" fill="#D97757" />
+                    <ellipse cx="19" cy="13.5" rx="3.5" ry="3" fill="#292524" />
+                    <ellipse cx="29" cy="13.5" rx="3.5" ry="3" fill="#292524" />
+                    <ellipse cx="19" cy="14" rx="2" ry="2" fill="#D97757" />
+                    <ellipse cx="29" cy="14" rx="2" ry="2" fill="#D97757" />
+                  </svg>
+                </div>
+                <span className="font-semibold text-text-primary">Bobot</span>
+              </div>
+            </div>
             <button
-              onClick={() => setMobileMenuOpen(true)}
-              className="p-2 -ml-2 rounded-lg hover:bg-bg-secondary transition-colors"
-              aria-label="Öppna meny"
+              onClick={handleLogout}
+              className="p-2 rounded-lg text-text-secondary hover:text-error hover:bg-error-soft transition-colors"
+              aria-label="Logga ut"
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="18" x2="21" y2="18" />
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
             </button>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8">
-                <svg viewBox="0 0 48 48" fill="none" className="w-full h-full">
-                  <rect x="14" y="8" width="20" height="11" rx="2" fill="#D97757" />
-                  <ellipse cx="19" cy="13.5" rx="3.5" ry="3" fill="#292524" />
-                  <ellipse cx="29" cy="13.5" rx="3.5" ry="3" fill="#292524" />
-                  <ellipse cx="19" cy="14" rx="2" ry="2" fill="#D97757" />
-                  <ellipse cx="29" cy="14" rx="2" ry="2" fill="#D97757" />
-                </svg>
-              </div>
-              <span className="font-semibold text-text-primary">Bobot</span>
-            </div>
           </div>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

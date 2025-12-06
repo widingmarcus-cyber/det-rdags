@@ -18,7 +18,8 @@ FROM nginx:alpine
 # Kopiera byggda filer
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Kopiera demo-sida
+# Kopiera demo-sida as both index.html and demo.html
+COPY index.html /usr/share/nginx/html/index.html
 COPY index.html /usr/share/nginx/html/demo.html
 
 # Nginx-konfiguration
