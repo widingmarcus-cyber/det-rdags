@@ -307,7 +307,6 @@ const styles = StyleSheet.create({
   },
   uspGrid: {
     flexDirection: 'row',
-    gap: 20,
     marginTop: 30,
   },
   uspCard: {
@@ -318,6 +317,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
+    marginLeft: 10,
   },
   uspCardAccent: {
     flex: 1,
@@ -327,6 +327,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: colors.primary,
+    marginRight: 10,
   },
   uspIcon: {
     marginBottom: 16,
@@ -352,7 +353,6 @@ const styles = StyleSheet.create({
   // SECTION 3: JOB DESCRIPTION
   twoColumnGrid: {
     flexDirection: 'row',
-    gap: 20,
     marginTop: 20,
   },
   roleCard: {
@@ -362,14 +362,16 @@ const styles = StyleSheet.create({
     padding: 24,
     borderWidth: 1,
     borderColor: colors.border,
+    marginLeft: 10,
   },
   roleCardHighlight: {
     flex: 1,
     backgroundColor: colors.white,
     borderRadius: 20,
     padding: 24,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    marginRight: 10,
   },
   roleTitle: {
     fontSize: 16,
@@ -391,7 +393,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 30,
   },
   customizationText: {
     flex: 1,
@@ -466,7 +467,6 @@ const styles = StyleSheet.create({
   pricingGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
     marginTop: 20,
   },
   pricingCard: {
@@ -579,7 +579,6 @@ const styles = StyleSheet.create({
   footerLogo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
   },
 
   // Page header with mascot
@@ -605,7 +604,7 @@ const PageFooter = ({ pageNumber }) => (
   <View style={styles.footer} fixed>
     <View style={styles.footerLogo}>
       <BobotMascotSmall size={20} />
-      <Text style={styles.footerText}>Bobot AB | www.bobot.nu</Text>
+      <Text style={[styles.footerText, { marginLeft: 6 }]}>Bobot AB | www.bobot.nu</Text>
     </View>
     <Text style={styles.footerText}>Sida {pageNumber}</Text>
   </View>
@@ -714,19 +713,19 @@ const PhilosophyPage = () => (
       <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 16 }}>
         Fördelar med en AI-kollega
       </Text>
-      <View style={{ flexDirection: 'row', gap: 16 }}>
+      <View style={{ flexDirection: 'row' }}>
         {/* Business benefits */}
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, marginRight: 8 }}>
           <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Affärsfördelar</Text>
-          <View style={{ gap: 6 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 }}>
               <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, marginRight: 8, marginTop: 2, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 8, color: colors.white, fontWeight: 700 }}>1</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Minskad supportbelastning</Text>
                 <Text style={{ fontSize: 8, color: colors.textLight, marginTop: 1 }}>Upp till 70% av rutinfrågor besvaras automatiskt</Text>
               </View>
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 }}>
               <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, marginRight: 8, marginTop: 2, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 8, color: colors.white, fontWeight: 700 }}>2</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Snabbare onboarding</Text>
@@ -743,17 +742,17 @@ const PhilosophyPage = () => (
           </View>
         </View>
         {/* Technical benefits */}
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, marginLeft: 8 }}>
           <Text style={{ fontSize: 10, fontWeight: 600, color: colors.accent, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tekniska fördelar</Text>
-          <View style={{ gap: 6 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 }}>
               <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.accent, marginRight: 8, marginTop: 2, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 8, color: colors.white, fontWeight: 700 }}>1</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>GDPR-säker arkitektur</Text>
                 <Text style={{ fontSize: 8, color: colors.textLight, marginTop: 1 }}>Automatisk radering, EU-datalagring, audit-loggning</Text>
               </View>
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 }}>
               <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.accent, marginRight: 8, marginTop: 2, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 8, color: colors.white, fontWeight: 700 }}>2</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Lokal språkmodell (LLM)</Text>
@@ -829,20 +828,20 @@ const JobDescriptionPage = () => (
       <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text, marginBottom: 12 }}>
         Så fungerar tekniken
       </Text>
-      <View style={{ flexDirection: 'row', gap: 16 }}>
-        <View style={{ flex: 1 }}>
+      <View style={{ flexDirection: 'row' }}>
+        <View style={{ flex: 1, marginRight: 8 }}>
           <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 4 }}>Lokal AI-modell</Text>
           <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
             Bobot drivs av en lokal språkmodell (LLM) som körs på EU-servrar. Ingen data skickas till externa molntjänster som OpenAI eller Google.
           </Text>
         </View>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, marginHorizontal: 8 }}>
           <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 4 }}>GDPR-säker</Text>
           <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
             All data lagras inom EU med automatisk radering. Möjlighet till dedikerad svensk hosting för extra säkerhet.
           </Text>
         </View>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, marginLeft: 8 }}>
           <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 4 }}>Er kunskapsbas</Text>
           <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
             Bobot svarar endast baserat på den information ni laddar upp. Separata kunskapsbaser för extern och intern användning.
@@ -853,8 +852,8 @@ const JobDescriptionPage = () => (
       {/* Hosting options */}
       <View style={{ marginTop: 16, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 16 }}>
         <Text style={{ fontSize: 10, fontWeight: 600, color: colors.text, marginBottom: 10 }}>Hosting-alternativ</Text>
-        <View style={{ flexDirection: 'row', gap: 16 }}>
-          <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: 'row' }}>
+          <View style={{ flex: 1, marginRight: 8 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
               <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 6 }}>
                 <IconBolt size={8} color={colors.white} />
@@ -865,7 +864,7 @@ const JobDescriptionPage = () => (
               Vi hanterar allt – hosting ingår i månadspriset. EU-servrar med 99.9% SLA.
             </Text>
           </View>
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, marginLeft: 8 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
               <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 6 }}>
                 <IconHome size={8} color={colors.white} />
@@ -900,9 +899,9 @@ const CustomizationPage = () => (
     </Text>
 
     {/* Two-column layout: mascot + customization options */}
-    <View style={{ flexDirection: 'row', gap: 20, marginTop: 16 }}>
+    <View style={{ flexDirection: 'row', marginTop: 16 }}>
       {/* Left column - Mascot and intro */}
-      <View style={{ width: 140, alignItems: 'center' }}>
+      <View style={{ width: 140, alignItems: 'center', marginRight: 20 }}>
         <BobotMascot size={100} />
         <Text style={{ fontSize: 9, color: colors.textLight, marginTop: 10, textAlign: 'center', lineHeight: 1.4 }}>
           Bobots personlighet förblir densamma, men utseendet anpassas efter ert varumärke
@@ -919,15 +918,15 @@ const CustomizationPage = () => (
         <View style={{ marginBottom: 12 }}>
           <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Visuell design</Text>
           <View style={{ backgroundColor: colors.white, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border }}>
-            <View style={{ gap: 6 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+            <View>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 }}>
                 <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: colors.primary, marginRight: 8, marginTop: 1, alignItems: 'center', justifyContent: 'center' }}><IconPalette size={10} color={colors.white} /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Företagsfärger</Text>
                   <Text style={{ fontSize: 8, color: colors.textLight }}>Primär- och sekundärfärg för widget och knappar</Text>
                 </View>
               </View>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 }}>
                 <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: colors.primary, marginRight: 8, marginTop: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 8, color: colors.white, fontWeight: 600 }}>Aa</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Typografi</Text>
@@ -949,15 +948,15 @@ const CustomizationPage = () => (
         <View>
           <Text style={{ fontSize: 10, fontWeight: 600, color: colors.accent, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Beteende & röst</Text>
           <View style={{ backgroundColor: colors.white, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border }}>
-            <View style={{ gap: 6 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+            <View>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 }}>
                 <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: colors.accent, marginRight: 8, marginTop: 1, alignItems: 'center', justifyContent: 'center' }}><IconChat size={10} color={colors.white} /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Tonalitet</Text>
                   <Text style={{ fontSize: 8, color: colors.textLight }}>Formell eller avslappnad – matcha ert varumärke</Text>
                 </View>
               </View>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 }}>
                 <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: colors.accent, marginRight: 8, marginTop: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 8, color: colors.white, fontWeight: 600 }}>Hi</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Välkomstmeddelande</Text>
@@ -983,20 +982,20 @@ const CustomizationPage = () => (
         Språkstöd
       </Text>
       <View style={{ backgroundColor: colors.white, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: colors.border }}>
-        <View style={{ flexDirection: 'row', gap: 20 }}>
-          <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: 'row' }}>
+          <View style={{ flex: 1, marginRight: 10 }}>
             <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 8 }}>Anpassningsbart språk</Text>
             <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
               Bobot svarar på svenska som standard. Behöver ni stöd för andra språk? Kontakta oss så diskuterar vi era behov.
             </Text>
           </View>
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, marginLeft: 10 }}>
             <Text style={{ fontSize: 10, fontWeight: 600, color: colors.accent, marginBottom: 8 }}>Tekniskt</Text>
-            <View style={{ gap: 4 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                 <Text style={{ fontSize: 9, color: colors.text }}>• RTL-stöd för höger-till-vänster-språk</Text>
               </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                 <Text style={{ fontSize: 9, color: colors.text }}>• Fullt Unicode/UTF-8-stöd</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -1069,8 +1068,8 @@ const ProcessPage = () => (
       <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 16 }}>
         4 veckors provperiod
       </Text>
-      <View style={{ flexDirection: 'row', gap: 12 }}>
-        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14 }}>
+      <View style={{ flexDirection: 'row' }}>
+        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14, marginRight: 6 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
             <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
               <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>1</Text>
@@ -1079,7 +1078,7 @@ const ProcessPage = () => (
           </View>
           <Text style={{ fontSize: 9, color: colors.textLight }}>Uppstart & setup av konto och widget</Text>
         </View>
-        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14 }}>
+        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14, marginLeft: 6 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
             <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
               <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>2</Text>
@@ -1089,8 +1088,8 @@ const ProcessPage = () => (
           <Text style={{ fontSize: 9, color: colors.textLight }}>Bygga och finjustera kunskapsbasen</Text>
         </View>
       </View>
-      <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
-        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14 }}>
+      <View style={{ flexDirection: 'row', marginTop: 12 }}>
+        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14, marginRight: 6 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
             <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
               <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>3</Text>
@@ -1099,7 +1098,7 @@ const ProcessPage = () => (
           </View>
           <Text style={{ fontSize: 9, color: colors.textLight }}>Testa internt och göra justeringar</Text>
         </View>
-        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14 }}>
+        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14, marginLeft: 6 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
             <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
               <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>4</Text>
@@ -1136,7 +1135,7 @@ const PricingPage = ({ startupFee, monthlyFee, tier, discount, pricingTiers = []
       </View>
 
       {/* Pricing cards - 2x2 grid to fit better on page */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 16 }}>
         {sortedTiers.length > 0 ? (
           sortedTiers.map((tierItem, index) => (
             <View key={tierItem.tier_key || index} style={{
@@ -1146,7 +1145,9 @@ const PricingPage = ({ startupFee, monthlyFee, tier, discount, pricingTiers = []
               padding: 16,
               borderWidth: 1,
               borderColor: colors.border,
-              marginBottom: 8
+              marginBottom: 8,
+              marginRight: index % 2 === 0 ? '2%' : 0,
+              marginLeft: index % 2 === 1 ? '2%' : 0
             }}>
               <Text style={{ fontSize: 11, fontWeight: 600, color: colors.textLight, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
                 {tierItem.name || tierItem.tier_key}
@@ -1244,9 +1245,9 @@ const ContactPage = () => (
     </View>
 
     {/* Main content - two column layout */}
-    <View style={{ flexDirection: 'row', gap: 24, marginTop: 16 }}>
+    <View style={{ flexDirection: 'row', marginTop: 16 }}>
       {/* Left column - Next steps */}
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, marginRight: 12 }}>
         <Text style={{ fontFamily: 'Playfair', fontSize: 20, fontWeight: 700, color: colors.text, marginBottom: 16 }}>
           Så kommer ni igång
         </Text>
@@ -1286,7 +1287,7 @@ const ContactPage = () => (
       </View>
 
       {/* Right column - Contact card (cleaner design with less orange) */}
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, marginLeft: 12 }}>
         <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 24, borderWidth: 1, borderColor: colors.border }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
             <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
@@ -1296,15 +1297,15 @@ const ContactPage = () => (
           </View>
 
           {/* Contact details */}
-          <View style={{ gap: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
               <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.slateLight, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
                 <IconUser size={14} color={colors.primary} />
               </View>
               <Text style={{ fontSize: 12, color: colors.text, fontWeight: 500 }}>Marcus Widing</Text>
             </View>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
               <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.slateLight, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
                 <IconMail size={14} color={colors.primary} />
               </View>
