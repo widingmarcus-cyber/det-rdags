@@ -437,11 +437,12 @@ class CompanyActivityLog(Base):
     company_id = Column(String, ForeignKey("companies.id"), nullable=False, index=True)
 
     # Action details
-    action_type = Column(String, nullable=False, index=True)  # "knowledge_create", "knowledge_update", "knowledge_delete", "settings_update", "conversation_delete", "export_data"
+    action_type = Column(String, nullable=False, index=True)  # "knowledge_create", "knowledge_update", "knowledge_delete", "settings_update", "conversation_delete", "export_data", "login"
     description = Column(Text)  # Human-readable description
     details = Column(Text)  # JSON with additional details (e.g., which item was affected)
 
     # Metadata
+    ip_address = Column(String)  # IP address for login tracking
     timestamp = Column(DateTime, default=datetime.utcnow, index=True)
 
     # Composite index for common queries

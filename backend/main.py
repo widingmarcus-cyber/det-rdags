@@ -2265,13 +2265,14 @@ def log_admin_action(db: Session, admin_username: str, action_type: str,
 
 
 def log_company_activity(db: Session, company_id: str, action_type: str,
-                         description: str = None, details: dict = None):
+                         description: str = None, details: dict = None, ip_address: str = None):
     """Log a company admin action to the activity log"""
     log_entry = CompanyActivityLog(
         company_id=company_id,
         action_type=action_type,
         description=description,
-        details=json.dumps(details) if details else None
+        details=json.dumps(details) if details else None,
+        ip_address=ip_address
     )
     db.add(log_entry)
     db.commit()
@@ -2445,6 +2446,13 @@ async def login(request: LoginRequest, req: Request, db: Session = Depends(get_d
         "name": company.name,
         "type": "company"
     })
+
+    # Log successful login with IP address
+    log_company_activity(
+        db, company.id, "login",
+        description=f"Inloggning från IP {client_ip}",
+        ip_address=client_ip
+    )
 
     return LoginResponse(token=token, company_id=company.id, name=company.name)
 
@@ -7223,6 +7231,7 @@ async def get_company_activity(
                 "action_type": log.action_type,
                 "description": log.description,
                 "details": log.details,
+                "ip_address": log.ip_address,
                 "timestamp": log.timestamp.isoformat() if log.timestamp else None
             }
             for log in logs

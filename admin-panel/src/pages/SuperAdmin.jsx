@@ -84,7 +84,9 @@ function SuperAdmin() {
   const [showUsageLimitModal, setShowUsageLimitModal] = useState(null)
   const [usageLimitValue, setUsageLimitValue] = useState({ conversations: 0, knowledge: 0 })
   const [showCompanyDashboard, setShowCompanyDashboard] = useState(null)
-  const [companyModalTab, setCompanyModalTab] = useState('overview') // overview, widgets, billing, activity
+  const [companyModalTab, setCompanyModalTab] = useState('overview') // overview, widgets, billing, activity, notes
+  const [activityPage, setActivityPage] = useState(1)
+  const activityPerPage = 10
   const [companyUsage, setCompanyUsage] = useState(null)
   const [companyActivity, setCompanyActivity] = useState([])
   const [companyWidgets, setCompanyWidgets] = useState([])
@@ -2492,12 +2494,13 @@ function SuperAdmin() {
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex border-b border-border-subtle px-6 flex-shrink-0">
+            <div className="flex border-b border-border-subtle px-6 flex-shrink-0 overflow-x-auto">
               {[
                 { id: 'overview', label: 'Översikt', icon: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /> },
                 { id: 'widgets', label: 'Widgets', icon: <><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></> },
                 { id: 'billing', label: 'Fakturering', icon: <><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></> },
-                { id: 'activity', label: 'Aktivitet', icon: <><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></> }
+                { id: 'activity', label: 'Aktivitet', icon: <><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></> },
+                { id: 'notes', label: 'Anteckningar', icon: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></> }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -3088,9 +3091,12 @@ function SuperAdmin() {
                 {/* ACTIVITY TAB */}
                 {companyModalTab === 'activity' && (
                   <>
-                {/* Recent Activity */}
+                {/* Recent Activity with Pagination */}
                 <div>
-                  <h3 className="text-sm font-semibold text-text-primary mb-4">Senaste aktivitet</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-semibold text-text-primary">Aktivitetslogg</h3>
+                    <span className="text-xs text-text-tertiary">{companyActivity.length} händelser</span>
+                  </div>
                   {companyActivity.length === 0 ? (
                     <div className="bg-bg-secondary rounded-xl p-6 text-center">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-2 text-text-tertiary">
@@ -3100,29 +3106,78 @@ function SuperAdmin() {
                       <p className="text-sm text-text-secondary">Ingen aktivitet registrerad</p>
                     </div>
                   ) : (
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {companyActivity.map((log) => (
-                        <div key={log.id} className="flex items-center gap-3 p-3 rounded-lg bg-bg-secondary">
-                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                            log.action_type.includes('create') ? 'bg-green-500' :
-                            log.action_type.includes('delete') ? 'bg-red-500' :
-                            log.action_type.includes('update') ? 'bg-amber-500' :
-                            'bg-accent'
-                          }`} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-text-primary truncate">{log.description}</p>
+                    <>
+                      <div className="space-y-2">
+                        {companyActivity
+                          .slice((activityPage - 1) * activityPerPage, activityPage * activityPerPage)
+                          .map((log) => (
+                          <div key={log.id} className="flex items-center gap-3 p-3 rounded-lg bg-bg-secondary">
+                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                              log.action_type.includes('create') ? 'bg-green-500' :
+                              log.action_type.includes('delete') ? 'bg-red-500' :
+                              log.action_type.includes('update') ? 'bg-amber-500' :
+                              log.action_type.includes('login') ? 'bg-blue-500' :
+                              'bg-accent'
+                            }`} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-text-primary">{log.description}</p>
+                              {log.ip_address && (
+                                <p className="text-xs text-text-tertiary mt-0.5">IP: {log.ip_address}</p>
+                              )}
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <span className="text-xs text-text-tertiary block">
+                                {new Date(log.timestamp).toLocaleDateString('sv-SE')}
+                              </span>
+                              <span className="text-xs text-text-tertiary">
+                                {new Date(log.timestamp).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
                           </div>
-                          <span className="text-xs text-text-tertiary flex-shrink-0">
-                            {new Date(log.timestamp).toLocaleDateString('sv-SE')}
-                          </span>
+                        ))}
+                      </div>
+
+                      {/* Pagination */}
+                      {companyActivity.length > activityPerPage && (
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-border-subtle">
+                          <p className="text-xs text-text-tertiary">
+                            Visar {(activityPage - 1) * activityPerPage + 1}-{Math.min(activityPage * activityPerPage, companyActivity.length)} av {companyActivity.length}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setActivityPage(p => Math.max(1, p - 1))}
+                              disabled={activityPage === 1}
+                              className="p-1.5 rounded-lg bg-bg-secondary hover:bg-bg-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="15 18 9 12 15 6" />
+                              </svg>
+                            </button>
+                            <span className="text-xs text-text-secondary px-2">
+                              {activityPage} / {Math.ceil(companyActivity.length / activityPerPage)}
+                            </span>
+                            <button
+                              onClick={() => setActivityPage(p => Math.min(Math.ceil(companyActivity.length / activityPerPage), p + 1))}
+                              disabled={activityPage >= Math.ceil(companyActivity.length / activityPerPage)}
+                              className="p-1.5 rounded-lg bg-bg-secondary hover:bg-bg-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="9 18 15 12 9 6" />
+                              </svg>
+                            </button>
+                          </div>
                         </div>
-                      ))}
-                    </div>
+                      )}
+                    </>
                   )}
                 </div>
+                  </>
+                )}
 
-                {/* Notes & Documents */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {/* NOTES TAB */}
+                {companyModalTab === 'notes' && (
+                  <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Notes Section */}
                   <div className="bg-bg-secondary rounded-xl p-4">
                     <div className="flex items-center justify-between mb-3">
