@@ -1074,20 +1074,19 @@ const TrialPeriodPage = () => (
       Testa Bobot utan risk. Under provperioden får ni full tillgång till alla funktioner och personlig support.
     </Text>
 
-    {/* Week-by-week breakdown */}
+    {/* Week-by-week breakdown - clean timeline design */}
     <View style={{ marginTop: 20 }}>
       {/* Week 1 */}
-      <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 20, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: colors.primary }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+      <View style={{ flexDirection: 'row', marginBottom: 20 }}>
+        <View style={{ width: 44, alignItems: 'center', marginRight: 16 }}>
+          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 14, color: colors.white, fontWeight: 700 }}>1</Text>
           </View>
-          <View>
-            <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Vecka 1: Uppstart & Setup</Text>
-            <Text style={{ fontSize: 10, color: colors.textLight }}>Dag 1-7</Text>
-          </View>
+          <View style={{ width: 2, flex: 1, backgroundColor: colors.border, marginTop: 8 }} />
         </View>
-        <View style={{ marginLeft: 44 }}>
+        <View style={{ flex: 1, paddingBottom: 8 }}>
+          <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Vecka 1: Uppstart & Setup</Text>
+          <Text style={{ fontSize: 10, color: colors.textLight, marginBottom: 10 }}>Dag 1-7</Text>
           <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Kickoff-möte för att förstå era behov och mål</Text>
           <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Skapa konto och konfigurera grundinställningar</Text>
           <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Anpassa widgetens utseende efter ert varumärke</Text>
@@ -1096,17 +1095,16 @@ const TrialPeriodPage = () => (
       </View>
 
       {/* Week 2 */}
-      <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 20, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: colors.accent }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+      <View style={{ flexDirection: 'row', marginBottom: 20 }}>
+        <View style={{ width: 44, alignItems: 'center', marginRight: 16 }}>
+          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 14, color: colors.white, fontWeight: 700 }}>2</Text>
           </View>
-          <View>
-            <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Vecka 2: Kunskapsbas</Text>
-            <Text style={{ fontSize: 10, color: colors.textLight }}>Dag 8-14</Text>
-          </View>
+          <View style={{ width: 2, flex: 1, backgroundColor: colors.border, marginTop: 8 }} />
         </View>
-        <View style={{ marginLeft: 44 }}>
+        <View style={{ flex: 1, paddingBottom: 8 }}>
+          <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Vecka 2: Kunskapsbas</Text>
+          <Text style={{ fontSize: 10, color: colors.textLight, marginBottom: 10 }}>Dag 8-14</Text>
           <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Ladda upp era dokument (PDF, Word, Excel)</Text>
           <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Importera FAQ från hemsida eller skriv egna</Text>
           <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Granska och finjustera AI-genererade svar</Text>
@@ -1115,17 +1113,16 @@ const TrialPeriodPage = () => (
       </View>
 
       {/* Week 3 */}
-      <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 20, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: colors.primary }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+      <View style={{ flexDirection: 'row', marginBottom: 20 }}>
+        <View style={{ width: 44, alignItems: 'center', marginRight: 16 }}>
+          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 14, color: colors.white, fontWeight: 700 }}>3</Text>
           </View>
-          <View>
-            <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Vecka 3: Testning</Text>
-            <Text style={{ fontSize: 10, color: colors.textLight }}>Dag 15-21</Text>
-          </View>
+          <View style={{ width: 2, flex: 1, backgroundColor: colors.border, marginTop: 8 }} />
         </View>
-        <View style={{ marginLeft: 44 }}>
+        <View style={{ flex: 1, paddingBottom: 8 }}>
+          <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Vecka 3: Testning</Text>
+          <Text style={{ fontSize: 10, color: colors.textLight, marginBottom: 10 }}>Dag 15-21</Text>
           <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Intern testning med utvalda medarbetare</Text>
           <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Identifiera kunskapsluckor och finjustera</Text>
           <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Genomgång av första statistiken och insikter</Text>
@@ -1134,17 +1131,15 @@ const TrialPeriodPage = () => (
       </View>
 
       {/* Week 4 */}
-      <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 20, borderLeftWidth: 4, borderLeftColor: colors.accent }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+      <View style={{ flexDirection: 'row' }}>
+        <View style={{ width: 44, alignItems: 'center', marginRight: 16 }}>
+          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 14, color: colors.white, fontWeight: 700 }}>4</Text>
           </View>
-          <View>
-            <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Vecka 4: Utvärdering</Text>
-            <Text style={{ fontSize: 10, color: colors.textLight }}>Dag 22-28</Text>
-          </View>
         </View>
-        <View style={{ marginLeft: 44 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Vecka 4: Utvärdering</Text>
+          <Text style={{ fontSize: 10, color: colors.textLight, marginBottom: 10 }}>Dag 22-28</Text>
           <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Soft launch för externa besökare (valfritt)</Text>
           <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Analysera resultat och ROI-potential</Text>
           <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Avslutande möte för att gå igenom upplevelsen</Text>
@@ -1176,9 +1171,11 @@ const formatPrice = (price) => {
 
 // SECTION 7: Pricing Page - Redesigned to show recommended tier
 const PricingPage = ({ startupFee, monthlyFee, tier, tierInfo, discount, discountEndDate }) => {
-  // Get original price (before discount)
+  // Get original price from tierInfo (before discount)
+  // monthlyFee passed from SuperAdmin is already discounted, so we need the original from tierInfo
   const originalMonthlyFee = tierInfo?.monthly_fee || monthlyFee
-  const discountedMonthlyFee = discount > 0 ? Math.round(originalMonthlyFee * (1 - discount / 100)) : originalMonthlyFee
+  // Use the already-discounted monthlyFee if discount > 0, otherwise use original
+  const discountedMonthlyFee = discount > 0 ? monthlyFee : originalMonthlyFee
   const discountAmount = originalMonthlyFee - discountedMonthlyFee
 
   // Format discount end date
