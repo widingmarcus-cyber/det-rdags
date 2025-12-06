@@ -8014,42 +8014,78 @@ async def get_usage_trends(
 ):
     """Get usage trends over time (week over week, month over month)"""
     today = date.today()
+    now = datetime.now()
 
     # This week vs last week
     this_week_start = today - timedelta(days=today.weekday())
     last_week_start = this_week_start - timedelta(days=7)
 
-    this_week_stats = db.query(
+    # Count from DailyStatistics (aggregated data) + Conversation table (for today/recent)
+    # This ensures we capture all conversations including those not yet aggregated
+
+    # This week: DailyStatistics + today's Conversations
+    this_week_daily = db.query(
         func.sum(DailyStatistics.total_conversations)
     ).filter(
         DailyStatistics.date >= this_week_start,
-        DailyStatistics.date < today
+        DailyStatistics.date <= today
     ).scalar() or 0
 
-    last_week_stats = db.query(
+    # Also count conversations directly (in case DailyStatistics is not populated)
+    this_week_convs = db.query(Conversation).filter(
+        func.date(Conversation.started_at) >= this_week_start,
+        func.date(Conversation.started_at) <= today
+    ).count()
+
+    # Use the higher value (DailyStatistics might be incomplete)
+    this_week_stats = max(this_week_daily, this_week_convs)
+
+    # Last week stats
+    last_week_daily = db.query(
         func.sum(DailyStatistics.total_conversations)
     ).filter(
         DailyStatistics.date >= last_week_start,
         DailyStatistics.date < this_week_start
     ).scalar() or 0
 
+    last_week_convs = db.query(Conversation).filter(
+        func.date(Conversation.started_at) >= last_week_start,
+        func.date(Conversation.started_at) < this_week_start
+    ).count()
+
+    last_week_stats = max(last_week_daily, last_week_convs)
+
     # This month vs last month
     this_month_start = today.replace(day=1)
     last_month_start = (this_month_start - timedelta(days=1)).replace(day=1)
 
-    this_month_stats = db.query(
+    this_month_daily = db.query(
         func.sum(DailyStatistics.total_conversations)
     ).filter(
         DailyStatistics.date >= this_month_start,
         DailyStatistics.date <= today
     ).scalar() or 0
 
-    last_month_stats = db.query(
+    this_month_convs = db.query(Conversation).filter(
+        func.date(Conversation.started_at) >= this_month_start,
+        func.date(Conversation.started_at) <= today
+    ).count()
+
+    this_month_stats = max(this_month_daily, this_month_convs)
+
+    last_month_daily = db.query(
         func.sum(DailyStatistics.total_conversations)
     ).filter(
         DailyStatistics.date >= last_month_start,
         DailyStatistics.date < this_month_start
     ).scalar() or 0
+
+    last_month_convs = db.query(Conversation).filter(
+        func.date(Conversation.started_at) >= last_month_start,
+        func.date(Conversation.started_at) < this_month_start
+    ).count()
+
+    last_month_stats = max(last_month_daily, last_month_convs)
 
     def calc_change(current, previous):
         if previous == 0:
@@ -8209,6 +8245,7 @@ async def get_performance_overview(
     """Get overall widget performance across all companies"""
     cutoff = datetime.utcnow() - timedelta(hours=hours)
 
+    # First try WidgetPerformance table (if populated)
     stats = db.query(
         func.sum(WidgetPerformance.total_requests).label('total'),
         func.sum(WidgetPerformance.successful_requests).label('successful'),
@@ -8217,13 +8254,40 @@ async def get_performance_overview(
         func.avg(WidgetPerformance.avg_response_time).label('avg_response')
     ).filter(WidgetPerformance.hour >= cutoff).first()
 
+    total_requests = stats.total or 0
+    successful_requests = stats.successful or 0
+    failed_requests = stats.failed or 0
+    rate_limited = stats.rate_limited or 0
+    avg_response = stats.avg_response or 0
+
+    # If no WidgetPerformance data, calculate from Message/Conversation tables
+    if total_requests == 0:
+        # Count messages in the time period
+        messages = db.query(Message).filter(
+            Message.created_at >= cutoff,
+            Message.role == "bot"
+        ).all()
+
+        total_requests = len(messages)
+        successful_requests = sum(1 for m in messages if m.had_answer)
+        failed_requests = sum(1 for m in messages if not m.had_answer)
+
+        # Calculate average response time from DailyStatistics
+        today = date.today()
+        daily_stats = db.query(DailyStatistics).filter(
+            DailyStatistics.date >= today - timedelta(days=1)
+        ).all()
+
+        response_times = [s.avg_response_time_ms for s in daily_stats if s.avg_response_time_ms]
+        avg_response = sum(response_times) / len(response_times) if response_times else 0
+
     return {
-        "total_requests": stats.total or 0,
-        "successful_requests": stats.successful or 0,
-        "failed_requests": stats.failed or 0,
-        "rate_limited_requests": stats.rate_limited or 0,
-        "avg_response_time": round(stats.avg_response or 0, 2),
-        "success_rate": round((stats.successful or 0) / max(stats.total or 1, 1) * 100, 1)
+        "total_requests": total_requests,
+        "successful_requests": successful_requests,
+        "failed_requests": failed_requests,
+        "rate_limited_requests": rate_limited,
+        "avg_response_time": round(avg_response, 2),
+        "success_rate": round(successful_requests / max(total_requests, 1) * 100, 1)
     }
 
 
