@@ -178,29 +178,26 @@ const CornerAccent = ({ position = 'topRight' }) => {
   )
 }
 
-// Subtle dot pattern background - like landing page
-const DotPattern = ({ opacity = 0.15, color = colors.textLight, spacing = 24 }) => {
-  const dots = []
-  const cols = Math.ceil(595 / spacing) // A4 width in points
-  const rows = Math.ceil(842 / spacing) // A4 height in points
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      dots.push(
-        <Circle
-          key={`${row}-${col}`}
-          cx={col * spacing + spacing / 2}
-          cy={row * spacing + spacing / 2}
-          r={1}
-          fill={color}
-          opacity={opacity}
-        />
-      )
-    }
-  }
+// Subtle dot pattern background - simplified version with fewer elements
+const DotPattern = ({ opacity = 0.15 }) => {
+  // Simplified: just a few decorative circles in corners instead of full grid
   return (
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
       <Svg width={595} height={842}>
-        {dots}
+        {/* Top-left cluster */}
+        <Circle cx={30} cy={30} r={2} fill={colors.textLight} opacity={opacity} />
+        <Circle cx={50} cy={25} r={1.5} fill={colors.textLight} opacity={opacity * 0.7} />
+        <Circle cx={25} cy={50} r={1.5} fill={colors.textLight} opacity={opacity * 0.7} />
+        {/* Top-right cluster */}
+        <Circle cx={565} cy={30} r={2} fill={colors.textLight} opacity={opacity} />
+        <Circle cx={545} cy={25} r={1.5} fill={colors.textLight} opacity={opacity * 0.7} />
+        <Circle cx={570} cy={50} r={1.5} fill={colors.textLight} opacity={opacity * 0.7} />
+        {/* Bottom-left cluster */}
+        <Circle cx={30} cy={812} r={2} fill={colors.textLight} opacity={opacity} />
+        <Circle cx={50} cy={817} r={1.5} fill={colors.textLight} opacity={opacity * 0.7} />
+        {/* Bottom-right cluster */}
+        <Circle cx={565} cy={812} r={2} fill={colors.textLight} opacity={opacity} />
+        <Circle cx={545} cy={817} r={1.5} fill={colors.textLight} opacity={opacity * 0.7} />
       </Svg>
     </View>
   )
@@ -659,7 +656,7 @@ const HeroPage = ({ customerName, contactPerson, startDate }) => (
 // SECTION 2: Philosophy Page
 const PhilosophyPage = () => (
   <Page size="A4" style={styles.page}>
-    <DotPattern opacity={0.12} spacing={28} />
+    <DotPattern opacity={0.12} />
     <CornerAccent position="topRight" />
 
     <View style={styles.pageHeader}>
@@ -779,7 +776,7 @@ const PhilosophyPage = () => (
 // SECTION 3: Job Description Page - Two roles section with visual appeal
 const JobDescriptionPage = () => (
   <Page size="A4" style={styles.page}>
-    <DotPattern opacity={0.06} spacing={28} />
+    <DotPattern opacity={0.06} />
     <CornerAccent position="bottomLeft" />
 
     {/* Header with mascot */}
@@ -927,7 +924,7 @@ const JobDescriptionPage = () => (
 // SECTION 4: Customization Page
 const CustomizationPage = () => (
   <Page size="A4" style={styles.page}>
-    <DotPattern opacity={0.1} spacing={32} />
+    <DotPattern opacity={0.1} />
     <CornerAccent position="topRight" />
 
     <View style={styles.pageHeader}>
@@ -1055,7 +1052,7 @@ const CustomizationPage = () => (
 // SECTION 5: Process Page - Redesigned to be visually engaging
 const ProcessPage = () => (
   <Page size="A4" style={styles.page}>
-    <DotPattern opacity={0.08} spacing={24} />
+    <DotPattern opacity={0.08} />
     <CornerAccent position="bottomLeft" />
 
     {/* Hero section with mascot */}
@@ -1397,7 +1394,7 @@ const IconUser = ({ size = 20, color = colors.white }) => (
 // SECTION 7: Contact Page
 const ContactPage = () => (
   <Page size="A4" style={styles.page}>
-    <DotPattern opacity={0.08} spacing={30} />
+    <DotPattern opacity={0.08} />
     <CornerAccent position="topRight" />
 
     {/* Header */}
