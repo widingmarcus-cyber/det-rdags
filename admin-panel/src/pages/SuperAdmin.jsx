@@ -1494,10 +1494,24 @@ function SuperAdmin() {
     try {
       // Get pricing info for this company
       const company = showProposalModal
-      const tier = company.pricing_tier || 'starter'
+      const tierKey = company.pricing_tier || 'starter'
 
-      // Find the pricing tier details from database
-      const tierInfo = dbPricingTiers.find(t => t.tier_key === tier)
+      // Find the pricing tier details - try dbPricingTiers first, then fall back to pricingTiers
+      const dbTierInfo = dbPricingTiers.find(t => t.tier_key === tierKey)
+      const fallbackTier = pricingTiers[tierKey]
+
+      // Use dbTierInfo if available, otherwise use fallback from revenueDashboard
+      const tierInfo = dbTierInfo || (fallbackTier ? {
+        tier_key: tierKey,
+        name: fallbackTier.name,
+        monthly_fee: fallbackTier.monthly_fee,
+        startup_fee: fallbackTier.startup_fee,
+        max_conversations: fallbackTier.max_conversations,
+        max_widgets: fallbackTier.max_widgets || 0,
+        max_knowledge_items: fallbackTier.max_knowledge_items || 0,
+        features: fallbackTier.features || []
+      } : null)
+
       const startupFee = tierInfo?.startup_fee ?? 0
       const monthlyFee = tierInfo?.monthly_fee ?? 1500
       const conversationLimit = tierInfo?.max_conversations ?? 0
@@ -1511,13 +1525,13 @@ function SuperAdmin() {
         startDate: proposalForm.startDate,
         startupFee,
         monthlyFee: discount > 0 ? Math.round(monthlyFee * (1 - discount / 100)) : monthlyFee,
-        tier: tierInfo?.name || tier.charAt(0).toUpperCase() + tier.slice(1),
-        tierKey: tier,
+        tier: tierInfo?.name || tierKey.charAt(0).toUpperCase() + tierKey.slice(1),
+        tierKey: tierKey,
         tierInfo: tierInfo,
         discount,
         discountEndDate: company.discount_end_date,
         conversationLimit,
-        pricingTiers: dbPricingTiers
+        pricingTiers: dbPricingTiers.length > 0 ? dbPricingTiers : Object.entries(pricingTiers).map(([key, val]) => ({ tier_key: key, ...val }))
       })
 
       showNotification(`PDF skapad: ${fileName}`)
