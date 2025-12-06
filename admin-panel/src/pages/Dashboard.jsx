@@ -291,7 +291,7 @@ function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 mb-8">
         <StatCard
           title="Kunskapsposter"
           value={stats.totalKnowledge}
@@ -446,7 +446,7 @@ function Dashboard() {
             </svg>
             <h2 className="text-lg font-medium text-text-primary">Användningsgränser</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <UsageMeter
               label="Konversationer denna månad"
               current={usage.conversations.current}

@@ -327,17 +327,48 @@ async def admin_endpoint(
 
 ## Production Deployment
 
-See `deploy/` directory:
-- `docker-compose.prod.yml` - Production services
-- `nginx.conf` - SSL + reverse proxy config
-- SSL via Let's Encrypt (Certbot)
+### Quick Deploy (Docker Compose V2)
+
+**Server:** `ssh root@bobot.nu` → Code at `/opt/bobot`
 
 ```bash
-# Deploy
-docker-compose -f deploy/docker-compose.prod.yml up -d
+# 1. Pull latest changes
+cd /opt/bobot
+git pull origin main
 
-# SSL setup
+# 2. Deploy with Docker Compose V2
+cd deploy
+docker compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.prod.yml up -d --build
+
+# 3. Verify services are running
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs -f --tail=50
+```
+
+**Important:** Always use `docker compose` (V2, space) not `docker-compose` (V1, hyphen). V1 has compatibility issues with newer Docker Engine versions (`KeyError: 'ContainerConfig'`).
+
+### Files
+- `deploy/docker-compose.prod.yml` - Production services
+- `deploy/nginx.conf` - SSL + reverse proxy config
+- `deploy/.env.prod` - Production environment variables
+
+### SSL Setup (First time only)
+```bash
 sudo certbot --nginx -d bobot.nu -d www.bobot.nu -d demo.bobot.nu
+```
+
+### Troubleshooting
+```bash
+# View logs
+docker compose -f docker-compose.prod.yml logs backend -f
+
+# Restart specific service
+docker compose -f docker-compose.prod.yml restart backend
+
+# Full rebuild (if issues persist)
+docker compose -f docker-compose.prod.yml down --remove-orphans
+docker compose -f docker-compose.prod.yml up -d --build --force-recreate
 ```
 
 ## Known Limitations

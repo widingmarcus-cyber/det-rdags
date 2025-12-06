@@ -735,8 +735,8 @@ function Knowledge() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 mb-6">
-        <div className="relative flex-1">
+      <div className="flex flex-wrap gap-3 sm:gap-4 mb-6">
+        <div className="relative flex-1 min-w-0 w-full sm:w-auto sm:min-w-[200px]">
           <svg
             width="20"
             height="20"
@@ -760,7 +760,7 @@ function Knowledge() {
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
-          className="input w-48"
+          className="input w-full sm:w-auto sm:min-w-[140px]"
           aria-label="Filtrera efter kategori"
         >
           <option value="">Alla kategorier</option>
@@ -772,7 +772,7 @@ function Knowledge() {
           <select
             value={filterWidget}
             onChange={(e) => setFilterWidget(e.target.value)}
-            className="input w-48"
+            className="input w-full sm:w-auto sm:min-w-[140px]"
             aria-label="Filtrera efter widget"
           >
             <option value="">Alla widgets</option>
@@ -784,7 +784,7 @@ function Knowledge() {
         )}
         <button
           onClick={() => setShowCategoryModal(true)}
-          className="btn btn-ghost"
+          className="btn btn-ghost w-full sm:w-auto"
           title="Hantera kategorier"
           aria-label="Hantera kategorier"
         >

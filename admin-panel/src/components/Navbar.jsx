@@ -162,7 +162,7 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
       )}
       <aside
         id="main-nav"
-        className={`w-60 bg-bg-secondary border-r border-border-subtle flex flex-col h-screen fixed md:sticky top-0 z-50 transition-transform duration-300 ${
+        className={`w-60 bg-bg-secondary border-r border-border-subtle flex flex-col h-full fixed md:relative top-0 left-0 z-50 transition-transform duration-300 flex-shrink-0 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
         role="complementary"
@@ -305,12 +305,12 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
         <>
           {/* Backdrop - covers main content area only (not navbar) */}
           <div
-            className="fixed top-0 left-60 right-0 bottom-0 bg-black/30 backdrop-blur-sm z-[9998] transition-opacity"
+            className="fixed inset-0 sm:top-0 sm:left-60 sm:right-0 sm:bottom-0 bg-black/30 backdrop-blur-sm z-[9998] transition-opacity"
             onClick={() => setShowAnnouncement(false)}
           />
 
           {/* Slide-out panel - with top/bottom margin for better appearance */}
-          <div className="fixed top-4 left-60 bottom-4 w-96 bg-bg-primary border border-border-subtle rounded-r-2xl shadow-2xl z-[9999] flex flex-col animate-slide-in-right overflow-hidden">
+          <div className="fixed top-0 sm:top-4 left-0 sm:left-60 bottom-0 sm:bottom-4 w-full sm:w-80 md:w-96 bg-bg-primary border border-border-subtle sm:rounded-r-2xl shadow-2xl z-[9999] flex flex-col animate-slide-in-right overflow-hidden">
             {/* Header */}
             <div className="px-6 py-4 border-b border-border-subtle flex items-center justify-between bg-bg-secondary">
               <div className="flex items-center gap-3">

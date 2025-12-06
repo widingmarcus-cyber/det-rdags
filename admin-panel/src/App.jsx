@@ -403,7 +403,7 @@ function App() {
         Hoppa till navigation
       </a>
 
-      <div className="flex min-h-screen bg-bg-primary relative overflow-x-hidden">
+      <div className="flex h-screen bg-bg-primary relative overflow-hidden">
         {/* Subtle dot pattern overlay (light mode only) */}
         <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.08] dark:opacity-0" style={{
           backgroundImage: 'radial-gradient(circle, #D97757 1px, transparent 1px)',
@@ -422,7 +422,7 @@ function App() {
           setMobileOpen={setMobileMenuOpen}
           companyStatus={companyStatus}
         />
-        <main id="main-content" className="flex-1 p-4 md:p-8 overflow-auto relative z-10 w-full" role="main" aria-label="Huvudinnehåll">
+        <main id="main-content" className="flex-1 p-4 md:p-8 overflow-y-auto overflow-x-hidden relative z-10 w-full md:ml-0" role="main" aria-label="Huvudinnehåll">
           {/* Mobile header with hamburger menu */}
           <div className="md:hidden flex items-center justify-between mb-4 -mt-1">
             <div className="flex items-center gap-3">
