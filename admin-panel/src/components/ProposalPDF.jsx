@@ -300,20 +300,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textLight,
-    lineHeight: 1.6,
-    marginBottom: 20,
+    lineHeight: 1.5,
+    marginBottom: 12,
   },
   uspGrid: {
     flexDirection: 'row',
-    marginTop: 30,
+    marginTop: 20,
   },
   uspCard: {
     flex: 1,
     backgroundColor: colors.white,
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 16,
+    padding: 16,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
@@ -322,15 +322,15 @@ const styles = StyleSheet.create({
   uspCardAccent: {
     flex: 1,
     backgroundColor: colors.white,
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 16,
+    padding: 16,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: colors.primary,
     marginRight: 10,
   },
   uspIcon: {
-    marginBottom: 16,
+    marginBottom: 10,
   },
   uspIconText: {
     fontSize: 20,
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -674,8 +674,8 @@ const PhilosophyPage = () => (
     <View style={styles.uspGrid}>
       <View style={styles.uspCardAccent}>
         <View style={styles.uspIcon}>
-          <FancyIconWrapper color={colors.primary} size={56}>
-            <IconBolt size={22} color={colors.white} />
+          <FancyIconWrapper color={colors.primary} size={44}>
+            <IconBolt size={18} color={colors.white} />
           </FancyIconWrapper>
         </View>
         <Text style={styles.uspTitle}>Supersnabb</Text>
@@ -684,8 +684,8 @@ const PhilosophyPage = () => (
 
       <View style={styles.uspCard}>
         <View style={styles.uspIcon}>
-          <FancyIconWrapper color={colors.accent} size={56}>
-            <IconHome size={22} color={colors.white} />
+          <FancyIconWrapper color={colors.accent} size={44}>
+            <IconHome size={18} color={colors.white} />
           </FancyIconWrapper>
         </View>
         <Text style={styles.uspTitle}>Lokal</Text>
@@ -694,8 +694,8 @@ const PhilosophyPage = () => (
 
       <View style={styles.uspCard}>
         <View style={styles.uspIcon}>
-          <FancyIconWrapper color={colors.primary} size={56}>
-            <IconMoon size={22} color={colors.white} />
+          <FancyIconWrapper color={colors.primary} size={44}>
+            <IconMoon size={18} color={colors.white} />
           </FancyIconWrapper>
         </View>
         <Text style={styles.uspTitle}>Vaken</Text>
@@ -704,13 +704,13 @@ const PhilosophyPage = () => (
     </View>
 
     {/* Decorative divider */}
-    <View style={{ alignItems: 'center', marginTop: 10 }}>
+    <View style={{ alignItems: 'center', marginTop: 6 }}>
       <DecorativeDivider width={200} />
     </View>
 
     {/* Expanded benefits - two columns */}
     <View>
-      <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 16 }}>
+      <Text style={{ fontSize: 13, fontWeight: 600, color: colors.text, marginBottom: 10 }}>
         Fördelar med en AI-kollega
       </Text>
       <View style={{ flexDirection: 'row' }}>
