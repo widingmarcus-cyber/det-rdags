@@ -12,12 +12,8 @@ import {
   Circle,
   Rect,
   G,
-  Ellipse,
-  Image
+  Ellipse
 } from '@react-pdf/renderer'
-
-// Cover illustration - save your image as cover-illustration.png in public folder
-const COVER_IMAGE_URL = '/cover-illustration.png'
 
 // Register Playfair Display - Serif for "Human Voice" headlines
 // Using jsDelivr/fontsource CDN for reliable font loading with react-pdf
@@ -608,18 +604,21 @@ const PageFooter = ({ pageNumber }) => (
   </View>
 )
 
-// SECTION 1: Hero Page with Cover Image
+// SECTION 1: Hero Page - Simplified without external image to avoid loading issues
 const HeroPage = ({ customerName, contactPerson, startDate }) => (
   <Page size="A4" style={{ backgroundColor: colors.background, padding: 0 }}>
-    {/* Cover Image - takes most of the page */}
-    <View style={{ flex: 1, margin: 30, marginBottom: 0 }}>
-      <Image
-        src={COVER_IMAGE_URL}
-        style={{ width: '100%', height: 380, objectFit: 'cover', borderRadius: 20 }}
-      />
+    {/* Decorative header area with mascot instead of external image */}
+    <View style={{ backgroundColor: colors.heroBackground, margin: 30, marginBottom: 0, borderRadius: 20, padding: 40, minHeight: 340, alignItems: 'center', justifyContent: 'center' }}>
+      <BobotMascot size={120} />
+      <Text style={{ fontFamily: 'Playfair', fontSize: 28, fontWeight: 700, color: colors.text, marginTop: 20, textAlign: 'center' }}>
+        Er nya AI-kollega
+      </Text>
+      <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 8, textAlign: 'center' }}>
+        Alltid redo att hjälpa
+      </Text>
     </View>
 
-    {/* Content below image */}
+    {/* Content below */}
     <View style={{ padding: 40, paddingTop: 30, alignItems: 'center' }}>
       {/* Contact person - above title */}
       {contactPerson && (
@@ -1539,23 +1538,38 @@ const ProposalDocument = ({
 
 // Export PDF generation function
 export const generateProposalPDF = async (props) => {
-  const blob = await pdf(<ProposalDocument {...props} />).toBlob()
-  return blob
+  try {
+    console.log('[PDF] Starting generation with props:', props)
+    const doc = <ProposalDocument {...props} />
+    console.log('[PDF] Document created, generating blob...')
+    const blob = await pdf(doc).toBlob()
+    console.log('[PDF] Blob generated successfully, size:', blob.size)
+    return blob
+  } catch (error) {
+    console.error('[PDF] Generation failed:', error)
+    console.error('[PDF] Error stack:', error.stack)
+    throw error
+  }
 }
 
 // Export download function
 export const downloadProposalPDF = async (props) => {
-  const blob = await generateProposalPDF(props)
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  const fileName = `${props.customerName.replace(/[^a-zA-Z0-9åäöÅÄÖ]/g, '_')}_Bobot_Proposal.pdf`
-  link.href = url
-  link.download = fileName
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
-  return fileName
+  try {
+    const blob = await generateProposalPDF(props)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    const fileName = `${props.customerName.replace(/[^a-zA-Z0-9åäöÅÄÖ]/g, '_')}_Bobot_Proposal.pdf`
+    link.href = url
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    return fileName
+  } catch (error) {
+    console.error('[PDF] Download failed:', error)
+    throw error
+  }
 }
 
 // Export colors and mascot for reuse in KPI report
