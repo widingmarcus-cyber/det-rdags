@@ -113,6 +113,16 @@ function SuperAdmin() {
   const [companyNotes, setCompanyNotes] = useState([])
   const [newNote, setNewNote] = useState('')
 
+  // Password change modal
+  const [showPasswordModal, setShowPasswordModal] = useState(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [passwordLoading, setPasswordLoading] = useState(false)
+
+  // Delete company confirmation (2-step)
+  const [deleteConfirmCompany, setDeleteConfirmCompany] = useState(null)
+  const [deleteConfirmStep, setDeleteConfirmStep] = useState(1)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+
   // Admin preferences
   const [adminPrefs, setAdminPrefs] = useState({ dark_mode: false, totp_enabled: false })
   const [show2FASetup, setShow2FASetup] = useState(false)
@@ -1046,12 +1056,85 @@ function SuperAdmin() {
         method: 'PUT'
       })
       if (response.ok) {
+        const data = await response.json()
         fetchCompanies()
+        // Update showCompanyDashboard if it's the same company
+        if (showCompanyDashboard?.id === companyId) {
+          setShowCompanyDashboard(prev => ({ ...prev, is_active: data.is_active }))
+        }
         const company = companies.find(c => c.id === companyId)
-        showNotification(`${company?.name} ${company?.is_active ? 'inaktiverad' : 'aktiverad'}`)
+        showNotification(`${company?.name} ${data.is_active ? 'aktiverad' : 'inaktiverad'}`)
       }
     } catch (error) {
       console.error('Kunde inte ändra status:', error)
+    }
+  }
+
+  const handleChangePassword = async (companyId) => {
+    if (!newPassword || newPassword.length < 6) {
+      showNotification('Lösenordet måste vara minst 6 tecken', 'error')
+      return
+    }
+    setPasswordLoading(true)
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/companies/${companyId}/password`, {
+        method: 'PUT',
+        body: JSON.stringify({ new_password: newPassword })
+      })
+      if (response.ok) {
+        showNotification('Lösenord ändrat')
+        setShowPasswordModal(null)
+        setNewPassword('')
+      } else {
+        const err = await response.json()
+        showNotification(err.detail || 'Kunde inte ändra lösenord', 'error')
+      }
+    } catch (error) {
+      console.error('Kunde inte ändra lösenord:', error)
+      showNotification('Kunde inte ändra lösenord', 'error')
+    } finally {
+      setPasswordLoading(false)
+    }
+  }
+
+  const handleDeleteCompany = async (companyId) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/companies/${companyId}`, {
+        method: 'DELETE'
+      })
+      if (response.ok) {
+        fetchCompanies()
+        showNotification('Företag borttaget')
+        setDeleteConfirmCompany(null)
+        setDeleteConfirmStep(1)
+        setDeleteConfirmText('')
+        setShowCompanyDashboard(null)
+      } else {
+        const err = await response.json()
+        showNotification(err.detail || 'Kunde inte ta bort företag', 'error')
+      }
+    } catch (error) {
+      console.error('Kunde inte ta bort företag:', error)
+      showNotification('Kunde inte ta bort företag', 'error')
+    }
+  }
+
+  const handleToggleWidget = async (widgetId) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/widgets/${widgetId}/toggle`, {
+        method: 'PUT'
+      })
+      if (response.ok) {
+        const data = await response.json()
+        // Update the widget in companyWidgets
+        setCompanyWidgets(prev => prev.map(w =>
+          w.id === widgetId ? { ...w, is_active: data.is_active } : w
+        ))
+        showNotification(data.is_active ? 'Widget aktiverad' : 'Widget inaktiverad')
+      }
+    } catch (error) {
+      console.error('Kunde inte ändra widget status:', error)
+      showNotification('Kunde inte ändra widget status', 'error')
     }
   }
 
@@ -2018,6 +2101,159 @@ function SuperAdmin() {
         </div>
       )}
 
+      {/* Password Change Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60] animate-fade-in">
+          <div className="bg-bg-tertiary rounded-2xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-text-primary">Ändra lösenord</h2>
+                  <p className="text-sm text-text-secondary">{showPasswordModal.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowPasswordModal(null); setNewPassword('') }}
+                className="p-2 hover:bg-bg-secondary rounded-lg transition-colors text-text-tertiary hover:text-text-primary"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-2">Nytt lösenord</label>
+                <input
+                  type="text"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Minst 6 tecken"
+                  className="w-full px-4 py-3 rounded-xl bg-bg-secondary border border-border-subtle focus:border-accent focus:ring-1 focus:ring-accent outline-none text-text-primary font-mono"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => { setShowPasswordModal(null); setNewPassword('') }}
+                  className="flex-1 px-4 py-3 rounded-xl bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
+                >
+                  Avbryt
+                </button>
+                <button
+                  onClick={() => handleChangePassword(showPasswordModal.id)}
+                  disabled={passwordLoading || newPassword.length < 6}
+                  className="flex-1 px-4 py-3 rounded-xl bg-accent hover:bg-accent-hover text-white font-medium transition-colors disabled:opacity-50"
+                >
+                  {passwordLoading ? 'Sparar...' : 'Spara'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Company Confirmation Modal (2-step) */}
+      {deleteConfirmCompany && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60] animate-fade-in">
+          <div className="bg-bg-tertiary rounded-2xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-error/10 rounded-xl flex items-center justify-center">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-error">
+                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    <line x1="10" y1="11" x2="10" y2="17" />
+                    <line x1="14" y1="11" x2="14" y2="17" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-text-primary">Ta bort företag</h2>
+                  <p className="text-sm text-text-secondary">{deleteConfirmCompany.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setDeleteConfirmCompany(null); setDeleteConfirmStep(1); setDeleteConfirmText('') }}
+                className="p-2 hover:bg-bg-secondary rounded-lg transition-colors text-text-tertiary hover:text-text-primary"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {deleteConfirmStep === 1 ? (
+                <>
+                  <div className="p-4 rounded-xl bg-error/10 border border-error/20">
+                    <p className="text-error font-medium mb-2">Varning!</p>
+                    <p className="text-sm text-text-secondary">
+                      Detta kommer permanent ta bort företaget <strong>{deleteConfirmCompany.name}</strong> och all dess data:
+                    </p>
+                    <ul className="text-sm text-text-secondary mt-2 list-disc list-inside space-y-1">
+                      <li>Alla widgets</li>
+                      <li>All kunskapsbas</li>
+                      <li>Alla konversationer</li>
+                      <li>All statistik</li>
+                    </ul>
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => { setDeleteConfirmCompany(null); setDeleteConfirmStep(1) }}
+                      className="flex-1 px-4 py-3 rounded-xl bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
+                    >
+                      Avbryt
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmStep(2)}
+                      className="flex-1 px-4 py-3 rounded-xl bg-error hover:bg-error/80 text-white font-medium transition-colors"
+                    >
+                      Fortsätt
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="p-4 rounded-xl bg-error/10 border border-error/20">
+                    <p className="text-error font-medium mb-2">Bekräfta borttagning</p>
+                    <p className="text-sm text-text-secondary">
+                      Skriv <strong className="font-mono">{deleteConfirmCompany.id}</strong> för att bekräfta:
+                    </p>
+                  </div>
+                  <input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder={deleteConfirmCompany.id}
+                    className="w-full px-4 py-3 rounded-xl bg-bg-secondary border border-border-subtle focus:border-error focus:ring-1 focus:ring-error outline-none text-text-primary font-mono"
+                    autoFocus
+                  />
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => setDeleteConfirmStep(1)}
+                      className="flex-1 px-4 py-3 rounded-xl bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
+                    >
+                      Tillbaka
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCompany(deleteConfirmCompany.id)}
+                      disabled={deleteConfirmText !== deleteConfirmCompany.id}
+                      className="flex-1 px-4 py-3 rounded-xl bg-error hover:bg-error/80 text-white font-medium transition-colors disabled:opacity-50"
+                    >
+                      Ta bort permanent
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Company Dashboard Modal */}
       {showCompanyDashboard && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50 animate-fade-in">
@@ -2171,9 +2407,15 @@ function SuperAdmin() {
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {companyWidgets.map((widget) => (
-                        <div key={widget.id} className="bg-bg-secondary hover:bg-bg-primary rounded-xl p-4 flex items-center gap-3 border border-transparent hover:border-border-subtle transition-all group">
+                        <div key={widget.id} className={`rounded-xl p-4 flex items-center gap-3 border transition-all group ${
+                          widget.is_active
+                            ? 'bg-bg-secondary hover:bg-bg-primary border-transparent hover:border-border-subtle'
+                            : 'bg-bg-secondary/50 border-border-subtle opacity-60'
+                        }`}>
                           <div
-                            className="w-11 h-11 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform"
+                            className={`w-11 h-11 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-sm transition-transform ${
+                              widget.is_active ? 'group-hover:scale-105' : 'grayscale'
+                            }`}
                             style={{ backgroundColor: widget.primary_color || '#D97757' }}
                           >
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -2201,10 +2443,27 @@ function SuperAdmin() {
                               </span>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-xs text-text-tertiary font-mono bg-bg-tertiary px-2 py-1 rounded-lg truncate max-w-[100px]" title={widget.widget_key}>
-                              {widget.widget_key?.slice(0, 8)}...
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-text-tertiary font-mono bg-bg-tertiary px-2 py-1 rounded-lg truncate max-w-[80px]" title={widget.widget_key}>
+                              {widget.widget_key?.slice(0, 6)}...
                             </p>
+                            <button
+                              onClick={() => handleToggleWidget(widget.id)}
+                              className={`p-2 rounded-lg transition-colors ${
+                                widget.is_active
+                                  ? 'bg-warning/10 hover:bg-warning/20 text-warning'
+                                  : 'bg-success/10 hover:bg-success/20 text-success'
+                              }`}
+                              title={widget.is_active ? 'Inaktivera widget' : 'Aktivera widget'}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                {widget.is_active ? (
+                                  <><circle cx="12" cy="12" r="10" /><path d="M15 9l-6 6M9 9l6 6" /></>
+                                ) : (
+                                  <><circle cx="12" cy="12" r="10" /><polyline points="9 12 11 14 15 10" /></>
+                                )}
+                              </svg>
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -2534,14 +2793,37 @@ function SuperAdmin() {
                     Skapa offert
                   </button>
                   <button
-                    onClick={() => { setShowCompanyDashboard(null); handleToggle(showCompanyDashboard.id) }}
-                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
+                    onClick={() => handleToggle(showCompanyDashboard.id)}
+                    className={`flex items-center gap-2.5 px-5 py-2.5 rounded-lg font-medium transition-colors ${
+                      showCompanyDashboard.is_active
+                        ? 'bg-warning/10 hover:bg-warning/20 border border-warning/30 text-warning'
+                        : 'bg-success/10 hover:bg-success/20 border border-success/30 text-success'
+                    }`}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <circle cx="12" cy="12" r="10" />
                       {showCompanyDashboard.is_active ? <path d="M15 9l-6 6M9 9l6 6" /> : <polyline points="9 12 11 14 15 10" />}
                     </svg>
                     {showCompanyDashboard.is_active ? 'Inaktivera' : 'Aktivera'}
+                  </button>
+                  <button
+                    onClick={() => setShowPasswordModal(showCompanyDashboard)}
+                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    Ändra lösenord
+                  </button>
+                  <button
+                    onClick={() => setDeleteConfirmCompany(showCompanyDashboard)}
+                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-error/10 hover:bg-error/20 border border-error/30 text-error font-medium transition-colors"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                    Ta bort
                   </button>
                 </div>
               </div>

@@ -88,6 +88,36 @@ function App() {
     return saved ? JSON.parse(saved) : null
   })
 
+  // Company status (for showing inactive overlay)
+  const [companyStatus, setCompanyStatus] = useState(null)
+
+  // Fetch company status
+  const fetchCompanyStatus = async () => {
+    if (!auth?.token) return
+    try {
+      const response = await fetch(`${API_BASE}/company/status`, {
+        headers: { 'Authorization': `Bearer ${auth.token}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setCompanyStatus(data)
+      }
+    } catch (e) {
+      console.error('Could not fetch company status:', e)
+    }
+  }
+
+  useEffect(() => {
+    if (auth) {
+      fetchCompanyStatus()
+      // Check status every 2 minutes
+      const interval = setInterval(fetchCompanyStatus, 2 * 60 * 1000)
+      return () => clearInterval(interval)
+    } else {
+      setCompanyStatus(null)
+    }
+  }, [auth])
+
   useEffect(() => {
     if (auth) {
       localStorage.setItem('bobot_auth', JSON.stringify(auth))
@@ -364,7 +394,7 @@ function App() {
 
   // Authenticated company routes
   return (
-    <AuthContext.Provider value={{ auth, authFetch, darkMode, toggleDarkMode }}>
+    <AuthContext.Provider value={{ auth, authFetch, darkMode, toggleDarkMode, companyStatus }}>
       {/* Skip links for keyboard navigation */}
       <a href="#main-content" className="skip-link">
         Hoppa till huvudinnehåll
@@ -434,6 +464,42 @@ function App() {
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
+
+        {/* Inactive Company Overlay */}
+        {companyStatus && !companyStatus.is_active && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-bg-tertiary rounded-2xl shadow-2xl max-w-md w-full p-8 text-center">
+              <div className="w-16 h-16 bg-error/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-error">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M15 9l-6 6M9 9l6 6" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-text-primary mb-3">Kontot är inaktiverat</h2>
+              <p className="text-text-secondary mb-6">
+                Ditt företagskonto har tillfälligt inaktiverats. Kontakta oss för att lösa detta.
+              </p>
+              <div className="space-y-3">
+                <a
+                  href="mailto:hej@bobot.nu"
+                  className="flex items-center justify-center gap-2 w-full px-6 py-3 rounded-xl bg-accent hover:bg-accent-hover text-white font-medium transition-colors"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                  </svg>
+                  hej@bobot.nu
+                </a>
+                <button
+                  onClick={handleLogout}
+                  className="w-full px-6 py-3 rounded-xl bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
+                >
+                  Logga ut
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AuthContext.Provider>
   )

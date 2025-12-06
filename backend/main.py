@@ -3448,6 +3448,39 @@ async def delete_widget(
 
 
 # =============================================================================
+# Company Status Endpoint (for checking if company/widgets are active)
+# =============================================================================
+
+@app.get("/company/status")
+async def get_company_status(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Get company and widget active status"""
+    company = db.query(Company).filter(Company.id == current["company_id"]).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    widgets = db.query(Widget).filter(Widget.company_id == current["company_id"]).all()
+
+    return {
+        "company_id": company.id,
+        "company_name": company.name,
+        "is_active": company.is_active,
+        "widgets": [
+            {
+                "id": w.id,
+                "name": w.name,
+                "widget_key": w.widget_key,
+                "widget_type": w.widget_type,
+                "is_active": w.is_active
+            }
+            for w in widgets
+        ]
+    }
+
+
+# =============================================================================
 # Settings Endpoints (Autentiserade)
 # =============================================================================
 
@@ -5827,7 +5860,61 @@ async def toggle_company(
         description=f"Företag {status}: {company.name}"
     )
 
-    return {"message": f"Företag {status}"}
+    return {"message": f"Företag {status}", "is_active": company.is_active}
+
+
+class PasswordChangeRequest(BaseModel):
+    new_password: str = Field(..., min_length=6, max_length=100)
+
+
+@app.put("/admin/companies/{company_id}/password")
+async def change_company_password(
+    company_id: str,
+    request: PasswordChangeRequest,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Ändra lösenord för ett företag (admin only)"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    company.password_hash = hash_password(request.new_password)
+    db.commit()
+
+    # Log admin action
+    log_admin_action(
+        db, admin["username"], "change_password",
+        target_company_id=company_id,
+        description=f"Ändrade lösenord för: {company.name}"
+    )
+
+    return {"message": "Lösenord ändrat"}
+
+
+@app.put("/admin/widgets/{widget_id}/toggle")
+async def toggle_widget(
+    widget_id: int,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Aktivera/inaktivera en widget (admin only)"""
+    widget = db.query(Widget).filter(Widget.id == widget_id).first()
+    if not widget:
+        raise HTTPException(status_code=404, detail="Widget finns inte")
+
+    widget.is_active = not widget.is_active
+    db.commit()
+
+    # Log admin action
+    status = "aktiverad" if widget.is_active else "inaktiverad"
+    log_admin_action(
+        db, admin["username"], "toggle_widget",
+        target_company_id=widget.company_id,
+        description=f"Widget {status}: {widget.name}"
+    )
+
+    return {"message": f"Widget {status}", "is_active": widget.is_active}
 
 
 # =============================================================================
