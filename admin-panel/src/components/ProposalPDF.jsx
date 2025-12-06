@@ -360,8 +360,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 20,
     padding: 24,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 2,
+    borderColor: colors.accent,
     marginLeft: 10,
   },
   roleCardHighlight: {
@@ -1056,51 +1056,113 @@ const ProcessPage = () => (
         </View>
       </View>
     </View>
+  </Page>
+)
 
-    {/* Timeline - 4 week trial - 2x2 grid */}
-    <View style={{ marginTop: 30, backgroundColor: colors.white, borderRadius: 16, padding: 20 }}>
-      <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 16 }}>
-        4 veckors provperiod
-      </Text>
-      <View style={{ flexDirection: 'row' }}>
-        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14, marginRight: 6 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
-              <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>1</Text>
-            </View>
-            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 1</Text>
+// SECTION 6: Trial Period Page
+const TrialPeriodPage = () => (
+  <Page size="A4" style={styles.page} wrap={false}>
+    <DotPattern opacity={0.1} spacing={30} />
+    <CornerAccent position="topRight" />
+
+    <View style={styles.pageHeader}>
+      <Text style={styles.pageHeaderTitle}>4 veckors provperiod</Text>
+      <BobotMascotSmall size={36} />
+    </View>
+
+    <Text style={styles.sectionSubtitle}>
+      Testa Bobot utan risk. Under provperioden får ni full tillgång till alla funktioner och personlig support.
+    </Text>
+
+    {/* Week-by-week breakdown */}
+    <View style={{ marginTop: 20 }}>
+      {/* Week 1 */}
+      <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 20, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: colors.primary }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+            <Text style={{ fontSize: 14, color: colors.white, fontWeight: 700 }}>1</Text>
           </View>
-          <Text style={{ fontSize: 9, color: colors.textLight }}>Uppstart & setup av konto och widget</Text>
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Vecka 1: Uppstart & Setup</Text>
+            <Text style={{ fontSize: 10, color: colors.textLight }}>Dag 1-7</Text>
+          </View>
         </View>
-        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14, marginLeft: 6 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
-              <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>2</Text>
-            </View>
-            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 2</Text>
-          </View>
-          <Text style={{ fontSize: 9, color: colors.textLight }}>Bygga och finjustera kunskapsbasen</Text>
+        <View style={{ marginLeft: 44 }}>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Kickoff-möte för att förstå era behov och mål</Text>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Skapa konto och konfigurera grundinställningar</Text>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Anpassa widgetens utseende efter ert varumärke</Text>
+          <Text style={{ fontSize: 10, color: colors.text }}>• Teknisk guide för integration på er hemsida</Text>
         </View>
       </View>
-      <View style={{ flexDirection: 'row', marginTop: 12 }}>
-        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14, marginRight: 6 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
-              <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>3</Text>
-            </View>
-            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 3</Text>
+
+      {/* Week 2 */}
+      <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 20, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: colors.accent }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+            <Text style={{ fontSize: 14, color: colors.white, fontWeight: 700 }}>2</Text>
           </View>
-          <Text style={{ fontSize: 9, color: colors.textLight }}>Testa internt och göra justeringar</Text>
-        </View>
-        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14, marginLeft: 6 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
-              <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>4</Text>
-            </View>
-            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 4</Text>
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Vecka 2: Kunskapsbas</Text>
+            <Text style={{ fontSize: 10, color: colors.textLight }}>Dag 8-14</Text>
           </View>
-          <Text style={{ fontSize: 9, color: colors.textLight }}>Utvärdera resultat och bestäm framtid</Text>
         </View>
+        <View style={{ marginLeft: 44 }}>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Ladda upp era dokument (PDF, Word, Excel)</Text>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Importera FAQ från hemsida eller skriv egna</Text>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Granska och finjustera AI-genererade svar</Text>
+          <Text style={{ fontSize: 10, color: colors.text }}>• Sätt upp kategorier och föreslagna frågor</Text>
+        </View>
+      </View>
+
+      {/* Week 3 */}
+      <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 20, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: colors.primary }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+            <Text style={{ fontSize: 14, color: colors.white, fontWeight: 700 }}>3</Text>
+          </View>
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Vecka 3: Testning</Text>
+            <Text style={{ fontSize: 10, color: colors.textLight }}>Dag 15-21</Text>
+          </View>
+        </View>
+        <View style={{ marginLeft: 44 }}>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Intern testning med utvalda medarbetare</Text>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Identifiera kunskapsluckor och finjustera</Text>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Genomgång av första statistiken och insikter</Text>
+          <Text style={{ fontSize: 10, color: colors.text }}>• Förberedelser inför extern lansering</Text>
+        </View>
+      </View>
+
+      {/* Week 4 */}
+      <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 20, borderLeftWidth: 4, borderLeftColor: colors.accent }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+            <Text style={{ fontSize: 14, color: colors.white, fontWeight: 700 }}>4</Text>
+          </View>
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>Vecka 4: Utvärdering</Text>
+            <Text style={{ fontSize: 10, color: colors.textLight }}>Dag 22-28</Text>
+          </View>
+        </View>
+        <View style={{ marginLeft: 44 }}>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Soft launch för externa besökare (valfritt)</Text>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Analysera resultat och ROI-potential</Text>
+          <Text style={{ fontSize: 10, color: colors.text, marginBottom: 4 }}>• Avslutande möte för att gå igenom upplevelsen</Text>
+          <Text style={{ fontSize: 10, color: colors.text }}>• Beslut om fortsatt samarbete – helt utan bindningstid</Text>
+        </View>
+      </View>
+    </View>
+
+    {/* Bottom note */}
+    <View style={{ marginTop: 20, backgroundColor: colors.slateLight, borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center' }}>
+      <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+        <IconCheck size={20} color={colors.white} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text, marginBottom: 4 }}>Ingen risk, full transparens</Text>
+        <Text style={{ fontSize: 10, color: colors.textLight, lineHeight: 1.5 }}>
+          Om ni inte är nöjda efter 4 veckor avslutar vi samarbetet utan extra kostnad. Ni behåller all kunskap och erfarenhet.
+        </Text>
       </View>
     </View>
   </Page>
@@ -1348,6 +1410,7 @@ const ProposalDocument = ({
       <JobDescriptionPage />
       <CustomizationPage />
       <ProcessPage />
+      <TrialPeriodPage />
       <PricingPage
         startupFee={startupFee}
         monthlyFee={monthlyFee}
