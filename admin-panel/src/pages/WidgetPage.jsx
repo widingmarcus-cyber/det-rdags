@@ -276,6 +276,8 @@ function WidgetPage({ widgetType }) {
           })
           fetchKnowledge(existingWidget.id)
           setPreviewMessages([{ type: 'bot', text: existingWidget.welcome_message || 'Hej! Hur kan jag hjälpa dig idag?' }])
+          setFeedbackGiven({}) // Reset feedback state when loading widget
+          setExpandedSources({}) // Reset expanded sources state when loading widget
         } else {
           await createWidget()
         }
@@ -333,6 +335,8 @@ function WidgetPage({ widgetType }) {
           start_expanded: newWidget.start_expanded ?? false
         })
         setPreviewMessages([{ type: 'bot', text: newWidget.welcome_message }])
+        setFeedbackGiven({}) // Reset feedback state when creating widget
+        setExpandedSources({}) // Reset expanded sources state when creating widget
       }
     } catch (e) {
       setError('Kunde inte skapa widget: ' + e.message)
@@ -690,6 +694,7 @@ function WidgetPage({ widgetType }) {
   const resetPreview = () => {
     setPreviewMessages([{ type: 'bot', text: formData?.welcome_message || 'Hej! Hur kan jag hjälpa dig?' }])
     setFeedbackGiven({})
+    setExpandedSources({})
   }
 
   const handlePreviewFeedback = async (msgIndex, helpful) => {
