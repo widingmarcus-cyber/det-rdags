@@ -404,14 +404,200 @@ function SuperAdmin() {
       })
 
       if (response.ok) {
-        showNotification(`Faktura markerad som ${status === 'paid' ? 'betald' : status}`, 'success')
+        showNotification(`Faktura markerad som ${status === 'paid' ? 'betald' : 'obetald'}`, 'success')
         fetchBilling()
+        // Also refresh company modal invoices if open
+        if (showCompanyDashboard) {
+          const invoicesRes = await adminFetch(`${API_BASE}/admin/companies/${showCompanyDashboard.id}/invoices`)
+          if (invoicesRes.ok) {
+            const invoicesData = await invoicesRes.json()
+            setCompanyInvoices(invoicesData.invoices || [])
+          }
+        }
       } else {
         showNotification('Kunde inte uppdatera faktura', 'error')
       }
     } catch (error) {
       console.error('Failed to update invoice:', error)
     }
+  }
+
+  // Generate Swedish standard invoice PDF
+  const handleExportInvoicePDF = (invoice) => {
+    // Create PDF content in new window for printing
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      showNotification('Popup blockerad - tillåt popup för att exportera PDF', 'error')
+      return
+    }
+
+    const invoiceDate = new Date(invoice.created_at).toLocaleDateString('sv-SE')
+    const dueDate = invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('sv-SE') : 'Vid anfordran'
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="sv">
+      <head>
+        <meta charset="UTF-8">
+        <title>Faktura ${invoice.invoice_number}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #1a1a1a; padding: 40px; }
+          .invoice { max-width: 800px; margin: 0 auto; }
+          .header { display: flex; justify-content: space-between; margin-bottom: 50px; }
+          .logo { font-size: 24pt; font-weight: bold; color: #D97757; }
+          .invoice-title { text-align: right; }
+          .invoice-title h1 { font-size: 28pt; font-weight: 300; color: #333; margin-bottom: 5px; }
+          .invoice-number { font-size: 12pt; color: #666; }
+          .parties { display: flex; justify-content: space-between; margin-bottom: 40px; }
+          .party { width: 45%; }
+          .party-label { font-size: 9pt; text-transform: uppercase; color: #999; margin-bottom: 10px; letter-spacing: 1px; }
+          .party-name { font-size: 14pt; font-weight: 600; margin-bottom: 5px; }
+          .party-details { font-size: 10pt; color: #666; }
+          .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 40px; padding: 20px; background: #f9f9f9; border-radius: 8px; }
+          .info-item label { font-size: 9pt; text-transform: uppercase; color: #999; display: block; margin-bottom: 5px; }
+          .info-item span { font-size: 11pt; font-weight: 500; }
+          .table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+          .table th { text-align: left; padding: 15px 10px; border-bottom: 2px solid #333; font-size: 9pt; text-transform: uppercase; color: #666; }
+          .table td { padding: 15px 10px; border-bottom: 1px solid #eee; }
+          .table .amount { text-align: right; }
+          .totals { display: flex; justify-content: flex-end; margin-bottom: 40px; }
+          .totals-table { width: 300px; }
+          .totals-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+          .totals-row.total { border-bottom: none; border-top: 2px solid #333; font-size: 14pt; font-weight: 600; padding-top: 15px; }
+          .payment-info { background: #f9f9f9; padding: 25px; border-radius: 8px; margin-bottom: 30px; }
+          .payment-info h3 { font-size: 11pt; margin-bottom: 15px; color: #333; }
+          .payment-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+          .payment-item label { font-size: 9pt; color: #999; display: block; margin-bottom: 3px; }
+          .payment-item span { font-size: 10pt; font-weight: 500; }
+          .footer { text-align: center; font-size: 9pt; color: #999; padding-top: 30px; border-top: 1px solid #eee; }
+          .status { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 10pt; font-weight: 500; }
+          .status.paid { background: #d4edda; color: #155724; }
+          .status.pending { background: #fff3cd; color: #856404; }
+          @media print { body { padding: 20px; } .invoice { max-width: 100%; } }
+        </style>
+      </head>
+      <body>
+        <div class="invoice">
+          <div class="header">
+            <div class="logo">Bobot</div>
+            <div class="invoice-title">
+              <h1>FAKTURA</h1>
+              <div class="invoice-number">${invoice.invoice_number}</div>
+            </div>
+          </div>
+
+          <div class="parties">
+            <div class="party">
+              <div class="party-label">Från</div>
+              <div class="party-name">Bobot AB</div>
+              <div class="party-details">
+                AI Chatbot-plattform<br>
+                info@bobot.nu<br>
+                bobot.nu
+              </div>
+            </div>
+            <div class="party">
+              <div class="party-label">Till</div>
+              <div class="party-name">${invoice.company_name || 'Kund'}</div>
+              <div class="party-details">
+                ${invoice.billing_email || ''}
+              </div>
+            </div>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-item">
+              <label>Fakturadatum</label>
+              <span>${invoiceDate}</span>
+            </div>
+            <div class="info-item">
+              <label>Förfallodatum</label>
+              <span>${dueDate}</span>
+            </div>
+            <div class="info-item">
+              <label>Fakturanummer</label>
+              <span>${invoice.invoice_number}</span>
+            </div>
+            <div class="info-item">
+              <label>Status</label>
+              <span class="status ${invoice.status}">${invoice.status === 'paid' ? 'BETALD' : 'OBETALD'}</span>
+            </div>
+          </div>
+
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Beskrivning</th>
+                <th class="amount">Belopp</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>${invoice.description || 'Tjänster'}</td>
+                <td class="amount">${invoice.amount?.toLocaleString('sv-SE')} ${invoice.currency || 'SEK'}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <div class="totals-table">
+              <div class="totals-row">
+                <span>Summa exkl. moms</span>
+                <span>${(invoice.amount * 0.8)?.toLocaleString('sv-SE', { minimumFractionDigits: 2 })} ${invoice.currency || 'SEK'}</span>
+              </div>
+              <div class="totals-row">
+                <span>Moms (25%)</span>
+                <span>${(invoice.amount * 0.2)?.toLocaleString('sv-SE', { minimumFractionDigits: 2 })} ${invoice.currency || 'SEK'}</span>
+              </div>
+              <div class="totals-row total">
+                <span>Att betala</span>
+                <span>${invoice.amount?.toLocaleString('sv-SE')} ${invoice.currency || 'SEK'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="payment-info">
+            <h3>Betalningsinformation</h3>
+            <div class="payment-grid">
+              <div class="payment-item">
+                <label>Bankgiro</label>
+                <span>XXXX-XXXX</span>
+              </div>
+              <div class="payment-item">
+                <label>Swish</label>
+                <span>XXX XXX XX XX</span>
+              </div>
+              <div class="payment-item">
+                <label>OCR/Referens</label>
+                <span>${invoice.invoice_number}</span>
+              </div>
+              <div class="payment-item">
+                <label>Betalningsvillkor</label>
+                <span>30 dagar netto</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p>Bobot AB | Org.nr: XXX XXX-XXXX | VAT: SE XXXX XXXX XX 01</p>
+            <p>Vid frågor, kontakta faktura@bobot.nu</p>
+          </div>
+        </div>
+        <script>
+          window.onload = function() {
+            window.print();
+          }
+        </script>
+      </body>
+      </html>
+    `)
+    printWindow.document.close()
+  }
+
+  // Email invoice handler (placeholder for future email setup)
+  const handleEmailInvoice = (invoice) => {
+    showNotification('E-postfunktion kommer snart! Faktura-PDF kan exporteras och skickas manuellt.', 'info')
   }
 
   const fetchPricingTiers = async () => {
@@ -1912,6 +2098,8 @@ function SuperAdmin() {
             billingLoading={billingLoading}
             onCreateInvoice={() => setShowCreateInvoiceModal(true)}
             onUpdateInvoiceStatus={handleUpdateInvoiceStatus}
+            onExportInvoicePDF={handleExportInvoicePDF}
+            onEmailInvoice={handleEmailInvoice}
           />
         )}
 
@@ -2783,36 +2971,79 @@ function SuperAdmin() {
                           <p className="text-sm text-text-secondary">Inga fakturor ännu</p>
                         </div>
                       ) : (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {companyInvoices.map((invoice) => (
-                            <div key={invoice.id} className="flex items-center justify-between p-3 rounded-lg bg-bg-secondary">
-                              <div className="flex items-center gap-3">
-                                <div className={`w-2 h-2 rounded-full ${
-                                  invoice.status === 'paid' ? 'bg-green-500' :
-                                  invoice.status === 'overdue' ? 'bg-red-500' :
-                                  'bg-amber-500'
-                                }`} />
-                                <div>
-                                  <p className="text-sm text-text-primary font-medium">{invoice.invoice_number}</p>
-                                  <p className="text-xs text-text-tertiary">{invoice.description}</p>
+                            <div key={invoice.id} className="p-3 rounded-lg bg-bg-secondary">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-2 h-2 rounded-full ${
+                                    invoice.status === 'paid' ? 'bg-green-500' :
+                                    invoice.status === 'overdue' ? 'bg-red-500' :
+                                    'bg-amber-500'
+                                  }`} />
+                                  <div>
+                                    <p className="text-sm text-text-primary font-medium">{invoice.invoice_number}</p>
+                                    <p className="text-xs text-text-tertiary">{invoice.description}</p>
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="flex items-center gap-3">
                                 <div className="text-right">
                                   <p className="text-sm font-medium text-text-primary">{invoice.amount?.toLocaleString('sv-SE')} kr</p>
                                   <p className="text-xs text-text-tertiary">
                                     {invoice.status === 'paid' ? 'Betald' : invoice.status === 'overdue' ? 'Förfallen' : 'Obetald'}
                                   </p>
                                 </div>
+                              </div>
+                              {/* Action buttons */}
+                              <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border-subtle">
+                                {invoice.status === 'pending' ? (
+                                  <button
+                                    onClick={() => handleUpdateInvoiceStatus(invoice.id, 'paid')}
+                                    className="flex-1 text-xs bg-green-100 text-green-700 px-2 py-1.5 rounded hover:bg-green-200 transition-all flex items-center justify-center gap-1"
+                                  >
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                    Markera betald
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => {
+                                      if (window.confirm('Är du säker på att du vill ångra betalningen för denna faktura?')) {
+                                        handleUpdateInvoiceStatus(invoice.id, 'pending')
+                                      }
+                                    }}
+                                    className="flex-1 text-xs bg-amber-100 text-amber-700 px-2 py-1.5 rounded hover:bg-amber-200 transition-all flex items-center justify-center gap-1"
+                                  >
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                      <path d="M3 3v5h5" />
+                                    </svg>
+                                    Ångra
+                                  </button>
+                                )}
                                 <button
-                                  onClick={() => handleUpdateInvoiceStatus(invoice.id, invoice.status === 'paid' ? 'pending' : 'paid')}
-                                  className={`px-2 py-1 rounded text-xs font-medium ${
-                                    invoice.status === 'paid'
-                                      ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                                      : 'bg-green-100 text-green-700 hover:bg-green-200'
-                                  }`}
+                                  onClick={() => handleExportInvoicePDF({...invoice, company_name: showCompanyDashboard.name, billing_email: showCompanyDashboard.billing_email})}
+                                  className="text-xs bg-bg-primary text-text-secondary px-2 py-1.5 rounded hover:bg-bg-tertiary border border-border-subtle transition-all flex items-center gap-1"
+                                  title="Exportera PDF"
                                 >
-                                  {invoice.status === 'paid' ? 'Markera obetald' : 'Markera betald'}
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                    <line x1="12" y1="18" x2="12" y2="12" />
+                                    <polyline points="9 15 12 18 15 15" />
+                                  </svg>
+                                  PDF
+                                </button>
+                                <button
+                                  onClick={() => handleEmailInvoice(invoice)}
+                                  className="text-xs bg-accent/10 text-accent px-2 py-1.5 rounded hover:bg-accent/20 transition-all flex items-center gap-1"
+                                  title="Skicka e-post"
+                                >
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                                    <polyline points="22,6 12,13 2,6" />
+                                  </svg>
+                                  E-post
                                 </button>
                               </div>
                             </div>
