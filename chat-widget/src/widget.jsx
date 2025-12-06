@@ -389,15 +389,16 @@ const injectStyles = (fontFamily, borderRadius) => {
     @media (max-width: 640px) {
       .bobot-widget-window {
         position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        max-height: none !important;
-        border-radius: 0 !important;
+        top: 12px !important;
+        left: 12px !important;
+        right: 12px !important;
+        bottom: 12px !important;
+        width: calc(100vw - 24px) !important;
+        height: calc(100vh - 24px) !important;
+        max-height: calc(100vh - 24px) !important;
+        border-radius: 16px !important;
         z-index: 100000 !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
       }
       .bobot-widget-trigger {
         bottom: 16px !important;
