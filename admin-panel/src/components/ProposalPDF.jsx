@@ -918,66 +918,34 @@ const CustomizationPage = () => (
       </View>
     </View>
 
-    {/* Language support - expanded section */}
+    {/* Language support - simplified */}
     <View style={{ marginTop: 20 }}>
       <Text style={{ fontSize: 13, fontWeight: 600, color: colors.text, marginBottom: 12 }}>
         Språkstöd
       </Text>
-      <View style={{ flexDirection: 'row', gap: 12 }}>
-        {/* Main languages */}
-        <View style={{ flex: 2, backgroundColor: colors.white, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: colors.border }}>
-          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Inbyggda språk</Text>
-          <View style={{ flexDirection: 'row', gap: 16 }}>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={{ fontSize: 14, marginRight: 6 }}>🇸🇪</Text>
-                <View>
-                  <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Svenska</Text>
-                  <Text style={{ fontSize: 8, color: colors.textLight }}>Fullt stöd (primärt)</Text>
-                </View>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={{ fontSize: 14, marginRight: 6 }}>🇬🇧</Text>
-                <View>
-                  <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Engelska</Text>
-                  <Text style={{ fontSize: 8, color: colors.textLight }}>Fullt stöd</Text>
-                </View>
-              </View>
-            </View>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={{ fontSize: 14, marginRight: 6 }}>🇸🇦</Text>
-                <View>
-                  <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Arabiska</Text>
-                  <Text style={{ fontSize: 8, color: colors.textLight }}>Med RTL-stöd</Text>
-                </View>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={{ fontSize: 14, marginRight: 6 }}>🌐</Text>
-                <View>
-                  <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Fler på begäran</Text>
-                  <Text style={{ fontSize: 8, color: colors.textLight }}>Kontakta oss</Text>
-                </View>
-              </View>
-            </View>
+      <View style={{ backgroundColor: colors.white, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: colors.border }}>
+        <View style={{ flexDirection: 'row', gap: 20 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 8 }}>Flerspråkig chatbot</Text>
+            <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
+              Bobot kan kommunicera på det språk era kunder och medarbetare föredrar. Språkstöd konfigureras efter era behov vid uppstart.
+            </Text>
           </View>
-        </View>
-
-        {/* Technical details */}
-        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 16 }}>
-          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.accent, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tekniskt</Text>
-          <View style={{ gap: 8 }}>
-            <View>
-              <Text style={{ fontSize: 9, color: colors.text, fontWeight: 500 }}>Automatisk detektering</Text>
-              <Text style={{ fontSize: 8, color: colors.textLight, lineHeight: 1.4 }}>Bobot identifierar användarens språk automatiskt</Text>
-            </View>
-            <View>
-              <Text style={{ fontSize: 9, color: colors.text, fontWeight: 500 }}>RTL-rendering</Text>
-              <Text style={{ fontSize: 8, color: colors.textLight, lineHeight: 1.4 }}>Höger-till-vänster för arabiska och hebreiska</Text>
-            </View>
-            <View>
-              <Text style={{ fontSize: 9, color: colors.text, fontWeight: 500 }}>Unicode-stöd</Text>
-              <Text style={{ fontSize: 8, color: colors.textLight, lineHeight: 1.4 }}>Stöd för alla tecken via UTF-8</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 10, fontWeight: 600, color: colors.accent, marginBottom: 8 }}>Tekniska möjligheter</Text>
+            <View style={{ gap: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={[styles.featureBullet, { width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent }]}><IconCheck size={8} color={colors.white} /></View>
+                <Text style={{ fontSize: 9, color: colors.text }}>Automatisk språkdetektering</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={[styles.featureBullet, { width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent }]}><IconCheck size={8} color={colors.white} /></View>
+                <Text style={{ fontSize: 9, color: colors.text }}>RTL-stöd (höger-till-vänster)</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={[styles.featureBullet, { width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent }]}><IconCheck size={8} color={colors.white} /></View>
+                <Text style={{ fontSize: 9, color: colors.text }}>Fullt Unicode/UTF-8-stöd</Text>
+              </View>
             </View>
           </View>
         </View>
@@ -1177,11 +1145,11 @@ const PricingPage = ({ startupFee, monthlyFee, tier, discount, pricingTiers = []
             <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 8 }}>
               <Text style={{ fontSize: 8, fontWeight: 600, color: colors.text, marginBottom: 4 }}>Inkluderar:</Text>
               <View style={{ gap: 2 }}>
-                <Text style={{ fontSize: 7, color: colors.text }}>• Svenska servrar (GDPR-kompatibelt)</Text>
+                <Text style={{ fontSize: 7, color: colors.text }}>• EU-servrar (fullt GDPR-kompatibelt)</Text>
+                <Text style={{ fontSize: 7, color: colors.text }}>• Möjlighet till dedikerad svensk hosting</Text>
                 <Text style={{ fontSize: 7, color: colors.text }}>• SSL-certifikat & domänhantering</Text>
                 <Text style={{ fontSize: 7, color: colors.text }}>• Automatiska uppdateringar & backup</Text>
                 <Text style={{ fontSize: 7, color: colors.text }}>• 99.9% upptidgaranti (SLA)</Text>
-                <Text style={{ fontSize: 7, color: colors.text }}>• Teknisk support via e-post</Text>
               </View>
             </View>
             <View style={{ marginTop: 8, backgroundColor: colors.slateLight, borderRadius: 6, padding: 8 }}>
