@@ -543,6 +543,30 @@ function ChatWidget({ config }) {
     return () => document.removeEventListener('keydown', handleKey)
   }, [isOpen, showMenu])
 
+  // Lock body scroll on mobile when widget is open
+  useEffect(() => {
+    const isMobile = window.innerWidth <= 640
+    if (isOpen && isMobile) {
+      // Save current scroll position and lock body
+      const scrollY = window.scrollY
+      document.body.style.position = 'fixed'
+      document.body.style.top = `-${scrollY}px`
+      document.body.style.left = '0'
+      document.body.style.right = '0'
+      document.body.style.overflow = 'hidden'
+
+      return () => {
+        // Restore scroll position when closing
+        document.body.style.position = ''
+        document.body.style.top = ''
+        document.body.style.left = ''
+        document.body.style.right = ''
+        document.body.style.overflow = ''
+        window.scrollTo(0, scrollY)
+      }
+    }
+  }, [isOpen])
+
   const needsConsent = () => {
     if (!widgetConfig?.require_consent) return false
     return !consentGiven

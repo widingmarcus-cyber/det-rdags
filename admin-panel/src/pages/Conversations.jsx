@@ -411,58 +411,58 @@ function Conversations() {
           </div>
 
           {/* Selected conversation - hidden on mobile when nothing selected */}
-          <div className={`flex-1 ${!selectedConversation && !loadingDetails ? 'hidden md:block' : ''}`}>
+          <div className={`flex-1 w-full min-w-0 ${!selectedConversation && !loadingDetails ? 'hidden md:block' : ''}`}>
             {loadingDetails ? (
               <div className="card text-center py-12">
                 <p className="text-text-tertiary">Laddar konversation...</p>
               </div>
             ) : selectedConversation ? (
-              <div className="card">
-                <div className="flex items-center justify-between mb-4 pb-4 border-b border-border-subtle">
-                  <div className="flex items-center gap-3">
+              <div className="card overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 pb-4 border-b border-border-subtle">
+                  <div className="flex items-start gap-3 min-w-0">
                     {/* Back button for mobile */}
                     <button
                       onClick={() => setSelectedConversation(null)}
-                      className="md:hidden p-2 -ml-2 rounded-lg hover:bg-bg-secondary transition-colors text-text-secondary"
+                      className="md:hidden p-2 -ml-2 rounded-lg hover:bg-bg-secondary transition-colors text-text-secondary flex-shrink-0"
                       aria-label="Tillbaka till listan"
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <polyline points="15 18 9 12 15 6" />
                       </svg>
                     </button>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h3 className="font-medium text-text-primary">Konversation</h3>
-                      <span className="text-sm font-mono text-accent bg-accent-soft px-2 py-0.5 rounded">
-                        {selectedConversation.reference_id}
-                      </span>
-                      {selectedConversation.widget_type && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          selectedConversation.widget_type === 'external'
-                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                            : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                        }`}>
-                          {selectedConversation.widget_type === 'external' ? 'Extern widget' : 'Intern widget'}
+                        <span className="text-sm font-mono text-accent bg-accent-soft px-2 py-0.5 rounded break-all">
+                          {selectedConversation.reference_id}
                         </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-text-tertiary flex-wrap">
-                      <span>{formatDate(selectedConversation.started_at)}</span>
-                      <span className="hidden sm:inline">•</span>
-                      <span>{selectedConversation.message_count} meddelanden</span>
-                      {selectedConversation.category && (
-                        <>
-                          <span className="hidden sm:inline">•</span>
-                          <span className="capitalize">{selectedConversation.category}</span>
-                        </>
-                      )}
-                    </div>
+                        {selectedConversation.widget_type && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
+                            selectedConversation.widget_type === 'external'
+                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                              : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                          }`}>
+                            {selectedConversation.widget_type === 'external' ? 'Extern' : 'Intern'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-text-tertiary flex-wrap">
+                        <span>{formatDate(selectedConversation.started_at)}</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span>{selectedConversation.message_count} meddelanden</span>
+                        {selectedConversation.category && (
+                          <>
+                            <span className="hidden sm:inline">•</span>
+                            <span className="capitalize">{selectedConversation.category}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <button
                     onClick={() => handleDelete(selectedConversation.id)}
                     disabled={deleteLoading}
-                    className="btn btn-ghost text-error hover:bg-error-soft text-sm py-2 disabled:opacity-50"
+                    className="btn btn-ghost text-error hover:bg-error-soft text-sm py-2 disabled:opacity-50 flex-shrink-0 self-start sm:self-auto"
                   >
                     {deleteLoading ? (
                       <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -478,14 +478,14 @@ function Conversations() {
                   </button>
                 </div>
 
-                <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                <div className="space-y-4 max-h-[400px] sm:max-h-[500px] overflow-y-auto overflow-x-hidden pr-2">
                   {selectedConversation.messages?.map((msg) => (
                     <div
                       key={msg.id}
                       className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[80%] rounded-xl px-4 py-3 ${
+                        className={`max-w-[85%] sm:max-w-[80%] rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 ${
                           msg.role === 'user'
                             ? 'bg-bg-chat-user text-text-primary'
                             : msg.had_answer === false
