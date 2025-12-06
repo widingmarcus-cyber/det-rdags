@@ -490,9 +490,16 @@ function ChatWidget({ config }) {
           // Consent is NOT persisted - users must accept each session
           // This ensures GDPR compliance by requiring explicit consent
 
-          // Always start fresh - no conversation persistence
-          // Each page refresh starts a new conversation
-          setMessages([{ id: 0, type: 'bot', text: data.welcome_message || t.welcomeMessage, time: Date.now() }])
+          // Check if maintenance mode is enabled
+          if (data.maintenance_mode) {
+            // Show maintenance message instead of welcome message
+            const maintenanceText = data.maintenance_message || t.serviceUnavailable
+            setMessages([{ id: 0, type: 'bot', text: maintenanceText, isError: true, isMaintenance: true, time: Date.now() }])
+          } else {
+            // Always start fresh - no conversation persistence
+            // Each page refresh starts a new conversation
+            setMessages([{ id: 0, type: 'bot', text: data.welcome_message || t.welcomeMessage, time: Date.now() }])
+          }
         } else {
           setMessages([{ id: 0, type: 'bot', text: t.welcomeMessage, time: Date.now() }])
         }
@@ -511,12 +518,12 @@ function ChatWidget({ config }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
-  // Focus input when chat opens
+  // Focus input when chat opens (not during maintenance or consent required)
   useEffect(() => {
-    if (isOpen && inputRef.current && !needsConsent()) {
+    if (isOpen && inputRef.current && !needsConsent() && !widgetConfig?.maintenance_mode) {
       setTimeout(() => inputRef.current?.focus(), 150)
     }
-  }, [isOpen, consentGiven])
+  }, [isOpen, consentGiven, widgetConfig?.maintenance_mode])
 
   // Escape to close
   useEffect(() => {
@@ -533,6 +540,11 @@ function ChatWidget({ config }) {
   const needsConsent = () => {
     if (!widgetConfig?.require_consent) return false
     return !consentGiven
+  }
+
+  // Check if maintenance mode is active
+  const isMaintenanceMode = () => {
+    return widgetConfig?.maintenance_mode === true
   }
 
   const giveConsent = async () => {
@@ -1407,7 +1419,7 @@ function ChatWidget({ config }) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={t.placeholder}
-                disabled={loading || needsConsent()}
+                disabled={loading || needsConsent() || isMaintenanceMode()}
                 style={{
                   flex: 1, padding: '12px 16px', border: `1px solid ${theme.border}`,
                   borderRadius: borderRadius, fontSize: fontSize, outline: 'none',
@@ -1425,11 +1437,11 @@ function ChatWidget({ config }) {
               />
               <button
                 type="submit"
-                disabled={loading || !input.trim()}
+                disabled={loading || !input.trim() || isMaintenanceMode()}
                 style={{
                   width: 44, height: 44, borderRadius: '50%', border: 'none',
-                  background: loading || !input.trim() ? theme.textMuted : primaryColor,
-                  color: '#fff', cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
+                  background: loading || !input.trim() || isMaintenanceMode() ? theme.textMuted : primaryColor,
+                  color: '#fff', cursor: loading || !input.trim() || isMaintenanceMode() ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'transform 0.15s, background 0.15s',
                 }}
