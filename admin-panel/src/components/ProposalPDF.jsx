@@ -849,6 +849,35 @@ const JobDescriptionPage = () => (
           </Text>
         </View>
       </View>
+
+      {/* Hosting options */}
+      <View style={{ marginTop: 16, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 16 }}>
+        <Text style={{ fontSize: 10, fontWeight: 600, color: colors.text, marginBottom: 10 }}>Hosting-alternativ</Text>
+        <View style={{ flexDirection: 'row', gap: 16 }}>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+              <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 6 }}>
+                <IconBolt size={8} color={colors.white} />
+              </View>
+              <Text style={{ fontSize: 9, fontWeight: 600, color: colors.text }}>Bobot Cloud (rekommenderat)</Text>
+            </View>
+            <Text style={{ fontSize: 8, color: colors.textLight, lineHeight: 1.4 }}>
+              Vi hanterar allt – hosting ingår i månadspriset. EU-servrar med 99.9% SLA.
+            </Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+              <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 6 }}>
+                <IconHome size={8} color={colors.white} />
+              </View>
+              <Text style={{ fontSize: 9, fontWeight: 600, color: colors.text }}>Självhostad</Text>
+            </View>
+            <Text style={{ fontSize: 8, color: colors.textLight, lineHeight: 1.4 }}>
+              Full kontroll. Kräver: 16+ GB RAM, 8 CPU, 100 GB SSD, Docker, Linux.
+            </Text>
+          </View>
+        </View>
+      </View>
     </View>
 
     <PageFooter pageNumber={3} />
@@ -994,7 +1023,7 @@ const ProcessPage = () => (
     </View>
 
     <Text style={styles.sectionSubtitle}>
-      Kom igång snabbt med tre enkla steg. Vi hjälper er hela vägen med Bobot Cloud.
+      Kom igång snabbt med tre enkla steg.
     </Text>
 
     <View style={styles.processSteps}>
@@ -1102,7 +1131,7 @@ const PricingPage = ({ startupFee, monthlyFee, tier, discount, pricingTiers = []
       <CornerAccent position="topRight" />
 
       <View style={styles.pageHeader}>
-        <Text style={styles.pageHeaderTitle}>Priser och paket</Text>
+        <Text style={styles.pageHeaderTitle}>Vi rekommenderar</Text>
         <BobotMascotSmall size={36} />
       </View>
 
@@ -1169,82 +1198,6 @@ const PricingPage = ({ startupFee, monthlyFee, tier, discount, pricingTiers = []
                 <Text style={{ fontSize: 9, color: colors.white, fontWeight: 600 }}>{discount}% rabatt</Text>
               </View>
             )}
-          </View>
-        </View>
-      </View>
-
-      {/* Hosting options - expanded */}
-      <View style={{ marginTop: 16 }}>
-        <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text, marginBottom: 10 }}>Hosting-alternativ</Text>
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          {/* Cloud hosting - detailed */}
-          <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 14, borderWidth: 2, borderColor: colors.primary }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 6 }}>
-                <IconBolt size={11} color={colors.white} />
-              </View>
-              <Text style={{ fontSize: 10, fontWeight: 600, color: colors.text }}>Bobot Cloud</Text>
-              <View style={{ marginLeft: 'auto', backgroundColor: colors.accent, borderRadius: 6, paddingVertical: 2, paddingHorizontal: 6 }}>
-                <Text style={{ fontSize: 7, color: colors.white, fontWeight: 600 }}>REKOMMENDERAT</Text>
-              </View>
-            </View>
-            <Text style={{ fontSize: 8, color: colors.textLight, marginBottom: 8, lineHeight: 1.4 }}>
-              Vi hanterar allt tekniskt. Snabbaste sättet att komma igång – klart på en dag.
-            </Text>
-            <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 8 }}>
-              <Text style={{ fontSize: 8, fontWeight: 600, color: colors.text, marginBottom: 4 }}>Inkluderar:</Text>
-              <View style={{ gap: 2 }}>
-                <Text style={{ fontSize: 7, color: colors.text }}>• EU-servrar (fullt GDPR-kompatibelt)</Text>
-                <Text style={{ fontSize: 7, color: colors.text }}>• Möjlighet till dedikerad svensk hosting</Text>
-                <Text style={{ fontSize: 7, color: colors.text }}>• SSL-certifikat & domänhantering</Text>
-                <Text style={{ fontSize: 7, color: colors.text }}>• Automatiska uppdateringar & backup</Text>
-                <Text style={{ fontSize: 7, color: colors.text }}>• 99.9% upptidgaranti (SLA)</Text>
-              </View>
-            </View>
-            <View style={{ marginTop: 8, backgroundColor: colors.slateLight, borderRadius: 6, padding: 8 }}>
-              <Text style={{ fontSize: 9, fontWeight: 600, color: colors.primary }}>Ingår i månadspriset</Text>
-              <Text style={{ fontSize: 7, color: colors.textLight }}>Ingen extra kostnad för hosting</Text>
-            </View>
-          </View>
-
-          {/* Self-hosted - detailed */}
-          <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: colors.border }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 6 }}>
-                <IconHome size={11} color={colors.white} />
-              </View>
-              <Text style={{ fontSize: 10, fontWeight: 600, color: colors.text }}>Självhostad</Text>
-            </View>
-            <Text style={{ fontSize: 8, color: colors.textLight, marginBottom: 8, lineHeight: 1.4 }}>
-              Full kontroll över data och infrastruktur. Kräver teknisk kompetens och egen serverkapacitet.
-            </Text>
-            <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 8 }}>
-              <Text style={{ fontSize: 8, fontWeight: 600, color: colors.text, marginBottom: 4 }}>Serverkrav (minimum):</Text>
-              <View style={{ gap: 2 }}>
-                <Text style={{ fontSize: 7, color: colors.text }}>• 16 GB RAM (32 GB rekommenderat)</Text>
-                <Text style={{ fontSize: 7, color: colors.text }}>• 8 CPU-kärnor</Text>
-                <Text style={{ fontSize: 7, color: colors.text }}>• 100 GB SSD-lagring</Text>
-                <Text style={{ fontSize: 7, color: colors.text }}>• Docker & Docker Compose</Text>
-                <Text style={{ fontSize: 7, color: colors.text }}>• Linux (Ubuntu 22.04+)</Text>
-              </View>
-            </View>
-            <View style={{ marginTop: 8, backgroundColor: colors.slateLight, borderRadius: 6, padding: 8 }}>
-              <Text style={{ fontSize: 8, fontWeight: 600, color: colors.text, marginBottom: 4 }}>Estimerade kostnader:</Text>
-              <View style={{ gap: 2 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={{ fontSize: 7, color: colors.text }}>VPS/Server (månad)</Text>
-                  <Text style={{ fontSize: 7, color: colors.primary, fontWeight: 500 }}>500-2 000 kr</Text>
-                </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={{ fontSize: 7, color: colors.text }}>Installationshjälp</Text>
-                  <Text style={{ fontSize: 7, color: colors.primary, fontWeight: 500 }}>5 000 kr</Text>
-                </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={{ fontSize: 7, color: colors.text }}>Support (per timme)</Text>
-                  <Text style={{ fontSize: 7, color: colors.primary, fontWeight: 500 }}>800 kr</Text>
-                </View>
-              </View>
-            </View>
           </View>
         </View>
       </View>
