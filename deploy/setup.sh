@@ -105,7 +105,7 @@ sleep 10
 
 # Pull Ollama model
 echo "Downloading AI model (this may take a few minutes)..."
-docker exec bobot-ollama ollama pull qwen2.5:14b
+docker exec bobot-ollama ollama pull qwen2.5:7b-instruct
 
 echo ""
 echo "=========================================="
