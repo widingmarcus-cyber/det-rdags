@@ -1065,7 +1065,7 @@ const ProcessPage = () => (
     </View>
 
     {/* Timeline - 4 week trial - 2x2 grid with more detail */}
-    <View style={{ marginTop: 30, backgroundColor: colors.white, borderRadius: 16, padding: 20 }}>
+    <View wrap={false} style={{ marginTop: 30, backgroundColor: colors.white, borderRadius: 16, padding: 20 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>
           4 veckors provperiod

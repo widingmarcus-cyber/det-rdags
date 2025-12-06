@@ -741,10 +741,12 @@ class PricingTier(Base):
     id = Column(Integer, primary_key=True, index=True)
     tier_key = Column(String, unique=True, nullable=False)  # starter, professional, business, enterprise
     name = Column(String, nullable=False)  # Display name
+    description = Column(Text, default="")  # Tier description for proposals
     monthly_fee = Column(Float, default=0)  # Monthly fee in SEK
     startup_fee = Column(Float, default=0)  # One-time startup fee in SEK
     max_conversations = Column(Integer, default=0)  # 0 = unlimited
     max_knowledge_items = Column(Integer, default=0)  # 0 = unlimited
+    max_widgets = Column(Integer, default=0)  # 0 = unlimited
     features = Column(Text, default="[]")  # JSON array of feature descriptions
     is_active = Column(Boolean, default=True)  # Can be disabled
     display_order = Column(Integer, default=0)  # For custom ordering

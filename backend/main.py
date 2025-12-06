@@ -6786,6 +6786,9 @@ async def get_pricing_tiers_from_db(
                 "monthly_fee": tier.monthly_fee,
                 "startup_fee": tier.startup_fee,
                 "max_conversations": tier.max_conversations,
+                "max_knowledge": tier.max_knowledge_items if hasattr(tier, 'max_knowledge_items') else 0,
+                "max_widgets": getattr(tier, 'max_widgets', 0),
+                "description": getattr(tier, 'description', ''),
                 "features": json.loads(tier.features) if tier.features else [],
                 "is_active": tier.is_active,
                 "display_order": tier.display_order
