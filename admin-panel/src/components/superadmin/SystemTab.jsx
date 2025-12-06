@@ -49,8 +49,8 @@ const SystemTab = ({
           <h2 className="text-lg font-medium text-text-primary mb-4">Konfiguration</h2>
           <div className="space-y-4">
             <div className="p-3 rounded-lg bg-bg-secondary">
-              <p className="text-sm text-text-secondary">AI-modell</p>
-              <p className="text-text-primary font-medium">Qwen 2.5 14B</p>
+              <p className="text-sm text-text-secondary">AI-modell (aktiv)</p>
+              <p className="text-text-primary font-medium font-mono">{systemHealth?.ollama_model || 'Laddar...'}</p>
             </div>
             <div className="p-3 rounded-lg bg-bg-secondary">
               <p className="text-sm text-text-secondary">Max retention</p>
@@ -66,6 +66,11 @@ const SystemTab = ({
         {/* Maintenance Mode */}
         <div className="card lg:col-span-2">
           <h2 className="text-lg font-medium text-text-primary mb-4">Underhållsläge</h2>
+          <p className="text-sm text-text-secondary mb-4">
+            När underhållsläge är aktiverat blockeras alla chattwidgets på alla kundsajter.
+            Användare ser ett meddelande om att tjänsten tillfälligt är otillgänglig.
+            Admin-panelen och kunskapshantering fungerar fortfarande.
+          </p>
           <div className="flex items-center justify-between p-4 rounded-lg bg-bg-secondary">
             <div>
               <p className="font-medium text-text-primary">

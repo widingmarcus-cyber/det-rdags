@@ -1890,7 +1890,6 @@ function SuperAdmin() {
             adminPrefs={adminPrefs}
             adminAuth={adminAuth}
             selectedCompanies={selectedCompanies}
-            onToggleDarkMode={handleToggleDarkMode}
             onSetup2FA={handleSetup2FA}
             onExportCompanies={handleExportCompanies}
             onBulkSetLimits={handleBulkSetLimits}
@@ -1899,10 +1898,7 @@ function SuperAdmin() {
 
         {/* Documentation Hub Tab */}
         {activeTab === 'docs' && (
-          <DocsTab
-            onShowAnnouncementModal={() => setShowAnnouncementModal(true)}
-            announcements={announcements}
-          />
+          <DocsTab />
         )}
         </main>
       </div>

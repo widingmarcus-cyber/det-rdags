@@ -7,7 +7,6 @@ const PreferencesTab = ({
   adminPrefs,
   adminAuth,
   selectedCompanies,
-  onToggleDarkMode,
   onSetup2FA,
   onExportCompanies,
   onBulkSetLimits
@@ -20,23 +19,6 @@ const PreferencesTab = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Appearance */}
-        <div className="card">
-          <h3 className="text-lg font-medium text-text-primary mb-4">Utseende</h3>
-          <div className="flex items-center justify-between p-4 bg-bg-secondary rounded-lg">
-            <div>
-              <p className="font-medium text-text-primary">Mörkt läge</p>
-              <p className="text-sm text-text-secondary">Använd mörkt tema i admingränssnittet</p>
-            </div>
-            <button
-              onClick={onToggleDarkMode}
-              className={`w-12 h-6 rounded-full transition-colors ${adminPrefs.dark_mode ? 'bg-accent' : 'bg-bg-primary'}`}
-            >
-              <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${adminPrefs.dark_mode ? 'translate-x-6' : 'translate-x-0.5'}`} />
-            </button>
-          </div>
-        </div>
-
         {/* Security */}
         <div className="card">
           <h3 className="text-lg font-medium text-text-primary mb-4">Säkerhet</h3>
@@ -57,6 +39,11 @@ const PreferencesTab = ({
                 </button>
               )}
             </div>
+            {!adminPrefs.totp_enabled && (
+              <p className="text-xs text-text-tertiary px-1">
+                2FA använder Google Authenticator eller liknande app. Om aktivering misslyckas, kontrollera backend-loggarna.
+              </p>
+            )}
 
             <div className="p-4 bg-bg-secondary rounded-lg">
               <p className="font-medium text-text-primary mb-2">Inloggad som</p>

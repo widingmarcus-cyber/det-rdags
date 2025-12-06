@@ -3,7 +3,7 @@
  * Displays system architecture, guides, and security information
  */
 
-const DocsTab = ({ onShowAnnouncementModal, announcements = [] }) => {
+const DocsTab = () => {
   return (
     <div className="animate-fade-in">
       <div className="mb-6">
@@ -185,56 +185,6 @@ const DocsTab = ({ onShowAnnouncementModal, announcements = [] }) => {
           </div>
         </div>
 
-        {/* Create Announcement */}
-        <div className="lg:col-span-3 card">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-text-primary flex items-center gap-2">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-              </svg>
-              Skicka meddelande till alla kunder
-            </h2>
-            <button
-              onClick={onShowAnnouncementModal}
-              className="btn btn-primary"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              Nytt meddelande
-            </button>
-          </div>
-          <p className="text-sm text-text-secondary">
-            Skapa ett meddelande som visas för alla företagsadministratörer i deras dashboard.
-            Användbart för systemunderhåll, nya funktioner eller viktiga uppdateringar.
-          </p>
-          {announcements.length > 0 && (
-            <div className="mt-4 space-y-2">
-              <p className="text-sm text-text-tertiary">{announcements.length} aktiva meddelanden:</p>
-              {announcements.slice(0, 3).map((announcement) => (
-                <div key={announcement.id} className={`p-3 rounded-lg border ${
-                  announcement.type === 'warning' ? 'bg-warning/10 border-warning/30' :
-                  announcement.type === 'maintenance' ? 'bg-error/10 border-error/30' :
-                  'bg-accent/10 border-accent/30'
-                }`}>
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-text-primary text-sm">{announcement.title}</p>
-                    {announcement.target_company_name && (
-                      <span className="text-xs px-1.5 py-0.5 bg-accent/20 text-accent rounded">
-                        {announcement.target_company_name}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-text-secondary truncate">{announcement.message}</p>
-                </div>
-              ))}
-              {announcements.length > 3 && (
-                <p className="text-xs text-text-tertiary">+{announcements.length - 3} fler...</p>
-              )}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   )
