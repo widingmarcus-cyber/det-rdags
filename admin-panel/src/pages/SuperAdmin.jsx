@@ -2688,6 +2688,96 @@ function SuperAdmin() {
                   </div>
                 </div>
 
+                {/* Self-Hosting Section */}
+                {selfHostingStatus && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
+                      <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-blue-500">
+                          <path d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                        </svg>
+                      </div>
+                      Self-Hosting
+                    </h3>
+                    <div className="bg-bg-secondary rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${
+                            selfHostingStatus.is_self_hosted
+                              ? 'bg-success-soft text-success'
+                              : selfHostingStatus.self_host_available
+                                ? 'bg-gray-100 text-gray-600'
+                                : 'bg-gray-100 text-gray-400'
+                          }`}>
+                            {selfHostingStatus.is_self_hosted ? 'Aktiverat' : selfHostingStatus.self_host_available ? 'Tillgängligt' : 'Ej tillgängligt'}
+                          </span>
+                          <span className="text-xs text-text-tertiary">
+                            {selfHostingStatus.tier && `(${selfHostingStatus.tier})`}
+                          </span>
+                        </div>
+                        {selfHostingStatus.self_host_available && (
+                          <button
+                            onClick={() => handleToggleSelfHosting(showCompanyDashboard.id, selfHostingStatus.is_self_hosted)}
+                            disabled={selfHostingLoading}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                              selfHostingStatus.is_self_hosted
+                                ? 'bg-error-soft text-error hover:bg-error/20'
+                                : 'bg-accent text-white hover:bg-accent-hover'
+                            } disabled:opacity-50`}
+                          >
+                            {selfHostingLoading ? '...' : selfHostingStatus.is_self_hosted ? 'Inaktivera' : 'Aktivera'}
+                          </button>
+                        )}
+                      </div>
+
+                      {selfHostingStatus.is_self_hosted && (
+                        <div className="space-y-2 pt-3 border-t border-border-subtle">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-text-secondary">Licensnyckel:</span>
+                            <code className="text-xs font-mono bg-bg-primary px-2 py-1 rounded select-all">
+                              {selfHostingStatus.license_key}
+                            </code>
+                          </div>
+                          {selfHostingStatus.valid_until && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-text-secondary">Giltig till:</span>
+                              <span className="text-xs text-text-primary">
+                                {new Date(selfHostingStatus.valid_until).toLocaleDateString('sv-SE')}
+                              </span>
+                            </div>
+                          )}
+                          {selfHostingStatus.last_validated && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-text-secondary">Senast validerad:</span>
+                              <span className="text-xs text-text-primary">
+                                {new Date(selfHostingStatus.last_validated).toLocaleDateString('sv-SE')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {!selfHostingStatus.self_host_available && (
+                        <p className="text-xs text-text-tertiary">
+                          Self-hosting är endast tillgängligt för Professional, Business och Enterprise.
+                        </p>
+                      )}
+
+                      {selfHostingStatus.self_host_available && !selfHostingStatus.is_self_hosted && selfHostingStatus.license_fee > 0 && (
+                        <p className="text-xs text-text-tertiary mt-2">
+                          Licensavgift: {selfHostingStatus.license_fee.toLocaleString('sv-SE')} kr (engångsavgift)
+                        </p>
+                      )}
+
+                      {selfHostingStatus.self_host_available && !selfHostingStatus.is_self_hosted && selfHostingStatus.license_fee === 0 && (
+                        <p className="text-xs text-success mt-2">
+                          Self-hosting ingår i Enterprise-paketet utan extra kostnad.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Usage Meters */}
                 {companyUsage && (companyUsage.max_conversations_month > 0 || (showCompanyDashboard.max_knowledge_items || 0) > 0) && (
                   <div>
@@ -2845,93 +2935,6 @@ function SuperAdmin() {
                   </div>
                 )}
 
-                {/* Self-Hosting Section in Widgets tab */}
-                {selfHostingStatus && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
-                      </svg>
-                      Self-Hosting
-                    </h3>
-                    <div className="bg-bg-secondary rounded-xl p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${
-                            selfHostingStatus.is_self_hosted
-                              ? 'bg-success-soft text-success'
-                              : selfHostingStatus.self_host_available
-                                ? 'bg-gray-100 text-gray-600'
-                                : 'bg-gray-100 text-gray-400'
-                          }`}>
-                            {selfHostingStatus.is_self_hosted ? 'Aktiverat' : selfHostingStatus.self_host_available ? 'Tillgängligt' : 'Ej tillgängligt'}
-                          </span>
-                          <span className="text-xs text-text-tertiary">
-                            {selfHostingStatus.tier && `(${selfHostingStatus.tier})`}
-                          </span>
-                        </div>
-                        {selfHostingStatus.self_host_available && (
-                          <button
-                            onClick={() => handleToggleSelfHosting(showCompanyDashboard.id, selfHostingStatus.is_self_hosted)}
-                            disabled={selfHostingLoading}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                              selfHostingStatus.is_self_hosted
-                                ? 'bg-error-soft text-error hover:bg-error/20'
-                                : 'bg-accent text-white hover:bg-accent-hover'
-                            } disabled:opacity-50`}
-                          >
-                            {selfHostingLoading ? '...' : selfHostingStatus.is_self_hosted ? 'Inaktivera' : 'Aktivera'}
-                          </button>
-                        )}
-                      </div>
-
-                      {selfHostingStatus.is_self_hosted && (
-                        <div className="space-y-2 pt-3 border-t border-border-subtle">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-text-secondary">Licensnyckel:</span>
-                            <code className="text-xs font-mono bg-bg-primary px-2 py-1 rounded select-all">
-                              {selfHostingStatus.license_key}
-                            </code>
-                          </div>
-                          {selfHostingStatus.valid_until && (
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs text-text-secondary">Giltig till:</span>
-                              <span className="text-xs text-text-primary">
-                                {new Date(selfHostingStatus.valid_until).toLocaleDateString('sv-SE')}
-                              </span>
-                            </div>
-                          )}
-                          {selfHostingStatus.last_validated && (
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs text-text-secondary">Senast validerad:</span>
-                              <span className="text-xs text-text-primary">
-                                {new Date(selfHostingStatus.last_validated).toLocaleDateString('sv-SE')}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {!selfHostingStatus.self_host_available && (
-                        <p className="text-xs text-text-tertiary">
-                          Self-hosting är endast tillgängligt för Professional, Business och Enterprise.
-                        </p>
-                      )}
-
-                      {selfHostingStatus.self_host_available && !selfHostingStatus.is_self_hosted && selfHostingStatus.license_fee > 0 && (
-                        <p className="text-xs text-text-tertiary mt-2">
-                          Licensavgift: {selfHostingStatus.license_fee.toLocaleString('sv-SE')} kr (engångsavgift)
-                        </p>
-                      )}
-
-                      {selfHostingStatus.self_host_available && !selfHostingStatus.is_self_hosted && selfHostingStatus.license_fee === 0 && (
-                        <p className="text-xs text-success mt-2">
-                          Self-hosting ingår i Enterprise-paketet utan extra kostnad.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
                   </>
                 )}
 
