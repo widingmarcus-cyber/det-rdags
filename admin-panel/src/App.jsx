@@ -420,6 +420,7 @@ function App() {
           onDismissAllAnnouncements={markAllAnnouncementsAsRead}
           mobileOpen={mobileMenuOpen}
           setMobileOpen={setMobileMenuOpen}
+          companyStatus={companyStatus}
         />
         <main id="main-content" className="flex-1 p-4 md:p-8 overflow-auto relative z-10 w-full" role="main" aria-label="Huvudinnehåll">
           {/* Mobile header with hamburger menu */}

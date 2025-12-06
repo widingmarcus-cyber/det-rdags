@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
-function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, announcements = [], onDismissAnnouncement, onDismissAllAnnouncements, mobileOpen, setMobileOpen }) {
+function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, announcements = [], onDismissAnnouncement, onDismissAllAnnouncements, mobileOpen, setMobileOpen, companyStatus }) {
   const [showAnnouncement, setShowAnnouncement] = useState(false)
   const location = useLocation()
 
@@ -12,10 +12,15 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
       setMobileOpen(false)
     }
   }, [location.pathname])
+
+  // Check if widgets are inactive
+  const isExternalInactive = companyStatus?.widgets?.find(w => w.widget_type === 'external')?.is_active === false
+  const isInternalInactive = companyStatus?.widgets?.find(w => w.widget_type === 'internal')?.is_active === false
+
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: 'chart' },
-    { to: '/widget/external', label: 'Kundtjänst', icon: 'external' },
-    { to: '/widget/internal', label: 'Medarbetarstöd', icon: 'internal' },
+    { to: '/widget/external', label: 'Kundtjänst', icon: 'external', warning: isExternalInactive },
+    { to: '/widget/internal', label: 'Medarbetarstöd', icon: 'internal', warning: isInternalInactive },
     { to: '/conversations', label: 'Konversationer', icon: 'messages' },
     { to: '/analytics', label: 'Statistik', icon: 'analytics' },
     { to: '/settings', label: 'Företagsinställningar', icon: 'settings' },
@@ -253,13 +258,21 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `sidebar-item ${isActive ? 'active' : ''}`
+              `sidebar-item ${isActive ? 'active' : ''} ${item.warning ? 'opacity-60' : ''}`
             }
             end={item.to === '/'}
             aria-current={({ isActive }) => isActive ? 'page' : undefined}
           >
-            <span aria-hidden="true">{renderIcon(item.icon)}</span>
-            {item.label}
+            <span aria-hidden="true" className="relative">
+              {renderIcon(item.icon)}
+              {item.warning && (
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-warning rounded-full flex items-center justify-center text-[8px] font-bold text-white">!</span>
+              )}
+            </span>
+            <span className={item.warning ? 'text-text-tertiary' : ''}>{item.label}</span>
+            {item.warning && (
+              <span className="ml-auto text-[10px] text-warning font-medium">Inaktiv</span>
+            )}
           </NavLink>
         ))}
       </nav>

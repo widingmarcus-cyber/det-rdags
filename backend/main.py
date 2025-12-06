@@ -2516,8 +2516,20 @@ async def chat(
         )
 
     company = db.query(Company).filter(Company.id == company_id).first()
-    if not company or not company.is_active:
+    if not company:
         raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    if not company.is_active:
+        raise HTTPException(status_code=403, detail="COMPANY_INACTIVE")
+
+    # Check if widget_key is provided and validate widget is active
+    if request.widget_key:
+        widget_check = db.query(Widget).filter(
+            Widget.widget_key == request.widget_key,
+            Widget.company_id == company_id
+        ).first()
+        if widget_check and not widget_check.is_active:
+            raise HTTPException(status_code=403, detail="WIDGET_INACTIVE")
 
     # Check usage limits
     allowed, limit_msg = check_usage_limit(db, company_id)
@@ -2949,12 +2961,18 @@ async def chat_via_widget_key(
     """Chatta med AI via widget_key - ny endpoint för multi-widget support"""
     # Look up widget
     widget = db.query(Widget).filter(Widget.widget_key == widget_key).first()
-    if not widget or not widget.is_active:
+    if not widget:
         raise HTTPException(status_code=404, detail="Widget finns inte")
 
+    if not widget.is_active:
+        raise HTTPException(status_code=403, detail="WIDGET_INACTIVE")
+
     company = db.query(Company).filter(Company.id == widget.company_id).first()
-    if not company or not company.is_active:
+    if not company:
         raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    if not company.is_active:
+        raise HTTPException(status_code=403, detail="COMPANY_INACTIVE")
 
     company_id = company.id
 

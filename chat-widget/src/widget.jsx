@@ -15,6 +15,7 @@ const translations = {
     thanksFeedback: 'Tack för din feedback!',
     errorMessage: 'Ett fel uppstod. Vänligen försök igen.',
     serviceUnavailable: 'Chatten är tillfälligt otillgänglig.',
+    widgetInactive: 'Denna chatt är för tillfället inaktiverad. Kontakta oss på annat sätt.',
     newConversation: 'Ny konversation',
     lightMode: 'Ljust läge',
     darkMode: 'Mörkt läge',
@@ -57,6 +58,7 @@ const translations = {
     thanksFeedback: 'Thanks for your feedback!',
     errorMessage: 'An error occurred. Please try again.',
     serviceUnavailable: 'Chat is temporarily unavailable.',
+    widgetInactive: 'This chat is currently deactivated. Please contact us another way.',
     newConversation: 'New conversation',
     lightMode: 'Light mode',
     darkMode: 'Dark mode',
@@ -661,6 +663,26 @@ function ChatWidget({ config }) {
           hadAnswer: data.had_answer,
           confidence: data.confidence || 100,
           sources: data.sources_detail || [], // Store detailed sources for display
+          time: Date.now()
+        }])
+      } else if (res.status === 403) {
+        // Widget or company is inactive
+        const errorData = await res.json().catch(() => ({}))
+        const isInactive = errorData.detail === 'WIDGET_INACTIVE' || errorData.detail === 'COMPANY_INACTIVE'
+        setMessages(prev => [...prev, {
+          id: Date.now(),
+          type: 'bot',
+          text: isInactive ? t.widgetInactive : t.serviceUnavailable,
+          isError: true,
+          time: Date.now()
+        }])
+      } else if (res.status === 503) {
+        // Maintenance mode
+        setMessages(prev => [...prev, {
+          id: Date.now(),
+          type: 'bot',
+          text: t.serviceUnavailable,
+          isError: true,
           time: Date.now()
         }])
       } else {
