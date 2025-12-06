@@ -437,11 +437,12 @@ class CompanyActivityLog(Base):
     company_id = Column(String, ForeignKey("companies.id"), nullable=False, index=True)
 
     # Action details
-    action_type = Column(String, nullable=False, index=True)  # "knowledge_create", "knowledge_update", "knowledge_delete", "settings_update", "conversation_delete", "export_data"
+    action_type = Column(String, nullable=False, index=True)  # "knowledge_create", "knowledge_update", "knowledge_delete", "settings_update", "conversation_delete", "export_data", "login"
     description = Column(Text)  # Human-readable description
     details = Column(Text)  # JSON with additional details (e.g., which item was affected)
 
     # Metadata
+    ip_address = Column(String)  # IP address for login tracking
     timestamp = Column(DateTime, default=datetime.utcnow, index=True)
 
     # Composite index for common queries
@@ -740,10 +741,12 @@ class PricingTier(Base):
     id = Column(Integer, primary_key=True, index=True)
     tier_key = Column(String, unique=True, nullable=False)  # starter, professional, business, enterprise
     name = Column(String, nullable=False)  # Display name
+    description = Column(Text, default="")  # Tier description for proposals
     monthly_fee = Column(Float, default=0)  # Monthly fee in SEK
     startup_fee = Column(Float, default=0)  # One-time startup fee in SEK
     max_conversations = Column(Integer, default=0)  # 0 = unlimited
     max_knowledge_items = Column(Integer, default=0)  # 0 = unlimited
+    max_widgets = Column(Integer, default=0)  # 0 = unlimited
     features = Column(Text, default="[]")  # JSON array of feature descriptions
     is_active = Column(Boolean, default=True)  # Can be disabled
     display_order = Column(Integer, default=0)  # For custom ordering
@@ -861,6 +864,30 @@ def run_migrations():
             if 'self_host_last_validated' not in company_columns:
                 conn.execute(text("ALTER TABLE companies ADD COLUMN self_host_last_validated DATETIME"))
                 print("[Migration] Added 'self_host_last_validated' column to companies table")
+
+            conn.commit()
+
+        # Migrate company_activity_log table (ip_address column)
+        if 'company_activity_log' in inspector.get_table_names():
+            activity_columns = [col['name'] for col in inspector.get_columns('company_activity_log')]
+
+            if 'ip_address' not in activity_columns:
+                conn.execute(text("ALTER TABLE company_activity_log ADD COLUMN ip_address VARCHAR"))
+                print("[Migration] Added 'ip_address' column to company_activity_log table")
+
+            conn.commit()
+
+        # Migrate pricing_tiers table (new columns)
+        if 'pricing_tiers' in inspector.get_table_names():
+            tier_columns = [col['name'] for col in inspector.get_columns('pricing_tiers')]
+
+            if 'description' not in tier_columns:
+                conn.execute(text("ALTER TABLE pricing_tiers ADD COLUMN description TEXT DEFAULT ''"))
+                print("[Migration] Added 'description' column to pricing_tiers table")
+
+            if 'max_widgets' not in tier_columns:
+                conn.execute(text("ALTER TABLE pricing_tiers ADD COLUMN max_widgets INTEGER DEFAULT 0"))
+                print("[Migration] Added 'max_widgets' column to pricing_tiers table")
 
             conn.commit()
 

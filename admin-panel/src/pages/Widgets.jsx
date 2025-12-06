@@ -194,6 +194,11 @@ function Widgets() {
     )
   }
 
+  // Check widget limits
+  const hasInternalWidget = widgets.some(w => w.widget_type === 'internal')
+  const hasExternalWidget = widgets.some(w => w.widget_type === 'external' || w.widget_type === 'custom')
+  const canCreateMore = widgets.length < 2
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
@@ -202,10 +207,15 @@ function Widgets() {
           <p className="text-text-secondary mt-1">
             Hantera dina chattwidgets för olika användningsområden
           </p>
+          <p className="text-xs text-text-tertiary mt-1">
+            {widgets.length}/2 widgets ({hasInternalWidget ? '1 intern' : '0 interna'}, {hasExternalWidget ? '1 extern' : '0 externa'})
+          </p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="btn btn-primary flex items-center gap-2"
+          className={`btn flex items-center gap-2 ${canCreateMore ? 'btn-primary' : 'btn-secondary opacity-50 cursor-not-allowed'}`}
+          disabled={!canCreateMore}
+          title={!canCreateMore ? 'Du har nått maxgränsen på 2 widgets' : ''}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" />
@@ -230,10 +240,10 @@ function Widgets() {
             <line x1="12" y1="8" x2="12.01" y2="8" />
           </svg>
           <div className="text-sm text-blue-800 dark:text-blue-200">
-            <p className="font-medium mb-1">Två typer av widgets</p>
+            <p className="font-medium mb-1">Två typer av widgets (max 2 totalt)</p>
             <p className="text-blue-700 dark:text-blue-300">
-              <strong>Extern:</strong> För kunder på er hemsida med kundrelaterad kunskapsbank.<br/>
-              <strong>Intern:</strong> För anställda med intern kunskapsbank (policyer, rutiner, etc.).<br/>
+              <strong>Extern:</strong> För kunder på er hemsida med kundrelaterad kunskapsbank (max 1).<br/>
+              <strong>Intern:</strong> För anställda med intern kunskapsbank, policyer, rutiner etc. (max 1).<br/>
               Varje widget har sin egen kunskapsbas och kan anpassas med egna färger och meddelanden.
             </p>
           </div>

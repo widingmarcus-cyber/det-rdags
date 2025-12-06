@@ -280,6 +280,23 @@ def migrate():
         cursor.execute("CREATE INDEX ix_daily_page_stats_id ON daily_page_stats (id)")
         cursor.execute("CREATE INDEX ix_daily_page_stats_date ON daily_page_stats (date)")
 
+    # Add ip_address column to company_activity_log if it doesn't exist
+    cursor.execute("PRAGMA table_info(company_activity_log)")
+    columns = [col[1] for col in cursor.fetchall()]
+    if 'ip_address' not in columns:
+        print("Adding ip_address column to company_activity_log...")
+        cursor.execute("ALTER TABLE company_activity_log ADD COLUMN ip_address VARCHAR")
+
+    # Add new columns to pricing_tiers if they don't exist
+    cursor.execute("PRAGMA table_info(pricing_tiers)")
+    columns = [col[1] for col in cursor.fetchall()]
+    if 'description' not in columns:
+        print("Adding description column to pricing_tiers...")
+        cursor.execute("ALTER TABLE pricing_tiers ADD COLUMN description TEXT DEFAULT ''")
+    if 'max_widgets' not in columns:
+        print("Adding max_widgets column to pricing_tiers...")
+        cursor.execute("ALTER TABLE pricing_tiers ADD COLUMN max_widgets INTEGER DEFAULT 0")
+
     conn.commit()
     conn.close()
 

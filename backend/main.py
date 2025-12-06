@@ -626,6 +626,10 @@ class CompanyResponse(BaseModel):
     startup_fee_paid: bool = False
     contract_start_date: Optional[date] = None
     billing_email: str = ""
+    # Discount fields
+    discount_percent: float = 0.0
+    discount_end_date: Optional[date] = None
+    discount_note: str = ""
 
 
 class PricingTierUpdate(BaseModel):
@@ -1396,6 +1400,26 @@ def init_demo_data():
                 if added_count > 0:
                     print(f"[Bobot] Added {added_count} new knowledge items")
 
+            # Cleanup extra widgets for Bobot (keep max 2: 1 internal, 1 external)
+            bobot_widgets = db.query(Widget).filter(Widget.company_id == "bobot").order_by(Widget.created_at.asc()).all()
+            if len(bobot_widgets) > 2:
+                # Keep the landing widget (external) and max 1 internal
+                widgets_to_keep = []
+                external_kept = False
+                internal_kept = False
+                for w in bobot_widgets:
+                    if w.widget_type in ["external", "custom"] and not external_kept:
+                        widgets_to_keep.append(w.id)
+                        external_kept = True
+                    elif w.widget_type == "internal" and not internal_kept:
+                        widgets_to_keep.append(w.id)
+                        internal_kept = True
+                # Delete extras
+                for w in bobot_widgets:
+                    if w.id not in widgets_to_keep:
+                        db.delete(w)
+                        print(f"[Bobot] Deleted extra widget: {w.name}")
+
             db.commit()
 
         # =================================================================
@@ -1461,6 +1485,25 @@ def init_demo_data():
             else:
                 print("SFAB-företag skapat: sfab / sbab (utan kunskapsbas - mall saknas)")
 
+            db.commit()
+
+        # Cleanup extra widgets for SFAB (keep max 2: 1 internal, 1 external)
+        sfab_widgets = db.query(Widget).filter(Widget.company_id == "sfab").order_by(Widget.created_at.asc()).all()
+        if len(sfab_widgets) > 2:
+            widgets_to_keep = []
+            external_kept = False
+            internal_kept = False
+            for w in sfab_widgets:
+                if w.widget_type in ["external", "custom"] and not external_kept:
+                    widgets_to_keep.append(w.id)
+                    external_kept = True
+                elif w.widget_type == "internal" and not internal_kept:
+                    widgets_to_keep.append(w.id)
+                    internal_kept = True
+            for w in sfab_widgets:
+                if w.id not in widgets_to_keep:
+                    db.delete(w)
+                    print(f"[SFAB] Deleted extra widget: {w.name}")
             db.commit()
 
         if is_production:
@@ -2222,13 +2265,14 @@ def log_admin_action(db: Session, admin_username: str, action_type: str,
 
 
 def log_company_activity(db: Session, company_id: str, action_type: str,
-                         description: str = None, details: dict = None):
+                         description: str = None, details: dict = None, ip_address: str = None):
     """Log a company admin action to the activity log"""
     log_entry = CompanyActivityLog(
         company_id=company_id,
         action_type=action_type,
         description=description,
-        details=json.dumps(details) if details else None
+        details=json.dumps(details) if details else None,
+        ip_address=ip_address
     )
     db.add(log_entry)
     db.commit()
@@ -2402,6 +2446,13 @@ async def login(request: LoginRequest, req: Request, db: Session = Depends(get_d
         "name": company.name,
         "type": "company"
     })
+
+    # Log successful login with IP address
+    log_company_activity(
+        db, company.id, "login",
+        description=f"Inloggning från IP {client_ip}",
+        ip_address=client_ip
+    )
 
     return LoginResponse(token=token, company_id=company.id, name=company.name)
 
@@ -3312,6 +3363,27 @@ async def create_widget(
 ):
     """Skapa ny widget för inloggat företag"""
     company_id = current["company_id"]
+
+    # Enforce widget limits: max 2 widgets per company (1 internal, 1 external)
+    existing_widgets = db.query(Widget).filter(Widget.company_id == company_id).all()
+    existing_internal = sum(1 for w in existing_widgets if w.widget_type == "internal")
+    existing_external = sum(1 for w in existing_widgets if w.widget_type in ["external", "custom"])
+
+    if widget.widget_type == "internal" and existing_internal >= 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Du kan endast ha 1 intern widget. Ta bort den befintliga interna widgeten först."
+        )
+    if widget.widget_type in ["external", "custom"] and existing_external >= 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Du kan endast ha 1 extern widget. Ta bort den befintliga externa widgeten först."
+        )
+    if len(existing_widgets) >= 2:
+        raise HTTPException(
+            status_code=400,
+            detail="Du har nått maxgränsen på 2 widgets. Ta bort en widget för att skapa en ny."
+        )
 
     # Internal widgets default to bottom-left, external to bottom-right
     default_position = "bottom-left" if widget.widget_type == "internal" else "bottom-right"
@@ -5849,7 +5921,10 @@ async def list_companies(
             pricing_tier=c.pricing_tier or "starter",
             startup_fee_paid=c.startup_fee_paid or False,
             contract_start_date=c.contract_start_date,
-            billing_email=c.billing_email or ""
+            billing_email=c.billing_email or "",
+            discount_percent=c.discount_percent or 0.0,
+            discount_end_date=c.discount_end_date,
+            discount_note=c.discount_note or ""
         ))
 
     return result
@@ -6011,6 +6086,32 @@ async def toggle_widget(
     )
 
     return {"message": f"Widget {status}", "is_active": widget.is_active}
+
+
+@app.delete("/admin/widgets/{widget_id}")
+async def admin_delete_widget(
+    widget_id: int,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a widget (admin only)"""
+    widget = db.query(Widget).filter(Widget.id == widget_id).first()
+    if not widget:
+        raise HTTPException(status_code=404, detail="Widget finns inte")
+
+    widget_name = widget.name
+    company_id = widget.company_id
+    db.delete(widget)
+    db.commit()
+
+    # Log admin action
+    log_admin_action(
+        db, admin["username"], "delete_widget",
+        target_company_id=company_id,
+        description=f"Raderade widget: {widget_name}"
+    )
+
+    return {"message": f"Widget '{widget_name}' raderad"}
 
 
 # =============================================================================
@@ -6685,6 +6786,9 @@ async def get_pricing_tiers_from_db(
                 "monthly_fee": tier.monthly_fee,
                 "startup_fee": tier.startup_fee,
                 "max_conversations": tier.max_conversations,
+                "max_knowledge": tier.max_knowledge_items if hasattr(tier, 'max_knowledge_items') else 0,
+                "max_widgets": getattr(tier, 'max_widgets', 0),
+                "description": getattr(tier, 'description', ''),
                 "features": json.loads(tier.features) if tier.features else [],
                 "is_active": tier.is_active,
                 "display_order": tier.display_order
@@ -7119,22 +7223,27 @@ async def get_company_activity(
     db: Session = Depends(get_db)
 ):
     """Get activity logs for a specific company"""
-    logs = db.query(CompanyActivityLog).filter(
-        CompanyActivityLog.company_id == company_id
-    ).order_by(CompanyActivityLog.timestamp.desc()).limit(limit).all()
+    try:
+        logs = db.query(CompanyActivityLog).filter(
+            CompanyActivityLog.company_id == company_id
+        ).order_by(CompanyActivityLog.timestamp.desc()).limit(limit).all()
 
-    return {
-        "logs": [
-            {
-                "id": log.id,
-                "action_type": log.action_type,
-                "description": log.description,
-                "details": log.details,
-                "timestamp": log.timestamp.isoformat() if log.timestamp else None
-            }
-            for log in logs
-        ]
-    }
+        return {
+            "logs": [
+                {
+                    "id": log.id,
+                    "action_type": log.action_type,
+                    "description": log.description,
+                    "details": log.details,
+                    "ip_address": getattr(log, 'ip_address', None),
+                    "timestamp": log.timestamp.isoformat() if log.timestamp else None
+                }
+                for log in logs
+            ]
+        }
+    except Exception as e:
+        print(f"[Error] Failed to fetch company activity: {e}")
+        return {"logs": [], "error": str(e)}
 
 
 # =============================================================================
@@ -7242,12 +7351,18 @@ async def get_all_subscriptions(
     result = []
     for sub in subscriptions:
         company = db.query(Company).filter(Company.id == sub.company_id).first()
+        discount_percent = company.discount_percent if company else 0
+        discount_end_date = company.discount_end_date.isoformat() if company and company.discount_end_date else None
+        effective_price = sub.plan_price * (1 - discount_percent / 100) if discount_percent > 0 else sub.plan_price
         result.append({
             "id": sub.id,
             "company_id": sub.company_id,
             "company_name": company.name if company else "Unknown",
             "plan_name": sub.plan_name,
             "plan_price": sub.plan_price,
+            "effective_price": round(effective_price, 2),
+            "discount_percent": discount_percent,
+            "discount_end_date": discount_end_date,
             "billing_cycle": sub.billing_cycle,
             "status": sub.status,
             "current_period_end": sub.current_period_end.isoformat() if sub.current_period_end else None

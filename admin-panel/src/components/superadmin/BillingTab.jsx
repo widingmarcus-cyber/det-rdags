@@ -9,7 +9,9 @@ const BillingTab = ({
   revenueDashboard,
   billingLoading,
   onCreateInvoice,
-  onUpdateInvoiceStatus
+  onUpdateInvoiceStatus,
+  onExportInvoicePDF,
+  onEmailInvoice
 }) => {
   return (
     <div className="animate-fade-in">
@@ -143,17 +145,33 @@ const BillingTab = ({
                       <p className="font-medium text-text-primary">{sub.company_name}</p>
                       <p className="text-xs text-text-secondary">{sub.company_id}</p>
                     </div>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      sub.plan_name === 'enterprise' ? 'bg-accent-soft text-accent' :
-                      sub.plan_name === 'professional' || sub.plan_name === 'business' ? 'bg-success-soft text-success' :
-                      sub.plan_name === 'starter' ? 'bg-warning-soft text-warning' :
-                      'bg-bg-primary text-text-secondary'
-                    }`}>
-                      {sub.plan_name?.charAt(0).toUpperCase() + sub.plan_name?.slice(1)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {sub.discount_percent > 0 && (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                          -{sub.discount_percent}%
+                        </span>
+                      )}
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        sub.plan_name === 'enterprise' ? 'bg-accent-soft text-accent' :
+                        sub.plan_name === 'professional' || sub.plan_name === 'business' ? 'bg-success-soft text-success' :
+                        sub.plan_name === 'starter' ? 'bg-warning-soft text-warning' :
+                        'bg-bg-primary text-text-secondary'
+                      }`}>
+                        {sub.plan_name?.charAt(0).toUpperCase() + sub.plan_name?.slice(1)}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between mt-2">
-                    <span className="text-sm text-text-secondary">{sub.plan_price?.toLocaleString('sv-SE')} kr/{sub.billing_cycle === 'monthly' ? 'mån' : 'år'}</span>
+                    <div className="flex items-center gap-2">
+                      {sub.discount_percent > 0 ? (
+                        <>
+                          <span className="text-sm text-text-tertiary line-through">{sub.plan_price?.toLocaleString('sv-SE')} kr</span>
+                          <span className="text-sm font-medium text-green-600">{sub.effective_price?.toLocaleString('sv-SE')} kr/{sub.billing_cycle === 'monthly' ? 'mån' : 'år'}</span>
+                        </>
+                      ) : (
+                        <span className="text-sm text-text-secondary">{sub.plan_price?.toLocaleString('sv-SE')} kr/{sub.billing_cycle === 'monthly' ? 'mån' : 'år'}</span>
+                      )}
+                    </div>
                     <span className={`text-xs flex items-center gap-1 ${sub.status === 'active' ? 'text-success' : 'text-warning'}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${sub.status === 'active' ? 'bg-success' : 'bg-warning'}`} />
                       {sub.status === 'active' ? 'Aktiv' : sub.status}
@@ -203,17 +221,60 @@ const BillingTab = ({
                   </div>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-lg font-medium text-text-primary">{inv.amount?.toLocaleString('sv-SE')} {inv.currency}</span>
-                    <div className="flex items-center gap-2">
-                      {inv.status === 'pending' && (
-                        <button
-                          onClick={() => onUpdateInvoiceStatus(inv.id, 'paid')}
-                          className="opacity-0 group-hover:opacity-100 text-xs bg-success/10 text-success px-2 py-1 rounded hover:bg-success/20 transition-all"
-                        >
-                          Markera betald
-                        </button>
-                      )}
-                      <span className="text-xs text-text-tertiary">{new Date(inv.created_at).toLocaleDateString('sv-SE')}</span>
-                    </div>
+                    <span className="text-xs text-text-tertiary">{new Date(inv.created_at).toLocaleDateString('sv-SE')}</span>
+                  </div>
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border-subtle">
+                    {inv.status === 'pending' ? (
+                      <button
+                        onClick={() => onUpdateInvoiceStatus(inv.id, 'paid')}
+                        className="flex-1 text-xs bg-success/10 text-success px-3 py-1.5 rounded-lg hover:bg-success/20 transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        Markera betald
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Är du säker på att du vill ångra betalningen för denna faktura?')) {
+                            onUpdateInvoiceStatus(inv.id, 'pending')
+                          }
+                        }}
+                        className="flex-1 text-xs bg-warning/10 text-warning px-3 py-1.5 rounded-lg hover:bg-warning/20 transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                          <path d="M3 3v5h5" />
+                        </svg>
+                        Ångra betalning
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onExportInvoicePDF && onExportInvoicePDF(inv)}
+                      className="text-xs bg-bg-primary text-text-secondary px-3 py-1.5 rounded-lg hover:bg-bg-tertiary border border-border-subtle transition-all flex items-center gap-1.5"
+                      title="Exportera som PDF"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="12" y1="18" x2="12" y2="12" />
+                        <polyline points="9 15 12 18 15 15" />
+                      </svg>
+                      PDF
+                    </button>
+                    <button
+                      onClick={() => onEmailInvoice && onEmailInvoice(inv)}
+                      className="text-xs bg-accent/10 text-accent px-3 py-1.5 rounded-lg hover:bg-accent/20 transition-all flex items-center gap-1.5"
+                      title="Skicka faktura via e-post"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                        <polyline points="22,6 12,13 2,6" />
+                      </svg>
+                      E-post
+                    </button>
                   </div>
                 </div>
               ))}
