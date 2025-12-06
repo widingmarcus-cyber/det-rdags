@@ -90,9 +90,9 @@ nginx -t
 systemctl start nginx
 systemctl enable nginx
 
-# Get SSL certificate
+# Get SSL certificate (includes demo subdomain)
 echo "[8/8] Obtaining SSL certificate..."
-certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos --email $EMAIL --redirect
+certbot --nginx -d $DOMAIN -d www.$DOMAIN -d demo.$DOMAIN --non-interactive --agree-tos --email $EMAIL --redirect
 
 # Start application
 echo "Starting Bobot..."
@@ -112,9 +112,10 @@ echo "=========================================="
 echo "  Deployment Complete!"
 echo "=========================================="
 echo ""
-echo "  Admin Panel: https://$DOMAIN"
-echo "  API:         https://$DOMAIN/api"
-echo "  Widget:      https://$DOMAIN/widget.js"
+echo "  Admin Panel:  https://$DOMAIN"
+echo "  Demo Site:    https://demo.$DOMAIN"
+echo "  API:          https://$DOMAIN/api"
+echo "  Widget:       https://$DOMAIN/widget.js"
 echo ""
 echo "  Default credentials:"
 echo "    Company: demo / demo123"

@@ -77,8 +77,8 @@ ssh $SSH_USER@$SERVER_IP "bash -s" << ENDSSH
 set -e
 cd /opt/bobot
 
-# Get SSL certificate
-certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos --email admin@$DOMAIN --redirect || true
+# Get SSL certificate (includes demo subdomain)
+certbot --nginx -d $DOMAIN -d www.$DOMAIN -d demo.$DOMAIN --non-interactive --agree-tos --email admin@$DOMAIN --redirect || true
 
 # Build and start containers
 docker-compose -f docker-compose.prod.yml up -d --build
@@ -96,7 +96,9 @@ echo "=========================================="
 echo "  Deployment Complete!"
 echo "=========================================="
 echo ""
-echo "  Your Bobot is live at: https://$DOMAIN"
+echo "  Admin Panel:  https://$DOMAIN"
+echo "  Demo Site:    https://demo.$DOMAIN"
+echo "  Widget:       https://$DOMAIN/widget.js"
 echo ""
 echo "  Login credentials:"
 echo "    Company: demo / demo123"
@@ -105,4 +107,4 @@ echo ""
 ENDSSH
 
 echo ""
-echo "Done! Visit https://$DOMAIN"
+echo "Done! Visit https://$DOMAIN or https://demo.$DOMAIN"
