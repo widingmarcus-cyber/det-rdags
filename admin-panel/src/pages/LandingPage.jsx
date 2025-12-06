@@ -323,6 +323,7 @@ function LiveWidget() {
       console.log('[LiveWidget] Widget already loaded, initializing')
       containerId = window.Bobot.init({
         widgetKey: LANDING_PAGE_WIDGET_KEY,
+        companyId: 'bobot',
         apiUrl: API_URL
       })
       setWidgetContainerId(containerId)
@@ -347,6 +348,7 @@ function LiveWidget() {
         console.log('[LiveWidget] Initializing Bobot widget')
         containerId = window.Bobot.init({
           widgetKey: LANDING_PAGE_WIDGET_KEY,
+          companyId: 'bobot',
           apiUrl: API_URL
         })
         setWidgetContainerId(containerId)

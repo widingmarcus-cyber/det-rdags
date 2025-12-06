@@ -256,8 +256,8 @@ function Conversations() {
       )}
 
       {/* Search & Filters */}
-      <div className="mb-6 flex flex-wrap gap-4">
-        <div className="flex-1 min-w-[200px]">
+      <div className="mb-6 flex flex-wrap gap-3 sm:gap-4">
+        <div className="flex-1 min-w-0 w-full sm:w-auto sm:min-w-[200px]">
           <div className="relative">
             <svg
               width="20"
@@ -283,7 +283,7 @@ function Conversations() {
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="input w-auto min-w-[150px]"
+          className="input w-full sm:w-auto sm:min-w-[140px]"
         >
           {categories.map(cat => (
             <option key={cat.value} value={cat.value}>{cat.label}</option>
@@ -292,7 +292,7 @@ function Conversations() {
         <select
           value={widgetTypeFilter}
           onChange={(e) => setWidgetTypeFilter(e.target.value)}
-          className="input w-auto min-w-[150px]"
+          className="input w-full sm:w-auto sm:min-w-[140px]"
         >
           {WIDGET_TYPES.map(wt => (
             <option key={wt.value} value={wt.value}>{wt.label}</option>
@@ -301,7 +301,7 @@ function Conversations() {
         <select
           value={feedbackFilter}
           onChange={(e) => setFeedbackFilter(e.target.value)}
-          className={`input w-auto min-w-[150px] ${
+          className={`input w-full sm:w-auto sm:min-w-[140px] ${
             feedbackFilter === 'helpful' ? 'border-success text-success' :
             feedbackFilter === 'not_helpful' ? 'border-error text-error' : ''
           }`}

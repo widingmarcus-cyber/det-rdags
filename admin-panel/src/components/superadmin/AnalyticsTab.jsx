@@ -212,7 +212,7 @@ const AnalyticsTab = ({
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-3 bg-accent-soft rounded-lg text-center">
                 <p className="text-xl font-semibold text-accent">{landingAnalytics.views_today}</p>
                 <p className="text-xs text-text-secondary">Idag</p>

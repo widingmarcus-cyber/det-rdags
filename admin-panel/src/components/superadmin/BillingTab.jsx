@@ -224,7 +224,7 @@ const BillingTab = ({
                     <span className="text-xs text-text-tertiary">{new Date(inv.created_at).toLocaleDateString('sv-SE')}</span>
                   </div>
                   {/* Action buttons */}
-                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border-subtle">
+                  <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-border-subtle">
                     {inv.status === 'pending' ? (
                       <button
                         onClick={() => onUpdateInvoiceStatus(inv.id, 'paid')}

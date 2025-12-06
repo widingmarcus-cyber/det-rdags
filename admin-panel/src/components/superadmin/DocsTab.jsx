@@ -136,6 +136,144 @@ const DocsTab = () => {
           </div>
         </div>
 
+        {/* Self-Hosting Guide */}
+        <div className="lg:col-span-3 card border-accent/20 bg-accent/5">
+          <h2 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+              <line x1="8" y1="21" x2="16" y2="21" />
+              <line x1="12" y1="17" x2="12" y2="21" />
+            </svg>
+            Självhosting (Self-Hosting)
+            <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-accent-soft text-accent rounded-full">Professional+</span>
+          </h2>
+          <p className="text-text-secondary mb-4 text-sm">
+            Med self-hosting kör du Bobot på din egen server. Du får full kontroll över data, säkerhet och prestanda.
+            Perfekt för organisationer med höga säkerhetskrav eller som vill integrera djupare med befintlig infrastruktur.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* What You Get */}
+            <div className="p-4 bg-bg-secondary rounded-xl">
+              <h3 className="font-semibold text-text-primary mb-3 flex items-center gap-2">
+                <span className="text-success">📦</span> Vad ingår?
+              </h3>
+              <ul className="text-sm text-text-secondary space-y-2">
+                <li className="flex items-start gap-2">
+                  <span className="text-success mt-0.5">✓</span>
+                  <span><strong>Komplett källkod</strong> - Backend, admin-panel och widget</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-success mt-0.5">✓</span>
+                  <span><strong>Docker-konfiguration</strong> - Starta med ett kommando</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-success mt-0.5">✓</span>
+                  <span><strong>Installationsguide</strong> - Steg-för-steg dokumentation</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-success mt-0.5">✓</span>
+                  <span><strong>Licensnyckel</strong> - 12 månaders giltighetstid</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-success mt-0.5">✓</span>
+                  <span><strong>E-postsupport</strong> - Hjälp vid installation och problem</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Requirements */}
+            <div className="p-4 bg-bg-secondary rounded-xl">
+              <h3 className="font-semibold text-text-primary mb-3 flex items-center gap-2">
+                <span className="text-accent">⚙️</span> Systemkrav
+              </h3>
+              <div className="text-sm text-text-secondary space-y-3">
+                <div>
+                  <p className="font-medium text-text-primary mb-1">Server</p>
+                  <ul className="space-y-1 ml-4">
+                    <li>• Linux (Ubuntu 20.04+ rekommenderas)</li>
+                    <li>• 8 GB RAM minimum, 16 GB för bästa AI-prestanda</li>
+                    <li>• 20 GB ledigt diskutrymme</li>
+                    <li>• Docker och Docker Compose installerat</li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-medium text-text-primary mb-1">Nätverk</p>
+                  <ul className="space-y-1 ml-4">
+                    <li>• Publik IP eller domännamn</li>
+                    <li>• Port 80/443 öppen för HTTPS</li>
+                    <li>• SSL-certifikat (Let's Encrypt gratis)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Step-by-Step Installation */}
+            <div className="p-4 bg-bg-secondary rounded-xl md:col-span-2">
+              <h3 className="font-semibold text-text-primary mb-3 flex items-center gap-2">
+                <span className="text-accent">🚀</span> Installation i 5 steg
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                <div className="text-center p-3 bg-bg-tertiary rounded-lg">
+                  <div className="w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center mx-auto mb-2 text-sm font-bold">1</div>
+                  <p className="text-xs font-medium text-text-primary">Ladda ner</p>
+                  <p className="text-xs text-text-tertiary">Packa upp källkoden</p>
+                </div>
+                <div className="text-center p-3 bg-bg-tertiary rounded-lg">
+                  <div className="w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center mx-auto mb-2 text-sm font-bold">2</div>
+                  <p className="text-xs font-medium text-text-primary">Konfigurera</p>
+                  <p className="text-xs text-text-tertiary">Kopiera .env.example</p>
+                </div>
+                <div className="text-center p-3 bg-bg-tertiary rounded-lg">
+                  <div className="w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center mx-auto mb-2 text-sm font-bold">3</div>
+                  <p className="text-xs font-medium text-text-primary">Starta Docker</p>
+                  <p className="text-xs text-text-tertiary">docker-compose up -d</p>
+                </div>
+                <div className="text-center p-3 bg-bg-tertiary rounded-lg">
+                  <div className="w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center mx-auto mb-2 text-sm font-bold">4</div>
+                  <p className="text-xs font-medium text-text-primary">Ladda AI</p>
+                  <p className="text-xs text-text-tertiary">ollama pull qwen2.5</p>
+                </div>
+                <div className="text-center p-3 bg-bg-tertiary rounded-lg">
+                  <div className="w-8 h-8 bg-success text-white rounded-full flex items-center justify-center mx-auto mb-2 text-sm font-bold">✓</div>
+                  <p className="text-xs font-medium text-text-primary">Klart!</p>
+                  <p className="text-xs text-text-tertiary">Logga in på admin</p>
+                </div>
+              </div>
+              <p className="text-xs text-text-tertiary mt-4 text-center">
+                Detaljerad guide med kommando-för-kommando instruktioner medföljer vid köp.
+              </p>
+            </div>
+
+            {/* Pricing */}
+            <div className="p-4 bg-gradient-to-br from-accent/10 to-accent/5 rounded-xl md:col-span-2 border border-accent/20">
+              <h3 className="font-semibold text-text-primary mb-3 flex items-center gap-2">
+                <span>💰</span> Priser för self-hosting
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-bg-tertiary rounded-lg">
+                  <p className="text-sm font-medium text-text-primary">Professional</p>
+                  <p className="text-2xl font-bold text-accent mt-1">+20 000 kr</p>
+                  <p className="text-xs text-text-tertiary">engångsavgift</p>
+                </div>
+                <div className="text-center p-4 bg-bg-tertiary rounded-lg">
+                  <p className="text-sm font-medium text-text-primary">Business</p>
+                  <p className="text-2xl font-bold text-accent mt-1">+35 000 kr</p>
+                  <p className="text-xs text-text-tertiary">engångsavgift</p>
+                </div>
+                <div className="text-center p-4 bg-bg-tertiary rounded-lg border-2 border-success">
+                  <p className="text-sm font-medium text-text-primary">Enterprise</p>
+                  <p className="text-2xl font-bold text-success mt-1">Ingår</p>
+                  <p className="text-xs text-text-tertiary">utan extra kostnad</p>
+                </div>
+              </div>
+              <p className="text-xs text-text-secondary mt-4 text-center">
+                Kontakta oss på <a href="mailto:hej@bobot.nu" className="text-accent hover:underline">hej@bobot.nu</a> för mer information eller för att komma igång.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Security & Production */}
         <div className="lg:col-span-3 card border-green-200 bg-green-50/30">
           <h2 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">

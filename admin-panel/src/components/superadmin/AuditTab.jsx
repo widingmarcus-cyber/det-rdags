@@ -24,7 +24,7 @@ const AuditTab = ({
 
       {/* Search Filters */}
       <div className="card mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <input
             type="text"
             value={auditSearchTerm}

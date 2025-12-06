@@ -373,6 +373,29 @@ def clear_login_attempts(identifier: str):
         del login_attempts[identifier]
 
 
+def get_client_ip(request: Request) -> str:
+    """
+    Extract real client IP from request, respecting proxy headers.
+
+    In Docker/reverse proxy setups, the direct client connection comes from
+    the proxy container (e.g., 172.18.0.1). The real client IP is passed
+    via X-Forwarded-For or X-Real-IP headers set by Nginx.
+    """
+    # Check for X-Forwarded-For header (set by reverse proxy like Nginx)
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        # Take the first IP (client's IP, not intermediate proxies)
+        return forwarded.split(",")[0].strip()
+
+    # Fall back to X-Real-IP header (alternative proxy header)
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+
+    # Finally, use direct client connection (won't work in Docker)
+    return request.client.host if request.client else "unknown"
+
+
 # Ollama-konfiguration
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b-instruct")
@@ -2400,7 +2423,7 @@ async def health(db: Session = Depends(get_db)):
 async def login(request: LoginRequest, req: Request, db: Session = Depends(get_db)):
     """Login as company with automatic password migration and brute-force protection"""
     # Get client IP for rate limiting
-    client_ip = req.client.host if req.client else "unknown"
+    client_ip = get_client_ip(req)
     login_identifier = f"company:{request.company_id}:{client_ip}"
 
     # Check for brute-force attacks
@@ -2475,7 +2498,7 @@ class AdminLoginResponse(BaseModel):
 async def admin_login(request: AdminLoginRequest, req: Request, db: Session = Depends(get_db)):
     """Login as super admin with 2FA support, password migration, and brute-force protection"""
     # Get client IP for rate limiting
-    client_ip = req.client.host if req.client else "unknown"
+    client_ip = get_client_ip(req)
     login_identifier = f"admin:{request.username}:{client_ip}"
 
     # Check for brute-force attacks
@@ -2611,7 +2634,7 @@ async def chat(
         )
 
     # Rate limiting - check before any heavy processing
-    client_ip = req.client.host if req.client else "unknown"
+    client_ip = get_client_ip(req)
     allowed, current_count, reset_time = check_rate_limit(request.session_id, client_ip)
 
     # Add rate limit headers to response
@@ -2698,7 +2721,7 @@ async def chat(
 
     if not conversation:
         # Anonymisera användardata
-        client_ip = req.client.host if req.client else None
+        client_ip = get_client_ip(req)
         user_agent = req.headers.get("user-agent", "")
 
         # Generate a short reference ID
@@ -3113,7 +3136,7 @@ async def chat_via_widget_key(
         )
 
     # Rate limiting
-    client_ip = req.client.host if req.client else "unknown"
+    client_ip = get_client_ip(req)
     allowed, current_count, reset_time = check_rate_limit(request.session_id, client_ip)
 
     response.headers["X-RateLimit-Limit"] = str(RATE_LIMIT_MAX_REQUESTS)
@@ -3165,7 +3188,7 @@ async def chat_via_widget_key(
     ).first()
 
     if not conversation:
-        client_ip = req.client.host if req.client else None
+        client_ip = get_client_ip(req)
         user_agent = req.headers.get("user-agent", "")
         reference_id = generate_reference_id()
 
@@ -5715,7 +5738,7 @@ async def record_consent(
         conversation.consent_timestamp = datetime.utcnow() if request.consent_given else None
     else:
         # Create new conversation with consent
-        client_ip = req.client.host if req.client else None
+        client_ip = get_client_ip(req)
         conversation = Conversation(
             company_id=company_id,
             session_id=request.session_id,
@@ -8969,11 +8992,8 @@ async def track_pageview(
 ):
     """Track a page view - publicly accessible for landing page tracking"""
     try:
-        # Get client IP from request
-        client_ip = request.client.host if request.client else "unknown"
-        forwarded = request.headers.get("x-forwarded-for")
-        if forwarded:
-            client_ip = forwarded.split(",")[0].strip()
+        # Get client IP from request (handles X-Forwarded-For from reverse proxy)
+        client_ip = get_client_ip(request)
 
         # Create anonymous visitor ID from IP + user agent (hashed)
         import hashlib

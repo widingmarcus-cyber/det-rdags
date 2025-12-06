@@ -20,7 +20,7 @@ const PricingTab = ({
 
       {/* Revenue Dashboard */}
       {revenueDashboard && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="card bg-gradient-to-br from-green-50 to-green-100 border-green-200">
             <p className="text-sm text-green-700 font-medium">MRR (Månadlig)</p>
             <p className="text-3xl font-bold text-green-800 mt-1">
@@ -55,7 +55,7 @@ const PricingTab = ({
       {/* Pricing Tiers */}
       <div className="card mb-8">
         <h2 className="text-lg font-semibold text-text-primary mb-4">Prisnivåer</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Object.entries(pricingTiers).map(([key, tier]) => (
             <div
               key={key}

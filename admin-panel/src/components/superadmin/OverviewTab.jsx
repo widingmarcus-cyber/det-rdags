@@ -149,7 +149,7 @@ const OverviewTab = ({
       </div>
 
       {/* KPI CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="group relative overflow-hidden bg-bg-tertiary rounded-2xl p-6 border border-border-subtle hover:border-accent/30 transition-all hover:shadow-lg hover:shadow-accent/5">
           <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-accent/10 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500" />
           <div className="relative">
