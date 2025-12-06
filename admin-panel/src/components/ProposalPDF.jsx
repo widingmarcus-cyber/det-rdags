@@ -902,10 +902,10 @@ const JobDescriptionPage = () => (
     <View style={{ flexDirection: 'row', gap: 12 }}>
       <View style={{ flex: 1, backgroundColor: colors.primary, borderRadius: 12, padding: 14 }}>
         <Text style={{ fontSize: 10, fontWeight: 600, color: colors.white, marginBottom: 4 }}>Bobot Cloud</Text>
-        <Text style={{ fontSize: 8, color: 'rgba(255,255,255,0.8)', lineHeight: 1.4 }}>
+        <Text style={{ fontSize: 8, color: '#FFFFFFCC', lineHeight: 1.4 }}>
           Vi hanterar allt – hosting ingår. EU-servrar, 99.9% SLA.
         </Text>
-        <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 6, paddingVertical: 3, paddingHorizontal: 8, marginTop: 8, alignSelf: 'flex-start' }}>
+        <View style={{ backgroundColor: '#FFFFFF33', borderRadius: 6, paddingVertical: 3, paddingHorizontal: 8, marginTop: 8, alignSelf: 'flex-start' }}>
           <Text style={{ fontSize: 8, color: colors.white, fontWeight: 600 }}>REKOMMENDERAT</Text>
         </View>
       </View>
@@ -1121,21 +1121,30 @@ const ProcessPage = () => (
 
       {/* Timeline visualization */}
       <View style={{ flexDirection: 'row', marginBottom: 16 }}>
-        {[1, 2, 3, 4].map((week) => (
-          <View key={week} style={{ flex: 1, alignItems: 'center' }}>
-            <View style={{
-              width: 40, height: 40, borderRadius: 20,
-              backgroundColor: week % 2 === 1 ? colors.primary : colors.accent,
-              alignItems: 'center', justifyContent: 'center',
-              marginBottom: 8
-            }}>
-              <Text style={{ fontSize: 14, color: colors.white, fontWeight: 700 }}>{week}</Text>
-            </View>
-            <Text style={{ fontSize: 10, fontWeight: 600, color: colors.text, marginBottom: 2 }}>
-              {week === 1 ? 'Uppstart' : week === 2 ? 'Bygga' : week === 3 ? 'Testa' : 'Utvärdera'}
-            </Text>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+            <Text style={{ fontSize: 14, color: colors.white, fontWeight: 700 }}>1</Text>
           </View>
-        ))}
+          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.text, marginBottom: 2 }}>Uppstart</Text>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+            <Text style={{ fontSize: 14, color: colors.white, fontWeight: 700 }}>2</Text>
+          </View>
+          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.text, marginBottom: 2 }}>Bygga</Text>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+            <Text style={{ fontSize: 14, color: colors.white, fontWeight: 700 }}>3</Text>
+          </View>
+          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.text, marginBottom: 2 }}>Testa</Text>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+            <Text style={{ fontSize: 14, color: colors.white, fontWeight: 700 }}>4</Text>
+          </View>
+          <Text style={{ fontSize: 10, fontWeight: 600, color: colors.text, marginBottom: 2 }}>Utvärdera</Text>
+        </View>
       </View>
 
       {/* Week details in 2x2 grid */}
@@ -1266,12 +1275,12 @@ const PricingPage = ({ startupFee, monthlyFee, tier, tierKey, tierInfo, discount
                   {tierInfo?.max_knowledge > 0 ? `${formatPrice(tierInfo.max_knowledge)} kunskapsposter` : 'Obegränsade kunskapsposter'}
                 </Text>
               </View>
-              {tierInfo?.features && tierInfo.features.slice(0, 4).map((feature, index) => (
-                <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {tierInfo?.features && Array.isArray(tierInfo.features) && tierInfo.features.slice(0, 4).map((feature, index) => (
+                <View key={`feature-${index}`} style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
                     <IconCheck size={10} color={colors.white} />
                   </View>
-                  <Text style={{ fontSize: 10, color: colors.text }}>{feature}</Text>
+                  <Text style={{ fontSize: 10, color: colors.text }}>{String(feature)}</Text>
                 </View>
               ))}
             </View>
