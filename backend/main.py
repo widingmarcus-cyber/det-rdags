@@ -1398,6 +1398,71 @@ def init_demo_data():
 
             db.commit()
 
+        # =================================================================
+        # SFAB Company (Strängnäs Fastigheter)
+        # =================================================================
+        sfab = db.query(Company).filter(Company.id == "sfab").first()
+        if not sfab:
+            sfab = Company(
+                id="sfab",
+                name="Strängnäs Fastigheter",
+                password_hash=hash_password("sbab"),
+                pricing_tier="professional"
+            )
+            db.add(sfab)
+            db.commit()
+
+            # Create settings for SFAB
+            sfab_settings = CompanySettings(
+                company_id="sfab",
+                company_name="Strängnäs Bostads AB",
+                contact_email="info@strangnasbostadsab.se",
+                contact_phone="0152-290 90",
+                data_retention_days=30,
+                max_conversations_month=2000,
+                max_knowledge_items=250
+            )
+            db.add(sfab_settings)
+
+            # Create widget for SFAB
+            sfab_widget = Widget(
+                company_id="sfab",
+                widget_key="sfab-widget",
+                name="Kundtjänst",
+                display_name="Strängnäs Bostads AB",
+                widget_type="external",
+                widget_position="bottom-right",
+                primary_color="#1a5f7a",
+                welcome_message="Hej! Jag är Strängnäs Bostads AB:s digitala assistent. Jag kan hjälpa dig med frågor om bostäder, hyra, felanmälan och mycket mer. Vad kan jag hjälpa dig med idag?",
+                fallback_message="Tyvärr kunde jag inte hitta ett svar på din fråga. Kontakta oss på 0152-290 90 eller info@strangnasbostadsab.se.",
+                subtitle="Din bostadsassistent",
+                require_consent=True,
+                consent_text="Jag godkänner att mina meddelanden behandlas enligt Strängnäs Bostads AB:s integritetspolicy."
+            )
+            db.add(sfab_widget)
+            db.flush()
+
+            # Load knowledge base from template
+            import json
+            template_path = os.path.join(os.path.dirname(__file__), "templates", "strangnas_bostads_sv.json")
+            if os.path.exists(template_path):
+                with open(template_path, "r", encoding="utf-8") as f:
+                    template = json.load(f)
+                    for item in template.get("items", []):
+                        ki = KnowledgeItem(
+                            company_id="sfab",
+                            question=item["question"],
+                            answer=item["answer"],
+                            category=item.get("category", "Allmänt"),
+                            widget_id=sfab_widget.id
+                        )
+                        db.add(ki)
+                print(f"SFAB-företag skapat: sfab / sbab (med {len(template.get('items', []))} kunskapsartiklar)")
+            else:
+                print("SFAB-företag skapat: sfab / sbab (utan kunskapsbas - mall saknas)")
+
+            db.commit()
+
         if is_production:
             print("[Security] Demo data disabled in production")
     finally:

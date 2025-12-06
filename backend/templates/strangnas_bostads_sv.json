@@ -1,0 +1,273 @@
+{
+  "template_id": "strangnas_bostads_sv",
+  "name": "Strängnäs Bostads AB",
+  "description": "Kunskapsbas för Strängnäs Bostads AB - kommunalt bostadsbolag med lägenheter i Strängnäs, Mariefred och Åkers Styckebruk",
+  "version": "1.0.0",
+  "language": "sv",
+  "industry": "property_management",
+  "last_updated": "2025-01-01",
+  "sources": [
+    "strangnasbostadsab.se",
+    "Mina sidor"
+  ],
+  "categories": [
+    "Kontakt & Öppettider",
+    "Söka Bostad",
+    "Hyra & Betalning",
+    "Felanmälan",
+    "Flytta In",
+    "Flytta Ut",
+    "Parkering & Förråd",
+    "Tvättstuga",
+    "Andrahand & Byte",
+    "Bostadsområden",
+    "Allmänt"
+  ],
+  "items": [
+    {
+      "category": "Kontakt & Öppettider",
+      "question": "Vad är telefonnumret till Strängnäs Bostads AB?",
+      "answer": "Du når oss på telefon 0152-290 91 för uthyrning och övriga frågor (kl. 10.00-12.00). För felanmälan och jour dygnet runt ring 0152-290 90."
+    },
+    {
+      "category": "Kontakt & Öppettider",
+      "question": "Vilka är era öppettider?",
+      "answer": "Vårt kontor på Vältstigen 1 i Strängnäs har öppet måndag-torsdag kl. 7.00-16.00 och fredag kl. 7.00-12.00. Stängt alla helgdagar (röda dagar). Telefontid för uthyrning är kl. 10.00-12.00."
+    },
+    {
+      "category": "Kontakt & Öppettider",
+      "question": "Var ligger ert kontor?",
+      "answer": "Vårt kontor ligger på Vältstigen 1, 645 80 Strängnäs. Här hämtar du nycklar vid inflyttning och lämnar tillbaka dem vid utflyttning."
+    },
+    {
+      "category": "Kontakt & Öppettider",
+      "question": "Hur kontaktar jag er via e-post?",
+      "answer": "Du kan nå oss via e-post på info@strangnasbostadsab.se. Du kan också logga in på Mina sidor för att skicka meddelanden direkt till oss."
+    },
+    {
+      "category": "Kontakt & Öppettider",
+      "question": "Vad är Mina sidor?",
+      "answer": "Mina sidor är vår kundportal där du som hyresgäst eller bostadssökande hittar all information om avtal, betalningar, köpoäng och ärenden. Du kan logga in med Mobilt BankID. Som hyresgäst kan du göra felanmälningar, se hyresavier, söka parkering och förråd samt kommunicera direkt med oss."
+    },
+    {
+      "category": "Söka Bostad",
+      "question": "Hur söker jag lägenhet hos er?",
+      "answer": "Alla lediga lägenheter annonseras på vår webbplats strangnasbostadsab.se. För att anmäla intresse måste du registrera dig som sökande på webbplatsen. Du samlar sedan en poäng per dag i vår bostadskö."
+    },
+    {
+      "category": "Söka Bostad",
+      "question": "Hur fungerar bostadskön?",
+      "answer": "När du registrerar dig som sökande tilldelas du en poäng per dag. Bland de som anmält intresse för en annonserad lägenhet erbjuds den i första hand till de tio med högst poäng. Om du redan bor hos oss samlar du poäng automatiskt från inflyttningsdagen."
+    },
+    {
+      "category": "Söka Bostad",
+      "question": "Kan jag överlåta mina köpoäng till någon annan?",
+      "answer": "Nej, poängen är personliga och kan inte överlåtas eller läggas ihop med medsökande. Enda undantaget är vid dödsfall, då överlåtelse av köpoäng kan ske mellan gifta eller sammanboende."
+    },
+    {
+      "category": "Söka Bostad",
+      "question": "Vad händer om jag inte svarar på ett erbjudande?",
+      "answer": "Om du inte svarar i tid på ett erbjudande blir du spärrad i 30 dagar. Under den spärrade tiden kan du inte lägga nya intresseanmälningar, men du fortsätter att samla köpoäng."
+    },
+    {
+      "category": "Söka Bostad",
+      "question": "Kan jag få förtur till lägenhet?",
+      "answer": "Nej, Strängnäs Bostads AB beviljar inga förturer på sociala, ekonomiska eller medicinska grunder. Alla söker på samma villkor via bostadskön."
+    },
+    {
+      "category": "Söka Bostad",
+      "question": "Måste jag ha bott hos er en viss tid för att söka annan lägenhet?",
+      "answer": "Ja, för befintliga hyresgäster måste boendetiden uppgå till minst två år innan du kan anmäla intresse för annonserade lägenheter. Tilldelas du en bostad nollställs alla dina poäng på inflyttningsdagen."
+    },
+    {
+      "category": "Söka Bostad",
+      "question": "Vad är Bostadssnabben?",
+      "answer": "På Bostadssnabben finns lediga bostäder i olika storlekar med möjlighet att avtala om snabbare inflyttning. Det kan vara ett bra alternativ om du vill flytta in fort."
+    },
+    {
+      "category": "Söka Bostad",
+      "question": "Är det rökfritt i era lägenheter?",
+      "answer": "Ja, från och med 1 januari 2022 är alla nya hyreskontrakt rökfria. Det betyder att du inte får röka inomhus i lägenheten."
+    },
+    {
+      "category": "Hyra & Betalning",
+      "question": "Hur betalar jag hyran?",
+      "answer": "Du kan betala hyran via autogiro eller e-faktura. Med autogiro dras hyran automatiskt från ditt konto i slutet av varje månad. Med e-faktura får du hyresfakturan direkt till din internetbank. Kontakta din bank för att komma igång."
+    },
+    {
+      "category": "Hyra & Betalning",
+      "question": "Vad är uppsägningstiden?",
+      "answer": "Normal uppsägningstid är 3 kalendermånader. Det betyder att du kan behöva betala hyra för både den nya och den gamla lägenheten i upp till 3 månader beroende på när tillträdet är."
+    },
+    {
+      "category": "Hyra & Betalning",
+      "question": "Har befintliga hyresgäster kortare uppsägningstid vid internflytt?",
+      "answer": "Ja, om du redan bor hos oss och blir aktuell för en större lägenhet med högre hyra har du endast 1 kalendermånads uppsägningstid."
+    },
+    {
+      "category": "Hyra & Betalning",
+      "question": "Var ser jag min hyresavi?",
+      "answer": "Du kan se dina hyresavier på Mina sidor. Där kan du också se betalningshistorik och hantera dina betalningar."
+    },
+    {
+      "category": "Felanmälan",
+      "question": "Hur gör jag en felanmälan?",
+      "answer": "Enklast gör du din felanmälan genom att logga in på Mina sidor. Där kan du också följa din felanmälan. Du kan även ringa felanmälan och jour dygnet runt på 0152-290 90."
+    },
+    {
+      "category": "Felanmälan",
+      "question": "Vad är ett akut fel?",
+      "answer": "Akuta fel är sådana som kan innebära risk för person- eller egendomsskada, till exempel vattenläcka, strömavbrott eller trasig ytterdörr. Ring kundservice på 0152-290 90 för akuta fel. På kvällar och helger kopplas du automatiskt till jouren. Vid fara för liv, ring alltid 112."
+    },
+    {
+      "category": "Felanmälan",
+      "question": "Hur felanmäler jag Kabel-TV?",
+      "answer": "I våra bostäder finns Kabel-TV via Telenor. Felanmälan för TV-problem görs direkt till Telenor på telefon 020-222 222."
+    },
+    {
+      "category": "Felanmälan",
+      "question": "Hur når jag jouren på kvällar och helger?",
+      "answer": "Ring 0152-290 90 så kopplas du automatiskt till jouren på kvällar och helger. Jouren är öppen dygnet runt för akuta fel."
+    },
+    {
+      "category": "Flytta In",
+      "question": "Vad händer när jag flyttar in?",
+      "answer": "Din nya lägenhet ska vara hel och ren när du kommer på flyttdagen. Vi gör både en besiktning och en städkontroll efter den förra hyresgästen. Du får ett besiktningsprotokoll när du hämtar nycklarna."
+    },
+    {
+      "category": "Flytta In",
+      "question": "Var hämtar jag nycklarna?",
+      "answer": "Nycklarna hämtar du på vårt kontor på Vältstigen 1 i Strängnäs. Du får originalnycklar till bostad, port, tvättstuga och andra allmänna utrymmen."
+    },
+    {
+      "category": "Flytta In",
+      "question": "Vad gör jag om jag hittar fel i lägenheten vid inflyttning?",
+      "answer": "Kontrollera att lägenheten överensstämmer med besiktningsprotokollet. Meddela eventuella avvikelser inom 8 dagar från tillträdet. Om det ska utföras åtgärder på golv eller tapeter får du välja färg eller golv på kontoret efter att du kvitterat ut nycklarna."
+    },
+    {
+      "category": "Flytta Ut",
+      "question": "Hur säger jag upp min lägenhet?",
+      "answer": "Du säger upp din lägenhet via Mina sidor eller genom att kontakta oss. Normal uppsägningstid är 3 kalendermånader."
+    },
+    {
+      "category": "Flytta Ut",
+      "question": "Vad händer efter uppsägningen?",
+      "answer": "När du sagt upp din bostad bokar vi in en besiktningstid inom 14 dagar. Vid besiktningen ska allt som tillhör lägenheten finnas i lägenheten, även sådant du kan ha plockat bort som dörrar, hatthyllor eller gardinbeslag."
+    },
+    {
+      "category": "Flytta Ut",
+      "question": "Hur ska lägenheten städas vid utflytt?",
+      "answer": "Lägenheten ska vara ren och prydlig – nästa hyresgäst ska kunna flytta in utan att behöva städa först. Du ska också visa eller informera om var förråd, tvättstuga och miljöbod finns."
+    },
+    {
+      "category": "Flytta Ut",
+      "question": "När och var lämnar jag nycklarna?",
+      "answer": "Lämna in alla nycklar senast klockan 12.00 på Vältstigen 1 på avflyttningsdagen, som alltid är den första dagen i månaden. Lämna in alla nycklar: tvättkolvar, förrådsnycklar, garagenycklar och postboxnycklar."
+    },
+    {
+      "category": "Flytta Ut",
+      "question": "Vad kostar det om jag tappar bort nycklarna?",
+      "answer": "Om nycklar saknas debiteras du för låsbyte. Kostnaden varierar mellan 1500-5500 kronor beroende på område och låssystem."
+    },
+    {
+      "category": "Parkering & Förråd",
+      "question": "Hur ansöker jag om parkeringsplats?",
+      "answer": "Som hyresgäst har du förtur på lediga parkeringsplatser i ditt närområde. Logga in på Mina sidor med Mobilt BankID för att ställa dig i kö och anmäla intresse på lediga parkeringsplatser så snart ditt hyresavtal har börjat gälla."
+    },
+    {
+      "category": "Parkering & Förråd",
+      "question": "Hur ansöker jag om extra förråd?",
+      "answer": "Du kan söka lediga förråd via Mina sidor. Logga in med Mobilt BankID och anmäl ditt intresse. Du kan också skapa en bevakning så får du mejl när det finns lediga förråd."
+    },
+    {
+      "category": "Parkering & Förråd",
+      "question": "Har jag förtur till parkering i mitt område?",
+      "answer": "Ja, som hyresgäst har du förtur på lediga parkeringsplatser i ditt närområde. Ansök via Mina sidor."
+    },
+    {
+      "category": "Tvättstuga",
+      "question": "Hur bokar jag tvättstuga?",
+      "answer": "Du bokar tvättstuga via bokningssystemet i din fastighet. Ofta finns det en bokningstavla i tvättstugan eller så bokar du digitalt. Kontakta oss om du är osäker på hur systemet fungerar i just din fastighet."
+    },
+    {
+      "category": "Tvättstuga",
+      "question": "Var finns tvättstugan?",
+      "answer": "Tvättstugan finns i din fastighet. När du flyttar in får du nyckel till tvättstugan. Om du är osäker på var den ligger, fråga en granne eller kontakta oss."
+    },
+    {
+      "category": "Andrahand & Byte",
+      "question": "Får jag hyra ut min lägenhet i andra hand?",
+      "answer": "Andrahandsuthyrning kan i vissa fall godkännas. Du måste alltid ha vårt medgivande. Ansök via blanketten på hemsidan - ansökan gäller max 6 månader. Hyr du ut utan tillstånd riskerar du uppsägning och förlust av kontraktet."
+    },
+    {
+      "category": "Andrahand & Byte",
+      "question": "Får jag hyra ut via Airbnb?",
+      "answer": "Nej, kommersiella korttidsuthyrningar som Airbnb är inte tillåtna. Det kan leda till uppsägning och förlust av kontraktet."
+    },
+    {
+      "category": "Andrahand & Byte",
+      "question": "Vilken hyra får jag ta vid andrahandsuthyrning?",
+      "answer": "Du får inte ta ut en högre hyra än vad du själv betalar."
+    },
+    {
+      "category": "Andrahand & Byte",
+      "question": "Hur byter jag lägenhet?",
+      "answer": "Vi har ingen intern byteskö. Vill du byta till en lägenhet inom Strängnäs Bostads AB söker du den på Mina sidor. Du kan även hitta bytespartner själv – det behöver inte vara en hyresgäst hos oss. Lämna då in en bytesansökan som finns på sidan Blanketter."
+    },
+    {
+      "category": "Andrahand & Byte",
+      "question": "Hur länge måste jag ha bott här för att få byta lägenhet?",
+      "answer": "Kontraktstiden måste uppgå till minst ett år innan du kan ansöka om lägenhetsbyte eller anmäla intresse för annonserade lägenheter. Både du och den du byter med ska ha bott i era lägenheter minst ett år."
+    },
+    {
+      "category": "Bostadsområden",
+      "question": "Var har ni bostäder?",
+      "answer": "Vi har 1267 lägenheter i Strängnäs, Mariefred och Åkers Styckebruk. Du kan bo centralt nära tågstation och shopping, eller i naturnära och familjevänliga områden."
+    },
+    {
+      "category": "Bostadsområden",
+      "question": "Hur många lägenheter har ni i Strängnäs stad?",
+      "answer": "I Strängnäs stad har vi 556 lägenheter fördelade på 10 olika områden."
+    },
+    {
+      "category": "Bostadsområden",
+      "question": "Finns det pensionärslägenheter?",
+      "answer": "Ja, vi har pensionärslägenheter i Mariefred, bland annat på Nyponvägen 31 och Klövervägen 1-5."
+    },
+    {
+      "category": "Bostadsområden",
+      "question": "Vilka områden finns i Åkers Styckebruk?",
+      "answer": "I Åkers Styckebruk har vi lägenheter på bland annat Bruksvägen, Lohesväg, Lunbyvägen, Rättarvägen, Solbergavägen, Stockenströmsvägen och Vallonvägen."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Vem äger Strängnäs Bostads AB?",
+      "answer": "Strängnäs Bostads AB är ett helägt dotterbolag till Strängnäs Fastighets AB, som i sin helhet ägs av Strängnäs kommun. Vi är ett allmännyttigt bostadsbolag."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Hur många lägenheter förvaltar ni totalt?",
+      "answer": "Vi äger 1267 bostäder och förvaltar cirka 150 000 kvm kommunala verksamhetslokaler i Strängnäs, Mariefred, Stallarholmen och Åkers Styckebruk."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Får man som hyresgäst som blivit uppsagd söka ny lägenhet?",
+      "answer": "Nej, sökande som blivit avhyst eller uppsagd på grund av störningar, olovlig andrahandsuthyrning eller försenade hyresbetalningar de senaste två åren hos oss kommer inte att erbjudas något hyreskontrakt."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Har ni en visselblåsarfunktion?",
+      "answer": "Ja, SBAB och SFAB har infört en visselblåsarfunktion där du kan rapportera oegentligheter anonymt."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Gör ni renoveringar i fastigheterna?",
+      "answer": "Ja, vi arbetar kontinuerligt med underhåll och renoveringar för att hålla våra bostäder i gott skick. Vi statusbesiktar alla fastigheter för att planera framtida underhåll. Vid större renoveringar informeras berörda hyresgäster i god tid."
+    },
+    {
+      "category": "Allmänt",
+      "question": "Hur hanteras störningar?",
+      "answer": "Vi tar störningar på allvar. Hyresgäster som upprepat stör sina grannar riskerar uppsägning. Om du upplever störningar, kontakta oss så utreder vi ärendet."
+    }
+  ]
+}
