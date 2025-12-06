@@ -6,7 +6,8 @@
 const SystemTab = ({
   systemHealth,
   maintenanceMode,
-  onToggleMaintenance
+  onToggleMaintenance,
+  onCleanupWidgets
 }) => {
   return (
     <div className="animate-fade-in">
@@ -110,6 +111,21 @@ const SystemTab = ({
               </div>
             </div>
           )}
+        </div>
+
+        {/* Widget Cleanup */}
+        <div className="card lg:col-span-2">
+          <h2 className="text-lg font-medium text-text-primary mb-4">Widgethantering</h2>
+          <p className="text-sm text-text-secondary mb-4">
+            Varje företag kan ha max 2 widgets (1 intern och 1 extern). Använd knappen nedan för att
+            automatiskt ta bort extra widgets från alla företag som har fler än 2.
+          </p>
+          <button
+            onClick={onCleanupWidgets}
+            className="px-4 py-2 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 font-medium transition-colors"
+          >
+            Rensa extra widgets
+          </button>
         </div>
       </div>
     </div>
