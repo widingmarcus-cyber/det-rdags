@@ -403,7 +403,7 @@ function App() {
         Hoppa till navigation
       </a>
 
-      <div className="flex min-h-screen bg-bg-primary relative">
+      <div className="flex min-h-screen bg-bg-primary relative overflow-x-hidden">
         {/* Subtle dot pattern overlay (light mode only) */}
         <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.08] dark:opacity-0" style={{
           backgroundImage: 'radial-gradient(circle, #D97757 1px, transparent 1px)',

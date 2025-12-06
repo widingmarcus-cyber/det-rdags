@@ -389,16 +389,21 @@ const injectStyles = (fontFamily, borderRadius) => {
     @media (max-width: 640px) {
       .bobot-widget-window {
         position: fixed !important;
-        top: 12px !important;
-        left: 12px !important;
+        top: auto !important;
+        left: auto !important;
         right: 12px !important;
-        bottom: 12px !important;
+        bottom: 70px !important;
         width: calc(100vw - 24px) !important;
-        height: calc(100vh - 24px) !important;
-        max-height: calc(100vh - 24px) !important;
+        max-width: 340px !important;
+        height: 60vh !important;
+        max-height: 450px !important;
         border-radius: 16px !important;
         z-index: 100000 !important;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+      }
+      .bobot-widget-window.bobot-position-left {
+        left: 12px !important;
+        right: auto !important;
       }
       .bobot-widget-trigger {
         bottom: 16px !important;
@@ -737,7 +742,7 @@ function ChatWidget({ config }) {
     >
       {isOpen && (
         <div
-          className="bobot-widget-window"
+          className={`bobot-widget-window ${isLeft ? 'bobot-position-left' : ''}`}
           style={{
             position: 'absolute',
             bottom: 64,
