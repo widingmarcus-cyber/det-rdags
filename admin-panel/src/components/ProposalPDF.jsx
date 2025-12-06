@@ -720,21 +720,21 @@ const PhilosophyPage = () => (
           <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Affärsfördelar</Text>
           <View style={{ gap: 6 }}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <View style={[styles.featureBullet, { marginTop: 2 }]}><IconCheck size={10} color={colors.white} /></View>
+              <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, marginRight: 8, marginTop: 2, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 8, color: colors.white, fontWeight: 700 }}>1</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Minskad supportbelastning</Text>
                 <Text style={{ fontSize: 8, color: colors.textLight, marginTop: 1 }}>Upp till 70% av rutinfrågor besvaras automatiskt</Text>
               </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <View style={[styles.featureBullet, { marginTop: 2 }]}><IconCheck size={10} color={colors.white} /></View>
+              <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, marginRight: 8, marginTop: 2, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 8, color: colors.white, fontWeight: 700 }}>2</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Snabbare onboarding</Text>
                 <Text style={{ fontSize: 8, color: colors.textLight, marginTop: 1 }}>Nyanställda hittar svar själva istället för att fråga kollegor</Text>
               </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <View style={[styles.featureBullet, { marginTop: 2 }]}><IconCheck size={10} color={colors.white} /></View>
+              <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, marginRight: 8, marginTop: 2, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 8, color: colors.white, fontWeight: 700 }}>3</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Tillgänglig dygnet runt</Text>
                 <Text style={{ fontSize: 8, color: colors.textLight, marginTop: 1 }}>Kunder och anställda får hjälp även utanför kontorstid</Text>
@@ -747,21 +747,21 @@ const PhilosophyPage = () => (
           <Text style={{ fontSize: 10, fontWeight: 600, color: colors.accent, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tekniska fördelar</Text>
           <View style={{ gap: 6 }}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <View style={[styles.featureBullet, { marginTop: 2, backgroundColor: colors.accent }]}><IconCheck size={10} color={colors.white} /></View>
+              <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.accent, marginRight: 8, marginTop: 2, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 8, color: colors.white, fontWeight: 700 }}>1</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>GDPR-säker arkitektur</Text>
-                <Text style={{ fontSize: 8, color: colors.textLight, marginTop: 1 }}>Automatisk radering, svensk datalagring, audit-loggning</Text>
+                <Text style={{ fontSize: 8, color: colors.textLight, marginTop: 1 }}>Automatisk radering, EU-datalagring, audit-loggning</Text>
               </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <View style={[styles.featureBullet, { marginTop: 2, backgroundColor: colors.accent }]}><IconCheck size={10} color={colors.white} /></View>
+              <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.accent, marginRight: 8, marginTop: 2, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 8, color: colors.white, fontWeight: 700 }}>2</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Lokal språkmodell (LLM)</Text>
                 <Text style={{ fontSize: 8, color: colors.textLight, marginTop: 1 }}>Ingen data skickas till externa AI-tjänster som OpenAI</Text>
               </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <View style={[styles.featureBullet, { marginTop: 2, backgroundColor: colors.accent }]}><IconCheck size={10} color={colors.white} /></View>
+              <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.accent, marginRight: 8, marginTop: 2, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 8, color: colors.white, fontWeight: 700 }}>3</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Enkel integration</Text>
                 <Text style={{ fontSize: 8, color: colors.textLight, marginTop: 1 }}>En rad JavaScript på er hemsida – ingen kodning krävs</Text>
@@ -892,24 +892,24 @@ const CustomizationPage = () => (
           <View style={{ backgroundColor: colors.white, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border }}>
             <View style={{ gap: 6 }}>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                <View style={[styles.featureBullet, { width: 18, height: 18, borderRadius: 9, marginTop: 1 }]}><IconPalette size={10} color={colors.white} /></View>
+                <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: colors.primary, marginRight: 8, marginTop: 1, alignItems: 'center', justifyContent: 'center' }}><IconPalette size={10} color={colors.white} /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Företagsfärger</Text>
-                  <Text style={{ fontSize: 8, color: colors.textLight }}>Primär- och sekundärfärg (HEX-kod) för widget och knappar</Text>
+                  <Text style={{ fontSize: 8, color: colors.textLight }}>Primär- och sekundärfärg för widget och knappar</Text>
                 </View>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                <View style={[styles.featureBullet, { width: 18, height: 18, borderRadius: 9, marginTop: 1 }]}><Text style={{ fontSize: 8, color: colors.white, fontWeight: 600 }}>Aa</Text></View>
+                <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: colors.primary, marginRight: 8, marginTop: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 8, color: colors.white, fontWeight: 600 }}>Aa</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Typografi</Text>
-                  <Text style={{ fontSize: 8, color: colors.textLight }}>Välj typsnitt eller använd vårt standardteckensnitt Inter</Text>
+                  <Text style={{ fontSize: 8, color: colors.textLight }}>Välj typsnitt eller använd standardteckensnittet Inter</Text>
                 </View>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                <View style={[styles.featureBullet, { width: 18, height: 18, borderRadius: 9, marginTop: 1 }]}><IconCheck size={10} color={colors.white} /></View>
+                <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: colors.primary, marginRight: 8, marginTop: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 8, color: colors.white, fontWeight: 600 }}>○</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Form & stil</Text>
-                  <Text style={{ fontSize: 8, color: colors.textLight }}>Runda eller raka hörn (border-radius: 0-24px)</Text>
+                  <Text style={{ fontSize: 8, color: colors.textLight }}>Runda eller raka hörn på widgeten</Text>
                 </View>
               </View>
             </View>
@@ -922,24 +922,24 @@ const CustomizationPage = () => (
           <View style={{ backgroundColor: colors.white, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border }}>
             <View style={{ gap: 6 }}>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                <View style={[styles.featureBullet, { width: 18, height: 18, borderRadius: 9, marginTop: 1, backgroundColor: colors.accent }]}><IconChat size={10} color={colors.white} /></View>
+                <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: colors.accent, marginRight: 8, marginTop: 1, alignItems: 'center', justifyContent: 'center' }}><IconChat size={10} color={colors.white} /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Tonalitet</Text>
                   <Text style={{ fontSize: 8, color: colors.textLight }}>Formell eller avslappnad – matcha ert varumärke</Text>
                 </View>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                <View style={[styles.featureBullet, { width: 18, height: 18, borderRadius: 9, marginTop: 1, backgroundColor: colors.accent }]}><IconCheck size={10} color={colors.white} /></View>
+                <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: colors.accent, marginRight: 8, marginTop: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 8, color: colors.white, fontWeight: 600 }}>Hi</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Välkomstmeddelande</Text>
                   <Text style={{ fontSize: 8, color: colors.textLight }}>Anpassat hälsningsmeddelande och föreslagna frågor</Text>
                 </View>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                <View style={[styles.featureBullet, { width: 18, height: 18, borderRadius: 9, marginTop: 1, backgroundColor: colors.accent }]}><IconCheck size={10} color={colors.white} /></View>
+                <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: colors.accent, marginRight: 8, marginTop: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 7, color: colors.white, fontWeight: 600 }}>[*]</Text></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Svarsformat</Text>
-                  <Text style={{ fontSize: 8, color: colors.textLight }}>Korta eller utförliga svar, med eller utan källhänvisningar</Text>
+                  <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>Källhänvisningar</Text>
+                  <Text style={{ fontSize: 8, color: colors.textLight }}>Bobot visar alltid vilken källa svaret kommer från</Text>
                 </View>
               </View>
             </View>
@@ -956,25 +956,22 @@ const CustomizationPage = () => (
       <View style={{ backgroundColor: colors.white, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: colors.border }}>
         <View style={{ flexDirection: 'row', gap: 20 }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 8 }}>Flerspråkig chatbot</Text>
+            <Text style={{ fontSize: 10, fontWeight: 600, color: colors.primary, marginBottom: 8 }}>Anpassningsbart språk</Text>
             <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
-              Bobot kan kommunicera på det språk era kunder och medarbetare föredrar. Språkstöd konfigureras efter era behov vid uppstart.
+              Bobot svarar på svenska som standard. Behöver ni stöd för andra språk? Kontakta oss så diskuterar vi era behov.
             </Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 10, fontWeight: 600, color: colors.accent, marginBottom: 8 }}>Tekniska möjligheter</Text>
+            <Text style={{ fontSize: 10, fontWeight: 600, color: colors.accent, marginBottom: 8 }}>Tekniskt</Text>
             <View style={{ gap: 4 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={[styles.featureBullet, { width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent }]}><IconCheck size={8} color={colors.white} /></View>
-                <Text style={{ fontSize: 9, color: colors.text }}>Automatisk språkdetektering</Text>
+                <Text style={{ fontSize: 9, color: colors.text }}>• RTL-stöd för höger-till-vänster-språk</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={[styles.featureBullet, { width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent }]}><IconCheck size={8} color={colors.white} /></View>
-                <Text style={{ fontSize: 9, color: colors.text }}>RTL-stöd (höger-till-vänster)</Text>
+                <Text style={{ fontSize: 9, color: colors.text }}>• Fullt Unicode/UTF-8-stöd</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={[styles.featureBullet, { width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent }]}><IconCheck size={8} color={colors.white} /></View>
-                <Text style={{ fontSize: 9, color: colors.text }}>Fullt Unicode/UTF-8-stöd</Text>
+                <Text style={{ fontSize: 9, color: colors.text }}>• Anpassningsbart gränssnitt</Text>
               </View>
             </View>
           </View>
@@ -997,7 +994,7 @@ const ProcessPage = () => (
     </View>
 
     <Text style={styles.sectionSubtitle}>
-      Kom igång snabbt med tre enkla steg. Ingen teknisk kompetens krävs – vi hjälper er hela vägen.
+      Kom igång snabbt med tre enkla steg. Vi hjälper er hela vägen med Bobot Cloud.
     </Text>
 
     <View style={styles.processSteps}>
@@ -1038,27 +1035,49 @@ const ProcessPage = () => (
       </View>
     </View>
 
-    {/* Timeline - 4 week trial */}
-    <View style={{ marginTop: 40, backgroundColor: colors.white, borderRadius: 16, padding: 24 }}>
+    {/* Timeline - 4 week trial - 2x2 grid */}
+    <View style={{ marginTop: 30, backgroundColor: colors.white, borderRadius: 16, padding: 20 }}>
       <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 16 }}>
         4 veckors provperiod
       </Text>
-      <View style={{ flexDirection: 'row' }}>
-        <View style={{ flex: 1, alignItems: 'center', paddingVertical: 12 }}>
-          <Text style={{ fontSize: 18, fontWeight: 700, color: colors.primary }}>Vecka 1</Text>
-          <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'center', marginTop: 4 }}>Uppstart & setup</Text>
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+              <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>1</Text>
+            </View>
+            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 1</Text>
+          </View>
+          <Text style={{ fontSize: 9, color: colors.textLight }}>Uppstart & setup av konto och widget</Text>
         </View>
-        <View style={{ flex: 1, alignItems: 'center', paddingVertical: 12, borderLeftWidth: 1, borderLeftColor: colors.border }}>
-          <Text style={{ fontSize: 18, fontWeight: 700, color: colors.primary }}>Vecka 2</Text>
-          <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'center', marginTop: 4 }}>Kunskapsbas</Text>
+        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+              <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>2</Text>
+            </View>
+            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 2</Text>
+          </View>
+          <Text style={{ fontSize: 9, color: colors.textLight }}>Bygga och finjustera kunskapsbasen</Text>
         </View>
-        <View style={{ flex: 1, alignItems: 'center', paddingVertical: 12, borderLeftWidth: 1, borderLeftColor: colors.border }}>
-          <Text style={{ fontSize: 18, fontWeight: 700, color: colors.primary }}>Vecka 3</Text>
-          <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'center', marginTop: 4 }}>Test & justering</Text>
+      </View>
+      <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+              <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>3</Text>
+            </View>
+            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 3</Text>
+          </View>
+          <Text style={{ fontSize: 9, color: colors.textLight }}>Testa internt och göra justeringar</Text>
         </View>
-        <View style={{ flex: 1, alignItems: 'center', paddingVertical: 12, borderLeftWidth: 1, borderLeftColor: colors.border }}>
-          <Text style={{ fontSize: 18, fontWeight: 700, color: colors.primary }}>Vecka 4</Text>
-          <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'center', marginTop: 4 }}>Utvärdering</Text>
+        <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+              <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>4</Text>
+            </View>
+            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 4</Text>
+          </View>
+          <Text style={{ fontSize: 9, color: colors.textLight }}>Utvärdera resultat och bestäm framtid</Text>
         </View>
       </View>
     </View>
@@ -1083,7 +1102,7 @@ const PricingPage = ({ startupFee, monthlyFee, tier, discount, pricingTiers = []
       <CornerAccent position="topRight" />
 
       <View style={styles.pageHeader}>
-        <Text style={styles.pageHeaderTitle}>Välj nivå för er nya kollega</Text>
+        <Text style={styles.pageHeaderTitle}>Priser och paket</Text>
         <BobotMascotSmall size={36} />
       </View>
 
