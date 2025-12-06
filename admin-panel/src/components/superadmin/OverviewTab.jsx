@@ -356,17 +356,17 @@ const OverviewTab = ({
             <div className="space-y-3">
               <button
                 onClick={onAddCompany}
-                className="w-full flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-accent to-accent-hover text-white hover:shadow-lg hover:shadow-accent/20 transition-all group"
+                className="w-full flex items-center gap-3 p-4 rounded-xl bg-bg-secondary hover:bg-bg-primary border border-border-subtle hover:border-accent/30 transition-all group"
               >
-                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <line x1="12" y1="5" x2="12" y2="19" />
                     <line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
                 </div>
                 <div className="text-left">
-                  <p className="font-medium">Lägg till kund</p>
-                  <p className="text-xs opacity-80">Skapa nytt företagskonto</p>
+                  <p className="font-medium text-text-primary">Lägg till kund</p>
+                  <p className="text-xs text-text-secondary">Skapa nytt företagskonto</p>
                 </div>
               </button>
               <button
