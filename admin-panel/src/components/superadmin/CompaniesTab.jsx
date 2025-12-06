@@ -110,10 +110,18 @@ const CompaniesTab = ({
         </div>
       ) : (
         <div className="card overflow-hidden p-0">
-          <table className="w-full">
+          {/* Mobile scroll hint */}
+          <div className="sm:hidden px-4 py-2 bg-bg-secondary border-b border-border-subtle flex items-center gap-2 text-xs text-text-tertiary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+            Svep för att se mer
+          </div>
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px]">
             <thead className="bg-bg-secondary border-b border-border-subtle">
               <tr>
-                <th className="px-4 py-3 text-left">
+                <th className="px-4 py-3 text-left whitespace-nowrap">
                   <button
                     onClick={toggleSelectAll}
                     className={`w-5 h-5 rounded flex items-center justify-center transition-all ${
@@ -129,13 +137,13 @@ const CompaniesTab = ({
                     )}
                   </button>
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Företag</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Widgets</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Kunskapsbas</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Konversationer</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Användning</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Skapad</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider whitespace-nowrap">Företag</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider whitespace-nowrap">Widgets</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider whitespace-nowrap">Kunskapsbas</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider whitespace-nowrap">Konversationer</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider whitespace-nowrap">Användning</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider whitespace-nowrap">Skapad</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-subtle">
@@ -251,6 +259,7 @@ const CompaniesTab = ({
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

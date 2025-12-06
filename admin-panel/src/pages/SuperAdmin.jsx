@@ -1801,11 +1801,41 @@ function SuperAdmin() {
         </div>
       </nav>
 
+      {/* Mobile Tab Navigation */}
+      <div className="lg:hidden sticky top-16 z-30 bg-bg-tertiary border-b border-border-subtle overflow-x-auto">
+        <div className="flex p-2 gap-1 min-w-max">
+          {[
+            { id: 'overview', label: 'Dashboard' },
+            { id: 'companies', label: 'Företag' },
+            { id: 'billing', label: 'Fakturering' },
+            { id: 'pricing', label: 'Prissättning' },
+            { id: 'analytics', label: 'Analys' },
+            { id: 'system', label: 'Hälsa' },
+            { id: 'audit', label: 'Logg' },
+            { id: 'gdpr', label: 'GDPR' },
+            { id: 'preferences', label: 'Inställningar' },
+            { id: 'docs', label: 'Dokumentation' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-accent text-white'
+                  : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Sidebar + Content Layout */}
       <div className="flex min-h-[calc(100vh-4rem)]">
-        {/* Sidebar Navigation */}
-        <aside className="w-64 bg-bg-tertiary border-r border-border-subtle flex-shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
-          <nav className="p-4 space-y-1">
+        {/* Sidebar Navigation - Hidden on mobile */}
+        <aside className="hidden lg:flex w-64 bg-bg-tertiary border-r border-border-subtle flex-shrink-0 sticky top-16 h-[calc(100vh-4rem)] flex-col">
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             {/* Dashboard */}
             <button
               onClick={() => setActiveTab('overview')}
@@ -1975,24 +2005,24 @@ function SuperAdmin() {
                 Dokumentation
               </button>
             </div>
+          </nav>
 
-            {/* User section at bottom */}
-            <div className="absolute bottom-4 left-4 right-4 pt-4 border-t border-border-subtle">
-              <div className="flex items-center gap-3 px-3 py-2">
-                <div className="w-8 h-8 rounded-full bg-warning/20 flex items-center justify-center">
-                  <span className="text-sm font-semibold text-warning">{adminAuth.username?.charAt(0).toUpperCase()}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-text-primary truncate">{adminAuth.username}</p>
-                  <p className="text-xs text-text-tertiary">Super Admin</p>
-                </div>
+          {/* User section at bottom - properly positioned with flex */}
+          <div className="p-4 border-t border-border-subtle bg-bg-tertiary">
+            <div className="flex items-center gap-3 px-3 py-2">
+              <div className="w-8 h-8 rounded-full bg-warning/20 flex items-center justify-center">
+                <span className="text-sm font-semibold text-warning">{adminAuth.username?.charAt(0).toUpperCase()}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-text-primary truncate">{adminAuth.username}</p>
+                <p className="text-xs text-text-tertiary">Super Admin</p>
               </div>
             </div>
-          </nav>
+          </div>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-8 overflow-y-auto">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <OverviewTab

@@ -867,7 +867,7 @@ function WidgetPage({ widgetType }) {
                 Kontaktinformation
               </h3>
               <p className="text-sm text-text-secondary mb-4">Visas i widgetens header och fallback-meddelanden</p>
-              <div className="grid md:grid-cols-3 gap-4">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-1">Namn</label>
                   <input
@@ -1007,7 +1007,7 @@ function WidgetPage({ widgetType }) {
                 </h3>
                 <div className="space-y-4">
                   {/* Color Settings */}
-                  <div className="grid md:grid-cols-3 gap-4">
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-text-primary mb-1">Primärfärg</label>
                       <div className="flex gap-2">

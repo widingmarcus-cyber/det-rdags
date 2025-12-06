@@ -178,8 +178,8 @@ const SuperAdminSidebar = ({
   }
 
   return (
-    <aside className="w-64 bg-bg-tertiary border-r border-border-subtle flex-shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
-      <nav className="p-4 space-y-1">
+    <aside className="hidden lg:flex w-64 bg-bg-tertiary border-r border-border-subtle flex-shrink-0 sticky top-16 h-[calc(100vh-4rem)] flex-col">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {renderNavItems()}
 
         {/* Divider and bottom items */}
@@ -188,22 +188,22 @@ const SuperAdminSidebar = ({
             <NavButton key={item.id} item={item} />
           ))}
         </div>
+      </nav>
 
-        {/* User section at bottom */}
-        <div className="absolute bottom-4 left-4 right-4 pt-4 border-t border-border-subtle">
-          <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-8 h-8 rounded-full bg-warning/20 flex items-center justify-center">
-              <span className="text-sm font-semibold text-warning">
-                {adminUsername?.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-text-primary truncate">{adminUsername}</p>
-              <p className="text-xs text-text-tertiary">Super Admin</p>
-            </div>
+      {/* User section at bottom - properly positioned with flex */}
+      <div className="p-4 border-t border-border-subtle bg-bg-tertiary">
+        <div className="flex items-center gap-3 px-3 py-2">
+          <div className="w-8 h-8 rounded-full bg-warning/20 flex items-center justify-center">
+            <span className="text-sm font-semibold text-warning">
+              {adminUsername?.charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-text-primary truncate">{adminUsername}</p>
+            <p className="text-xs text-text-tertiary">Super Admin</p>
           </div>
         </div>
-      </nav>
+      </div>
     </aside>
   )
 }
