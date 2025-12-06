@@ -5,7 +5,6 @@ import {
   Text,
   View,
   StyleSheet,
-  Font,
   pdf,
   Svg,
   Path,
@@ -15,27 +14,8 @@ import {
   Ellipse
 } from '@react-pdf/renderer'
 
-// Register Playfair Display - Serif for "Human Voice" headlines
-// Using jsDelivr/fontsource CDN for reliable font loading with react-pdf
-Font.register({
-  family: 'Playfair',
-  fonts: [
-    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/playfair-display@latest/latin-400-normal.ttf', fontWeight: 400 },
-    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/playfair-display@latest/latin-600-normal.ttf', fontWeight: 600 },
-    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/playfair-display@latest/latin-700-normal.ttf', fontWeight: 700 },
-  ]
-})
-
-// Register Inter - Sans-serif for body text
-Font.register({
-  family: 'Inter',
-  fonts: [
-    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.ttf', fontWeight: 400 },
-    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-500-normal.ttf', fontWeight: 500 },
-    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-600-normal.ttf', fontWeight: 600 },
-    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.ttf', fontWeight: 700 },
-  ]
-})
+// Note: Using system fonts (Helvetica) to avoid font loading issues
+// Custom fonts can be re-enabled later if needed
 
 // Refined, Elegant, Professional Color Palette
 const colors = {
@@ -229,14 +209,14 @@ const styles = StyleSheet.create({
   page: {
     backgroundColor: colors.background,
     padding: 50,
-    fontFamily: 'Inter',
+    fontFamily: 'Helvetica',
   },
 
   // SECTION 1: HERO
   heroPage: {
     backgroundColor: colors.background,
     padding: 0,
-    fontFamily: 'Inter',
+    fontFamily: 'Helvetica',
   },
   heroContainer: {
     backgroundColor: colors.heroBackground,
@@ -254,7 +234,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroTitle: {
-    fontFamily: 'Playfair',
+    fontFamily: 'Helvetica-Bold',
     fontSize: 42,
     fontWeight: 700,
     color: colors.primary,
@@ -286,7 +266,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   sectionTitle: {
-    fontFamily: 'Playfair',
+    fontFamily: 'Helvetica-Bold',
     fontSize: 28,
     fontWeight: 700,
     color: colors.text,
@@ -586,7 +566,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   pageHeaderTitle: {
-    fontFamily: 'Playfair',
+    fontFamily: 'Helvetica-Bold',
     fontSize: 24,
     fontWeight: 700,
     color: colors.text,
@@ -610,7 +590,7 @@ const HeroPage = ({ customerName, contactPerson, startDate }) => (
     {/* Decorative header area with mascot instead of external image */}
     <View style={{ backgroundColor: colors.heroBackground, margin: 30, marginBottom: 0, borderRadius: 20, padding: 40, minHeight: 340, alignItems: 'center', justifyContent: 'center' }}>
       <BobotMascot size={120} />
-      <Text style={{ fontFamily: 'Playfair', fontSize: 28, fontWeight: 700, color: colors.text, marginTop: 20, textAlign: 'center' }}>
+      <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 28, fontWeight: 700, color: colors.text, marginTop: 20, textAlign: 'center' }}>
         Er nya AI-kollega
       </Text>
       <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 8, textAlign: 'center' }}>
@@ -628,7 +608,7 @@ const HeroPage = ({ customerName, contactPerson, startDate }) => (
       )}
 
       {/* Title */}
-      <Text style={{ fontFamily: 'Playfair', fontSize: 36, fontWeight: 700, color: colors.primary, marginBottom: 12, textAlign: 'center' }}>
+      <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 36, fontWeight: 700, color: colors.primary, marginBottom: 12, textAlign: 'center' }}>
         Hälsa på Bobot.
       </Text>
       <Text style={{ fontSize: 13, color: colors.textLight, textAlign: 'center', lineHeight: 1.6, maxWidth: 400, marginBottom: 30 }}>
@@ -781,7 +761,7 @@ const JobDescriptionPage = () => (
     {/* Header with mascot */}
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontFamily: 'Playfair', fontSize: 26, fontWeight: 700, color: colors.text, marginBottom: 8 }}>
+        <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 26, fontWeight: 700, color: colors.text, marginBottom: 8 }}>
           Två roller i en anställning
         </Text>
         <Text style={{ fontSize: 11, color: colors.textLight, lineHeight: 1.6 }}>
@@ -1057,7 +1037,7 @@ const ProcessPage = () => (
     {/* Hero section with mascot */}
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontFamily: 'Playfair', fontSize: 28, fontWeight: 700, color: colors.text, marginBottom: 8 }}>
+        <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 28, fontWeight: 700, color: colors.text, marginBottom: 8 }}>
           Kom igång på nolltid
         </Text>
         <Text style={{ fontSize: 12, color: colors.textLight, lineHeight: 1.6 }}>
@@ -1237,7 +1217,7 @@ const PricingPage = ({ startupFee, monthlyFee, tier, tierKey, tierInfo, discount
             <View style={{ backgroundColor: colors.primary, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 12, alignSelf: 'flex-start', marginBottom: 12 }}>
               <Text style={{ fontSize: 10, color: colors.white, fontWeight: 600 }}>REKOMMENDERAT FÖR ER</Text>
             </View>
-            <Text style={{ fontFamily: 'Playfair', fontSize: 24, fontWeight: 700, color: colors.text, marginBottom: 8 }}>
+            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 24, fontWeight: 700, color: colors.text, marginBottom: 8 }}>
               {tier || tierInfo?.name || 'Starter'}
             </Text>
             <Text style={{ fontSize: 11, color: colors.textLight, lineHeight: 1.5, marginBottom: 16 }}>
@@ -1406,7 +1386,7 @@ const ContactPage = () => (
     <View style={{ flexDirection: 'row', gap: 24, marginTop: 16 }}>
       {/* Left column - Next steps */}
       <View style={{ flex: 1 }}>
-        <Text style={{ fontFamily: 'Playfair', fontSize: 20, fontWeight: 700, color: colors.text, marginBottom: 16 }}>
+        <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 20, fontWeight: 700, color: colors.text, marginBottom: 16 }}>
           Så kommer ni igång
         </Text>
 
@@ -1451,7 +1431,7 @@ const ContactPage = () => (
             <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
               <IconUser size={20} color={colors.white} />
             </View>
-            <Text style={{ fontFamily: 'Playfair', fontSize: 16, fontWeight: 700, color: colors.text }}>Kontakta oss</Text>
+            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 16, fontWeight: 700, color: colors.text }}>Kontakta oss</Text>
           </View>
 
           {/* Contact details */}
@@ -1484,7 +1464,7 @@ const ContactPage = () => (
     {/* Bottom quote - redesigned */}
     <View style={{ marginTop: 24, backgroundColor: colors.slateLight, borderRadius: 12, padding: 24, alignItems: 'center' }}>
       <View style={{ width: 40, height: 2, backgroundColor: colors.primary, marginBottom: 16, borderRadius: 1 }} />
-      <Text style={{ fontFamily: 'Playfair', fontSize: 16, color: colors.text, textAlign: 'center', marginBottom: 8 }}>
+      <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 16, color: colors.text, textAlign: 'center', marginBottom: 8 }}>
         Låt Bobot sköta rutinfrågorna.
       </Text>
       <Text style={{ fontSize: 11, color: colors.textLight, textAlign: 'center' }}>
