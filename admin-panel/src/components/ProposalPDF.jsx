@@ -1064,49 +1064,110 @@ const ProcessPage = () => (
       </View>
     </View>
 
-    {/* Timeline - 4 week trial - 2x2 grid */}
+    {/* Timeline - 4 week trial - 2x2 grid with more detail */}
     <View style={{ marginTop: 30, backgroundColor: colors.white, borderRadius: 16, padding: 20 }}>
-      <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 16 }}>
-        4 veckors provperiod
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Text style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>
+          4 veckors provperiod
+        </Text>
+        <View style={{ backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 3, paddingHorizontal: 10 }}>
+          <Text style={{ fontSize: 9, color: colors.white, fontWeight: 600 }}>Ingen bindningstid</Text>
+        </View>
+      </View>
+
+      <Text style={{ fontSize: 10, color: colors.textLight, marginBottom: 16, lineHeight: 1.5 }}>
+        Under provperioden får ni full tillgång till alla funktioner och personlig support. Vi hjälper er att bygga en kunskapsbas som svarar på era vanligaste frågor. Efter 4 veckor utvärderar vi tillsammans och ni bestämmer om ni vill fortsätta.
       </Text>
+
       <View style={{ flexDirection: 'row', gap: 12 }}>
         <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
               <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>1</Text>
             </View>
-            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 1</Text>
+            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 1: Uppstart</Text>
           </View>
-          <Text style={{ fontSize: 9, color: colors.textLight }}>Uppstart & setup av konto och widget</Text>
+          <View style={{ gap: 3 }}>
+            <Text style={{ fontSize: 9, color: colors.textLight }}>• Skapa konto och widget</Text>
+            <Text style={{ fontSize: 9, color: colors.textLight }}>• Anpassa design efter ert varumärke</Text>
+            <Text style={{ fontSize: 9, color: colors.textLight }}>• Installera widget på hemsidan</Text>
+          </View>
         </View>
         <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
               <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>2</Text>
             </View>
-            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 2</Text>
+            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 2: Kunskapsbas</Text>
           </View>
-          <Text style={{ fontSize: 9, color: colors.textLight }}>Bygga och finjustera kunskapsbasen</Text>
+          <View style={{ gap: 3 }}>
+            <Text style={{ fontSize: 9, color: colors.textLight }}>• Ladda upp dokument och manualer</Text>
+            <Text style={{ fontSize: 9, color: colors.textLight }}>• Skapa frågor och svar</Text>
+            <Text style={{ fontSize: 9, color: colors.textLight }}>• Testa och finjustera svar</Text>
+          </View>
         </View>
       </View>
       <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
         <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
               <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>3</Text>
             </View>
-            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 3</Text>
+            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 3: Intern test</Text>
           </View>
-          <Text style={{ fontSize: 9, color: colors.textLight }}>Testa internt och göra justeringar</Text>
+          <View style={{ gap: 3 }}>
+            <Text style={{ fontSize: 9, color: colors.textLight }}>• Testa internt med personalen</Text>
+            <Text style={{ fontSize: 9, color: colors.textLight }}>• Samla feedback och förbättra</Text>
+            <Text style={{ fontSize: 9, color: colors.textLight }}>• Förbereda för lansering</Text>
+          </View>
         </View>
         <View style={{ flex: 1, backgroundColor: colors.slateLight, borderRadius: 12, padding: 14 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
               <Text style={{ fontSize: 11, color: colors.white, fontWeight: 700 }}>4</Text>
             </View>
-            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 4</Text>
+            <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>Vecka 4: Utvärdering</Text>
           </View>
-          <Text style={{ fontSize: 9, color: colors.textLight }}>Utvärdera resultat och bestäm framtid</Text>
+          <View style={{ gap: 3 }}>
+            <Text style={{ fontSize: 9, color: colors.textLight }}>• Analysera statistik och resultat</Text>
+            <Text style={{ fontSize: 9, color: colors.textLight }}>• Diskutera nästa steg</Text>
+            <Text style={{ fontSize: 9, color: colors.textLight }}>• Bestäm om fortsättning</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* What's included */}
+      <View style={{ marginTop: 16, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 14 }}>
+        <Text style={{ fontSize: 10, fontWeight: 600, color: colors.text, marginBottom: 8 }}>Ingår i provperioden:</Text>
+        <View style={{ flexDirection: 'row', gap: 16 }}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 6 }}>
+                <IconCheck size={8} color={colors.white} />
+              </View>
+              <Text style={{ fontSize: 9, color: colors.text }}>Full tillgång till alla funktioner</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 6 }}>
+                <IconCheck size={8} color={colors.white} />
+              </View>
+              <Text style={{ fontSize: 9, color: colors.text }}>Personlig onboarding och support</Text>
+            </View>
+          </View>
+          <View style={{ flex: 1, gap: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 6 }}>
+                <IconCheck size={8} color={colors.white} />
+              </View>
+              <Text style={{ fontSize: 9, color: colors.text }}>Hjälp att bygga kunskapsbasen</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 6 }}>
+                <IconCheck size={8} color={colors.white} />
+              </View>
+              <Text style={{ fontSize: 9, color: colors.text }}>Ingen bindningstid – avsluta när som helst</Text>
+            </View>
+          </View>
         </View>
       </View>
     </View>
@@ -1121,10 +1182,14 @@ const formatPrice = (price) => {
   return price.toLocaleString('sv-SE')
 }
 
-// SECTION 6: Pricing Page
-const PricingPage = ({ startupFee, monthlyFee, tier, discount, pricingTiers = [] }) => {
-  // Sort tiers by price (lowest first)
-  const sortedTiers = [...pricingTiers].sort((a, b) => (a.monthly_fee || 0) - (b.monthly_fee || 0))
+// SECTION 6: Pricing Page - Shows company's selected tier prominently
+const PricingPage = ({ startupFee, monthlyFee, tier, tierKey, tierInfo, discount, discountEndDate, pricingTiers = [] }) => {
+  // Format discount end date
+  const formattedDiscountEnd = discountEndDate ? new Date(discountEndDate).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' }) : null
+
+  // Calculate discounted price
+  const originalPrice = tierInfo?.monthly_fee || monthlyFee
+  const discountedPrice = discount > 0 ? Math.round(originalPrice * (1 - discount / 100)) : originalPrice
 
   return (
     <Page size="A4" style={styles.page}>
@@ -1135,69 +1200,133 @@ const PricingPage = ({ startupFee, monthlyFee, tier, discount, pricingTiers = []
         <BobotMascotSmall size={36} />
       </View>
 
-      {/* Pricing cards - 2x2 grid to fit better on page */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
-        {sortedTiers.length > 0 ? (
-          sortedTiers.map((tierItem, index) => (
-            <View key={tierItem.tier_key || index} style={{
-              width: '48%',
-              backgroundColor: colors.white,
-              borderRadius: 12,
-              padding: 16,
-              borderWidth: 1,
-              borderColor: colors.border,
-              marginBottom: 8
-            }}>
-              <Text style={{ fontSize: 11, fontWeight: 600, color: colors.textLight, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
-                {tierItem.name || tierItem.tier_key}
-              </Text>
-              <Text style={{ fontSize: 22, fontWeight: 700, color: colors.primary }}>{formatPrice(tierItem.monthly_fee)}</Text>
-              <Text style={{ fontSize: 9, color: colors.textLight, marginBottom: 10 }}>kr/mån</Text>
-              <View>
-                {tierItem.max_conversations > 0 ? (
-                  <Text style={{ fontSize: 9, color: colors.text, marginBottom: 3 }}>• {formatPrice(tierItem.max_conversations)} konversationer/mån</Text>
-                ) : (
-                  <Text style={{ fontSize: 9, color: colors.text, marginBottom: 3 }}>• Obegränsade konversationer</Text>
-                )}
-                {tierItem.features && tierItem.features.slice(0, 3).map((feature, fIndex) => (
-                  <Text key={fIndex} style={{ fontSize: 9, color: colors.text, marginBottom: 3 }}>• {feature}</Text>
-                ))}
-              </View>
+      {/* Highlighted recommended tier */}
+      <View style={{ backgroundColor: colors.white, borderRadius: 16, padding: 24, borderWidth: 2, borderColor: colors.primary, marginBottom: 20 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <View style={{ flex: 1 }}>
+            <View style={{ backgroundColor: colors.primary, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 12, alignSelf: 'flex-start', marginBottom: 12 }}>
+              <Text style={{ fontSize: 10, color: colors.white, fontWeight: 600 }}>REKOMMENDERAT FÖR ER</Text>
             </View>
-          ))
-        ) : (
-          // Fallback if no pricing tiers provided
-          <View style={{
-            width: '48%',
-            backgroundColor: colors.white,
-            borderRadius: 12,
-            padding: 16,
-            borderWidth: 1,
-            borderColor: colors.border
-          }}>
-            <Text style={{ fontSize: 11, fontWeight: 600, color: colors.textLight, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>{tier || 'Standard'}</Text>
-            <Text style={{ fontSize: 22, fontWeight: 700, color: colors.primary }}>{formatPrice(monthlyFee)}</Text>
-            <Text style={{ fontSize: 9, color: colors.textLight }}>kr/mån</Text>
+            <Text style={{ fontFamily: 'Playfair', fontSize: 24, fontWeight: 700, color: colors.text, marginBottom: 8 }}>
+              {tier || tierInfo?.name || 'Starter'}
+            </Text>
+            <Text style={{ fontSize: 11, color: colors.textLight, lineHeight: 1.5, marginBottom: 16 }}>
+              {tierInfo?.description || 'En prisnivå anpassad efter era behov med alla funktioner ni behöver för att komma igång.'}
+            </Text>
+
+            {/* What's included in this tier */}
+            <Text style={{ fontSize: 11, fontWeight: 600, color: colors.text, marginBottom: 10 }}>Ingår i {tier}:</Text>
+            <View style={{ gap: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+                  <IconCheck size={10} color={colors.white} />
+                </View>
+                <Text style={{ fontSize: 10, color: colors.text }}>
+                  {tierInfo?.max_conversations > 0 ? `${formatPrice(tierInfo.max_conversations)} konversationer per månad` : 'Obegränsade konversationer'}
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+                  <IconCheck size={10} color={colors.white} />
+                </View>
+                <Text style={{ fontSize: 10, color: colors.text }}>
+                  {tierInfo?.max_widgets > 0 ? `Upp till ${tierInfo.max_widgets} widget${tierInfo.max_widgets > 1 ? 's' : ''}` : 'Obegränsade widgets'}
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+                  <IconCheck size={10} color={colors.white} />
+                </View>
+                <Text style={{ fontSize: 10, color: colors.text }}>
+                  {tierInfo?.max_knowledge > 0 ? `${formatPrice(tierInfo.max_knowledge)} kunskapsposter` : 'Obegränsade kunskapsposter'}
+                </Text>
+              </View>
+              {tierInfo?.features && tierInfo.features.slice(0, 4).map((feature, index) => (
+                <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+                    <IconCheck size={10} color={colors.white} />
+                  </View>
+                  <Text style={{ fontSize: 10, color: colors.text }}>{feature}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-        )}
+
+          {/* Price section */}
+          <View style={{ alignItems: 'flex-end', marginLeft: 20 }}>
+            {discount > 0 && (
+              <Text style={{ fontSize: 14, color: colors.textLight, textDecorationLine: 'line-through', marginBottom: 2 }}>
+                {formatPrice(originalPrice)} kr
+              </Text>
+            )}
+            <Text style={{ fontSize: 32, fontWeight: 700, color: colors.primary }}>
+              {formatPrice(discountedPrice)}
+            </Text>
+            <Text style={{ fontSize: 11, color: colors.textLight }}>kr/månad</Text>
+            {discount > 0 && (
+              <View style={{ marginTop: 8, alignItems: 'flex-end' }}>
+                <View style={{ backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 10 }}>
+                  <Text style={{ fontSize: 10, color: colors.white, fontWeight: 600 }}>-{discount}% rabatt</Text>
+                </View>
+                {formattedDiscountEnd && (
+                  <Text style={{ fontSize: 8, color: colors.textLight, marginTop: 4 }}>
+                    Gäller t.o.m. {formattedDiscountEnd}
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
+        </View>
       </View>
 
       {/* Startup fee */}
-      <View style={{ marginTop: 20, backgroundColor: colors.slateLight, borderRadius: 12, padding: 20 }}>
+      <View style={{ backgroundColor: colors.slateLight, borderRadius: 12, padding: 20, marginBottom: 20 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 13, fontWeight: 600, color: colors.text }}>Uppstartsavgift (engångskostnad)</Text>
-            <Text style={{ fontSize: 10, color: colors.textLight, marginTop: 4 }}>
-              Inkluderar onboarding, uppsättning och support under provperiod
+            <Text style={{ fontSize: 10, color: colors.textLight, marginTop: 4, lineHeight: 1.4 }}>
+              Inkluderar onboarding, uppsättning av konto och widget, hjälp att bygga kunskapsbasen, och personlig support under hela provperioden.
             </Text>
           </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ fontSize: 20, fontWeight: 700, color: colors.primary }}>{formatPrice(startupFee)} kr</Text>
-            {discount > 0 && (
-              <View style={{ backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 2, paddingHorizontal: 8, marginTop: 4 }}>
-                <Text style={{ fontSize: 9, color: colors.white, fontWeight: 600 }}>{discount}% rabatt</Text>
-              </View>
-            )}
+          <View style={{ alignItems: 'flex-end', marginLeft: 20 }}>
+            <Text style={{ fontSize: 24, fontWeight: 700, color: colors.primary }}>{formatPrice(startupFee)} kr</Text>
+            <Text style={{ fontSize: 9, color: colors.textLight }}>engångsbelopp</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Summary box */}
+      <View style={{ backgroundColor: colors.white, borderRadius: 12, padding: 20, borderWidth: 1, borderColor: colors.border }}>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text, marginBottom: 12 }}>Sammanfattning av kostnad</Text>
+        <View style={{ gap: 8 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text style={{ fontSize: 10, color: colors.textLight }}>Uppstartsavgift (engång)</Text>
+            <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>{formatPrice(startupFee)} kr</Text>
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text style={{ fontSize: 10, color: colors.textLight }}>Månadsavgift ({tier})</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {discount > 0 && (
+                <Text style={{ fontSize: 10, color: colors.textLight, textDecorationLine: 'line-through', marginRight: 6 }}>{formatPrice(originalPrice)} kr</Text>
+              )}
+              <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>{formatPrice(discountedPrice)} kr/mån</Text>
+            </View>
+          </View>
+          {discount > 0 && (
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ fontSize: 10, color: colors.accent }}>Rabatt ({discount}%)</Text>
+              <Text style={{ fontSize: 10, color: colors.accent, fontWeight: 500 }}>-{formatPrice(originalPrice - discountedPrice)} kr/mån</Text>
+            </View>
+          )}
+          <View style={{ borderTopWidth: 1, borderTopColor: colors.border, marginTop: 8, paddingTop: 8 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ fontSize: 11, color: colors.text, fontWeight: 600 }}>Total första månaden</Text>
+              <Text style={{ fontSize: 11, color: colors.primary, fontWeight: 700 }}>{formatPrice(startupFee + discountedPrice)} kr</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+              <Text style={{ fontSize: 10, color: colors.textLight }}>Därefter</Text>
+              <Text style={{ fontSize: 10, color: colors.text, fontWeight: 500 }}>{formatPrice(discountedPrice)} kr/mån</Text>
+            </View>
           </View>
         </View>
       </View>
@@ -1345,7 +1474,10 @@ const ProposalDocument = ({
   startupFee,
   monthlyFee,
   tier,
+  tierKey,
+  tierInfo,
   discount,
+  discountEndDate,
   conversationLimit,
   pricingTiers
 }) => {
@@ -1363,7 +1495,10 @@ const ProposalDocument = ({
         startupFee={startupFee}
         monthlyFee={monthlyFee}
         tier={tier}
+        tierKey={tierKey}
+        tierInfo={tierInfo}
         discount={discount}
+        discountEndDate={discountEndDate}
         pricingTiers={pricingTiers}
       />
       <ContactPage />

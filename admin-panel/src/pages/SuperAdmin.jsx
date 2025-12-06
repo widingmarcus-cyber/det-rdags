@@ -1512,7 +1512,10 @@ function SuperAdmin() {
         startupFee,
         monthlyFee: discount > 0 ? Math.round(monthlyFee * (1 - discount / 100)) : monthlyFee,
         tier: tierInfo?.name || tier.charAt(0).toUpperCase() + tier.slice(1),
+        tierKey: tier,
+        tierInfo: tierInfo,
         discount,
+        discountEndDate: company.discount_end_date,
         conversationLimit,
         pricingTiers: dbPricingTiers
       })
