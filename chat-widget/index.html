@@ -574,12 +574,12 @@
     Anställd? Klicka här för intern support!
   </div>
 
-  <!-- Widget script -->
-  <script type="module">
-    import './src/widget.jsx'
-
-    // Fetch widget keys for demo company's widgets, then init both
-    const API_URL = 'http://localhost:8000'
+  <!-- Widget script - production ready -->
+  <script src="/widget.js"></script>
+  <script>
+    // Detect environment - use relative /api for production, localhost for dev
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    const API_URL = isLocalhost ? 'http://localhost:8000' : '/api'
 
     async function initWidgets() {
       try {
@@ -615,6 +615,7 @@
           Bobot.init({ companyId: 'demo', apiUrl: API_URL })
         }
       } catch (e) {
+        console.error('Failed to init widgets:', e)
         // Fallback to company ID
         Bobot.init({ companyId: 'demo', apiUrl: API_URL })
       }
@@ -628,7 +629,12 @@
       }, 10000)
     }
 
-    setTimeout(initWidgets, 100)
+    // Wait for Bobot to be available
+    if (typeof Bobot !== 'undefined') {
+      setTimeout(initWidgets, 100)
+    } else {
+      window.addEventListener('load', () => setTimeout(initWidgets, 100))
+    }
   </script>
 </body>
 </html>
