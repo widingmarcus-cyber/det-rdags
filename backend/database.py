@@ -293,6 +293,9 @@ class Conversation(Base):
     consent_given = Column(Boolean, default=False)  # User gave consent
     consent_timestamp = Column(DateTime)  # When consent was given
 
+    # GDPR Access Token - required for data access/deletion requests
+    gdpr_token = Column(String, index=True)  # Secure token for GDPR operations
+
     # Relations
     company = relationship("Company", back_populates="conversations")
     widget = relationship("Widget", back_populates="conversations")

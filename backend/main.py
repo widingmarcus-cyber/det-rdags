@@ -373,27 +373,115 @@ def clear_login_attempts(identifier: str):
         del login_attempts[identifier]
 
 
+def is_trusted_proxy(ip: str) -> bool:
+    """
+    Check if an IP is a trusted proxy (Docker network or localhost).
+
+    SECURITY: Only trust X-Forwarded-For headers from known proxy IPs.
+    """
+    import ipaddress
+    try:
+        addr = ipaddress.ip_address(ip)
+        # Trust Docker default bridge networks and localhost
+        trusted_ranges = [
+            ipaddress.ip_network("172.16.0.0/12"),   # Docker default range
+            ipaddress.ip_network("192.168.0.0/16"), # Docker custom networks
+            ipaddress.ip_network("10.0.0.0/8"),     # Docker swarm/custom
+            ipaddress.ip_network("127.0.0.0/8"),    # Localhost
+            ipaddress.ip_network("::1/128"),         # IPv6 localhost
+        ]
+        return any(addr in network for network in trusted_ranges)
+    except ValueError:
+        return False
+
+
 def get_client_ip(request: Request) -> str:
     """
     Extract real client IP from request, respecting proxy headers.
+
+    SECURITY: Only trust X-Forwarded-For/X-Real-IP headers when the direct
+    connection is from a known trusted proxy (Docker network, localhost).
+    This prevents attackers from spoofing their IP via headers.
 
     In Docker/reverse proxy setups, the direct client connection comes from
     the proxy container (e.g., 172.18.0.1). The real client IP is passed
     via X-Forwarded-For or X-Real-IP headers set by Nginx.
     """
-    # Check for X-Forwarded-For header (set by reverse proxy like Nginx)
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        # Take the first IP (client's IP, not intermediate proxies)
-        return forwarded.split(",")[0].strip()
+    direct_ip = request.client.host if request.client else None
 
-    # Fall back to X-Real-IP header (alternative proxy header)
-    real_ip = request.headers.get("x-real-ip")
-    if real_ip:
-        return real_ip.strip()
+    # SECURITY: Only trust proxy headers if connection is from trusted proxy
+    if direct_ip and is_trusted_proxy(direct_ip):
+        # Check for X-Forwarded-For header (set by reverse proxy like Nginx)
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            # Take the first IP (client's IP added by Nginx)
+            # Nginx configuration should be: proxy_set_header X-Forwarded-For $remote_addr;
+            # NOT: proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            return forwarded.split(",")[0].strip()
 
-    # Finally, use direct client connection (won't work in Docker)
-    return request.client.host if request.client else "unknown"
+        # Fall back to X-Real-IP header (alternative proxy header)
+        real_ip = request.headers.get("x-real-ip")
+        if real_ip:
+            return real_ip.strip()
+
+    # Use direct client connection (when not behind proxy, or proxy not trusted)
+    return direct_ip or "unknown"
+
+
+def generate_gdpr_token() -> str:
+    """Generate a secure token for GDPR data access/deletion verification."""
+    import secrets
+    return secrets.token_urlsafe(32)
+
+
+def is_safe_url(url: str) -> bool:
+    """
+    Check if URL is safe to fetch (not accessing internal/private resources).
+    Prevents SSRF attacks by blocking private IP ranges and internal services.
+    """
+    import ipaddress
+    from urllib.parse import urlparse
+
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+
+        if not hostname:
+            return False
+
+        # Block localhost and common internal hostnames
+        blocked_hosts = [
+            'localhost', '127.0.0.1', '0.0.0.0',
+            '169.254.169.254',  # AWS/cloud metadata service
+            'metadata.google.internal',  # GCP metadata
+            'metadata.azure.com',  # Azure metadata
+        ]
+
+        if hostname.lower() in blocked_hosts:
+            return False
+
+        # Check if hostname is an IP address
+        try:
+            ip = ipaddress.ip_address(hostname)
+            # Block private, loopback, and link-local addresses
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                return False
+            # Block IPv6 localhost
+            if ip == ipaddress.ip_address('::1'):
+                return False
+        except ValueError:
+            # Hostname is not an IP, check for internal domain patterns
+            if hostname.endswith('.local') or hostname.endswith('.internal'):
+                return False
+
+        # Block common internal ports on any host
+        if parsed.port in [11434, 5432, 3306, 6379, 27017]:  # Ollama, PostgreSQL, MySQL, Redis, MongoDB
+            return False
+
+        return True
+
+    except Exception:
+        return False
 
 
 # Ollama-konfiguration
@@ -444,6 +532,7 @@ class ChatResponse(BaseModel):
     conversation_id: str  # Short readable ID for user reference (e.g., "BOB-A1B2")
     had_answer: bool = True
     confidence: int = 100  # Confidence score 0-100
+    gdpr_token: Optional[str] = None  # SECURITY: Token for GDPR data access/deletion (only on new conversations)
 
 
 # Simple in-memory cache for responses
@@ -484,13 +573,16 @@ RATE_LIMIT_WINDOW = 60  # 1 minute window
 RATE_LIMIT_MAX_REQUESTS = 15  # Max 15 messages per minute
 
 
-def check_rate_limit(session_id: str, ip_address: str) -> tuple:
+def check_rate_limit(ip_address: str, session_id: str = None) -> tuple:
     """
-    Check if session/IP is rate limited.
+    Check if IP is rate limited.
     Returns (allowed: bool, current_count: int, reset_time: int)
+
+    SECURITY: Uses IP address only for rate limiting, NOT session_id.
+    Session IDs are client-controlled and can be rotated to bypass limits.
     """
-    # Use combination of session and IP for rate limiting
-    rate_key = f"{session_id}:{ip_address}" if session_id else ip_address
+    # Use IP address only for rate limiting (session_id is ignored for security)
+    rate_key = ip_address
     now = datetime.utcnow().timestamp()
     window_start = now - RATE_LIMIT_WINDOW
 
@@ -1716,11 +1808,11 @@ def generate_reference_id() -> str:
 
 
 def generate_widget_key(company_id: str, widget_type: str) -> str:
-    """Generate a unique widget key (e.g., demo-external-a1b2c3)"""
-    import random
-    import string
-    chars = string.ascii_lowercase + string.digits
-    suffix = ''.join(random.choices(chars, k=6))
+    """Generate a cryptographically secure widget key."""
+    import secrets
+    # Use secrets for cryptographic randomness (not predictable random.choices)
+    # 16 chars of base64 = ~96 bits of entropy (vs 6 chars = ~31 bits before)
+    suffix = secrets.token_urlsafe(12)[:16]
     return f"{company_id}-{widget_type}-{suffix}"
 
 
@@ -2719,7 +2811,9 @@ async def chat(
         Conversation.company_id == company_id
     ).first()
 
+    is_new_conversation = False  # Track if this is a new conversation for GDPR token response
     if not conversation:
+        is_new_conversation = True
         # Anonymisera användardata
         client_ip = get_client_ip(req)
         user_agent = req.headers.get("user-agent", "")
@@ -2734,7 +2828,8 @@ async def chat(
             user_ip_anonymous=anonymize_ip(client_ip),
             user_agent_anonymous=anonymize_user_agent(user_agent),
             language=language,
-            category=category
+            category=category,
+            gdpr_token=generate_gdpr_token()  # SECURITY: Token for GDPR data access
         )
         db.add(conversation)
         db.commit()
@@ -2905,7 +3000,8 @@ async def chat(
         session_id=session_id,
         conversation_id=conversation.reference_id,
         had_answer=had_answer,
-        confidence=confidence
+        confidence=confidence,
+        gdpr_token=conversation.gdpr_token if is_new_conversation else None  # Only return token on first message
     )
 
 
@@ -3187,7 +3283,9 @@ async def chat_via_widget_key(
         Conversation.widget_id == widget.id
     ).first()
 
+    is_new_conversation = False  # Track if this is a new conversation for GDPR token response
     if not conversation:
+        is_new_conversation = True
         client_ip = get_client_ip(req)
         user_agent = req.headers.get("user-agent", "")
         reference_id = generate_reference_id()
@@ -3200,7 +3298,8 @@ async def chat_via_widget_key(
             user_ip_anonymous=anonymize_ip(client_ip) if client_ip else None,
             user_agent_anonymous=anonymize_user_agent(user_agent),
             category=category,
-            language=language
+            language=language,
+            gdpr_token=generate_gdpr_token()  # SECURITY: Token for GDPR data access
         )
         db.add(conversation)
         db.commit()
@@ -3312,7 +3411,8 @@ async def chat_via_widget_key(
         session_id=session_id,
         conversation_id=conversation.reference_id,
         had_answer=had_answer,
-        confidence=100 if had_answer else 0
+        confidence=100 if had_answer else 0,
+        gdpr_token=conversation.gdpr_token if is_new_conversation else None  # Only return token on first message
     )
 
 
@@ -4859,6 +4959,14 @@ async def import_knowledge_from_url(
     if not re.match(r'https?://[^\s/$.?#].[^\s]*', url):
         raise HTTPException(status_code=400, detail="Ogiltig URL")
 
+    # SECURITY: Block SSRF attacks - prevent access to internal/private resources
+    if not is_safe_url(url):
+        logger.warning(f"[URL Import] SSRF attempt blocked: {url}")
+        raise HTTPException(
+            status_code=400,
+            detail="URL:en är inte tillåten. Endast publika webbsidor kan importeras."
+        )
+
     # Fetch content
     logger.info(f"[URL Import] Fetching content from: {url}")
     text = await fetch_url_content(url)
@@ -5733,19 +5841,23 @@ async def record_consent(
         Conversation.company_id == company_id
     ).first()
 
+    gdpr_token_value = None
     if conversation:
         conversation.consent_given = request.consent_given
         conversation.consent_timestamp = datetime.utcnow() if request.consent_given else None
+        gdpr_token_value = conversation.gdpr_token
     else:
         # Create new conversation with consent
         client_ip = get_client_ip(req)
+        gdpr_token_value = generate_gdpr_token()
         conversation = Conversation(
             company_id=company_id,
             session_id=request.session_id,
             reference_id=generate_reference_id(),
             user_ip_anonymous=anonymize_ip(client_ip),
             consent_given=request.consent_given,
-            consent_timestamp=datetime.utcnow() if request.consent_given else None
+            consent_timestamp=datetime.utcnow() if request.consent_given else None,
+            gdpr_token=gdpr_token_value  # SECURITY: Token for GDPR data access
         )
         db.add(conversation)
 
@@ -5761,32 +5873,44 @@ async def record_consent(
     db.add(audit_log)
     db.commit()
 
-    return {"message": "Samtycke registrerat", "consent_given": request.consent_given}
+    # Return gdpr_token so users can access/delete their data later
+    return {
+        "message": "Samtycke registrerat",
+        "consent_given": request.consent_given,
+        "gdpr_token": gdpr_token_value  # SECURITY: Token needed for GDPR data access/deletion
+    }
 
 
 @app.get("/gdpr/{company_id}/my-data")
 async def get_my_data(
     company_id: str,
     session_id: str,
+    gdpr_token: str,  # SECURITY: Required verification token to prevent IDOR
     req: Request,
     db: Session = Depends(get_db)
 ):
-    """Get all data associated with a session (Right to Access - GDPR Art. 15)"""
+    """Get all data associated with a session (Right to Access - GDPR Art. 15)
+
+    SECURITY: Requires gdpr_token that was provided when the session started.
+    This prevents attackers from enumerating and accessing other users' data.
+    """
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise HTTPException(status_code=404, detail="Företag finns inte")
 
-    # Find conversation
+    # Find conversation with matching gdpr_token
     conversation = db.query(Conversation).filter(
         Conversation.session_id == session_id,
         Conversation.company_id == company_id
     ).first()
 
-    if not conversation:
-        return {
-            "message": "Ingen data hittades för denna session",
-            "data": None
-        }
+    # SECURITY: Verify gdpr_token matches - prevents IDOR attacks
+    if not conversation or not conversation.gdpr_token or conversation.gdpr_token != gdpr_token:
+        # Use consistent error message to prevent enumeration
+        raise HTTPException(
+            status_code=403,
+            detail="Ogiltig verifieringstoken. Kontrollera att du använder rätt token från din chatt-session."
+        )
 
     # Get all messages
     messages = db.query(Message).filter(
@@ -5840,10 +5964,15 @@ async def get_my_data(
 async def delete_my_data(
     company_id: str,
     session_id: str,
+    gdpr_token: str,  # SECURITY: Required verification token to prevent IDOR
     req: Request,
     db: Session = Depends(get_db)
 ):
-    """Delete all data associated with a session (Right to Erasure - GDPR Art. 17)"""
+    """Delete all data associated with a session (Right to Erasure - GDPR Art. 17)
+
+    SECURITY: Requires gdpr_token that was provided when the session started.
+    This prevents attackers from deleting other users' data.
+    """
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise HTTPException(status_code=404, detail="Företag finns inte")
@@ -5854,8 +5983,13 @@ async def delete_my_data(
         Conversation.company_id == company_id
     ).first()
 
-    if not conversation:
-        return {"message": "Ingen data att radera för denna session"}
+    # SECURITY: Verify gdpr_token matches - prevents IDOR attacks
+    if not conversation or not conversation.gdpr_token or conversation.gdpr_token != gdpr_token:
+        # Use consistent error message to prevent enumeration
+        raise HTTPException(
+            status_code=403,
+            detail="Ogiltig verifieringstoken. Kontrollera att du använder rätt token från din chatt-session."
+        )
 
     # Save anonymized stats before deletion (for aggregate statistics)
     await save_conversation_stats(db, conversation)
