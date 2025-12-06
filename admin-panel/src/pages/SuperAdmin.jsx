@@ -1905,68 +1905,112 @@ function SuperAdmin() {
       {/* Usage Limit Modal */}
       {showUsageLimitModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
-            <div className="p-6 border-b border-border-subtle">
-              <h2 className="text-lg font-semibold text-text-primary">Användningsgränser</h2>
-              <p className="text-sm text-text-secondary mt-1">
-                Ange gränser för {showUsageLimitModal.name}
-              </p>
+          <div className="bg-bg-tertiary rounded-2xl shadow-xl w-full max-w-lg animate-scale-in">
+            {/* Header */}
+            <div className="p-6 border-b border-border-subtle flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                    <path d="M12 20V10" />
+                    <path d="M18 20V4" />
+                    <path d="M6 20v-4" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-text-primary">Användningsgränser</h2>
+                  <p className="text-sm text-text-secondary">{showUsageLimitModal.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowUsageLimitModal(null)}
+                className="p-2 hover:bg-bg-secondary rounded-lg transition-colors text-text-tertiary hover:text-text-primary"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="input-label">Max konversationer/månad</label>
-                <input
-                  type="number"
-                  value={usageLimitValue.conversations}
-                  onChange={(e) => setUsageLimitValue({ ...usageLimitValue, conversations: parseInt(e.target.value) || 0 })}
-                  placeholder="0 = obegränsat"
-                  className="input"
-                  min="0"
-                />
-                <p className="text-xs text-text-tertiary mt-1">Sätt till 0 för obegränsat</p>
-              </div>
 
-              <div>
-                <label className="input-label">Max kunskapsposter</label>
-                <input
-                  type="number"
-                  value={usageLimitValue.knowledge}
-                  onChange={(e) => setUsageLimitValue({ ...usageLimitValue, knowledge: parseInt(e.target.value) || 0 })}
-                  placeholder="0 = obegränsat"
-                  className="input"
-                  min="0"
-                />
-                <p className="text-xs text-text-tertiary mt-1">Sätt till 0 för obegränsat</p>
-              </div>
-
-              <div className="p-3 rounded-lg bg-bg-secondary space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-text-secondary">Konversationer denna månad</span>
-                  <span className="text-sm font-medium text-text-primary">
-                    {showUsageLimitModal.current_month_conversations || 0}
-                  </span>
+            <div className="p-6 space-y-6">
+              {/* Current Usage Stats */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-bg-secondary rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
+                    </div>
+                    <span className="text-sm text-text-secondary">Konversationer</span>
+                  </div>
+                  <p className="text-2xl font-bold text-text-primary">{showUsageLimitModal.current_month_conversations || 0}</p>
+                  <p className="text-xs text-text-tertiary">denna månad</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-text-secondary">Kunskapsposter</span>
-                  <span className="text-sm font-medium text-text-primary">
-                    {showUsageLimitModal.knowledge_count || 0}
-                  </span>
+                <div className="bg-bg-secondary rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                        <path d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                      </svg>
+                    </div>
+                    <span className="text-sm text-text-secondary">Kunskapsposter</span>
+                  </div>
+                  <p className="text-2xl font-bold text-text-primary">{showUsageLimitModal.knowledge_count || 0}</p>
+                  <p className="text-xs text-text-tertiary">totalt</p>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4">
+              {/* Limit Inputs */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">Max konversationer per månad</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={usageLimitValue.conversations}
+                      onChange={(e) => setUsageLimitValue({ ...usageLimitValue, conversations: parseInt(e.target.value) || 0 })}
+                      placeholder="0"
+                      className="w-full px-4 py-3 rounded-xl bg-bg-secondary border border-border-subtle focus:border-accent focus:ring-1 focus:ring-accent outline-none text-text-primary"
+                      min="0"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-text-tertiary">
+                      {usageLimitValue.conversations === 0 ? '∞ obegränsat' : 'per månad'}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">Max kunskapsposter</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={usageLimitValue.knowledge}
+                      onChange={(e) => setUsageLimitValue({ ...usageLimitValue, knowledge: parseInt(e.target.value) || 0 })}
+                      placeholder="0"
+                      className="w-full px-4 py-3 rounded-xl bg-bg-secondary border border-border-subtle focus:border-accent focus:ring-1 focus:ring-accent outline-none text-text-primary"
+                      min="0"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-text-tertiary">
+                      {usageLimitValue.knowledge === 0 ? '∞ obegränsat' : 'totalt'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowUsageLimitModal(null)}
-                  className="btn btn-ghost"
+                  className="flex-1 px-4 py-3 rounded-xl bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
                 >
                   Avbryt
                 </button>
                 <button
                   onClick={() => handleSetUsageLimit(showUsageLimitModal.id)}
-                  className="btn btn-primary"
+                  className="flex-1 px-4 py-3 rounded-xl bg-accent hover:bg-accent-hover text-white font-medium transition-colors"
                 >
-                  Spara
+                  Spara ändringar
                 </button>
               </div>
             </div>

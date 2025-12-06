@@ -1236,7 +1236,7 @@ def init_demo_data():
 
                 demo = Company(
                     id="demo",
-                    name="Demo Fastigheter AB",
+                    name="Demo AB",
                     password_hash=hash_password(demo_password)
                 )
                 db.add(demo)
@@ -1245,7 +1245,7 @@ def init_demo_data():
                 # Create default settings for demo
                 demo_settings = CompanySettings(
                     company_id="demo",
-                    company_name="Demo Fastigheter AB",
+                    company_name="Demo AB",
                     contact_email="info@demo.se",
                     contact_phone="08-123 456 78"
                 )

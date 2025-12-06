@@ -114,15 +114,20 @@ const CompaniesTab = ({
             <thead className="bg-bg-secondary border-b border-border-subtle">
               <tr>
                 <th className="px-4 py-3 text-left">
-                  <input
-                    type="checkbox"
-                    checked={selectedCompanies.size === filteredCompanies.length && filteredCompanies.length > 0}
-                    onChange={toggleSelectAll}
-                    className="w-4 h-4 rounded border-2 border-stone-500 bg-transparent checked:bg-accent checked:border-accent cursor-pointer appearance-none relative
-                      after:content-[''] after:absolute after:left-[3px] after:top-[1px] after:w-[5px] after:h-[8px]
-                      after:border-white after:border-r-2 after:border-b-2 after:rotate-45
-                      after:opacity-0 checked:after:opacity-100 transition-all"
-                  />
+                  <button
+                    onClick={toggleSelectAll}
+                    className={`w-5 h-5 rounded flex items-center justify-center transition-all ${
+                      selectedCompanies.size === filteredCompanies.length && filteredCompanies.length > 0
+                        ? 'bg-accent text-white'
+                        : 'bg-bg-primary border border-border-subtle hover:border-accent/50'
+                    }`}
+                  >
+                    {selectedCompanies.size === filteredCompanies.length && filteredCompanies.length > 0 && (
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M2 6l3 3 5-5" />
+                      </svg>
+                    )}
+                  </button>
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Företag</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Status</th>
@@ -153,15 +158,20 @@ const CompaniesTab = ({
                 return (
                   <tr key={company.id} className="hover:bg-bg-secondary transition-colors">
                     <td className="px-4 py-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedCompanies.has(company.id)}
-                        onChange={() => toggleSelectCompany(company.id)}
-                        className="w-4 h-4 rounded border-2 border-stone-500 bg-transparent checked:bg-accent checked:border-accent cursor-pointer appearance-none relative
-                          after:content-[''] after:absolute after:left-[3px] after:top-[1px] after:w-[5px] after:h-[8px]
-                          after:border-white after:border-r-2 after:border-b-2 after:rotate-45
-                          after:opacity-0 checked:after:opacity-100 transition-all"
-                      />
+                      <button
+                        onClick={() => toggleSelectCompany(company.id)}
+                        className={`w-5 h-5 rounded flex items-center justify-center transition-all ${
+                          selectedCompanies.has(company.id)
+                            ? 'bg-accent text-white'
+                            : 'bg-bg-primary border border-border-subtle hover:border-accent/50'
+                        }`}
+                      >
+                        {selectedCompanies.has(company.id) && (
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M2 6l3 3 5-5" />
+                          </svg>
+                        )}
+                      </button>
                     </td>
                     <td className="px-4 py-4">
                       <button
