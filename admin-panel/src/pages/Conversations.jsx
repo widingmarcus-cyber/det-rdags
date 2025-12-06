@@ -354,9 +354,9 @@ function Conversations() {
           <p className="text-text-secondary mt-2">Konversationer visas här när användare chattar med din bot</p>
         </div>
       ) : (
-        <div className="flex gap-6">
-          {/* Conversation list */}
-          <div className="w-80 space-y-2 max-h-[600px] overflow-y-auto">
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Conversation list - hidden on mobile when conversation is selected */}
+          <div className={`w-full md:w-80 space-y-2 max-h-[600px] overflow-y-auto ${selectedConversation ? 'hidden md:block' : ''}`}>
             {filteredConversations.map((conv) => (
               <button
                 key={conv.id}
@@ -410,8 +410,8 @@ function Conversations() {
             ))}
           </div>
 
-          {/* Selected conversation */}
-          <div className="flex-1">
+          {/* Selected conversation - hidden on mobile when nothing selected */}
+          <div className={`flex-1 ${!selectedConversation && !loadingDetails ? 'hidden md:block' : ''}`}>
             {loadingDetails ? (
               <div className="card text-center py-12">
                 <p className="text-text-tertiary">Laddar konversation...</p>
@@ -419,9 +419,20 @@ function Conversations() {
             ) : selectedConversation ? (
               <div className="card">
                 <div className="flex items-center justify-between mb-4 pb-4 border-b border-border-subtle">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-text-primary">Konversation</h3>
+                  <div className="flex items-center gap-3">
+                    {/* Back button for mobile */}
+                    <button
+                      onClick={() => setSelectedConversation(null)}
+                      className="md:hidden p-2 -ml-2 rounded-lg hover:bg-bg-secondary transition-colors text-text-secondary"
+                      aria-label="Tillbaka till listan"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="15 18 9 12 15 6" />
+                      </svg>
+                    </button>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 className="font-medium text-text-primary">Konversation</h3>
                       <span className="text-sm font-mono text-accent bg-accent-soft px-2 py-0.5 rounded">
                         {selectedConversation.reference_id}
                       </span>
@@ -435,16 +446,17 @@ function Conversations() {
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-text-tertiary">
+                    <div className="flex items-center gap-2 text-xs text-text-tertiary flex-wrap">
                       <span>{formatDate(selectedConversation.started_at)}</span>
-                      <span>•</span>
+                      <span className="hidden sm:inline">•</span>
                       <span>{selectedConversation.message_count} meddelanden</span>
                       {selectedConversation.category && (
                         <>
-                          <span>•</span>
+                          <span className="hidden sm:inline">•</span>
                           <span className="capitalize">{selectedConversation.category}</span>
                         </>
                       )}
+                    </div>
                     </div>
                   </div>
                   <button

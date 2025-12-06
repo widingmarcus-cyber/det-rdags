@@ -15,6 +15,7 @@ const translations = {
     thanksFeedback: 'Tack för din feedback!',
     errorMessage: 'Ett fel uppstod. Vänligen försök igen.',
     serviceUnavailable: 'Chatten är tillfälligt otillgänglig.',
+    widgetInactive: 'Denna chatt är för tillfället inaktiverad. Kontakta oss på annat sätt.',
     newConversation: 'Ny konversation',
     lightMode: 'Ljust läge',
     darkMode: 'Mörkt läge',
@@ -57,6 +58,7 @@ const translations = {
     thanksFeedback: 'Thanks for your feedback!',
     errorMessage: 'An error occurred. Please try again.',
     serviceUnavailable: 'Chat is temporarily unavailable.',
+    widgetInactive: 'This chat is currently deactivated. Please contact us another way.',
     newConversation: 'New conversation',
     lightMode: 'Light mode',
     darkMode: 'Dark mode',
@@ -384,15 +386,22 @@ const injectStyles = (fontFamily, borderRadius) => {
       background: rgba(0,0,0,0.25);
     }
 
-    @media (max-width: 480px) {
+    @media (max-width: 640px) {
       .bobot-widget-window {
-        width: calc(100vw - 24px) !important;
-        height: 80vh !important;
-        max-height: 600px !important;
-        bottom: 72px !important;
-        right: 12px !important;
-        left: 12px !important;
-        border-radius: ${borderRadius}px !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        max-height: none !important;
+        border-radius: 0 !important;
+        z-index: 100000 !important;
+      }
+      .bobot-widget-trigger {
+        bottom: 16px !important;
+        right: 16px !important;
       }
     }
 
@@ -481,9 +490,16 @@ function ChatWidget({ config }) {
           // Consent is NOT persisted - users must accept each session
           // This ensures GDPR compliance by requiring explicit consent
 
-          // Always start fresh - no conversation persistence
-          // Each page refresh starts a new conversation
-          setMessages([{ id: 0, type: 'bot', text: data.welcome_message || t.welcomeMessage, time: Date.now() }])
+          // Check if maintenance mode is enabled
+          if (data.maintenance_mode) {
+            // Show maintenance message instead of welcome message
+            const maintenanceText = data.maintenance_message || t.serviceUnavailable
+            setMessages([{ id: 0, type: 'bot', text: maintenanceText, isError: true, isMaintenance: true, time: Date.now() }])
+          } else {
+            // Always start fresh - no conversation persistence
+            // Each page refresh starts a new conversation
+            setMessages([{ id: 0, type: 'bot', text: data.welcome_message || t.welcomeMessage, time: Date.now() }])
+          }
         } else {
           setMessages([{ id: 0, type: 'bot', text: t.welcomeMessage, time: Date.now() }])
         }
@@ -502,12 +518,12 @@ function ChatWidget({ config }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
-  // Focus input when chat opens
+  // Focus input when chat opens (not during maintenance or consent required)
   useEffect(() => {
-    if (isOpen && inputRef.current && !needsConsent()) {
+    if (isOpen && inputRef.current && !needsConsent() && !widgetConfig?.maintenance_mode) {
       setTimeout(() => inputRef.current?.focus(), 150)
     }
-  }, [isOpen, consentGiven])
+  }, [isOpen, consentGiven, widgetConfig?.maintenance_mode])
 
   // Escape to close
   useEffect(() => {
@@ -524,6 +540,11 @@ function ChatWidget({ config }) {
   const needsConsent = () => {
     if (!widgetConfig?.require_consent) return false
     return !consentGiven
+  }
+
+  // Check if maintenance mode is active
+  const isMaintenanceMode = () => {
+    return widgetConfig?.maintenance_mode === true
   }
 
   const giveConsent = async () => {
@@ -654,6 +675,26 @@ function ChatWidget({ config }) {
           hadAnswer: data.had_answer,
           confidence: data.confidence || 100,
           sources: data.sources_detail || [], // Store detailed sources for display
+          time: Date.now()
+        }])
+      } else if (res.status === 403) {
+        // Widget or company is inactive
+        const errorData = await res.json().catch(() => ({}))
+        const isInactive = errorData.detail === 'WIDGET_INACTIVE' || errorData.detail === 'COMPANY_INACTIVE'
+        setMessages(prev => [...prev, {
+          id: Date.now(),
+          type: 'bot',
+          text: isInactive ? t.widgetInactive : t.serviceUnavailable,
+          isError: true,
+          time: Date.now()
+        }])
+      } else if (res.status === 503) {
+        // Maintenance mode
+        setMessages(prev => [...prev, {
+          id: Date.now(),
+          type: 'bot',
+          text: t.serviceUnavailable,
+          isError: true,
           time: Date.now()
         }])
       } else {
@@ -1378,7 +1419,7 @@ function ChatWidget({ config }) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={t.placeholder}
-                disabled={loading || needsConsent()}
+                disabled={loading || needsConsent() || isMaintenanceMode()}
                 style={{
                   flex: 1, padding: '12px 16px', border: `1px solid ${theme.border}`,
                   borderRadius: borderRadius, fontSize: fontSize, outline: 'none',
@@ -1396,11 +1437,11 @@ function ChatWidget({ config }) {
               />
               <button
                 type="submit"
-                disabled={loading || !input.trim()}
+                disabled={loading || !input.trim() || isMaintenanceMode()}
                 style={{
                   width: 44, height: 44, borderRadius: '50%', border: 'none',
-                  background: loading || !input.trim() ? theme.textMuted : primaryColor,
-                  color: '#fff', cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
+                  background: loading || !input.trim() || isMaintenanceMode() ? theme.textMuted : primaryColor,
+                  color: '#fff', cursor: loading || !input.trim() || isMaintenanceMode() ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'transform 0.15s, background 0.15s',
                 }}
@@ -1428,7 +1469,7 @@ function ChatWidget({ config }) {
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={isOpen ? '' : 'bobot-glow'}
+        className={`bobot-widget-trigger ${isOpen ? '' : 'bobot-glow'}`}
         style={{
           width: 56, height: 56, borderRadius: '50%', border: 'none',
           background: `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(primaryColor, -15)} 100%)`,
@@ -1521,6 +1562,11 @@ const Bobot = {
 
     return container.id
   }
+}
+
+// Expose Bobot globally for both development (Vite) and production (IIFE)
+if (typeof window !== 'undefined') {
+  window.Bobot = Bobot
 }
 
 // Export the Bobot object (not ChatWidget) so IIFE assigns it to window.Bobot

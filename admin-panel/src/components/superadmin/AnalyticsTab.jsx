@@ -3,6 +3,29 @@
  * Displays platform analytics, trends, performance stats, and landing page analytics
  */
 
+// Helper to check if trends have meaningful data
+const hasTrendsData = (trends) => {
+  if (!trends) return false
+  const wow = trends.week_over_week
+  const mom = trends.month_over_month
+  return (wow?.current > 0 || wow?.previous > 0 || mom?.current > 0 || mom?.previous > 0)
+}
+
+// Helper to check if performance stats have meaningful data
+const hasPerformanceData = (stats) => {
+  if (!stats) return false
+  return stats.total_requests > 0 ||
+         (stats.success_rate !== undefined && stats.success_rate !== null) ||
+         stats.avg_response_time > 0
+}
+
+// Helper to check if rate limit stats have meaningful data (only show when there's activity)
+const hasRateLimitData = (stats) => {
+  if (!stats) return false
+  // Only show when there are active sessions or rate limited sessions
+  return stats.active_sessions > 0 || stats.rate_limited_sessions > 0
+}
+
 const AnalyticsTab = ({
   trends,
   performanceStats,
@@ -23,7 +46,7 @@ const AnalyticsTab = ({
       </div>
 
       {/* Trends Overview */}
-      {trends && (
+      {hasTrendsData(trends) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="card">
             <h3 className="text-sm font-medium text-text-secondary mb-2">Vecka-över-vecka</h3>
@@ -34,6 +57,7 @@ const AnalyticsTab = ({
               </span>
             </div>
             <p className="text-xs text-text-tertiary mt-1">vs förra veckan ({trends.week_over_week.previous})</p>
+            <p className="text-xs text-text-tertiary mt-2">Jämför antal konversationer denna vecka mot förra veckan</p>
           </div>
           <div className="card">
             <h3 className="text-sm font-medium text-text-secondary mb-2">Månad-över-månad</h3>
@@ -44,12 +68,13 @@ const AnalyticsTab = ({
               </span>
             </div>
             <p className="text-xs text-text-tertiary mt-1">vs förra månaden ({trends.month_over_month.previous})</p>
+            <p className="text-xs text-text-tertiary mt-2">Jämför antal konversationer denna månad mot förra månaden</p>
           </div>
         </div>
       )}
 
       {/* Performance Stats */}
-      {performanceStats && (
+      {hasPerformanceData(performanceStats) && (
         <div className="card mb-8">
           <h3 className="text-lg font-medium text-text-primary mb-4">Widgetprestanda (24h)</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -74,7 +99,7 @@ const AnalyticsTab = ({
       )}
 
       {/* Rate Limit Stats */}
-      {rateLimitStats && (
+      {hasRateLimitData(rateLimitStats) && (
         <div className="card mb-8">
           <h3 className="text-lg font-medium text-text-primary mb-4">Rate Limiting</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -136,7 +161,8 @@ const AnalyticsTab = ({
                 setLandingAnalyticsDays(days)
                 fetchLandingAnalytics(days)
               }}
-              className="input-field text-sm py-1 px-2"
+              className="px-3 py-1.5 text-sm bg-bg-tertiary text-text-primary border border-border rounded-md hover:border-text-tertiary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all cursor-pointer appearance-none pr-8"
+              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23A8A29E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
             >
               <option value={7}>7 dagar</option>
               <option value={30}>30 dagar</option>

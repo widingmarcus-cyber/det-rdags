@@ -16,6 +16,51 @@ import {
 
 const API_BASE = '/api'
 
+// Bobot mascot for header
+function BobotMini({ className = "", size = 36 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      {/* Feet */}
+      <rect x="25" y="95" width="30" height="12" rx="6" fill="#78716C" />
+      <rect x="65" y="95" width="30" height="12" rx="6" fill="#78716C" />
+      <rect x="28" y="97" width="24" height="8" rx="4" fill="#57534E" />
+      <rect x="68" y="97" width="24" height="8" rx="4" fill="#57534E" />
+      {/* Body */}
+      <rect x="30" y="55" width="60" height="42" rx="4" fill="#D97757" />
+      <rect x="33" y="58" width="54" height="36" rx="2" fill="#C4613D" />
+      <rect x="36" y="75" width="20" height="16" rx="2" fill="#1C1917" />
+      <rect x="64" y="75" width="20" height="16" rx="2" fill="#1C1917" />
+      {/* Neck */}
+      <rect x="50" y="45" width="20" height="14" rx="2" fill="#78716C" />
+      {/* Head */}
+      <rect x="35" y="20" width="50" height="28" rx="4" fill="#D97757" />
+      {/* Eyes */}
+      <ellipse cx="48" cy="34" rx="12" ry="11" fill="#1C1917" />
+      <ellipse cx="72" cy="34" rx="12" ry="11" fill="#1C1917" />
+      <ellipse cx="48" cy="34" rx="9" ry="8" fill="#292524" />
+      <ellipse cx="72" cy="34" rx="9" ry="8" fill="#292524" />
+      {/* Pupils */}
+      <ellipse cx="48" cy="35" rx="5" ry="5" fill="#D97757" />
+      <ellipse cx="72" cy="35" rx="5" ry="5" fill="#D97757" />
+      {/* Eye highlights */}
+      <circle cx="50" cy="32" r="2.5" fill="#FEF2EE" />
+      <circle cx="74" cy="32" r="2.5" fill="#FEF2EE" />
+      {/* Nose */}
+      <rect x="56" y="30" width="8" height="8" rx="2" fill="#78716C" />
+      {/* Arms */}
+      <rect x="15" y="62" width="18" height="6" rx="3" fill="#78716C" />
+      <rect x="87" y="62" width="18" height="6" rx="3" fill="#78716C" />
+      <rect x="10" y="58" width="8" height="14" rx="2" fill="#57534E" />
+      <rect x="102" y="58" width="8" height="14" rx="2" fill="#57534E" />
+      {/* Antenna */}
+      <rect x="58" y="12" width="4" height="10" rx="2" fill="#78716C" />
+      <circle cx="60" cy="10" r="5" fill="#4A9D7C">
+        <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite" />
+      </circle>
+    </svg>
+  )
+}
+
 function SuperAdmin() {
   const { adminAuth, adminFetch, handleAdminLogout, handleLogin } = useContext(AuthContext)
   const [companies, setCompanies] = useState([])
@@ -67,6 +112,16 @@ function SuperAdmin() {
   // Company notes
   const [companyNotes, setCompanyNotes] = useState([])
   const [newNote, setNewNote] = useState('')
+
+  // Password change modal
+  const [showPasswordModal, setShowPasswordModal] = useState(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [passwordLoading, setPasswordLoading] = useState(false)
+
+  // Delete company confirmation (2-step)
+  const [deleteConfirmCompany, setDeleteConfirmCompany] = useState(null)
+  const [deleteConfirmStep, setDeleteConfirmStep] = useState(1)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
   // Admin preferences
   const [adminPrefs, setAdminPrefs] = useState({ dark_mode: false, totp_enabled: false })
@@ -141,8 +196,7 @@ function SuperAdmin() {
   const [showProposalModal, setShowProposalModal] = useState(null)
   const [proposalForm, setProposalForm] = useState({
     contactPerson: '',
-    startDate: '',
-    hostingOption: 'cloud'
+    startDate: ''
   })
   const [generatingPDF, setGeneratingPDF] = useState(false)
 
@@ -1001,12 +1055,85 @@ function SuperAdmin() {
         method: 'PUT'
       })
       if (response.ok) {
+        const data = await response.json()
         fetchCompanies()
+        // Update showCompanyDashboard if it's the same company
+        if (showCompanyDashboard?.id === companyId) {
+          setShowCompanyDashboard(prev => ({ ...prev, is_active: data.is_active }))
+        }
         const company = companies.find(c => c.id === companyId)
-        showNotification(`${company?.name} ${company?.is_active ? 'inaktiverad' : 'aktiverad'}`)
+        showNotification(`${company?.name} ${data.is_active ? 'aktiverad' : 'inaktiverad'}`)
       }
     } catch (error) {
       console.error('Kunde inte ändra status:', error)
+    }
+  }
+
+  const handleChangePassword = async (companyId) => {
+    if (!newPassword || newPassword.length < 6) {
+      showNotification('Lösenordet måste vara minst 6 tecken', 'error')
+      return
+    }
+    setPasswordLoading(true)
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/companies/${companyId}/password`, {
+        method: 'PUT',
+        body: JSON.stringify({ new_password: newPassword })
+      })
+      if (response.ok) {
+        showNotification('Lösenord ändrat')
+        setShowPasswordModal(null)
+        setNewPassword('')
+      } else {
+        const err = await response.json()
+        showNotification(err.detail || 'Kunde inte ändra lösenord', 'error')
+      }
+    } catch (error) {
+      console.error('Kunde inte ändra lösenord:', error)
+      showNotification('Kunde inte ändra lösenord', 'error')
+    } finally {
+      setPasswordLoading(false)
+    }
+  }
+
+  const handleDeleteCompany = async (companyId) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/companies/${companyId}`, {
+        method: 'DELETE'
+      })
+      if (response.ok) {
+        fetchCompanies()
+        showNotification('Företag borttaget')
+        setDeleteConfirmCompany(null)
+        setDeleteConfirmStep(1)
+        setDeleteConfirmText('')
+        setShowCompanyDashboard(null)
+      } else {
+        const err = await response.json()
+        showNotification(err.detail || 'Kunde inte ta bort företag', 'error')
+      }
+    } catch (error) {
+      console.error('Kunde inte ta bort företag:', error)
+      showNotification('Kunde inte ta bort företag', 'error')
+    }
+  }
+
+  const handleToggleWidget = async (widgetId) => {
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/widgets/${widgetId}/toggle`, {
+        method: 'PUT'
+      })
+      if (response.ok) {
+        const data = await response.json()
+        // Update the widget in companyWidgets
+        setCompanyWidgets(prev => prev.map(w =>
+          w.id === widgetId ? { ...w, is_active: data.is_active } : w
+        ))
+        showNotification(data.is_active ? 'Widget aktiverad' : 'Widget inaktiverad')
+      }
+    } catch (error) {
+      console.error('Kunde inte ändra widget status:', error)
+      showNotification('Kunde inte ändra widget status', 'error')
     }
   }
 
@@ -1097,14 +1224,15 @@ function SuperAdmin() {
       const response = await adminFetch(`${API_BASE}/admin/impersonate/${companyId}`, { method: 'POST' })
       if (response.ok) {
         const data = await response.json()
-        // Store the impersonation token and redirect to company admin
-        localStorage.setItem('auth', JSON.stringify({
+        // Store the impersonation token and redirect to company dashboard
+        // Must use 'bobot_auth' key to match App.jsx
+        localStorage.setItem('bobot_auth', JSON.stringify({
           token: data.token,
           companyId: data.company_id,
           companyName: data.company_name,
           isImpersonated: true
         }))
-        window.location.href = '/'
+        window.location.href = '/dashboard'
       } else {
         showNotification('Kunde inte impersonera företag', 'error')
       }
@@ -1143,8 +1271,7 @@ function SuperAdmin() {
     setShowProposalModal(company)
     setProposalForm({
       contactPerson: '',
-      startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 week from now
-      hostingOption: 'cloud'
+      startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 1 week from now
     })
   }
 
@@ -1175,7 +1302,6 @@ function SuperAdmin() {
         tier: tierInfo?.name || tier.charAt(0).toUpperCase() + tier.slice(1),
         discount,
         conversationLimit,
-        hostingOption: proposalForm.hostingOption,
         pricingTiers: dbPricingTiers
       })
 
@@ -1376,19 +1502,23 @@ function SuperAdmin() {
         </div>
       )}
 
+      {/* Subtle dot pattern background */}
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.08] dark:opacity-[0.04]" style={{
+        backgroundImage: 'radial-gradient(circle, #D97757 1px, transparent 1px)',
+        backgroundSize: '24px 24px'
+      }} />
+
       {/* Header */}
-      <nav className="bg-bg-tertiary border-b border-border-subtle sticky top-0 z-40">
+      <nav className="bg-bg-tertiary/80 backdrop-blur-sm border-b border-border-subtle sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-gradient-to-br from-warning to-warning-hover rounded-lg flex items-center justify-center shadow-sm">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-bg-primary">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
+              <div className="relative">
+                <div className="absolute inset-0 bg-accent/20 rounded-full blur-lg scale-150" />
+                <BobotMini size={40} className="relative" />
               </div>
               <div>
-                <span className="font-semibold text-text-primary">Bobot</span>
-                <span className="text-xs text-text-tertiary ml-2">Systemöversikt</span>
+                <span className="font-bold text-text-primary text-lg">Bobot</span>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -1639,12 +1769,21 @@ function SuperAdmin() {
             setActiveTab={setActiveTab}
             onAddCompany={handleAdd}
             onGdprCleanup={handleGdprCleanup}
+            onShowAnnouncementModal={() => setShowAnnouncementModal(true)}
             aiInsights={aiInsights}
             insightsLoading={insightsLoading}
             fetchAiInsights={fetchAiInsights}
             activityStream={activityStream}
             activityLoading={activityLoading}
             fetchActivityStream={fetchActivityStream}
+            roadmapItems={roadmapItems}
+            onOpenRoadmapModalNew={() => {
+              setRoadmapForm({ title: '', description: '', quarter: 'Q1 2026', status: 'planned' })
+              setEditingRoadmapItem(null)
+              setShowRoadmapModal(true)
+            }}
+            onOpenEditRoadmapModal={openEditRoadmapModal}
+            onDeleteRoadmapItem={handleDeleteRoadmapItem}
           />
         )}
 
@@ -1677,10 +1816,6 @@ function SuperAdmin() {
             revenueDashboard={revenueDashboard}
             pricingTiers={pricingTiers}
             dbPricingTiers={dbPricingTiers}
-            companies={companies}
-            roadmapItems={roadmapItems}
-            onOpenPricingModal={openPricingModal}
-            onOpenDiscountModal={openDiscountModal}
             onInitPricingTiers={handleInitPricingTiers}
             onOpenEditPricingTierModal={openEditPricingTierModal}
             onOpenPricingTierModalNew={() => {
@@ -1688,13 +1823,6 @@ function SuperAdmin() {
               setEditingPricingTier(null)
               setShowPricingTierModal(true)
             }}
-            onOpenRoadmapModalNew={() => {
-              setRoadmapForm({ title: '', description: '', quarter: 'Q1 2026', status: 'planned' })
-              setEditingRoadmapItem(null)
-              setShowRoadmapModal(true)
-            }}
-            onOpenEditRoadmapModal={openEditRoadmapModal}
-            onDeleteRoadmapItem={handleDeleteRoadmapItem}
           />
         )}
 
@@ -1762,8 +1890,7 @@ function SuperAdmin() {
             adminPrefs={adminPrefs}
             adminAuth={adminAuth}
             selectedCompanies={selectedCompanies}
-            onToggleDarkMode={handleToggleDarkMode}
-            onSetup2FA={setup2FA}
+            onSetup2FA={handleSetup2FA}
             onExportCompanies={handleExportCompanies}
             onBulkSetLimits={handleBulkSetLimits}
           />
@@ -1771,10 +1898,7 @@ function SuperAdmin() {
 
         {/* Documentation Hub Tab */}
         {activeTab === 'docs' && (
-          <DocsTab
-            onShowAnnouncementModal={() => setShowAnnouncementModal(true)}
-            announcements={announcements}
-          />
+          <DocsTab />
         )}
         </main>
       </div>
@@ -1854,68 +1978,112 @@ function SuperAdmin() {
       {/* Usage Limit Modal */}
       {showUsageLimitModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-md animate-scale-in">
-            <div className="p-6 border-b border-border-subtle">
-              <h2 className="text-lg font-semibold text-text-primary">Användningsgränser</h2>
-              <p className="text-sm text-text-secondary mt-1">
-                Ange gränser för {showUsageLimitModal.name}
-              </p>
+          <div className="bg-bg-tertiary rounded-2xl shadow-xl w-full max-w-lg animate-scale-in">
+            {/* Header */}
+            <div className="p-6 border-b border-border-subtle flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                    <path d="M12 20V10" />
+                    <path d="M18 20V4" />
+                    <path d="M6 20v-4" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-text-primary">Användningsgränser</h2>
+                  <p className="text-sm text-text-secondary">{showUsageLimitModal.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowUsageLimitModal(null)}
+                className="p-2 hover:bg-bg-secondary rounded-lg transition-colors text-text-tertiary hover:text-text-primary"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="input-label">Max konversationer/månad</label>
-                <input
-                  type="number"
-                  value={usageLimitValue.conversations}
-                  onChange={(e) => setUsageLimitValue({ ...usageLimitValue, conversations: parseInt(e.target.value) || 0 })}
-                  placeholder="0 = obegränsat"
-                  className="input"
-                  min="0"
-                />
-                <p className="text-xs text-text-tertiary mt-1">Sätt till 0 för obegränsat</p>
-              </div>
 
-              <div>
-                <label className="input-label">Max kunskapsposter</label>
-                <input
-                  type="number"
-                  value={usageLimitValue.knowledge}
-                  onChange={(e) => setUsageLimitValue({ ...usageLimitValue, knowledge: parseInt(e.target.value) || 0 })}
-                  placeholder="0 = obegränsat"
-                  className="input"
-                  min="0"
-                />
-                <p className="text-xs text-text-tertiary mt-1">Sätt till 0 för obegränsat</p>
-              </div>
-
-              <div className="p-3 rounded-lg bg-bg-secondary space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-text-secondary">Konversationer denna månad</span>
-                  <span className="text-sm font-medium text-text-primary">
-                    {showUsageLimitModal.current_month_conversations || 0}
-                  </span>
+            <div className="p-6 space-y-6">
+              {/* Current Usage Stats */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-bg-secondary rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
+                    </div>
+                    <span className="text-sm text-text-secondary">Konversationer</span>
+                  </div>
+                  <p className="text-2xl font-bold text-text-primary">{showUsageLimitModal.current_month_conversations || 0}</p>
+                  <p className="text-xs text-text-tertiary">denna månad</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-text-secondary">Kunskapsposter</span>
-                  <span className="text-sm font-medium text-text-primary">
-                    {showUsageLimitModal.knowledge_count || 0}
-                  </span>
+                <div className="bg-bg-secondary rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                        <path d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                      </svg>
+                    </div>
+                    <span className="text-sm text-text-secondary">Kunskapsposter</span>
+                  </div>
+                  <p className="text-2xl font-bold text-text-primary">{showUsageLimitModal.knowledge_count || 0}</p>
+                  <p className="text-xs text-text-tertiary">totalt</p>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4">
+              {/* Limit Inputs */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">Max konversationer per månad</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={usageLimitValue.conversations}
+                      onChange={(e) => setUsageLimitValue({ ...usageLimitValue, conversations: parseInt(e.target.value) || 0 })}
+                      placeholder="0"
+                      className="w-full pl-4 pr-28 py-3 rounded-xl bg-bg-secondary border border-border-subtle focus:border-accent focus:ring-1 focus:ring-accent outline-none text-text-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      min="0"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-text-tertiary pointer-events-none">
+                      {usageLimitValue.conversations === 0 ? '∞ obegränsat' : 'per månad'}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">Max kunskapsposter</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={usageLimitValue.knowledge}
+                      onChange={(e) => setUsageLimitValue({ ...usageLimitValue, knowledge: parseInt(e.target.value) || 0 })}
+                      placeholder="0"
+                      className="w-full pl-4 pr-28 py-3 rounded-xl bg-bg-secondary border border-border-subtle focus:border-accent focus:ring-1 focus:ring-accent outline-none text-text-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      min="0"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-text-tertiary pointer-events-none">
+                      {usageLimitValue.knowledge === 0 ? '∞ obegränsat' : 'totalt'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowUsageLimitModal(null)}
-                  className="btn btn-ghost"
+                  className="flex-1 px-4 py-3 rounded-xl bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
                 >
                   Avbryt
                 </button>
                 <button
                   onClick={() => handleSetUsageLimit(showUsageLimitModal.id)}
-                  className="btn btn-primary"
+                  className="flex-1 px-4 py-3 rounded-xl bg-accent hover:bg-accent-hover text-white font-medium transition-colors"
                 >
-                  Spara
+                  Spara ändringar
                 </button>
               </div>
             </div>
@@ -1923,14 +2091,167 @@ function SuperAdmin() {
         </div>
       )}
 
+      {/* Password Change Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60] animate-fade-in">
+          <div className="bg-bg-tertiary rounded-2xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-text-primary">Ändra lösenord</h2>
+                  <p className="text-sm text-text-secondary">{showPasswordModal.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowPasswordModal(null); setNewPassword('') }}
+                className="p-2 hover:bg-bg-secondary rounded-lg transition-colors text-text-tertiary hover:text-text-primary"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-2">Nytt lösenord</label>
+                <input
+                  type="text"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Minst 6 tecken"
+                  className="w-full px-4 py-3 rounded-xl bg-bg-secondary border border-border-subtle focus:border-accent focus:ring-1 focus:ring-accent outline-none text-text-primary font-mono"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => { setShowPasswordModal(null); setNewPassword('') }}
+                  className="flex-1 px-4 py-3 rounded-xl bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
+                >
+                  Avbryt
+                </button>
+                <button
+                  onClick={() => handleChangePassword(showPasswordModal.id)}
+                  disabled={passwordLoading || newPassword.length < 6}
+                  className="flex-1 px-4 py-3 rounded-xl bg-accent hover:bg-accent-hover text-white font-medium transition-colors disabled:opacity-50"
+                >
+                  {passwordLoading ? 'Sparar...' : 'Spara'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Company Confirmation Modal (2-step) */}
+      {deleteConfirmCompany && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60] animate-fade-in">
+          <div className="bg-bg-tertiary rounded-2xl shadow-xl w-full max-w-md animate-scale-in">
+            <div className="p-6 border-b border-border-subtle flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-error/10 rounded-xl flex items-center justify-center">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-error">
+                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    <line x1="10" y1="11" x2="10" y2="17" />
+                    <line x1="14" y1="11" x2="14" y2="17" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-text-primary">Ta bort företag</h2>
+                  <p className="text-sm text-text-secondary">{deleteConfirmCompany.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setDeleteConfirmCompany(null); setDeleteConfirmStep(1); setDeleteConfirmText('') }}
+                className="p-2 hover:bg-bg-secondary rounded-lg transition-colors text-text-tertiary hover:text-text-primary"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {deleteConfirmStep === 1 ? (
+                <>
+                  <div className="p-4 rounded-xl bg-error/10 border border-error/20">
+                    <p className="text-error font-medium mb-2">Varning!</p>
+                    <p className="text-sm text-text-secondary">
+                      Detta kommer permanent ta bort företaget <strong>{deleteConfirmCompany.name}</strong> och all dess data:
+                    </p>
+                    <ul className="text-sm text-text-secondary mt-2 list-disc list-inside space-y-1">
+                      <li>Alla widgets</li>
+                      <li>All kunskapsbas</li>
+                      <li>Alla konversationer</li>
+                      <li>All statistik</li>
+                    </ul>
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => { setDeleteConfirmCompany(null); setDeleteConfirmStep(1) }}
+                      className="flex-1 px-4 py-3 rounded-xl bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
+                    >
+                      Avbryt
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmStep(2)}
+                      className="flex-1 px-4 py-3 rounded-xl bg-error hover:bg-error/80 text-white font-medium transition-colors"
+                    >
+                      Fortsätt
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="p-4 rounded-xl bg-error/10 border border-error/20">
+                    <p className="text-error font-medium mb-2">Bekräfta borttagning</p>
+                    <p className="text-sm text-text-secondary">
+                      Skriv <strong className="font-mono">{deleteConfirmCompany.id}</strong> för att bekräfta:
+                    </p>
+                  </div>
+                  <input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder={deleteConfirmCompany.id}
+                    className="w-full px-4 py-3 rounded-xl bg-bg-secondary border border-border-subtle focus:border-error focus:ring-1 focus:ring-error outline-none text-text-primary font-mono"
+                    autoFocus
+                  />
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => setDeleteConfirmStep(1)}
+                      className="flex-1 px-4 py-3 rounded-xl bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
+                    >
+                      Tillbaka
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCompany(deleteConfirmCompany.id)}
+                      disabled={deleteConfirmText !== deleteConfirmCompany.id}
+                      className="flex-1 px-4 py-3 rounded-xl bg-error hover:bg-error/80 text-white font-medium transition-colors disabled:opacity-50"
+                    >
+                      Ta bort permanent
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Company Dashboard Modal */}
       {showCompanyDashboard && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
-          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-4xl animate-scale-in my-8">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50 animate-fade-in">
+          <div className="bg-bg-tertiary rounded-2xl shadow-xl w-full max-w-4xl animate-scale-in max-h-[90vh] flex flex-col">
             {/* Header */}
-            <div className="p-6 border-b border-border-subtle flex items-center justify-between">
+            <div className="flex items-center justify-between p-6 border-b border-border-subtle flex-shrink-0">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center text-accent">
+                <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center text-accent">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
                     <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
@@ -1938,12 +2259,12 @@ function SuperAdmin() {
                 </div>
                 <div>
                   <h2 className="text-xl font-semibold text-text-primary">{showCompanyDashboard.name}</h2>
-                  <p className="text-sm text-text-secondary">{showCompanyDashboard.id}</p>
+                  <p className="text-sm text-text-tertiary font-mono">{showCompanyDashboard.id}</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowCompanyDashboard(null)}
-                className="p-2 rounded-lg text-text-tertiary hover:bg-bg-secondary hover:text-text-primary transition-colors"
+                className="p-2.5 rounded-lg text-text-tertiary hover:text-text-primary hover:bg-bg-secondary transition-colors"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M18 6L6 18M6 6l12 12" />
@@ -1952,40 +2273,40 @@ function SuperAdmin() {
             </div>
 
             {companyLoading ? (
-              <div className="p-12 text-center">
+              <div className="p-16 text-center">
                 <div className="animate-spin w-10 h-10 border-3 border-accent border-t-transparent rounded-full mx-auto mb-4" />
                 <p className="text-text-secondary">Laddar företagsdata...</p>
               </div>
             ) : (
-              <div className="p-6">
+              <div className="p-6 overflow-y-auto flex-1 space-y-6">
                 {/* Stats Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-bg-secondary rounded-xl p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 bg-accent-soft rounded-lg flex items-center justify-center text-accent">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-bg-secondary rounded-xl p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center text-accent">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
                           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
                         </svg>
                       </div>
-                      <span className="text-xs text-text-tertiary">Kunskapsposter</span>
+                      <span className="text-sm text-text-tertiary">Kunskapsposter</span>
                     </div>
-                    <p className="text-2xl font-semibold text-text-primary">{showCompanyDashboard.knowledge_count || 0}</p>
+                    <p className="text-3xl font-bold text-text-primary">{showCompanyDashboard.knowledge_count || 0}</p>
                   </div>
-                  <div className="bg-bg-secondary rounded-xl p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 bg-success-soft rounded-lg flex items-center justify-center text-success">
+                  <div className="bg-bg-secondary rounded-xl p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center text-accent">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                         </svg>
                       </div>
-                      <span className="text-xs text-text-tertiary">Konversationer</span>
+                      <span className="text-sm text-text-tertiary">Konversationer</span>
                     </div>
-                    <p className="text-2xl font-semibold text-text-primary">{showCompanyDashboard.chat_count || 0}</p>
+                    <p className="text-3xl font-bold text-text-primary">{showCompanyDashboard.chat_count || 0}</p>
                   </div>
-                  <div className="bg-bg-secondary rounded-xl p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 bg-warning-soft rounded-lg flex items-center justify-center text-warning">
+                  <div className="bg-bg-secondary rounded-xl p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center text-accent">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                           <line x1="16" y1="2" x2="16" y2="6" />
@@ -1993,31 +2314,120 @@ function SuperAdmin() {
                           <line x1="3" y1="10" x2="21" y2="10" />
                         </svg>
                       </div>
-                      <span className="text-xs text-text-tertiary">Skapad</span>
+                      <span className="text-sm text-text-tertiary">Skapad</span>
                     </div>
-                    <p className="text-sm font-medium text-text-primary">{formatDate(showCompanyDashboard.created_at)}</p>
+                    <p className="text-xl font-bold text-text-primary">{formatDate(showCompanyDashboard.created_at)}</p>
                   </div>
-                  <div className="bg-bg-secondary rounded-xl p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${showCompanyDashboard.is_active ? 'bg-success-soft text-success' : 'bg-error-soft text-error'}`}>
+                  <div className="bg-bg-secondary rounded-xl p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center text-accent">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <circle cx="12" cy="12" r="10" />
                           {showCompanyDashboard.is_active && <polyline points="9 12 11 14 15 10" />}
                           {!showCompanyDashboard.is_active && <path d="M15 9l-6 6M9 9l6 6" />}
                         </svg>
                       </div>
-                      <span className="text-xs text-text-tertiary">Status</span>
+                      <span className="text-sm text-text-tertiary">Status</span>
                     </div>
-                    <p className={`text-sm font-medium ${showCompanyDashboard.is_active ? 'text-success' : 'text-error'}`}>
+                    <p className={`text-3xl font-bold ${showCompanyDashboard.is_active ? 'text-success' : 'text-error'}`}>
                       {showCompanyDashboard.is_active ? 'Aktiv' : 'Inaktiv'}
                     </p>
                   </div>
                 </div>
 
+                {/* Pricing Tier Info */}
+                <div>
+                  <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
+                    <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500">
+                        <line x1="12" y1="1" x2="12" y2="23" />
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                      </svg>
+                    </div>
+                    Prissättning
+                  </h3>
+                  <div className="bg-bg-secondary rounded-xl p-4">
+                    {(() => {
+                      const tier = pricingTiers[showCompanyDashboard.pricing_tier || 'starter'] || pricingTiers.starter || { name: 'Starter', monthly_fee: 0, startup_fee: 0 }
+                      return (
+                        <>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                            <div>
+                              <span className="text-xs text-text-tertiary block mb-1">Prisnivå</span>
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                                showCompanyDashboard.pricing_tier === 'enterprise' ? 'bg-purple-100 text-purple-800' :
+                                showCompanyDashboard.pricing_tier === 'business' ? 'bg-blue-100 text-blue-800' :
+                                showCompanyDashboard.pricing_tier === 'professional' ? 'bg-green-100 text-green-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {tier?.name || 'Starter'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-xs text-text-tertiary block mb-1">Månadskostnad</span>
+                              <span className="text-lg font-bold text-text-primary">{tier?.monthly_fee?.toLocaleString('sv-SE')} kr</span>
+                            </div>
+                            <div>
+                              <span className="text-xs text-text-tertiary block mb-1">Rabatt</span>
+                              {showCompanyDashboard.discount_percent > 0 ? (
+                                <div>
+                                  <span className="text-lg font-bold text-green-600">{showCompanyDashboard.discount_percent}%</span>
+                                  {showCompanyDashboard.discount_end_date && (
+                                    <span className="text-xs text-text-tertiary block">t.o.m. {showCompanyDashboard.discount_end_date}</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-text-tertiary">Ingen rabatt</span>
+                              )}
+                            </div>
+                            <div>
+                              <span className="text-xs text-text-tertiary block mb-1">Uppstart betald</span>
+                              {showCompanyDashboard.startup_fee_paid ? (
+                                <span className="inline-flex items-center gap-1 text-green-600 font-medium">
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  Ja
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-amber-600 font-medium">
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  Nej ({tier?.startup_fee?.toLocaleString('sv-SE')} kr)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {showCompanyDashboard.contract_start_date && (
+                            <div className="text-xs text-text-tertiary mb-3">
+                              Avtal startade: {showCompanyDashboard.contract_start_date}
+                            </div>
+                          )}
+                          <div className="flex gap-2 pt-3 border-t border-border-subtle">
+                            <button
+                              onClick={() => { setShowCompanyDashboard(null); openPricingModal(showCompanyDashboard) }}
+                              className="btn btn-secondary text-sm"
+                            >
+                              Ändra prisnivå
+                            </button>
+                            <button
+                              onClick={() => { setShowCompanyDashboard(null); openDiscountModal(showCompanyDashboard) }}
+                              className="btn btn-ghost text-sm"
+                            >
+                              Hantera rabatt
+                            </button>
+                          </div>
+                        </>
+                      )
+                    })()}
+                  </div>
+                </div>
+
                 {/* Usage Meters */}
                 {companyUsage && (companyUsage.max_conversations_month > 0 || (showCompanyDashboard.max_knowledge_items || 0) > 0) && (
-                  <div className="mb-6">
-                    <h3 className="text-sm font-medium text-text-primary mb-3">Användningsgränser</h3>
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary mb-4">Användningsgränser</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {companyUsage.max_conversations_month > 0 && (
                         <div className={`p-4 rounded-xl border ${companyUsage.usage_percent >= 90 ? 'border-red-200 bg-red-50' : companyUsage.usage_percent >= 75 ? 'border-amber-200 bg-amber-50' : 'border-border-default bg-bg-primary'}`}>
@@ -2062,21 +2472,29 @@ function SuperAdmin() {
 
                 {/* Widgets Section */}
                 {companyWidgets.length > 0 && (
-                  <div className="mb-6">
-                    <h3 className="text-sm font-medium text-text-primary mb-3 flex items-center gap-2">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <rect x="3" y="3" width="7" height="7" rx="1" />
-                        <rect x="14" y="3" width="7" height="7" rx="1" />
-                        <rect x="14" y="14" width="7" height="7" rx="1" />
-                        <rect x="3" y="14" width="7" height="7" rx="1" />
-                      </svg>
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
+                      <div className="w-8 h-8 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-purple-500">
+                          <rect x="3" y="3" width="7" height="7" rx="1" />
+                          <rect x="14" y="3" width="7" height="7" rx="1" />
+                          <rect x="14" y="14" width="7" height="7" rx="1" />
+                          <rect x="3" y="14" width="7" height="7" rx="1" />
+                        </svg>
+                      </div>
                       Widgets ({companyWidgets.length})
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {companyWidgets.map((widget) => (
-                        <div key={widget.id} className="bg-bg-secondary rounded-xl p-4 flex items-center gap-3">
+                        <div key={widget.id} className={`rounded-xl p-4 flex items-center gap-3 border transition-all group ${
+                          widget.is_active
+                            ? 'bg-bg-secondary hover:bg-bg-primary border-transparent hover:border-border-subtle'
+                            : 'bg-bg-secondary/50 border-border-subtle opacity-60'
+                        }`}>
                           <div
-                            className="w-10 h-10 rounded-lg flex items-center justify-center text-white flex-shrink-0"
+                            className={`w-11 h-11 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-sm transition-transform ${
+                              widget.is_active ? 'group-hover:scale-105' : 'grayscale'
+                            }`}
                             style={{ backgroundColor: widget.primary_color || '#D97757' }}
                           >
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -2085,16 +2503,16 @@ function SuperAdmin() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-text-primary truncate">{widget.name}</p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                                widget.widget_type === 'external' ? 'bg-blue-100 text-blue-700' :
-                                widget.widget_type === 'internal' ? 'bg-purple-100 text-purple-700' :
-                                'bg-gray-100 text-gray-700'
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium ${
+                                widget.widget_type === 'external' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
+                                widget.widget_type === 'internal' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' :
+                                'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                               }`}>
                                 {widget.widget_type === 'external' ? 'Extern' :
                                  widget.widget_type === 'internal' ? 'Intern' : 'Anpassad'}
                               </span>
-                              <span className={`inline-flex items-center gap-1 text-xs ${
+                              <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
                                 widget.is_active ? 'text-success' : 'text-error'
                               }`}>
                                 <span className={`w-1.5 h-1.5 rounded-full ${
@@ -2104,10 +2522,27 @@ function SuperAdmin() {
                               </span>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-xs text-text-tertiary font-mono truncate max-w-[100px]" title={widget.widget_key}>
-                              {widget.widget_key?.slice(0, 8)}...
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-text-tertiary font-mono bg-bg-tertiary px-2 py-1 rounded-lg truncate max-w-[80px]" title={widget.widget_key}>
+                              {widget.widget_key?.slice(0, 6)}...
                             </p>
+                            <button
+                              onClick={() => handleToggleWidget(widget.id)}
+                              className={`p-2 rounded-lg transition-colors ${
+                                widget.is_active
+                                  ? 'bg-warning/10 hover:bg-warning/20 text-warning'
+                                  : 'bg-success/10 hover:bg-success/20 text-success'
+                              }`}
+                              title={widget.is_active ? 'Inaktivera widget' : 'Aktivera widget'}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                {widget.is_active ? (
+                                  <><circle cx="12" cy="12" r="10" /><path d="M15 9l-6 6M9 9l6 6" /></>
+                                ) : (
+                                  <><circle cx="12" cy="12" r="10" /><polyline points="9 12 11 14 15 10" /></>
+                                )}
+                              </svg>
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -2117,8 +2552,8 @@ function SuperAdmin() {
 
                 {/* Self-Hosting Section */}
                 {selfHostingStatus && (
-                  <div className="mb-6">
-                    <h3 className="text-sm font-medium text-text-primary mb-3 flex items-center gap-2">
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                         <path d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
                       </svg>
@@ -2204,8 +2639,8 @@ function SuperAdmin() {
                 )}
 
                 {/* Recent Activity */}
-                <div className="mb-6">
-                  <h3 className="text-sm font-medium text-text-primary mb-3">Senaste aktivitet</h3>
+                <div>
+                  <h3 className="text-sm font-semibold text-text-primary mb-4">Senaste aktivitet</h3>
                   {companyActivity.length === 0 ? (
                     <div className="bg-bg-secondary rounded-xl p-6 text-center">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-2 text-text-tertiary">
@@ -2391,59 +2826,95 @@ function SuperAdmin() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-wrap gap-2">
+                <div className="pt-6 border-t border-border-subtle mt-2 space-y-4">
+                  {/* Primary Action */}
                   <button
                     onClick={() => { setShowCompanyDashboard(null); handleImpersonate(showCompanyDashboard.id) }}
-                    className="btn btn-primary"
+                    className="w-full flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl bg-accent text-white font-medium hover:bg-accent-hover transition-colors"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                       <circle cx="12" cy="7" r="4" />
                     </svg>
-                    Logga in som
+                    Logga in som detta företag
                   </button>
-                  <button
-                    onClick={() => { setShowCompanyDashboard(null); openUsageLimitModal(showCompanyDashboard) }}
-                    className="btn btn-secondary"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 20V10" />
-                      <path d="M18 20V4" />
-                      <path d="M6 20v-4" />
-                    </svg>
-                    Ändra gränser
-                  </button>
-                  <button
-                    onClick={() => handleExport(showCompanyDashboard.id)}
-                    className="btn btn-secondary"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                    Exportera
-                  </button>
-                  <button
-                    onClick={() => { setShowCompanyDashboard(null); openProposalModal(showCompanyDashboard) }}
-                    className="btn btn-secondary"
-                    style={{ background: 'linear-gradient(135deg, #C4633A 0%, #A85230 100%)', borderColor: '#C4633A', color: 'white' }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                      <line x1="16" y1="13" x2="8" y2="13" />
-                      <line x1="16" y1="17" x2="8" y2="17" />
-                      <polyline points="10 9 9 9 8 9" />
-                    </svg>
-                    Skapa offert
-                  </button>
-                  <button
-                    onClick={() => { setShowCompanyDashboard(null); handleToggle(showCompanyDashboard.id) }}
-                    className={`btn ${showCompanyDashboard.is_active ? 'btn-ghost text-warning' : 'btn-ghost text-success'}`}
-                  >
-                    {showCompanyDashboard.is_active ? 'Inaktivera' : 'Aktivera'}
-                  </button>
+
+                  {/* Management Actions - Grid */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => { setShowCompanyDashboard(null); openUsageLimitModal(showCompanyDashboard) }}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary text-sm font-medium transition-colors"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary flex-shrink-0">
+                        <path d="M12 20V10" />
+                        <path d="M18 20V4" />
+                        <path d="M6 20v-4" />
+                      </svg>
+                      Ändra gränser
+                    </button>
+                    <button
+                      onClick={() => setShowPasswordModal(showCompanyDashboard)}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary text-sm font-medium transition-colors"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary flex-shrink-0">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+                      Ändra lösenord
+                    </button>
+                    <button
+                      onClick={() => handleExport(showCompanyDashboard.id)}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary text-sm font-medium transition-colors"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary flex-shrink-0">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Exportera data
+                    </button>
+                    <button
+                      onClick={() => { setShowCompanyDashboard(null); openProposalModal(showCompanyDashboard) }}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary text-sm font-medium transition-colors"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary flex-shrink-0">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                      </svg>
+                      Skapa offert
+                    </button>
+                  </div>
+
+                  {/* Status & Danger Actions */}
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => handleToggle(showCompanyDashboard.id)}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                        showCompanyDashboard.is_active
+                          ? 'bg-warning/10 hover:bg-warning/20 border border-warning/30 text-warning'
+                          : 'bg-success/10 hover:bg-success/20 border border-success/30 text-success'
+                      }`}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        {showCompanyDashboard.is_active
+                          ? <><circle cx="12" cy="12" r="10" /><path d="M15 9l-6 6M9 9l6 6" /></>
+                          : <><circle cx="12" cy="12" r="10" /><polyline points="9 12 11 14 15 10" /></>
+                        }
+                      </svg>
+                      {showCompanyDashboard.is_active ? 'Inaktivera' : 'Aktivera'}
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmCompany(showCompanyDashboard)}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-error/10 hover:bg-error/20 border border-error/30 text-error text-sm font-medium transition-colors"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                      Ta bort
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -2580,36 +3051,6 @@ function SuperAdmin() {
                   onChange={(e) => setProposalForm(prev => ({ ...prev, startDate: e.target.value }))}
                   className="input"
                 />
-              </div>
-
-              {/* Hosting Option */}
-              <div>
-                <label className="input-label">Hosting-alternativ</label>
-                <select
-                  value={proposalForm.hostingOption}
-                  onChange={(e) => setProposalForm(prev => ({ ...prev, hostingOption: e.target.value }))}
-                  className="input"
-                >
-                  <option value="cloud">Bobot Cloud (hanterad)</option>
-                  <option value="selfhosted">Självhostad</option>
-                </select>
-              </div>
-
-              {/* Pricing Info */}
-              <div className="p-4 rounded-lg" style={{ backgroundColor: '#FDF6F0', border: '1px solid #E8A87C' }}>
-                <h3 className="text-sm font-semibold mb-2" style={{ color: '#3D2B24' }}>Prissättning som inkluderas</h3>
-                <div className="space-y-1 text-sm" style={{ color: '#6B5248' }}>
-                  <div className="flex justify-between">
-                    <span>Prisnivå:</span>
-                    <span className="font-medium">{showProposalModal.pricing_tier || 'Starter'}</span>
-                  </div>
-                  {showProposalModal.discount_percent > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Rabatt:</span>
-                      <span className="font-medium">-{showProposalModal.discount_percent}%</span>
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
 

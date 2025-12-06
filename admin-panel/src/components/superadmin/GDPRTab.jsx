@@ -31,6 +31,16 @@ const GDPRTab = ({ onGdprCleanup }) => {
                 <p className="text-sm text-text-secondary">Rensa utgångna konversationer nu</p>
               </div>
             </button>
+            <div className="p-4 rounded-lg bg-bg-secondary border border-border-subtle">
+              <h4 className="text-sm font-medium text-text-primary mb-2">Så fungerar cleanup:</h4>
+              <ul className="text-sm text-text-secondary space-y-1">
+                <li>• Körs automatiskt varje timme</li>
+                <li>• Raderar konversationer äldre än retention-perioden (7-30 dagar per företag)</li>
+                <li>• Statistik sparas anonymiserat innan radering</li>
+                <li>• Meddelanden och chatthistorik raderas permanent</li>
+                <li>• Manuell cleanup triggar samma process direkt</li>
+              </ul>
+            </div>
           </div>
         </div>
 

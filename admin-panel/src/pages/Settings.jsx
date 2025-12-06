@@ -175,10 +175,10 @@ function Settings() {
   return (
     <div className="animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Företagsinställningar</h1>
-          <p className="text-text-secondary mt-1">Hantera GDPR, notiser och compliance</p>
+          <h1 className="text-xl sm:text-2xl font-semibold text-text-primary tracking-tight">Företagsinställningar</h1>
+          <p className="text-text-secondary mt-1 text-sm sm:text-base">Hantera GDPR, notiser och compliance</p>
         </div>
         <div className="flex items-center gap-3">
           {saved && (
@@ -192,7 +192,7 @@ function Settings() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="btn btn-primary"
+            className="btn btn-primary w-full sm:w-auto"
           >
             {saving ? 'Sparar...' : 'Spara ändringar'}
           </button>
@@ -200,18 +200,18 @@ function Settings() {
       </div>
 
       {/* Tabs + Content Layout */}
-      <div className="flex gap-6">
-        {/* Sidebar Tabs */}
-        <div className="w-48 flex-shrink-0">
-          <nav className="space-y-1">
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Tabs - horizontal scroll on mobile, sidebar on desktop */}
+        <div className="w-full md:w-48 flex-shrink-0">
+          <nav className="flex md:flex-col gap-2 md:gap-1 overflow-x-auto pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center gap-2 md:gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 md:w-full ${
                   activeTab === tab.id
                     ? 'bg-accent text-white'
-                    : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+                    : 'text-text-secondary bg-bg-secondary md:bg-transparent hover:bg-bg-tertiary hover:text-text-primary'
                 }`}
               >
                 {renderIcon(tab.icon)}

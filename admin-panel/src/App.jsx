@@ -79,11 +79,44 @@ function App() {
   // Announcements state (supports multiple messages)
   const [announcements, setAnnouncements] = useState([])
 
+  // Mobile sidebar state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
   // Admin auth
   const [adminAuth, setAdminAuth] = useState(() => {
     const saved = localStorage.getItem('bobot_admin_auth')
     return saved ? JSON.parse(saved) : null
   })
+
+  // Company status (for showing inactive overlay)
+  const [companyStatus, setCompanyStatus] = useState(null)
+
+  // Fetch company status
+  const fetchCompanyStatus = async () => {
+    if (!auth?.token) return
+    try {
+      const response = await fetch(`${API_BASE}/company/status`, {
+        headers: { 'Authorization': `Bearer ${auth.token}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setCompanyStatus(data)
+      }
+    } catch (e) {
+      console.error('Could not fetch company status:', e)
+    }
+  }
+
+  useEffect(() => {
+    if (auth) {
+      fetchCompanyStatus()
+      // Check status every 2 minutes
+      const interval = setInterval(fetchCompanyStatus, 2 * 60 * 1000)
+      return () => clearInterval(interval)
+    } else {
+      setCompanyStatus(null)
+    }
+  }, [auth])
 
   useEffect(() => {
     if (auth) {
@@ -361,7 +394,7 @@ function App() {
 
   // Authenticated company routes
   return (
-    <AuthContext.Provider value={{ auth, authFetch, darkMode, toggleDarkMode }}>
+    <AuthContext.Provider value={{ auth, authFetch, darkMode, toggleDarkMode, companyStatus }}>
       {/* Skip links for keyboard navigation */}
       <a href="#main-content" className="skip-link">
         Hoppa till huvudinnehåll
@@ -385,8 +418,37 @@ function App() {
           announcements={announcements}
           onDismissAnnouncement={markAnnouncementAsRead}
           onDismissAllAnnouncements={markAllAnnouncementsAsRead}
+          mobileOpen={mobileMenuOpen}
+          setMobileOpen={setMobileMenuOpen}
+          companyStatus={companyStatus}
         />
-        <main id="main-content" className="flex-1 p-8 overflow-auto relative z-10" role="main" aria-label="Huvudinnehåll">
+        <main id="main-content" className="flex-1 p-4 md:p-8 overflow-auto relative z-10 w-full" role="main" aria-label="Huvudinnehåll">
+          {/* Mobile header with hamburger menu */}
+          <div className="md:hidden flex items-center gap-3 mb-4 -mt-1">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="p-2 -ml-2 rounded-lg hover:bg-bg-secondary transition-colors"
+              aria-label="Öppna meny"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8">
+                <svg viewBox="0 0 48 48" fill="none" className="w-full h-full">
+                  <rect x="14" y="8" width="20" height="11" rx="2" fill="#D97757" />
+                  <ellipse cx="19" cy="13.5" rx="3.5" ry="3" fill="#292524" />
+                  <ellipse cx="29" cy="13.5" rx="3.5" ry="3" fill="#292524" />
+                  <ellipse cx="19" cy="14" rx="2" ry="2" fill="#D97757" />
+                  <ellipse cx="29" cy="14" rx="2" ry="2" fill="#D97757" />
+                </svg>
+              </div>
+              <span className="font-semibold text-text-primary">Bobot</span>
+            </div>
+          </div>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
@@ -403,6 +465,42 @@ function App() {
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
+
+        {/* Inactive Company Overlay */}
+        {companyStatus && !companyStatus.is_active && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-bg-tertiary rounded-2xl shadow-2xl max-w-md w-full p-8 text-center">
+              <div className="w-16 h-16 bg-error/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-error">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M15 9l-6 6M9 9l6 6" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-text-primary mb-3">Kontot är inaktiverat</h2>
+              <p className="text-text-secondary mb-6">
+                Ditt företagskonto har tillfälligt inaktiverats. Kontakta oss för att lösa detta.
+              </p>
+              <div className="space-y-3">
+                <a
+                  href="mailto:hej@bobot.nu"
+                  className="flex items-center justify-center gap-2 w-full px-6 py-3 rounded-xl bg-accent hover:bg-accent-hover text-white font-medium transition-colors"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                  </svg>
+                  hej@bobot.nu
+                </a>
+                <button
+                  onClick={handleLogout}
+                  className="w-full px-6 py-3 rounded-xl bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
+                >
+                  Logga ut
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AuthContext.Provider>
   )

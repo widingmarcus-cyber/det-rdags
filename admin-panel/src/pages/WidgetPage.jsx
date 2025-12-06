@@ -31,10 +31,15 @@ const loadGoogleFont = (fontFamily) => {
 }
 
 function WidgetPage({ widgetType }) {
-  const { authFetch } = useContext(AuthContext)
+  const { auth, authFetch, companyStatus } = useContext(AuthContext)
   const [activeTab, setActiveTab] = useState('settings')
   const [widget, setWidget] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  // Check if this widget is inactive
+  const isWidgetInactive = companyStatus?.widgets?.find(
+    w => w.widget_type === widgetType
+  )?.is_active === false
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -687,8 +692,16 @@ function WidgetPage({ widgetType }) {
     setFeedbackGiven({})
   }
 
-  const handlePreviewFeedback = (msgIndex, helpful) => {
+  const handlePreviewFeedback = async (msgIndex, helpful) => {
     setFeedbackGiven(prev => ({ ...prev, [msgIndex]: helpful }))
+    // Send feedback to backend
+    try {
+      await fetch(`${API_BASE}/chat/${auth.companyId}/feedback?session_id=${sessionId}&helpful=${helpful}`, {
+        method: 'POST'
+      })
+    } catch (e) {
+      console.error('Failed to send feedback:', e)
+    }
   }
 
   useEffect(() => {
@@ -716,7 +729,38 @@ function WidgetPage({ widgetType }) {
   }
 
   return (
-    <div className="max-w-5xl mx-auto animate-fade-in">
+    <div className="max-w-5xl mx-auto animate-fade-in relative">
+      {/* Inactive Widget Overlay */}
+      {isWidgetInactive && (
+        <div className="absolute inset-0 z-40 bg-bg-primary/80 backdrop-blur-sm flex items-start justify-center pt-20">
+          <div className="bg-bg-tertiary rounded-2xl shadow-2xl max-w-md w-full p-8 text-center border border-border-subtle">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-text-primary mb-3">
+              Widget inaktiverad
+            </h2>
+            <p className="text-text-secondary mb-6">
+              Denna widget har tillfälligt inaktiverats. Kontakta oss för att återaktivera den.
+            </p>
+            <a
+              href="mailto:hej@bobot.nu"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                <polyline points="22,6 12,13 2,6" />
+              </svg>
+              hej@bobot.nu
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">

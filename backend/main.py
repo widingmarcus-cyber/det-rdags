@@ -375,7 +375,7 @@ def clear_login_attempts(identifier: str):
 
 # Ollama-konfiguration
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:14b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b-instruct")
 
 
 # =============================================================================
@@ -937,6 +937,215 @@ class AnalyticsResponse(BaseModel):
 
 
 # =============================================================================
+# Bobot Knowledge Base Content
+# =============================================================================
+
+def get_bobot_knowledge_items():
+    """Comprehensive knowledge base for Bobot landing page widget"""
+    return [
+        # === PRODUCT OVERVIEW ===
+        ("Vad är Bobot?",
+         "Bobot är en GDPR-säker AI-chatbot där företag bygger sin egen kunskapsbas med frågor och svar. Chatboten bäddas in på företagets hemsida och besvarar kundfrågor automatiskt med AI-stöd, dygnet runt. Perfekt för kundtjänst, intern kunskapsbank och introduktion av nyanställda.",
+         "produkt"),
+
+        ("Vem är Bobot för?",
+         "Bobot passar företag som vill avlasta sin kundtjänst och erbjuda snabbare svar. Vanliga användare är fastighetsbolag, e-handlare, B2B-företag, kommuner och organisationer med mycket kundkontakt. Bobot fungerar även utmärkt som intern kunskapsassistent för medarbetare.",
+         "produkt"),
+
+        ("Vad kan Bobot hjälpa till med?",
+         "Bobot kan svara på kundfrågor dygnet runt, fungera som intern kunskapsbank för medarbetare, hjälpa nyanställda att snabbt komma in i jobbet, minska belastningen på kundtjänst, och ge snabbare svar till kunder utan väntetid.",
+         "produkt"),
+
+        ("Hur skiljer sig Bobot från andra chatbotar?",
+         "Bobot använder en lokal AI-modell (Qwen 2.5 14B) som körs på våra egna servrar i EU. Det betyder att ingen data skickas till tredje part som OpenAI eller Google. Dessutom är Bobot byggt specifikt för GDPR-efterlevnad med automatisk dataradering, samtyckehantering och IP-anonymisering.",
+         "produkt"),
+
+        # === HOW IT WORKS ===
+        ("Hur fungerar Bobot?",
+         "Bobot fungerar i tre steg: 1) Du bygger en kunskapsbas med frågor och svar genom att lägga till manuellt eller importera från filer. 2) Du bäddar in widgeten på din hemsida med två rader kod. 3) Bobot svarar automatiskt på kundfrågor baserat på din kunskapsbas, dygnet runt.",
+         "hur-det-fungerar"),
+
+        ("Hur lång tid tar det att komma igång?",
+         "De flesta kunder är igång på cirka 15 minuter. Ladda upp din kunskapsbas (t.ex. befintlig FAQ), kopiera koden till din hemsida, och du är redo! Vi hjälper gärna till om du behöver assistans.",
+         "hur-det-fungerar"),
+
+        ("Hur bygger jag en kunskapsbas?",
+         "Det finns flera sätt att bygga din kunskapsbas: 1) Lägg till frågor och svar manuellt i admin-panelen. 2) Importera från Excel, Word, PDF eller CSV-filer. 3) Importera automatiskt från en befintlig FAQ-sida genom att ange URL. Admin-panelen har en användarvänlig editor där du enkelt kan organisera allt i kategorier.",
+         "hur-det-fungerar"),
+
+        ("Vad händer om Bobot inte kan svara?",
+         "Om Bobot inte hittar ett svar i kunskapsbasen visas ett anpassningsbart reservmeddelande, t.ex. 'Kontakta oss på support@dittforetag.se'. Frågan loggas i analytics så du kan se vilka frågor som behöver läggas till i kunskapsbasen.",
+         "hur-det-fungerar"),
+
+        # === FEATURES ===
+        ("Vilka funktioner har Bobot?",
+         "Bobot erbjuder: AI-drivna svar baserade på din kunskapsbas, import från Excel/Word/PDF/CSV/URL, flera widgets (intern/extern), flerspråksstöd (svenska, engelska, arabiska med RTL), GDPR-verktyg med automatisk dataradering, realtidsstatistik och analytics, anpassningsbar design, dark mode, och responsiv mobildesign.",
+         "funktioner"),
+
+        ("Vilka språk stöds?",
+         "Bobot stöder svenska, engelska och arabiska (inklusive RTL-stöd för höger-till-vänster-text). Språket detekteras automatiskt baserat på kundens fråga, så du behöver inte göra något speciellt.",
+         "funktioner"),
+
+        ("Kan jag ha flera chatbotar?",
+         "Ja! Du kan skapa separata widgets för olika ändamål. Exempelvis en extern widget för kundtjänst på hemsidan och en intern widget för medarbetarstöd på intranätet. Varje widget kan ha egen kunskapsbas, eget utseende och egen ton.",
+         "funktioner"),
+
+        ("Kan jag anpassa utseendet?",
+         "Absolut! I admin-panelen kan du anpassa: primärfärg och bakgrundsfärg, typsnitt och teckenstorlek, rundade hörn, position på skärmen (höger/vänster), välkomstmeddelande och reservmeddelande, samt aktivera dark mode. Allt med live-förhandsgranskning.",
+         "funktioner"),
+
+        ("Finns det statistik och rapporter?",
+         "Ja, Bobot ger detaljerad statistik: antal konversationer (dag/vecka/månad), vanligaste frågorna, obesvarade frågor som behöver läggas till, nöjdhetsbetyg (tumme upp/ner), svarstider, och fördelning per språk och kategori. Du kan exportera data till CSV.",
+         "funktioner"),
+
+        ("Stöder Bobot dark mode?",
+         "Ja, widgeten har inbyggt stöd för dark mode. Användare kan växla mellan ljust och mörkt läge, eller så kan det följa systemets inställningar automatiskt.",
+         "funktioner"),
+
+        ("Fungerar Bobot på mobilen?",
+         "Ja, widgeten är helt responsiv och fungerar utmärkt på mobiler, surfplattor och datorer. Designen anpassas automatiskt efter skärmstorlek.",
+         "funktioner"),
+
+        # === IMPORT & CONTENT ===
+        ("Hur importerar jag befintlig FAQ?",
+         "Du kan importera på flera sätt: 1) Excel-fil (.xlsx) med frågor i en kolumn och svar i en annan. 2) Word-dokument (.docx) där AI extraherar Q&A automatiskt. 3) PDF-fil med FAQ-innehåll. 4) CSV-fil med semikolon- eller kommaseparerade frågor/svar. 5) URL till befintlig FAQ-sida för automatisk extraktion.",
+         "import"),
+
+        ("Vilka filformat stöds för import?",
+         "Bobot stöder import från: Excel (.xlsx, .xls), Word (.docx), PDF (.pdf), CSV (.csv), och vanlig text (.txt). Du kan också importera direkt från en webbadress (URL).",
+         "import"),
+
+        ("Kan jag importera från min befintliga hemsida?",
+         "Ja! Ange URL:en till din befintliga FAQ-sida så extraherar Bobot automatiskt frågor och svar därifrån. Det sparar mycket tid om du redan har dokumenterat FAQ någon annanstans.",
+         "import"),
+
+        # === INTEGRATION ===
+        ("Hur bäddar jag in widgeten på min hemsida?",
+         "Det är enkelt! Kopiera två rader JavaScript-kod från admin-panelen och klistra in före </body>-taggen på din hemsida: <script src='https://bobot.nu/widget.js'></script> <script>Bobot.init({ widgetKey: 'ditt-widget-key' })</script>",
+         "integration"),
+
+        ("Fungerar Bobot med WordPress?",
+         "Ja! Du kan antingen klistra in koden i ditt temas footer.php-fil, använda ett plugin för anpassad kod, eller lägga till koden via WordPress Customizer. Vi har en guide som visar steg för steg.",
+         "integration"),
+
+        ("Vilka plattformar stöds?",
+         "Bobot fungerar med alla webbplattformar: WordPress, Wix, Squarespace, Shopify, Webflow, och valfri custom-byggd hemsida. Allt som krävs är att du kan lägga till JavaScript-kod på sidan.",
+         "integration"),
+
+        ("Finns det ett API?",
+         "Ja, Bobot har ett REST API för avancerade integrationer. Du kan programmatiskt hantera kunskapsbas, widgets, och hämta analytics. API-dokumentation finns i admin-panelen för Business- och Enterprise-kunder.",
+         "integration"),
+
+        # === PRICING ===
+        ("Vad kostar Bobot?",
+         "Vi har fyra prisplaner: Starter (1 500 kr/mån, 250 konversationer), Professional (3 000 kr/mån, 2000 konv.), Business (6 000 kr/mån, 5000 konv.), och Enterprise (offert, obegränsat). Alla planer har gratis uppstart för Starter, eller engångsavgift för övriga. Se bobot.nu för aktuella priser.",
+         "priser"),
+
+        ("Finns det en gratis provperiod?",
+         "Vi erbjuder en kostnadsfri demo där vi visar hur Bobot fungerar för just din verksamhet. Kontakta oss på hej@bobot.nu för att boka en demo.",
+         "priser"),
+
+        ("Vad ingår i de olika planerna?",
+         "Starter: Grundläggande AI-chatt, 50 kunskapsartiklar, 250 konv/månad, e-postsupport. Professional: 250 artiklar, 2000 konv, prioriterad support, anpassad widget. Business: 500 artiklar, 5000 konv, dedikerad support, API-åtkomst. Enterprise: Obegränsat, SLA-garanti, white-label, skräddarsydd utveckling.",
+         "priser"),
+
+        ("Finns det bindningstid?",
+         "Nej, våra planer har ingen bindningstid. Du betalar månadsvis och kan uppgradera, nedgradera eller avsluta när som helst.",
+         "priser"),
+
+        ("Kan jag uppgradera min plan?",
+         "Ja, du kan uppgradera eller nedgradera din plan när som helst. Ändringen träder i kraft direkt och du betalar bara mellanskillnaden för innevarande månad.",
+         "priser"),
+
+        # === SELF-HOSTING ===
+        ("Kan jag hosta Bobot själv?",
+         "Ja! Self-hosting finns som tillval för Professional, Business och Enterprise-planer. Du får fullständig källkod, installationsguide och licensnyckel för din egen server. Enterprise-kunder får self-hosting utan extra kostnad.",
+         "self-hosting"),
+
+        ("Vad kostar self-hosting?",
+         "Self-hosting kostar en engångsavgift: Professional +20 000 kr, Business +35 000 kr, Enterprise ingår. Du får källkoden och kan köra Bobot på din egen infrastruktur med full kontroll över data.",
+         "self-hosting"),
+
+        ("Vilka krav har self-hosting?",
+         "För self-hosting behöver du: Docker och Docker Compose, minst 8 GB RAM (16 GB rekommenderas för bästa AI-prestanda), 20 GB diskutrymme, och en server med Linux. Vi tillhandahåller fullständig dokumentation och support vid installation.",
+         "self-hosting"),
+
+        # === GDPR & SECURITY ===
+        ("Är Bobot GDPR-kompatibel?",
+         "Ja! Bobot är byggt med GDPR i fokus. Vi erbjuder: automatisk radering av konversationer (konfigurerbar 7-30 dagar), samtyckehantering i widgeten, IP-anonymisering, möjlighet för användare att se och radera sin data, och komplett audit-logg. All data lagras på servrar inom EU.",
+         "gdpr"),
+
+        ("Var lagras min data?",
+         "All data lagras på servrar inom EU. Vi använder aldrig molntjänster utanför Europa för känslig data. Med self-hosting kan du välja att lagra all data på din egen infrastruktur.",
+         "gdpr"),
+
+        ("Hur hanteras personuppgifter?",
+         "Bobot minimerar insamling av personuppgifter. IP-adresser anonymiseras, konversationer raderas automatiskt efter vald period, och vi samlar aldrig in personuppgifter utan samtycke. Användare kan begära export eller radering av sin data.",
+         "gdpr"),
+
+        ("Finns det samtyckehantering?",
+         "Ja, widgeten har inbyggd samtyckehantering. Användare måste godkänna behandling av sina meddelanden innan de kan chatta. Du kan anpassa samtyckestexten efter dina behov.",
+         "gdpr"),
+
+        ("Vilken säkerhet har Bobot?",
+         "Bobot har: bcrypt-hashning av lösenord, JWT-tokens med 24 timmars livstid, tvåfaktorsautentisering (2FA) för administratörer, rate limiting (15 förfrågningar/minut för chatt), brute force-skydd (lås efter 5 försök), HTTPS med HSTS, och skydd mot SQL-injection och XSS.",
+         "säkerhet"),
+
+        # === AI & TECHNOLOGY ===
+        ("Vilken AI-teknik används?",
+         "Bobot drivs av Qwen 2.5 14B via Ollama - en kraftfull open source AI-modell med utmärkt flerspråksstöd. All AI-behandling sker lokalt på våra servrar, så ingen data skickas till tredje part som OpenAI eller Google.",
+         "teknik"),
+
+        ("Skickas min data till OpenAI eller andra AI-tjänster?",
+         "Nej! Bobot använder en lokal AI-modell (Qwen 2.5) som körs på våra egna servrar. Ingen data lämnar våra system eller skickas till externa AI-tjänster. Detta är en viktig skillnad mot chatbotar som använder ChatGPT.",
+         "teknik"),
+
+        ("Hur bra är AI:n på att svara?",
+         "Bobot kombinerar semantisk matchning med generativ AI. Först hittar systemet relevanta svar i din kunskapsbas, sedan formulerar AI:n ett naturligt svar baserat på den informationen. Kvaliteten beror på din kunskapsbas - ju bättre frågor och svar du lägger in, desto bättre blir svaren.",
+         "teknik"),
+
+        ("Vilken teknikstack använder Bobot?",
+         "Bobot är byggt med: Python/FastAPI för backend, React/Vite/Tailwind CSS för admin-panel, SQLite/PostgreSQL för databas, Ollama/Qwen 2.5 för AI, Docker för deployment, och Nginx för SSL och lastbalansering.",
+         "teknik"),
+
+        # === SUPPORT ===
+        ("Hur kontaktar jag support?",
+         "Du kan nå oss på hej@bobot.nu. Vi svarar normalt inom en arbetsdag. Professional-kunder har prioriterad support, Business och Enterprise har dedikerad support med snabbare svarstider.",
+         "support"),
+
+        ("Finns det dokumentation?",
+         "Ja, vi har omfattande dokumentation i admin-panelen som täcker: komma igång-guide, import av kunskapsbas, widget-anpassning, API-dokumentation, och felsökning. Enterprise-kunder får även personlig onboarding.",
+         "support"),
+
+        ("Hjälper ni till med installation?",
+         "Ja! Vi hjälper gärna till att komma igång. Kontakta oss på hej@bobot.nu så bokar vi ett möte där vi hjälper dig att sätta upp ditt konto, importera din kunskapsbas och bädda in widgeten.",
+         "support"),
+
+        # === USE CASES ===
+        ("Hur använder fastighetsbolag Bobot?",
+         "Fastighetsbolag använder Bobot för att svara på hyresgästfrågor om: felanmälan, regler för andrahandsuthyrning, husdjur, parkering, tvättstuga, och mycket mer. Det avlastar kundtjänst och ger hyresgäster snabbare svar dygnet runt.",
+         "användningsfall"),
+
+        ("Hur kan e-handlare använda Bobot?",
+         "E-handlare använder Bobot för: frågor om frakt och leverans, returer och byten, produktinformation, öppettider, och orderstatusförfrågningar. Chatboten kan svara direkt utan att kunder behöver vänta på mejlsvar.",
+         "användningsfall"),
+
+        ("Kan Bobot användas internt?",
+         "Absolut! Många företag använder Bobot som intern kunskapsassistent för medarbetare. Det kan hjälpa med: HR-frågor (semester, förmåner), IT-support, onboarding av nyanställda, och interna processer.",
+         "användningsfall"),
+
+        # === CONTACT ===
+        ("Hur bokar jag en demo?",
+         "Kontakta oss på hej@bobot.nu så bokar vi ett möte där vi visar hur Bobot kan hjälpa just din verksamhet. Demo är helt kostnadsfri och utan förpliktelser.",
+         "kontakt"),
+
+        ("Vart ska jag skicka fakturafrågor?",
+         "Fakturafrågor skickas till hej@bobot.nu. Ange ditt företagsnamn och fakturanummer så hjälper vi dig.",
+         "kontakt"),
+    ]
+
+
+# =============================================================================
 # Init Functions - Security Hardened
 # =============================================================================
 
@@ -1027,7 +1236,7 @@ def init_demo_data():
 
                 demo = Company(
                     id="demo",
-                    name="Demo Fastigheter AB",
+                    name="Demo AB",
                     password_hash=hash_password(demo_password)
                 )
                 db.add(demo)
@@ -1036,7 +1245,7 @@ def init_demo_data():
                 # Create default settings for demo
                 demo_settings = CompanySettings(
                     company_id="demo",
-                    company_name="Demo Fastigheter AB",
+                    company_name="Demo AB",
                     contact_email="info@demo.se",
                     contact_phone="08-123 456 78"
                 )
@@ -1147,39 +1356,8 @@ def init_demo_data():
             db.add(landing_widget)
             db.flush()
 
-            # Add knowledge base for Bobot (about the product)
-            bobot_items = [
-                ("Vad är Bobot?",
-                 "Bobot är en AI-chatbot för fastighetsbolag. Med Bobot kan dina hyresgäster få svar på sina frågor dygnet runt, utan att belasta din kundtjänst.",
-                 "produkt"),
-                ("Hur fungerar Bobot?",
-                 "Bobot fungerar genom att du bygger en kunskapsbas med frågor och svar. När en hyresgäst ställer en fråga, hittar vår AI det bästa svaret från din kunskapsbas och formulerar ett naturligt svar.",
-                 "produkt"),
-                ("Vad kostar Bobot?",
-                 "Vi erbjuder olika prisplaner beroende på dina behov. Kontakta oss på hej@bobot.nu för en offert anpassad efter din organisation.",
-                 "priser"),
-                ("Är Bobot GDPR-kompatibel?",
-                 "Ja! Bobot är byggt med GDPR i åtanke. Vi erbjuder: automatisk radering av konversationer efter konfigurerbar tid (7-30 dagar), samtyckehantering i widgeten, IP-anonymisering, och möjlighet för användare att se och radera sin data.",
-                 "gdpr"),
-                ("Vilka språk stöds?",
-                 "Bobot stöder svenska, engelska och arabiska (med RTL-stöd). Språket detekteras automatiskt baserat på användarens fråga.",
-                 "funktioner"),
-                ("Hur lägger jag till frågor och svar?",
-                 "I admin-panelen kan du enkelt lägga till frågor och svar manuellt, eller importera från Excel, Word, CSV eller PDF-filer. Du kan också importera innehåll direkt från en URL.",
-                 "funktioner"),
-                ("Kan jag ha flera widgets?",
-                 "Ja! Med Bobot kan du skapa flera widgets för olika ändamål. Till exempel en extern widget för hyresgäster och en intern widget för anställda med olika kunskapsbaser.",
-                 "funktioner"),
-                ("Hur bäddar jag in widgeten på min hemsida?",
-                 "Det är enkelt! Du kopierar en liten JavaScript-kod från admin-panelen och klistrar in den på din hemsida. Widgeten fungerar med alla webbplatser, inklusive WordPress.",
-                 "installation"),
-                ("Fungerar Bobot på mobilen?",
-                 "Ja, widgeten är helt responsiv och fungerar utmärkt på mobiler, surfplattor och datorer.",
-                 "funktioner"),
-                ("Hur kommer jag igång?",
-                 "Kontakta oss på hej@bobot.nu för att komma igång. Vi hjälper dig att sätta upp ditt konto och importera din kunskapsbas.",
-                 "kom-igang"),
-            ]
+            # Add comprehensive knowledge base for Bobot (about the product)
+            bobot_items = get_bobot_knowledge_items()
 
             for q, a, cat in bobot_items:
                 item = KnowledgeItem(company_id="bobot", question=q, answer=a, category=cat, widget_id=landing_widget.id)
@@ -1195,7 +1373,95 @@ def init_demo_data():
                 bobot_settings.data_controller_name = "Marcus Widing"
                 bobot_settings.data_controller_email = "hej@bobot.nu"
                 bobot_settings.contact_email = "hej@bobot.nu"
-                db.commit()
+
+            # Sync knowledge base - add any missing items
+            landing_widget = db.query(Widget).filter(
+                Widget.company_id == "bobot",
+                Widget.widget_key == "bobot-landing"
+            ).first()
+
+            if landing_widget:
+                existing_questions = {item.question for item in db.query(KnowledgeItem).filter(
+                    KnowledgeItem.company_id == "bobot"
+                ).all()}
+
+                bobot_items = get_bobot_knowledge_items()
+                added_count = 0
+                for q, a, cat in bobot_items:
+                    if q not in existing_questions:
+                        item = KnowledgeItem(company_id="bobot", question=q, answer=a, category=cat, widget_id=landing_widget.id)
+                        db.add(item)
+                        added_count += 1
+
+                if added_count > 0:
+                    print(f"[Bobot] Added {added_count} new knowledge items")
+
+            db.commit()
+
+        # =================================================================
+        # SFAB Company (Strängnäs Fastigheter)
+        # =================================================================
+        sfab = db.query(Company).filter(Company.id == "sfab").first()
+        if not sfab:
+            sfab = Company(
+                id="sfab",
+                name="Strängnäs Fastigheter",
+                password_hash=hash_password("sbab"),
+                pricing_tier="professional"
+            )
+            db.add(sfab)
+            db.commit()
+
+            # Create settings for SFAB
+            sfab_settings = CompanySettings(
+                company_id="sfab",
+                company_name="Strängnäs Bostads AB",
+                contact_email="info@strangnasbostadsab.se",
+                contact_phone="0152-290 90",
+                data_retention_days=30,
+                max_conversations_month=2000,
+                max_knowledge_items=250
+            )
+            db.add(sfab_settings)
+
+            # Create widget for SFAB
+            sfab_widget = Widget(
+                company_id="sfab",
+                widget_key="sfab-widget",
+                name="Kundtjänst",
+                display_name="Strängnäs Bostads AB",
+                widget_type="external",
+                widget_position="bottom-right",
+                primary_color="#1a5f7a",
+                welcome_message="Hej! Jag är Strängnäs Bostads AB:s digitala assistent. Jag kan hjälpa dig med frågor om bostäder, hyra, felanmälan och mycket mer. Vad kan jag hjälpa dig med idag?",
+                fallback_message="Tyvärr kunde jag inte hitta ett svar på din fråga. Kontakta oss på 0152-290 90 eller info@strangnasbostadsab.se.",
+                subtitle="Din bostadsassistent",
+                require_consent=True,
+                consent_text="Jag godkänner att mina meddelanden behandlas enligt Strängnäs Bostads AB:s integritetspolicy."
+            )
+            db.add(sfab_widget)
+            db.flush()
+
+            # Load knowledge base from template
+            import json
+            template_path = os.path.join(os.path.dirname(__file__), "templates", "strangnas_bostads_sv.json")
+            if os.path.exists(template_path):
+                with open(template_path, "r", encoding="utf-8") as f:
+                    template = json.load(f)
+                    for item in template.get("items", []):
+                        ki = KnowledgeItem(
+                            company_id="sfab",
+                            question=item["question"],
+                            answer=item["answer"],
+                            category=item.get("category", "Allmänt"),
+                            widget_id=sfab_widget.id
+                        )
+                        db.add(ki)
+                print(f"SFAB-företag skapat: sfab / sbab (med {len(template.get('items', []))} kunskapsartiklar)")
+            else:
+                print("SFAB-företag skapat: sfab / sbab (utan kunskapsbas - mall saknas)")
+
+            db.commit()
 
         if is_production:
             print("[Security] Demo data disabled in production")
@@ -2315,8 +2581,20 @@ async def chat(
         )
 
     company = db.query(Company).filter(Company.id == company_id).first()
-    if not company or not company.is_active:
+    if not company:
         raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    if not company.is_active:
+        raise HTTPException(status_code=403, detail="COMPANY_INACTIVE")
+
+    # Check if widget_key is provided and validate widget is active
+    if request.widget_key:
+        widget_check = db.query(Widget).filter(
+            Widget.widget_key == request.widget_key,
+            Widget.company_id == company_id
+        ).first()
+        if widget_check and not widget_check.is_active:
+            raise HTTPException(status_code=403, detail="WIDGET_INACTIVE")
 
     # Check usage limits
     allowed, limit_msg = check_usage_limit(db, company_id)
@@ -2573,8 +2851,41 @@ async def chat_feedback(
     if not conversation:
         raise HTTPException(status_code=404, detail="Konversation finns inte")
 
+    # Track if feedback changed (to avoid double counting)
+    previous_feedback = conversation.was_helpful
     conversation.was_helpful = helpful
     db.commit()
+
+    # Update daily statistics with feedback
+    today = date.today()
+    daily_stat = db.query(DailyStatistics).filter(
+        DailyStatistics.company_id == company_id,
+        DailyStatistics.date == today
+    ).first()
+
+    if daily_stat:
+        # If previous feedback existed, decrement that counter first
+        if previous_feedback is True:
+            daily_stat.helpful_count = max(0, (daily_stat.helpful_count or 0) - 1)
+        elif previous_feedback is False:
+            daily_stat.not_helpful_count = max(0, (daily_stat.not_helpful_count or 0) - 1)
+
+        # Add new feedback
+        if helpful:
+            daily_stat.helpful_count = (daily_stat.helpful_count or 0) + 1
+        else:
+            daily_stat.not_helpful_count = (daily_stat.not_helpful_count or 0) + 1
+        db.commit()
+    else:
+        # Create new daily stat entry if none exists
+        daily_stat = DailyStatistics(
+            company_id=company_id,
+            date=today,
+            helpful_count=1 if helpful else 0,
+            not_helpful_count=0 if helpful else 1
+        )
+        db.add(daily_stat)
+        db.commit()
 
     return {"message": "Tack för din feedback!"}
 
@@ -2599,6 +2910,9 @@ async def get_widget_config(
         except json.JSONDecodeError:
             suggested_questions = []
 
+    # Check maintenance mode
+    maintenance_enabled, maintenance_message = is_maintenance_mode(db)
+
     return {
         "company_name": settings.company_name or company.name,
         "welcome_message": settings.welcome_message or "",
@@ -2620,6 +2934,9 @@ async def get_widget_config(
         "consent_text": settings.consent_text or "Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.",
         "data_controller_name": settings.data_controller_name or "",
         "data_controller_email": settings.data_controller_email or "",
+        # System status
+        "maintenance_mode": maintenance_enabled,
+        "maintenance_message": maintenance_message if maintenance_enabled else None,
     }
 
 
@@ -2646,6 +2963,9 @@ async def get_widget_config_by_key(
             suggested_questions = json.loads(widget.suggested_questions)
         except json.JSONDecodeError:
             suggested_questions = []
+
+    # Check maintenance mode
+    maintenance_enabled, maintenance_message = is_maintenance_mode(db)
 
     return {
         "widget_id": widget.id,
@@ -2676,6 +2996,9 @@ async def get_widget_config_by_key(
         "consent_text": widget.consent_text or "Jag godkänner att mina meddelanden behandlas enligt integritetspolicyn.",
         "data_controller_name": settings.data_controller_name or "",
         "data_controller_email": settings.data_controller_email or "",
+        # System status
+        "maintenance_mode": maintenance_enabled,
+        "maintenance_message": maintenance_message if maintenance_enabled else None,
     }
 
 
@@ -2715,12 +3038,18 @@ async def chat_via_widget_key(
     """Chatta med AI via widget_key - ny endpoint för multi-widget support"""
     # Look up widget
     widget = db.query(Widget).filter(Widget.widget_key == widget_key).first()
-    if not widget or not widget.is_active:
+    if not widget:
         raise HTTPException(status_code=404, detail="Widget finns inte")
 
+    if not widget.is_active:
+        raise HTTPException(status_code=403, detail="WIDGET_INACTIVE")
+
     company = db.query(Company).filter(Company.id == widget.company_id).first()
-    if not company or not company.is_active:
+    if not company:
         raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    if not company.is_active:
+        raise HTTPException(status_code=403, detail="COMPANY_INACTIVE")
 
     company_id = company.id
 
@@ -3211,6 +3540,39 @@ async def delete_widget(
     )
 
     return {"message": f"Widget '{widget_name}' har tagits bort"}
+
+
+# =============================================================================
+# Company Status Endpoint (for checking if company/widgets are active)
+# =============================================================================
+
+@app.get("/company/status")
+async def get_company_status(
+    current: dict = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    """Get company and widget active status"""
+    company = db.query(Company).filter(Company.id == current["company_id"]).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    widgets = db.query(Widget).filter(Widget.company_id == current["company_id"]).all()
+
+    return {
+        "company_id": company.id,
+        "company_name": company.name,
+        "is_active": company.is_active,
+        "widgets": [
+            {
+                "id": w.id,
+                "name": w.name,
+                "widget_key": w.widget_key,
+                "widget_type": w.widget_type,
+                "is_active": w.is_active
+            }
+            for w in widgets
+        ]
+    }
 
 
 # =============================================================================
@@ -5468,7 +5830,8 @@ async def list_companies(
     result = []
     for c in companies:
         knowledge_count = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == c.id).count()
-        chat_count = db.query(ChatLog).filter(ChatLog.company_id == c.id).count()
+        # Use Conversation table for accurate chat count (ChatLog is legacy)
+        chat_count = db.query(Conversation).filter(Conversation.company_id == c.id).count()
         widget_count = db.query(Widget).filter(Widget.company_id == c.id).count()
         settings = db.query(CompanySettings).filter(CompanySettings.company_id == c.id).first()
 
@@ -5593,7 +5956,61 @@ async def toggle_company(
         description=f"Företag {status}: {company.name}"
     )
 
-    return {"message": f"Företag {status}"}
+    return {"message": f"Företag {status}", "is_active": company.is_active}
+
+
+class PasswordChangeRequest(BaseModel):
+    new_password: str = Field(..., min_length=6, max_length=100)
+
+
+@app.put("/admin/companies/{company_id}/password")
+async def change_company_password(
+    company_id: str,
+    request: PasswordChangeRequest,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Ändra lösenord för ett företag (admin only)"""
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företag finns inte")
+
+    company.password_hash = hash_password(request.new_password)
+    db.commit()
+
+    # Log admin action
+    log_admin_action(
+        db, admin["username"], "change_password",
+        target_company_id=company_id,
+        description=f"Ändrade lösenord för: {company.name}"
+    )
+
+    return {"message": "Lösenord ändrat"}
+
+
+@app.put("/admin/widgets/{widget_id}/toggle")
+async def toggle_widget(
+    widget_id: int,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Aktivera/inaktivera en widget (admin only)"""
+    widget = db.query(Widget).filter(Widget.id == widget_id).first()
+    if not widget:
+        raise HTTPException(status_code=404, detail="Widget finns inte")
+
+    widget.is_active = not widget.is_active
+    db.commit()
+
+    # Log admin action
+    status = "aktiverad" if widget.is_active else "inaktiverad"
+    log_admin_action(
+        db, admin["username"], "toggle_widget",
+        target_company_id=widget.company_id,
+        description=f"Widget {status}: {widget.name}"
+    )
+
+    return {"message": f"Widget {status}", "is_active": widget.is_active}
 
 
 # =============================================================================
@@ -5639,6 +6056,7 @@ async def system_health(
 
     return {
         "ollama_status": ollama_status,
+        "ollama_model": OLLAMA_MODEL,
         "database_size": db_size,
         "total_companies": total_companies,
         "total_conversations": total_conversations,
@@ -5727,8 +6145,14 @@ async def impersonate_company(
     if not company:
         raise HTTPException(status_code=404, detail="Företag finns inte")
 
-    # Create token for company
-    token = create_token({"company_id": company_id, "impersonated_by": admin["username"]})
+    # Create token for company - must match the format expected by get_current_company
+    # which requires: type="company", sub=company_id, name=company_name
+    token = create_token({
+        "sub": company_id,
+        "name": company.name,
+        "type": "company",
+        "impersonated_by": admin["username"]
+    })
 
     # Log admin action
     log_admin_action(
@@ -5944,6 +6368,30 @@ async def update_company_pricing(
         company.billing_email = update.billing_email
 
     db.commit()
+
+    # Also update or create the subscription to match the pricing tier
+    tier_info = PRICING_TIERS.get(update.pricing_tier)
+    if tier_info:
+        existing_sub = db.query(Subscription).filter(Subscription.company_id == company_id).first()
+        if existing_sub:
+            # Update existing subscription
+            existing_sub.plan_name = tier_info["name"]
+            existing_sub.plan_price = tier_info["monthly_fee"]
+            existing_sub.plan_features = json.dumps(tier_info.get("features", []))
+        else:
+            # Create new subscription
+            new_sub = Subscription(
+                company_id=company_id,
+                plan_name=tier_info["name"],
+                plan_price=tier_info["monthly_fee"],
+                billing_cycle="monthly",
+                status="active",
+                current_period_start=datetime.utcnow(),
+                current_period_end=datetime.utcnow() + timedelta(days=30),
+                plan_features=json.dumps(tier_info.get("features", []))
+            )
+            db.add(new_sub)
+        db.commit()
 
     # Log admin action
     log_admin_action(
@@ -6764,6 +7212,14 @@ class InvoiceCreate(BaseModel):
     period_end: date
     due_date: date
 
+
+class InvoiceCreateSimple(BaseModel):
+    company_id: str
+    amount: float
+    description: Optional[str] = "Månadsavgift"
+    due_date: Optional[date] = None
+    currency: Optional[str] = "SEK"
+
 class InvoiceResponse(BaseModel):
     id: int
     invoice_number: str
@@ -6905,6 +7361,40 @@ async def get_all_invoices(
             "created_at": inv.created_at.isoformat()
         })
     return {"invoices": result}
+
+
+@app.post("/admin/invoices")
+async def create_invoice_simple(
+    invoice: InvoiceCreateSimple,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Create a new invoice for a company (simplified endpoint)"""
+    # Verify company exists
+    company = db.query(Company).filter(Company.id == invoice.company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företaget hittades inte")
+
+    # Generate invoice number
+    year_month = datetime.utcnow().strftime("%Y%m")
+    count = db.query(Invoice).filter(Invoice.invoice_number.like(f"INV-{year_month}%")).count()
+    invoice_number = f"INV-{year_month}-{count + 1:04d}"
+
+    # Calculate due date if not provided (default 30 days from now)
+    due_date = invoice.due_date if invoice.due_date else (date.today() + timedelta(days=30))
+
+    new_invoice = Invoice(
+        company_id=invoice.company_id,
+        invoice_number=invoice_number,
+        amount=invoice.amount,
+        description=invoice.description,
+        currency=invoice.currency or "SEK",
+        due_date=due_date
+    )
+    db.add(new_invoice)
+    db.commit()
+
+    return {"message": "Faktura skapad", "invoice_number": invoice_number, "id": new_invoice.id}
 
 
 @app.post("/admin/invoices/{company_id}")
@@ -7656,42 +8146,78 @@ async def get_usage_trends(
 ):
     """Get usage trends over time (week over week, month over month)"""
     today = date.today()
+    now = datetime.now()
 
     # This week vs last week
     this_week_start = today - timedelta(days=today.weekday())
     last_week_start = this_week_start - timedelta(days=7)
 
-    this_week_stats = db.query(
+    # Count from DailyStatistics (aggregated data) + Conversation table (for today/recent)
+    # This ensures we capture all conversations including those not yet aggregated
+
+    # This week: DailyStatistics + today's Conversations
+    this_week_daily = db.query(
         func.sum(DailyStatistics.total_conversations)
     ).filter(
         DailyStatistics.date >= this_week_start,
-        DailyStatistics.date < today
+        DailyStatistics.date <= today
     ).scalar() or 0
 
-    last_week_stats = db.query(
+    # Also count conversations directly (in case DailyStatistics is not populated)
+    this_week_convs = db.query(Conversation).filter(
+        func.date(Conversation.started_at) >= this_week_start,
+        func.date(Conversation.started_at) <= today
+    ).count()
+
+    # Use the higher value (DailyStatistics might be incomplete)
+    this_week_stats = max(this_week_daily, this_week_convs)
+
+    # Last week stats
+    last_week_daily = db.query(
         func.sum(DailyStatistics.total_conversations)
     ).filter(
         DailyStatistics.date >= last_week_start,
         DailyStatistics.date < this_week_start
     ).scalar() or 0
 
+    last_week_convs = db.query(Conversation).filter(
+        func.date(Conversation.started_at) >= last_week_start,
+        func.date(Conversation.started_at) < this_week_start
+    ).count()
+
+    last_week_stats = max(last_week_daily, last_week_convs)
+
     # This month vs last month
     this_month_start = today.replace(day=1)
     last_month_start = (this_month_start - timedelta(days=1)).replace(day=1)
 
-    this_month_stats = db.query(
+    this_month_daily = db.query(
         func.sum(DailyStatistics.total_conversations)
     ).filter(
         DailyStatistics.date >= this_month_start,
         DailyStatistics.date <= today
     ).scalar() or 0
 
-    last_month_stats = db.query(
+    this_month_convs = db.query(Conversation).filter(
+        func.date(Conversation.started_at) >= this_month_start,
+        func.date(Conversation.started_at) <= today
+    ).count()
+
+    this_month_stats = max(this_month_daily, this_month_convs)
+
+    last_month_daily = db.query(
         func.sum(DailyStatistics.total_conversations)
     ).filter(
         DailyStatistics.date >= last_month_start,
         DailyStatistics.date < this_month_start
     ).scalar() or 0
+
+    last_month_convs = db.query(Conversation).filter(
+        func.date(Conversation.started_at) >= last_month_start,
+        func.date(Conversation.started_at) < this_month_start
+    ).count()
+
+    last_month_stats = max(last_month_daily, last_month_convs)
 
     def calc_change(current, previous):
         if previous == 0:
@@ -7720,28 +8246,54 @@ async def get_company_analytics_comparison(
 ):
     """Get analytics comparison across companies"""
     cutoff_date = date.today() - timedelta(days=30)
+    cutoff_datetime = datetime.combine(cutoff_date, datetime.min.time())
 
-    company_stats = db.query(
-        DailyStatistics.company_id,
-        func.sum(DailyStatistics.total_conversations).label('conversations'),
-        func.sum(DailyStatistics.total_messages).label('messages'),
-        func.avg(DailyStatistics.avg_response_time_ms).label('avg_response_time')
-    ).filter(
-        DailyStatistics.date >= cutoff_date
-    ).group_by(DailyStatistics.company_id).order_by(
-        func.sum(DailyStatistics.total_conversations).desc()
-    ).limit(limit).all()
+    # Get all companies first
+    all_companies = db.query(Company).filter(Company.is_active == True).all()
 
-    result = []
-    for s in company_stats:
-        company = db.query(Company).filter(Company.id == s.company_id).first()
-        result.append({
-            "company_id": s.company_id,
-            "company_name": company.name if company else "Unknown",
-            "conversations": s.conversations or 0,
-            "messages": s.messages or 0,
-            "avg_response_time": round(s.avg_response_time or 0, 2)
-        })
+    company_data = []
+    for company in all_companies:
+        # Count from DailyStatistics (historical/aggregated data)
+        daily_stats = db.query(
+            func.sum(DailyStatistics.total_conversations).label('conversations'),
+            func.sum(DailyStatistics.total_messages).label('messages'),
+            func.avg(DailyStatistics.avg_response_time_ms).label('avg_response_time')
+        ).filter(
+            DailyStatistics.company_id == company.id,
+            DailyStatistics.date >= cutoff_date
+        ).first()
+
+        daily_convs = daily_stats.conversations or 0 if daily_stats else 0
+        daily_msgs = daily_stats.messages or 0 if daily_stats else 0
+        avg_resp = daily_stats.avg_response_time or 0 if daily_stats else 0
+
+        # Also count directly from Conversation table (active/recent conversations)
+        conv_count = db.query(Conversation).filter(
+            Conversation.company_id == company.id,
+            Conversation.started_at >= cutoff_datetime
+        ).count()
+
+        msg_count = db.query(Message).join(Conversation).filter(
+            Conversation.company_id == company.id,
+            Conversation.started_at >= cutoff_datetime
+        ).count()
+
+        # Use the higher of the two counts (avoid double-counting by taking max)
+        total_conversations = max(daily_convs, conv_count)
+        total_messages = max(daily_msgs, msg_count)
+
+        if total_conversations > 0 or total_messages > 0:
+            company_data.append({
+                "company_id": company.id,
+                "company_name": company.name,
+                "conversations": total_conversations,
+                "messages": total_messages,
+                "avg_response_time": round(avg_resp, 2)
+            })
+
+    # Sort by conversations descending and limit
+    company_data.sort(key=lambda x: x["conversations"], reverse=True)
+    result = company_data[:limit]
 
     return {"companies": result}
 
@@ -7851,6 +8403,7 @@ async def get_performance_overview(
     """Get overall widget performance across all companies"""
     cutoff = datetime.utcnow() - timedelta(hours=hours)
 
+    # First try WidgetPerformance table (if populated)
     stats = db.query(
         func.sum(WidgetPerformance.total_requests).label('total'),
         func.sum(WidgetPerformance.successful_requests).label('successful'),
@@ -7859,13 +8412,40 @@ async def get_performance_overview(
         func.avg(WidgetPerformance.avg_response_time).label('avg_response')
     ).filter(WidgetPerformance.hour >= cutoff).first()
 
+    total_requests = stats.total or 0
+    successful_requests = stats.successful or 0
+    failed_requests = stats.failed or 0
+    rate_limited = stats.rate_limited or 0
+    avg_response = stats.avg_response or 0
+
+    # If no WidgetPerformance data, calculate from Message/Conversation tables
+    if total_requests == 0:
+        # Count messages in the time period
+        messages = db.query(Message).filter(
+            Message.created_at >= cutoff,
+            Message.role == "bot"
+        ).all()
+
+        total_requests = len(messages)
+        successful_requests = sum(1 for m in messages if m.had_answer)
+        failed_requests = sum(1 for m in messages if not m.had_answer)
+
+        # Calculate average response time from DailyStatistics
+        today = date.today()
+        daily_stats = db.query(DailyStatistics).filter(
+            DailyStatistics.date >= today - timedelta(days=1)
+        ).all()
+
+        response_times = [s.avg_response_time_ms for s in daily_stats if s.avg_response_time_ms]
+        avg_response = sum(response_times) / len(response_times) if response_times else 0
+
     return {
-        "total_requests": stats.total or 0,
-        "successful_requests": stats.successful or 0,
-        "failed_requests": stats.failed or 0,
-        "rate_limited_requests": stats.rate_limited or 0,
-        "avg_response_time": round(stats.avg_response or 0, 2),
-        "success_rate": round((stats.successful or 0) / max(stats.total or 1, 1) * 100, 1)
+        "total_requests": total_requests,
+        "successful_requests": successful_requests,
+        "failed_requests": failed_requests,
+        "rate_limited_requests": rate_limited,
+        "avg_response_time": round(avg_response, 2),
+        "success_rate": round(successful_requests / max(total_requests, 1) * 100, 1)
     }
 
 

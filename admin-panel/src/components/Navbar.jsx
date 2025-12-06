@@ -1,13 +1,26 @@
-import { NavLink } from 'react-router-dom'
-import { useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
-function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, announcements = [], onDismissAnnouncement, onDismissAllAnnouncements }) {
+function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, announcements = [], onDismissAnnouncement, onDismissAllAnnouncements, mobileOpen, setMobileOpen, companyStatus }) {
   const [showAnnouncement, setShowAnnouncement] = useState(false)
+  const location = useLocation()
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    if (mobileOpen && setMobileOpen) {
+      setMobileOpen(false)
+    }
+  }, [location.pathname])
+
+  // Check if widgets are inactive
+  const isExternalInactive = companyStatus?.widgets?.find(w => w.widget_type === 'external')?.is_active === false
+  const isInternalInactive = companyStatus?.widgets?.find(w => w.widget_type === 'internal')?.is_active === false
+
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: 'chart' },
-    { to: '/widget/external', label: 'Kundtjänst', icon: 'external' },
-    { to: '/widget/internal', label: 'Medarbetarstöd', icon: 'internal' },
+    { to: '/widget/external', label: 'Kundtjänst', icon: 'external', warning: isExternalInactive },
+    { to: '/widget/internal', label: 'Medarbetarstöd', icon: 'internal', warning: isInternalInactive },
     { to: '/conversations', label: 'Konversationer', icon: 'messages' },
     { to: '/analytics', label: 'Statistik', icon: 'analytics' },
     { to: '/settings', label: 'Företagsinställningar', icon: 'settings' },
@@ -139,15 +152,38 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
   }
 
   return (
-    <aside
-      id="main-nav"
-      className="w-60 bg-bg-secondary border-r border-border-subtle flex flex-col h-screen sticky top-0"
-      role="complementary"
-      aria-label="Sidomeny"
-    >
+    <>
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+      <aside
+        id="main-nav"
+        className={`w-60 bg-bg-secondary border-r border-border-subtle flex flex-col h-screen fixed md:sticky top-0 z-50 transition-transform duration-300 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+        role="complementary"
+        aria-label="Sidomeny"
+      >
       {/* Logo & Mascot */}
       <div className="p-4 mb-2">
         <div className="flex items-center gap-3 px-3 py-2">
+          {/* Close button for mobile */}
+          {mobileOpen && (
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="md:hidden p-1.5 -ml-1.5 rounded-lg hover:bg-bg-tertiary transition-colors text-text-secondary"
+              aria-label="Stäng meny"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          )}
           {/* Mini Bobot Mascot - matches Landing page style */}
           <div className="w-10 h-10 relative" aria-hidden="true">
             <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
@@ -222,13 +258,21 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `sidebar-item ${isActive ? 'active' : ''}`
+              `sidebar-item ${isActive ? 'active' : ''} ${item.warning ? 'opacity-60' : ''}`
             }
             end={item.to === '/'}
             aria-current={({ isActive }) => isActive ? 'page' : undefined}
           >
-            <span aria-hidden="true">{renderIcon(item.icon)}</span>
-            {item.label}
+            <span aria-hidden="true" className="relative">
+              {renderIcon(item.icon)}
+              {item.warning && (
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-warning rounded-full flex items-center justify-center text-[8px] font-bold text-white">!</span>
+              )}
+            </span>
+            <span className={item.warning ? 'text-text-tertiary' : ''}>{item.label}</span>
+            {item.warning && (
+              <span className="ml-auto text-[10px] text-warning font-medium">Inaktiv</span>
+            )}
           </NavLink>
         ))}
       </nav>
@@ -437,6 +481,7 @@ function Navbar({ companyId, companyName, onLogout, darkMode, toggleDarkMode, an
         </button>
       </div>
     </aside>
+    </>
   )
 }
 
