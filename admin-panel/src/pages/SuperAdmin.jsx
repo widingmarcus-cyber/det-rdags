@@ -2024,7 +2024,7 @@ function SuperAdmin() {
                   </div>
                   <div className="bg-bg-secondary rounded-xl p-5">
                     <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 bg-success/10 rounded-lg flex items-center justify-center text-success">
+                      <div className="w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center text-accent">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                         </svg>
@@ -2035,7 +2035,7 @@ function SuperAdmin() {
                   </div>
                   <div className="bg-bg-secondary rounded-xl p-5">
                     <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500">
+                      <div className="w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center text-accent">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                           <line x1="16" y1="2" x2="16" y2="6" />
@@ -2049,7 +2049,7 @@ function SuperAdmin() {
                   </div>
                   <div className="bg-bg-secondary rounded-xl p-5">
                     <div className="flex items-center gap-2 mb-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${showCompanyDashboard.is_active ? 'bg-success/10 text-success' : 'bg-error/10 text-error'}`}>
+                      <div className="w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center text-accent">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <circle cx="12" cy="12" r="10" />
                           {showCompanyDashboard.is_active && <polyline points="9 12 11 14 15 10" />}
@@ -2490,14 +2490,11 @@ function SuperAdmin() {
                   </button>
                   <button
                     onClick={() => { setShowCompanyDashboard(null); handleToggle(showCompanyDashboard.id) }}
-                    className={`flex items-center gap-2.5 px-5 py-2.5 rounded-lg font-medium transition-colors border ${showCompanyDashboard.is_active ? 'bg-bg-secondary border-border-subtle text-warning hover:bg-warning/10' : 'bg-bg-secondary border-border-subtle text-success hover:bg-success/10'}`}
+                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-primary border border-border-subtle text-text-primary font-medium transition-colors"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      {showCompanyDashboard.is_active ? (
-                        <><circle cx="12" cy="12" r="10" /><path d="M15 9l-6 6M9 9l6 6" /></>
-                      ) : (
-                        <><circle cx="12" cy="12" r="10" /><polyline points="9 12 11 14 15 10" /></>
-                      )}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
+                      <circle cx="12" cy="12" r="10" />
+                      {showCompanyDashboard.is_active ? <path d="M15 9l-6 6M9 9l6 6" /> : <polyline points="9 12 11 14 15 10" />}
                     </svg>
                     {showCompanyDashboard.is_active ? 'Inaktivera' : 'Aktivera'}
                   </button>
