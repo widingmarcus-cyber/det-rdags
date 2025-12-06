@@ -770,8 +770,6 @@ const PhilosophyPage = () => (
         </View>
       </View>
     </View>
-
-    <PageFooter pageNumber={2} />
   </Page>
 )
 
@@ -878,8 +876,6 @@ const JobDescriptionPage = () => (
         </View>
       </View>
     </View>
-
-    <PageFooter pageNumber={3} />
   </Page>
 )
 
@@ -1006,8 +1002,6 @@ const CustomizationPage = () => (
         </View>
       </View>
     </View>
-
-    <PageFooter pageNumber={4} />
   </Page>
 )
 
@@ -1109,8 +1103,6 @@ const ProcessPage = () => (
         </View>
       </View>
     </View>
-
-    <PageFooter pageNumber={5} />
   </Page>
 )
 
@@ -1202,8 +1194,6 @@ const PricingPage = ({ startupFee, monthlyFee, tier, discount, pricingTiers = []
           </View>
         </View>
       </View>
-
-      <PageFooter pageNumber={6} />
     </Page>
   )
 }
@@ -1333,8 +1323,6 @@ const ContactPage = () => (
         Så ni kan fokusera på det som verkligen räknas.
       </Text>
     </View>
-
-    <PageFooter pageNumber={7} />
   </Page>
 )
 
