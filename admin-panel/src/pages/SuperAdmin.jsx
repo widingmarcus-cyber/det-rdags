@@ -16,6 +16,51 @@ import {
 
 const API_BASE = '/api'
 
+// Bobot mascot for header
+function BobotMini({ className = "", size = 36 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      {/* Feet */}
+      <rect x="25" y="95" width="30" height="12" rx="6" fill="#78716C" />
+      <rect x="65" y="95" width="30" height="12" rx="6" fill="#78716C" />
+      <rect x="28" y="97" width="24" height="8" rx="4" fill="#57534E" />
+      <rect x="68" y="97" width="24" height="8" rx="4" fill="#57534E" />
+      {/* Body */}
+      <rect x="30" y="55" width="60" height="42" rx="4" fill="#D97757" />
+      <rect x="33" y="58" width="54" height="36" rx="2" fill="#C4613D" />
+      <rect x="36" y="75" width="20" height="16" rx="2" fill="#1C1917" />
+      <rect x="64" y="75" width="20" height="16" rx="2" fill="#1C1917" />
+      {/* Neck */}
+      <rect x="50" y="45" width="20" height="14" rx="2" fill="#78716C" />
+      {/* Head */}
+      <rect x="35" y="20" width="50" height="28" rx="4" fill="#D97757" />
+      {/* Eyes */}
+      <ellipse cx="48" cy="34" rx="12" ry="11" fill="#1C1917" />
+      <ellipse cx="72" cy="34" rx="12" ry="11" fill="#1C1917" />
+      <ellipse cx="48" cy="34" rx="9" ry="8" fill="#292524" />
+      <ellipse cx="72" cy="34" rx="9" ry="8" fill="#292524" />
+      {/* Pupils */}
+      <ellipse cx="48" cy="35" rx="5" ry="5" fill="#D97757" />
+      <ellipse cx="72" cy="35" rx="5" ry="5" fill="#D97757" />
+      {/* Eye highlights */}
+      <circle cx="50" cy="32" r="2.5" fill="#FEF2EE" />
+      <circle cx="74" cy="32" r="2.5" fill="#FEF2EE" />
+      {/* Nose */}
+      <rect x="56" y="30" width="8" height="8" rx="2" fill="#78716C" />
+      {/* Arms */}
+      <rect x="15" y="62" width="18" height="6" rx="3" fill="#78716C" />
+      <rect x="87" y="62" width="18" height="6" rx="3" fill="#78716C" />
+      <rect x="10" y="58" width="8" height="14" rx="2" fill="#57534E" />
+      <rect x="102" y="58" width="8" height="14" rx="2" fill="#57534E" />
+      {/* Antenna */}
+      <rect x="58" y="12" width="4" height="10" rx="2" fill="#78716C" />
+      <circle cx="60" cy="10" r="5" fill="#4A9D7C">
+        <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite" />
+      </circle>
+    </svg>
+  )
+}
+
 function SuperAdmin() {
   const { adminAuth, adminFetch, handleAdminLogout, handleLogin } = useContext(AuthContext)
   const [companies, setCompanies] = useState([])
@@ -1376,19 +1421,24 @@ function SuperAdmin() {
         </div>
       )}
 
+      {/* Subtle dot pattern background */}
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.08] dark:opacity-[0.04]" style={{
+        backgroundImage: 'radial-gradient(circle, #D97757 1px, transparent 1px)',
+        backgroundSize: '24px 24px'
+      }} />
+
       {/* Header */}
-      <nav className="bg-bg-tertiary border-b border-border-subtle sticky top-0 z-40">
+      <nav className="bg-bg-tertiary/80 backdrop-blur-sm border-b border-border-subtle sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-gradient-to-br from-warning to-warning-hover rounded-lg flex items-center justify-center shadow-sm">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-bg-primary">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
+              <div className="relative">
+                <div className="absolute inset-0 bg-accent/20 rounded-full blur-lg scale-150" />
+                <BobotMini size={40} className="relative" />
               </div>
               <div>
-                <span className="font-semibold text-text-primary">Bobot</span>
-                <span className="text-xs text-text-tertiary ml-2">Systemöversikt</span>
+                <span className="font-bold text-text-primary text-lg">Bobot</span>
+                <span className="text-xs text-accent ml-2 font-medium">Admin</span>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -1926,30 +1976,36 @@ function SuperAdmin() {
 
       {/* Company Dashboard Modal */}
       {showCompanyDashboard && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
-          <div className="bg-bg-tertiary rounded-xl shadow-xl w-full max-w-4xl animate-scale-in my-8">
-            {/* Header */}
-            <div className="p-6 border-b border-border-subtle flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center text-accent">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
+          <div className="bg-bg-tertiary rounded-2xl shadow-2xl w-full max-w-4xl animate-scale-in my-8 overflow-hidden">
+            {/* Header with gradient */}
+            <div className="relative bg-gradient-to-r from-accent via-accent to-accent-hover p-6 overflow-hidden">
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/4" />
+              <div className="absolute bottom-0 left-1/4 w-24 h-24 bg-white/5 rounded-full translate-y-1/2" />
+
+              <div className="relative flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white shadow-lg">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">{showCompanyDashboard.name}</h2>
+                    <p className="text-sm text-white/70 font-mono">{showCompanyDashboard.id}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCompanyDashboard(null)}
+                  className="p-2.5 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-colors"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6L6 18M6 6l12 12" />
                   </svg>
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-text-primary">{showCompanyDashboard.name}</h2>
-                  <p className="text-sm text-text-secondary">{showCompanyDashboard.id}</p>
-                </div>
+                </button>
               </div>
-              <button
-                onClick={() => setShowCompanyDashboard(null)}
-                className="p-2 rounded-lg text-text-tertiary hover:bg-bg-secondary hover:text-text-primary transition-colors"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
-              </button>
             </div>
 
             {companyLoading ? (
@@ -1961,57 +2017,69 @@ function SuperAdmin() {
               <div className="p-6">
                 {/* Stats Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-bg-secondary rounded-xl p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 bg-accent-soft rounded-lg flex items-center justify-center text-accent">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-                        </svg>
+                  <div className="group relative overflow-hidden bg-gradient-to-br from-accent/5 to-accent/10 rounded-2xl p-4 border border-accent/10 hover:border-accent/30 transition-all hover:shadow-lg hover:shadow-accent/5">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-accent/20 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500" />
+                    <div className="relative">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-8 h-8 bg-accent/15 rounded-lg flex items-center justify-center text-accent">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                          </svg>
+                        </div>
+                        <span className="text-xs text-text-tertiary font-medium">Kunskapsposter</span>
                       </div>
-                      <span className="text-xs text-text-tertiary">Kunskapsposter</span>
+                      <p className="text-3xl font-bold text-text-primary">{showCompanyDashboard.knowledge_count || 0}</p>
                     </div>
-                    <p className="text-2xl font-semibold text-text-primary">{showCompanyDashboard.knowledge_count || 0}</p>
                   </div>
-                  <div className="bg-bg-secondary rounded-xl p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 bg-success-soft rounded-lg flex items-center justify-center text-success">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                        </svg>
+                  <div className="group relative overflow-hidden bg-gradient-to-br from-success/5 to-success/10 rounded-2xl p-4 border border-success/10 hover:border-success/30 transition-all hover:shadow-lg hover:shadow-success/5">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-success/20 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500" />
+                    <div className="relative">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-8 h-8 bg-success/15 rounded-lg flex items-center justify-center text-success">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                          </svg>
+                        </div>
+                        <span className="text-xs text-text-tertiary font-medium">Konversationer</span>
                       </div>
-                      <span className="text-xs text-text-tertiary">Konversationer</span>
+                      <p className="text-3xl font-bold text-text-primary">{showCompanyDashboard.chat_count || 0}</p>
                     </div>
-                    <p className="text-2xl font-semibold text-text-primary">{showCompanyDashboard.chat_count || 0}</p>
                   </div>
-                  <div className="bg-bg-secondary rounded-xl p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 bg-warning-soft rounded-lg flex items-center justify-center text-warning">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                          <line x1="16" y1="2" x2="16" y2="6" />
-                          <line x1="8" y1="2" x2="8" y2="6" />
-                          <line x1="3" y1="10" x2="21" y2="10" />
-                        </svg>
+                  <div className="group relative overflow-hidden bg-gradient-to-br from-warning/5 to-warning/10 rounded-2xl p-4 border border-warning/10 hover:border-warning/30 transition-all hover:shadow-lg hover:shadow-warning/5">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-warning/20 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500" />
+                    <div className="relative">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-8 h-8 bg-warning/15 rounded-lg flex items-center justify-center text-warning">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                          </svg>
+                        </div>
+                        <span className="text-xs text-text-tertiary font-medium">Skapad</span>
                       </div>
-                      <span className="text-xs text-text-tertiary">Skapad</span>
+                      <p className="text-lg font-semibold text-text-primary">{formatDate(showCompanyDashboard.created_at)}</p>
                     </div>
-                    <p className="text-sm font-medium text-text-primary">{formatDate(showCompanyDashboard.created_at)}</p>
                   </div>
-                  <div className="bg-bg-secondary rounded-xl p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${showCompanyDashboard.is_active ? 'bg-success-soft text-success' : 'bg-error-soft text-error'}`}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <circle cx="12" cy="12" r="10" />
-                          {showCompanyDashboard.is_active && <polyline points="9 12 11 14 15 10" />}
-                          {!showCompanyDashboard.is_active && <path d="M15 9l-6 6M9 9l6 6" />}
-                        </svg>
+                  <div className={`group relative overflow-hidden rounded-2xl p-4 border transition-all hover:shadow-lg ${showCompanyDashboard.is_active ? 'bg-gradient-to-br from-success/5 to-success/10 border-success/10 hover:border-success/30 hover:shadow-success/5' : 'bg-gradient-to-br from-error/5 to-error/10 border-error/10 hover:border-error/30 hover:shadow-error/5'}`}>
+                    <div className={`absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500 ${showCompanyDashboard.is_active ? 'from-success/20' : 'from-error/20'}`} />
+                    <div className="relative">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${showCompanyDashboard.is_active ? 'bg-success/15 text-success' : 'bg-error/15 text-error'}`}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10" />
+                            {showCompanyDashboard.is_active && <polyline points="9 12 11 14 15 10" />}
+                            {!showCompanyDashboard.is_active && <path d="M15 9l-6 6M9 9l6 6" />}
+                          </svg>
+                        </div>
+                        <span className="text-xs text-text-tertiary font-medium">Status</span>
                       </div>
-                      <span className="text-xs text-text-tertiary">Status</span>
+                      <p className={`text-lg font-semibold ${showCompanyDashboard.is_active ? 'text-success' : 'text-error'}`}>
+                        {showCompanyDashboard.is_active ? 'Aktiv' : 'Inaktiv'}
+                      </p>
                     </div>
-                    <p className={`text-sm font-medium ${showCompanyDashboard.is_active ? 'text-success' : 'text-error'}`}>
-                      {showCompanyDashboard.is_active ? 'Aktiv' : 'Inaktiv'}
-                    </p>
                   </div>
                 </div>
 
@@ -2064,20 +2132,22 @@ function SuperAdmin() {
                 {/* Widgets Section */}
                 {companyWidgets.length > 0 && (
                   <div className="mb-6">
-                    <h3 className="text-sm font-medium text-text-primary mb-3 flex items-center gap-2">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <rect x="3" y="3" width="7" height="7" rx="1" />
-                        <rect x="14" y="3" width="7" height="7" rx="1" />
-                        <rect x="14" y="14" width="7" height="7" rx="1" />
-                        <rect x="3" y="14" width="7" height="7" rx="1" />
-                      </svg>
+                    <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
+                      <div className="w-7 h-7 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-purple-500">
+                          <rect x="3" y="3" width="7" height="7" rx="1" />
+                          <rect x="14" y="3" width="7" height="7" rx="1" />
+                          <rect x="14" y="14" width="7" height="7" rx="1" />
+                          <rect x="3" y="14" width="7" height="7" rx="1" />
+                        </svg>
+                      </div>
                       Widgets ({companyWidgets.length})
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {companyWidgets.map((widget) => (
-                        <div key={widget.id} className="bg-bg-secondary rounded-xl p-4 flex items-center gap-3">
+                        <div key={widget.id} className="bg-bg-secondary hover:bg-bg-primary rounded-xl p-4 flex items-center gap-3 border border-transparent hover:border-border-subtle transition-all group">
                           <div
-                            className="w-10 h-10 rounded-lg flex items-center justify-center text-white flex-shrink-0"
+                            className="w-11 h-11 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform"
                             style={{ backgroundColor: widget.primary_color || '#D97757' }}
                           >
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -2086,16 +2156,16 @@ function SuperAdmin() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-text-primary truncate">{widget.name}</p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                                widget.widget_type === 'external' ? 'bg-blue-100 text-blue-700' :
-                                widget.widget_type === 'internal' ? 'bg-purple-100 text-purple-700' :
-                                'bg-gray-100 text-gray-700'
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium ${
+                                widget.widget_type === 'external' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
+                                widget.widget_type === 'internal' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' :
+                                'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                               }`}>
                                 {widget.widget_type === 'external' ? 'Extern' :
                                  widget.widget_type === 'internal' ? 'Intern' : 'Anpassad'}
                               </span>
-                              <span className={`inline-flex items-center gap-1 text-xs ${
+                              <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
                                 widget.is_active ? 'text-success' : 'text-error'
                               }`}>
                                 <span className={`w-1.5 h-1.5 rounded-full ${
@@ -2106,7 +2176,7 @@ function SuperAdmin() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs text-text-tertiary font-mono truncate max-w-[100px]" title={widget.widget_key}>
+                            <p className="text-xs text-text-tertiary font-mono bg-bg-tertiary px-2 py-1 rounded-lg truncate max-w-[100px]" title={widget.widget_key}>
                               {widget.widget_key?.slice(0, 8)}...
                             </p>
                           </div>
@@ -2392,56 +2462,62 @@ function SuperAdmin() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-3 pt-4 border-t border-border-subtle">
                   <button
                     onClick={() => { setShowCompanyDashboard(null); handleImpersonate(showCompanyDashboard.id) }}
-                    className="btn btn-primary"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-accent to-accent-hover text-white font-medium hover:shadow-lg hover:shadow-accent/20 transition-all group"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg>
+                    <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                    </div>
                     Logga in som
                   </button>
                   <button
                     onClick={() => { setShowCompanyDashboard(null); openUsageLimitModal(showCompanyDashboard) }}
-                    className="btn btn-secondary"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-bg-secondary hover:bg-bg-primary border border-border-subtle hover:border-blue-500/30 text-text-primary font-medium transition-all group"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 20V10" />
-                      <path d="M18 20V4" />
-                      <path d="M6 20v-4" />
-                    </svg>
+                    <div className="w-7 h-7 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 20V10" />
+                        <path d="M18 20V4" />
+                        <path d="M6 20v-4" />
+                      </svg>
+                    </div>
                     Ändra gränser
                   </button>
                   <button
                     onClick={() => handleExport(showCompanyDashboard.id)}
-                    className="btn btn-secondary"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-bg-secondary hover:bg-bg-primary border border-border-subtle hover:border-purple-500/30 text-text-primary font-medium transition-all group"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
+                    <div className="w-7 h-7 bg-purple-500/10 rounded-lg flex items-center justify-center text-purple-500 group-hover:scale-110 transition-transform">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                    </div>
                     Exportera
                   </button>
                   <button
                     onClick={() => { setShowCompanyDashboard(null); openProposalModal(showCompanyDashboard) }}
-                    className="btn btn-secondary"
-                    style={{ background: 'linear-gradient(135deg, #C4633A 0%, #A85230 100%)', borderColor: '#C4633A', color: 'white' }}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-medium hover:shadow-lg hover:shadow-amber-500/20 transition-all group"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                      <line x1="16" y1="13" x2="8" y2="13" />
-                      <line x1="16" y1="17" x2="8" y2="17" />
-                      <polyline points="10 9 9 9 8 9" />
-                    </svg>
+                    <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                      </svg>
+                    </div>
                     Skapa offert
                   </button>
                   <button
                     onClick={() => { setShowCompanyDashboard(null); handleToggle(showCompanyDashboard.id) }}
-                    className={`btn ${showCompanyDashboard.is_active ? 'btn-ghost text-warning' : 'btn-ghost text-success'}`}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all ${showCompanyDashboard.is_active ? 'bg-warning/10 text-warning hover:bg-warning/20' : 'bg-success/10 text-success hover:bg-success/20'}`}
                   >
                     {showCompanyDashboard.is_active ? 'Inaktivera' : 'Aktivera'}
                   </button>
