@@ -18,6 +18,7 @@ const OverviewTab = ({
   setActiveTab,
   onAddCompany,
   onGdprCleanup,
+  onShowAnnouncementModal,
   aiInsights,
   insightsLoading,
   fetchAiInsights,
@@ -313,6 +314,20 @@ const OverviewTab = ({
                 <div className="text-left">
                   <p className="font-medium">Lägg till ny kund</p>
                   <p className="text-xs opacity-80">Skapa ett nytt företagskonto</p>
+                </div>
+              </button>
+              <button
+                onClick={onShowAnnouncementModal}
+                className="w-full flex items-center gap-3 p-4 rounded-lg bg-bg-secondary hover:bg-bg-tertiary border border-border-subtle transition-all"
+              >
+                <div className="w-10 h-10 bg-info/20 rounded-lg flex items-center justify-center text-info">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-text-primary">Skicka meddelande till kunder</p>
+                  <p className="text-xs text-text-secondary">Broadcast till administratörer</p>
                 </div>
               </button>
               <button

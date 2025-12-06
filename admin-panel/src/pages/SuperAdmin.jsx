@@ -1639,6 +1639,7 @@ function SuperAdmin() {
             setActiveTab={setActiveTab}
             onAddCompany={handleAdd}
             onGdprCleanup={handleGdprCleanup}
+            onShowAnnouncementModal={() => setShowAnnouncementModal(true)}
             aiInsights={aiInsights}
             insightsLoading={insightsLoading}
             fetchAiInsights={fetchAiInsights}
@@ -1763,7 +1764,7 @@ function SuperAdmin() {
             adminAuth={adminAuth}
             selectedCompanies={selectedCompanies}
             onToggleDarkMode={handleToggleDarkMode}
-            onSetup2FA={setup2FA}
+            onSetup2FA={handleSetup2FA}
             onExportCompanies={handleExportCompanies}
             onBulkSetLimits={handleBulkSetLimits}
           />
