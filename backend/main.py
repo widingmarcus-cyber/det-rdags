@@ -2573,8 +2573,41 @@ async def chat_feedback(
     if not conversation:
         raise HTTPException(status_code=404, detail="Konversation finns inte")
 
+    # Track if feedback changed (to avoid double counting)
+    previous_feedback = conversation.was_helpful
     conversation.was_helpful = helpful
     db.commit()
+
+    # Update daily statistics with feedback
+    today = date.today()
+    daily_stat = db.query(DailyStatistics).filter(
+        DailyStatistics.company_id == company_id,
+        DailyStatistics.date == today
+    ).first()
+
+    if daily_stat:
+        # If previous feedback existed, decrement that counter first
+        if previous_feedback is True:
+            daily_stat.helpful_count = max(0, (daily_stat.helpful_count or 0) - 1)
+        elif previous_feedback is False:
+            daily_stat.not_helpful_count = max(0, (daily_stat.not_helpful_count or 0) - 1)
+
+        # Add new feedback
+        if helpful:
+            daily_stat.helpful_count = (daily_stat.helpful_count or 0) + 1
+        else:
+            daily_stat.not_helpful_count = (daily_stat.not_helpful_count or 0) + 1
+        db.commit()
+    else:
+        # Create new daily stat entry if none exists
+        daily_stat = DailyStatistics(
+            company_id=company_id,
+            date=today,
+            helpful_count=1 if helpful else 0,
+            not_helpful_count=0 if helpful else 1
+        )
+        db.add(daily_stat)
+        db.commit()
 
     return {"message": "Tack för din feedback!"}
 
@@ -5639,6 +5672,7 @@ async def system_health(
 
     return {
         "ollama_status": ollama_status,
+        "ollama_model": OLLAMA_MODEL,
         "database_size": db_size,
         "total_companies": total_companies,
         "total_conversations": total_conversations,

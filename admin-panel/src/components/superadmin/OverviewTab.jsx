@@ -117,6 +117,16 @@ const OverviewTab = ({
                     ? maintenanceMode.message || 'Planerat underhåll pågår'
                     : 'Kontrollera AI-tjänsten'}
               </p>
+              {systemHealth?.ollama_model && (
+                <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 dark:bg-black/10 rounded-lg">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-current opacity-70">
+                    <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 0 2h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1 0-2h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2" />
+                    <circle cx="8" cy="14" r="1" fill="currentColor" />
+                    <circle cx="16" cy="14" r="1" fill="currentColor" />
+                  </svg>
+                  <span className="text-xs font-mono font-medium">{systemHealth.ollama_model}</span>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-6">
