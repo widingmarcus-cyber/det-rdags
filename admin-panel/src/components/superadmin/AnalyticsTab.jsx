@@ -320,16 +320,6 @@ const AnalyticsTab = ({
               </div>
             )}
 
-            {/* Tracking Script Info */}
-            <div className="p-4 bg-bg-tertiary rounded-lg border border-border-subtle">
-              <h4 className="text-sm font-medium text-text-primary mb-2">Spårningskod för landningssidan</h4>
-              <p className="text-xs text-text-secondary mb-3">Lägg till följande kod på din landningssida för att spåra besök:</p>
-              <div className="bg-bg-primary rounded p-3 font-mono text-xs text-text-secondary overflow-x-auto">
-                <code>{`<script>window.BOBOT_TRACKING_URL='${typeof window !== 'undefined' ? window.location.origin : ''}';</script>`}</code>
-                <br />
-                <code>{`<script src="${typeof window !== 'undefined' ? window.location.origin : ''}/api/track/script.js"></script>`}</code>
-              </div>
-            </div>
           </div>
         ) : (
           <div className="text-center py-8">

@@ -396,10 +396,8 @@ function SuperAdmin() {
 
   const handleUpdateInvoiceStatus = async (invoiceId, status) => {
     try {
-      const response = await adminFetch(`${API_BASE}/admin/invoices/${invoiceId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
+      const response = await adminFetch(`${API_BASE}/admin/invoices/${invoiceId}/status?status=${status}`, {
+        method: 'PUT'
       })
 
       if (response.ok) {
@@ -1134,6 +1132,28 @@ function SuperAdmin() {
     } catch (error) {
       console.error('Kunde inte ändra widget status:', error)
       showNotification('Kunde inte ändra widget status', 'error')
+    }
+  }
+
+  const handleDeleteWidget = async (widgetId, widgetName) => {
+    if (!confirm(`Är du säker på att du vill ta bort widget "${widgetName}"?`)) {
+      return
+    }
+    try {
+      const response = await adminFetch(`${API_BASE}/admin/widgets/${widgetId}`, {
+        method: 'DELETE'
+      })
+      if (response.ok) {
+        setCompanyWidgets(prev => prev.filter(w => w.id !== widgetId))
+        showNotification(`Widget "${widgetName}" raderad`, 'success')
+        fetchCompanies() // Refresh company list to update widget counts
+      } else {
+        const error = await response.json()
+        showNotification(error.detail || 'Kunde inte ta bort widget', 'error')
+      }
+    } catch (error) {
+      console.error('Kunde inte ta bort widget:', error)
+      showNotification('Kunde inte ta bort widget', 'error')
     }
   }
 
@@ -2543,10 +2563,26 @@ function SuperAdmin() {
                                 )}
                               </svg>
                             </button>
+                            {companyWidgets.length > 2 && (
+                              <button
+                                onClick={() => handleDeleteWidget(widget.id, widget.name)}
+                                className="p-2 rounded-lg bg-error/10 hover:bg-error/20 text-error transition-colors"
+                                title="Ta bort widget"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                </svg>
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
                     </div>
+                    {companyWidgets.length > 2 && (
+                      <p className="text-xs text-warning mt-2">
+                        ⚠️ Detta företag har {companyWidgets.length} widgets. Max är 2 (1 intern, 1 extern). Ta bort överflödiga widgets.
+                      </p>
+                    )}
                   </div>
                 )}
 

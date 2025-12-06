@@ -626,6 +626,10 @@ class CompanyResponse(BaseModel):
     startup_fee_paid: bool = False
     contract_start_date: Optional[date] = None
     billing_email: str = ""
+    # Discount fields
+    discount_percent: float = 0.0
+    discount_end_date: Optional[date] = None
+    discount_note: str = ""
 
 
 class PricingTierUpdate(BaseModel):
@@ -3313,6 +3317,27 @@ async def create_widget(
     """Skapa ny widget för inloggat företag"""
     company_id = current["company_id"]
 
+    # Enforce widget limits: max 2 widgets per company (1 internal, 1 external)
+    existing_widgets = db.query(Widget).filter(Widget.company_id == company_id).all()
+    existing_internal = sum(1 for w in existing_widgets if w.widget_type == "internal")
+    existing_external = sum(1 for w in existing_widgets if w.widget_type in ["external", "custom"])
+
+    if widget.widget_type == "internal" and existing_internal >= 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Du kan endast ha 1 intern widget. Ta bort den befintliga interna widgeten först."
+        )
+    if widget.widget_type in ["external", "custom"] and existing_external >= 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Du kan endast ha 1 extern widget. Ta bort den befintliga externa widgeten först."
+        )
+    if len(existing_widgets) >= 2:
+        raise HTTPException(
+            status_code=400,
+            detail="Du har nått maxgränsen på 2 widgets. Ta bort en widget för att skapa en ny."
+        )
+
     # Internal widgets default to bottom-left, external to bottom-right
     default_position = "bottom-left" if widget.widget_type == "internal" else "bottom-right"
 
@@ -5849,7 +5874,10 @@ async def list_companies(
             pricing_tier=c.pricing_tier or "starter",
             startup_fee_paid=c.startup_fee_paid or False,
             contract_start_date=c.contract_start_date,
-            billing_email=c.billing_email or ""
+            billing_email=c.billing_email or "",
+            discount_percent=c.discount_percent or 0.0,
+            discount_end_date=c.discount_end_date,
+            discount_note=c.discount_note or ""
         ))
 
     return result
@@ -6011,6 +6039,32 @@ async def toggle_widget(
     )
 
     return {"message": f"Widget {status}", "is_active": widget.is_active}
+
+
+@app.delete("/admin/widgets/{widget_id}")
+async def admin_delete_widget(
+    widget_id: int,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a widget (admin only)"""
+    widget = db.query(Widget).filter(Widget.id == widget_id).first()
+    if not widget:
+        raise HTTPException(status_code=404, detail="Widget finns inte")
+
+    widget_name = widget.name
+    company_id = widget.company_id
+    db.delete(widget)
+    db.commit()
+
+    # Log admin action
+    log_admin_action(
+        db, admin["username"], "delete_widget",
+        target_company_id=company_id,
+        description=f"Raderade widget: {widget_name}"
+    )
+
+    return {"message": f"Widget '{widget_name}' raderad"}
 
 
 # =============================================================================
