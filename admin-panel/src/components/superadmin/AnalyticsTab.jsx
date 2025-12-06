@@ -57,6 +57,7 @@ const AnalyticsTab = ({
               </span>
             </div>
             <p className="text-xs text-text-tertiary mt-1">vs förra veckan ({trends.week_over_week.previous})</p>
+            <p className="text-xs text-text-tertiary mt-2">Jämför antal konversationer denna vecka mot förra veckan</p>
           </div>
           <div className="card">
             <h3 className="text-sm font-medium text-text-secondary mb-2">Månad-över-månad</h3>
@@ -67,6 +68,7 @@ const AnalyticsTab = ({
               </span>
             </div>
             <p className="text-xs text-text-tertiary mt-1">vs förra månaden ({trends.month_over_month.previous})</p>
+            <p className="text-xs text-text-tertiary mt-2">Jämför antal konversationer denna månad mot förra månaden</p>
           </div>
         </div>
       )}

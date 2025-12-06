@@ -5765,7 +5765,8 @@ async def list_companies(
     result = []
     for c in companies:
         knowledge_count = db.query(KnowledgeItem).filter(KnowledgeItem.company_id == c.id).count()
-        chat_count = db.query(ChatLog).filter(ChatLog.company_id == c.id).count()
+        # Use Conversation table for accurate chat count (ChatLog is legacy)
+        chat_count = db.query(Conversation).filter(Conversation.company_id == c.id).count()
         widget_count = db.query(Widget).filter(Widget.company_id == c.id).count()
         settings = db.query(CompanySettings).filter(CompanySettings.company_id == c.id).first()
 
@@ -6302,6 +6303,30 @@ async def update_company_pricing(
         company.billing_email = update.billing_email
 
     db.commit()
+
+    # Also update or create the subscription to match the pricing tier
+    tier_info = PRICING_TIERS.get(update.pricing_tier)
+    if tier_info:
+        existing_sub = db.query(Subscription).filter(Subscription.company_id == company_id).first()
+        if existing_sub:
+            # Update existing subscription
+            existing_sub.plan_name = tier_info["name"]
+            existing_sub.plan_price = tier_info["monthly_fee"]
+            existing_sub.plan_features = json.dumps(tier_info.get("features", []))
+        else:
+            # Create new subscription
+            new_sub = Subscription(
+                company_id=company_id,
+                plan_name=tier_info["name"],
+                plan_price=tier_info["monthly_fee"],
+                billing_cycle="monthly",
+                status="active",
+                current_period_start=datetime.utcnow(),
+                current_period_end=datetime.utcnow() + timedelta(days=30),
+                plan_features=json.dumps(tier_info.get("features", []))
+            )
+            db.add(new_sub)
+        db.commit()
 
     # Log admin action
     log_admin_action(
@@ -7122,6 +7147,14 @@ class InvoiceCreate(BaseModel):
     period_end: date
     due_date: date
 
+
+class InvoiceCreateSimple(BaseModel):
+    company_id: str
+    amount: float
+    description: Optional[str] = "Månadsavgift"
+    due_date: Optional[date] = None
+    currency: Optional[str] = "SEK"
+
 class InvoiceResponse(BaseModel):
     id: int
     invoice_number: str
@@ -7263,6 +7296,40 @@ async def get_all_invoices(
             "created_at": inv.created_at.isoformat()
         })
     return {"invoices": result}
+
+
+@app.post("/admin/invoices")
+async def create_invoice_simple(
+    invoice: InvoiceCreateSimple,
+    admin: dict = Depends(get_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Create a new invoice for a company (simplified endpoint)"""
+    # Verify company exists
+    company = db.query(Company).filter(Company.id == invoice.company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Företaget hittades inte")
+
+    # Generate invoice number
+    year_month = datetime.utcnow().strftime("%Y%m")
+    count = db.query(Invoice).filter(Invoice.invoice_number.like(f"INV-{year_month}%")).count()
+    invoice_number = f"INV-{year_month}-{count + 1:04d}"
+
+    # Calculate due date if not provided (default 30 days from now)
+    due_date = invoice.due_date if invoice.due_date else (date.today() + timedelta(days=30))
+
+    new_invoice = Invoice(
+        company_id=invoice.company_id,
+        invoice_number=invoice_number,
+        amount=invoice.amount,
+        description=invoice.description,
+        currency=invoice.currency or "SEK",
+        due_date=due_date
+    )
+    db.add(new_invoice)
+    db.commit()
+
+    return {"message": "Faktura skapad", "invoice_number": invoice_number, "id": new_invoice.id}
 
 
 @app.post("/admin/invoices/{company_id}")
@@ -8114,28 +8181,54 @@ async def get_company_analytics_comparison(
 ):
     """Get analytics comparison across companies"""
     cutoff_date = date.today() - timedelta(days=30)
+    cutoff_datetime = datetime.combine(cutoff_date, datetime.min.time())
 
-    company_stats = db.query(
-        DailyStatistics.company_id,
-        func.sum(DailyStatistics.total_conversations).label('conversations'),
-        func.sum(DailyStatistics.total_messages).label('messages'),
-        func.avg(DailyStatistics.avg_response_time_ms).label('avg_response_time')
-    ).filter(
-        DailyStatistics.date >= cutoff_date
-    ).group_by(DailyStatistics.company_id).order_by(
-        func.sum(DailyStatistics.total_conversations).desc()
-    ).limit(limit).all()
+    # Get all companies first
+    all_companies = db.query(Company).filter(Company.is_active == True).all()
 
-    result = []
-    for s in company_stats:
-        company = db.query(Company).filter(Company.id == s.company_id).first()
-        result.append({
-            "company_id": s.company_id,
-            "company_name": company.name if company else "Unknown",
-            "conversations": s.conversations or 0,
-            "messages": s.messages or 0,
-            "avg_response_time": round(s.avg_response_time or 0, 2)
-        })
+    company_data = []
+    for company in all_companies:
+        # Count from DailyStatistics (historical/aggregated data)
+        daily_stats = db.query(
+            func.sum(DailyStatistics.total_conversations).label('conversations'),
+            func.sum(DailyStatistics.total_messages).label('messages'),
+            func.avg(DailyStatistics.avg_response_time_ms).label('avg_response_time')
+        ).filter(
+            DailyStatistics.company_id == company.id,
+            DailyStatistics.date >= cutoff_date
+        ).first()
+
+        daily_convs = daily_stats.conversations or 0 if daily_stats else 0
+        daily_msgs = daily_stats.messages or 0 if daily_stats else 0
+        avg_resp = daily_stats.avg_response_time or 0 if daily_stats else 0
+
+        # Also count directly from Conversation table (active/recent conversations)
+        conv_count = db.query(Conversation).filter(
+            Conversation.company_id == company.id,
+            Conversation.started_at >= cutoff_datetime
+        ).count()
+
+        msg_count = db.query(Message).join(Conversation).filter(
+            Conversation.company_id == company.id,
+            Conversation.started_at >= cutoff_datetime
+        ).count()
+
+        # Use the higher of the two counts (avoid double-counting by taking max)
+        total_conversations = max(daily_convs, conv_count)
+        total_messages = max(daily_msgs, msg_count)
+
+        if total_conversations > 0 or total_messages > 0:
+            company_data.append({
+                "company_id": company.id,
+                "company_name": company.name,
+                "conversations": total_conversations,
+                "messages": total_messages,
+                "avg_response_time": round(avg_resp, 2)
+            })
+
+    # Sort by conversations descending and limit
+    company_data.sort(key=lambda x: x["conversations"], reverse=True)
+    result = company_data[:limit]
 
     return {"companies": result}
 
