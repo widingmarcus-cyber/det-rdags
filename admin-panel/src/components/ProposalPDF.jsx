@@ -584,7 +584,7 @@ const PageFooter = ({ pageNumber }) => (
 )
 
 // SECTION 1: Hero Page with Cover Image
-const HeroPage = ({ customerName, year }) => (
+const HeroPage = ({ customerName, contactPerson, startDate }) => (
   <Page size="A4" style={{ backgroundColor: colors.background, padding: 0 }}>
     {/* Cover Image - takes most of the page */}
     <View style={{ flex: 1, margin: 30, marginBottom: 0 }}>
@@ -596,6 +596,13 @@ const HeroPage = ({ customerName, year }) => (
 
     {/* Content below image */}
     <View style={{ padding: 40, paddingTop: 30, alignItems: 'center' }}>
+      {/* Contact person - above title */}
+      {contactPerson && (
+        <Text style={{ fontSize: 11, color: colors.textLight, marginBottom: 8 }}>
+          Till {contactPerson}
+        </Text>
+      )}
+
       {/* Title */}
       <Text style={{ fontFamily: 'Playfair', fontSize: 36, fontWeight: 700, color: colors.primary, marginBottom: 12, textAlign: 'center' }}>
         Hälsa på Bobot.
@@ -608,7 +615,9 @@ const HeroPage = ({ customerName, year }) => (
       <View style={{ backgroundColor: colors.slateLight, borderRadius: 16, padding: 24, alignItems: 'center', width: '100%', maxWidth: 300 }}>
         <Text style={{ fontSize: 10, color: colors.textLight, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Förslag till</Text>
         <Text style={{ fontSize: 18, fontWeight: 600, color: colors.text }}>{customerName}</Text>
-        <Text style={{ fontSize: 10, color: colors.textLight, marginTop: 6 }}>{year}</Text>
+        {startDate && (
+          <Text style={{ fontSize: 10, color: colors.textLight, marginTop: 6 }}>Startdatum: {startDate}</Text>
+        )}
       </View>
     </View>
 
@@ -1009,6 +1018,37 @@ const PricingPage = ({ startupFee, monthlyFee, tier, discount, pricingTiers = []
         </View>
       </View>
 
+      {/* Hosting options */}
+      <View style={{ marginTop: 20 }}>
+        <Text style={{ fontSize: 12, fontWeight: 600, color: colors.text, marginBottom: 12 }}>Hosting-alternativ</Text>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          {/* Cloud hosting */}
+          <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: colors.border }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+                <IconBolt size={12} color={colors.white} />
+              </View>
+              <Text style={{ fontSize: 11, fontWeight: 600, color: colors.text }}>Bobot Cloud</Text>
+            </View>
+            <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
+              Vi hanterar allt. Snabbaste sättet att komma igång. Automatiska uppdateringar och backup.
+            </Text>
+          </View>
+          {/* Self-hosted */}
+          <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: colors.border }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+                <IconHome size={12} color={colors.white} />
+              </View>
+              <Text style={{ fontSize: 11, fontWeight: 600, color: colors.text }}>Självhostad</Text>
+            </View>
+            <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.5 }}>
+              Kör Bobot på era egna servrar. Full kontroll över data och infrastruktur. Kräver teknisk kompetens.
+            </Text>
+          </View>
+        </View>
+      </View>
+
       <PageFooter pageNumber={6} />
     </Page>
   )
@@ -1149,14 +1189,14 @@ const ProposalDocument = ({
   tier,
   discount,
   conversationLimit,
-  hostingOption,
   pricingTiers
 }) => {
-  const year = new Date().getFullYear()
+  // Format start date for display
+  const formattedStartDate = startDate ? new Date(startDate).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' }) : null
 
   return (
     <Document>
-      <HeroPage customerName={customerName} year={year} />
+      <HeroPage customerName={customerName} contactPerson={contactPerson} startDate={formattedStartDate} />
       <PhilosophyPage />
       <JobDescriptionPage />
       <CustomizationPage />

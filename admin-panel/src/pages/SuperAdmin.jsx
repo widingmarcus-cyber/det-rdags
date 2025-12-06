@@ -196,8 +196,7 @@ function SuperAdmin() {
   const [showProposalModal, setShowProposalModal] = useState(null)
   const [proposalForm, setProposalForm] = useState({
     contactPerson: '',
-    startDate: '',
-    hostingOption: 'cloud'
+    startDate: ''
   })
   const [generatingPDF, setGeneratingPDF] = useState(false)
 
@@ -1272,8 +1271,7 @@ function SuperAdmin() {
     setShowProposalModal(company)
     setProposalForm({
       contactPerson: '',
-      startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 week from now
-      hostingOption: 'cloud'
+      startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 1 week from now
     })
   }
 
@@ -1304,7 +1302,6 @@ function SuperAdmin() {
         tier: tierInfo?.name || tier.charAt(0).toUpperCase() + tier.slice(1),
         discount,
         conversationLimit,
-        hostingOption: proposalForm.hostingOption,
         pricingTiers: dbPricingTiers
       })
 
@@ -2972,36 +2969,6 @@ function SuperAdmin() {
                   onChange={(e) => setProposalForm(prev => ({ ...prev, startDate: e.target.value }))}
                   className="input"
                 />
-              </div>
-
-              {/* Hosting Option */}
-              <div>
-                <label className="input-label">Hosting-alternativ</label>
-                <select
-                  value={proposalForm.hostingOption}
-                  onChange={(e) => setProposalForm(prev => ({ ...prev, hostingOption: e.target.value }))}
-                  className="input"
-                >
-                  <option value="cloud">Bobot Cloud (hanterad)</option>
-                  <option value="selfhosted">Självhostad</option>
-                </select>
-              </div>
-
-              {/* Pricing Info */}
-              <div className="p-4 rounded-lg" style={{ backgroundColor: '#FDF6F0', border: '1px solid #E8A87C' }}>
-                <h3 className="text-sm font-semibold mb-2" style={{ color: '#3D2B24' }}>Prissättning som inkluderas</h3>
-                <div className="space-y-1 text-sm" style={{ color: '#6B5248' }}>
-                  <div className="flex justify-between">
-                    <span>Prisnivå:</span>
-                    <span className="font-medium">{showProposalModal.pricing_tier || 'Starter'}</span>
-                  </div>
-                  {showProposalModal.discount_percent > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Rabatt:</span>
-                      <span className="font-medium">-{showProposalModal.discount_percent}%</span>
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
 
